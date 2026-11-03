@@ -9,10 +9,16 @@ Open `lantern-road.html` in a browser. It needs no build step, no server and no 
 - **Move between lanes:** arrow keys, A/D, the on-screen arrows, or tap either side of the road.
 - **Choose actions:** number keys 1–5, or click.
 - **Pause:** P or Esc.
-- **Speed:** the speed button cycles through 1×, 2×, 3×, 5× and 10×. It speeds up walking, fight animations and auto-mode decisions.
-- **Auto mode:** the Auto button makes the game play itself. It picks forks, steers toward oil and gold, fights, and makes event and shop choices. Pressing Pause or opening Relics stops it until you resume. Combined with 10×, a full run takes about a minute and a half, which is handy for development.
+- **Speed:** the speed button switches between 1× and 2×. It speeds up walking, fight animations and auto-play decisions.
+- **Auto:** the Auto button makes the game play itself. It picks forks, steers toward oil and gold, fights, and makes event and shop choices. Pressing Pause or opening Relics stops it until you resume.
+- **Tips:** tap any icon, enemy intent or status to see what it means. The first walk teaches forks, intents, draughts, oil and relic sets with one-time hints.
+- **Settings:** sound effects, music, and screen shake and motion can each be turned off. Settings also holds How to Play and Erase progress.
 
-Speed, auto mode and the chosen Darkness level are remembered in your browser.
+Speed, auto play, settings and the chosen Darkness level are remembered on the device.
+
+### Developer mode
+
+Tap the **Lantern Road** title seven times, or open the page with `#dev` at the end of the address. Developer mode adds 3×, 5× and 10× speeds; with Auto on at 10×, a full walk takes about a minute and a half. Settings has a button to leave developer mode.
 
 ## Rules
 
@@ -40,6 +46,14 @@ Speed, auto mode and the chosen Darkness level are remembered in your browser.
 - **Codex:** achievements, a bestiary of every foe you have defeated, and every relic you have found.
 - **Darkness:** winning unlocks the next Darkness level, up to V. Levels stack: more foe HP, a hungrier lantern, harder elites and bosses, pricier merchants.
 - **Daily Road:** one shared road per calendar day, with the same class, foes and forks for every player. One walk per day, double embers, and a streak for playing on consecutive days. It ignores Pyre unlocks so everyone draws from the same pool.
+
+## Look and sound
+
+- **Cozy gothic:** a violet night with warm amber light. The lantern swings as the hero walks, wayside lanterns and grave candles glow along the road, and a soft vignette frames the scene.
+- **Icons instead of words:** the HUD, enemy intents, statuses, combat actions, prices and rewards all use pixel icons with numbers.
+- **Feedback:** pickups fly into their counters, counters bump, big hits flash and shake the screen, foes lunge before they strike, relics come out of an opening chest, and the end-of-walk score counts up.
+- **The Pyre:** a campfire scene. Each unlock lights one of the ten lanterns around it.
+- **Music and sound:** each region has its own procedural ambient tune with a drone, a soft plucked melody, lantern crackle, and rain in the Drowned Chapel. All sounds pass through a soft filter and a short echo.
 
 ## Saving
 
