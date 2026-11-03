@@ -11,21 +11,24 @@
 @font-face{font-family:"Spectral";src:url(fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
 @font-face{font-family:"Spectral";src:url(fonts/spectral-600.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
 :root{
-  /* Layout: one portrait road-frame centred in the void. The HUD rides its top edge, lane controls its bottom, and event cards rise from below into the lantern light. */
-  --void:#0a080e;
-  --stone:#15111a;
-  --stone-2:#1f1926;
-  --rule:#3a3044;
-  --bone:#ebe1cb;
-  --ash:#a59bab;
-  --ember:#f2a03d;
-  --blood:#c43b3b;
-  --oil:#e3ad4b;
-  --gold:#e9d27c;
-  --doom:#b48ae8;
-  --ward:#86bde0;
-  --good:#a5d48e;
-  --bad:#e9806e;
+  /* Layout: one portrait road-frame centred in a violet night. The HUD rides its top edge, lane controls its bottom, and event cards rise from below into the lantern light. Cozy gothic: cold night, warm amber hearth. */
+  --void:#0b0913;
+  --night:#120e1c;
+  --stone:#18121f;
+  --stone-2:#231b2c;
+  --rule:#3f344b;
+  --bone:#f2e7d0;
+  --ash:#b4a8b6;
+  --dim:#7d7186;
+  --ember:#f4a646;
+  --ember-soft:rgba(244,166,70,.14);
+  --blood:#d4484a;
+  --oil:#f0b552;
+  --gold:#f1d36a;
+  --doom:#bb96ee;
+  --ward:#8cc4e6;
+  --good:#b4de98;
+  --bad:#f08c76;
   --f-display:"Pirata One","Luminari","Palatino Linotype",Georgia,serif;
   --f-body:"Spectral",Georgia,"Times New Roman",serif;
   --f-pixel:"Silkscreen","Lucida Console","Courier New",monospace;
@@ -34,110 +37,165 @@
 html{height:100%;box-sizing:border-box;background:var(--void)}
 *,*::before,*::after{box-sizing:inherit}
 [hidden]{display:none!important}
-body{height:100%;margin:0;background:var(--void);color:var(--bone);font-family:var(--f-body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent}
-#app{height:100%;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;background:radial-gradient(ellipse at 50% 70%,#1b1322 0%,var(--void) 65%)}
-#frame{position:relative;height:100%;width:360px;max-width:100%;overflow:hidden;background:#000;box-shadow:0 0 0 1px var(--rule),0 0 90px rgba(0,0,0,.9)}
+body{height:100%;margin:0;background:var(--void);color:var(--bone);font-family:var(--f-body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+#app{height:100%;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;background:radial-gradient(ellipse at 50% 75%,#241629 0%,#130e1b 45%,var(--void) 75%)}
+#frame{position:relative;height:100%;width:360px;max-width:100%;overflow:hidden;background:var(--night);box-shadow:0 0 0 1px var(--rule),0 0 90px rgba(0,0,0,.9)}
 #world{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:crisp-edges;image-rendering:pixelated;touch-action:manipulation;cursor:pointer}
+#vig{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 80% 70% at 50% 72%,transparent 40%,rgba(10,6,20,.55) 100%)}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+.ico{width:14px;height:14px;image-rendering:pixelated;flex:none;display:inline-block;vertical-align:middle}
+.ico.lg{width:21px;height:21px}
+.ico.xl{width:28px;height:28px}
+
+/* Frame shake, scaled by how hard the hit was */
+#frame.shake1{animation:fshake .22s}
+#frame.shake2{animation:fshake .32s;--amp:4px}
+#frame.shake3{animation:fshake .45s;--amp:7px}
+@keyframes fshake{20%{transform:translate(calc(var(--amp,2px)*-1),1px)}40%{transform:translate(var(--amp,2px),-1px)}60%{transform:translate(calc(var(--amp,2px)*-.6),0)}80%{transform:translate(calc(var(--amp,2px)*.4),1px)}}
 
 /* HUD */
-#hud{position:absolute;top:0;left:0;right:0;z-index:3;display:grid;gap:7px;padding:10px 10px 22px;background:linear-gradient(180deg,rgba(10,8,14,.96) 0%,rgba(10,8,14,.86) 72%,transparent);font-family:var(--f-pixel);font-size:10px;letter-spacing:.04em}
+#hud{position:absolute;top:0;left:0;right:0;z-index:3;display:grid;gap:7px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 22px;background:linear-gradient(180deg,rgba(11,9,19,.96) 0%,rgba(11,9,19,.84) 72%,transparent);font-family:var(--f-pixel);font-size:10px;letter-spacing:.04em}
 .hud-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .region{font-family:var(--f-display);font-size:20px;line-height:1;white-space:nowrap}
 .region b{font-weight:400;color:var(--ember);margin-right:6px}
+.region .mode{font-family:var(--f-pixel);font-size:9px;letter-spacing:.08em;color:var(--ember);border:1px solid var(--ember);padding:1px 4px;margin-left:8px;vertical-align:middle}
 .pips{display:flex;gap:3px;align-items:center}
-.pip{width:7px;height:7px;background:#2b2433}
-.pip.done{background:#6d6474}
-.pip.now{background:var(--ember)}
-.pip.boss{width:10px;height:10px;background:#4a1a20;border:1px solid var(--blood)}
+.pip{width:7px;height:7px;background:#2d2536}
+.pip.done{background:#7a6c82}
+.pip.now{background:var(--ember);box-shadow:0 0 6px var(--ember)}
+.pip.boss{width:10px;height:10px;background:#4a1a22;border:1px solid var(--blood)}
 .pip.boss.now{background:var(--blood)}
-.meters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.meter{position:relative;height:15px;background:#050407;border:1px solid var(--rule);overflow:hidden}
-.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--blood);transition:width .25s}
-.meter.oil i{background:var(--oil)}
+.hud-bars{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{display:flex;align-items:center;gap:5px;min-width:0}
+.bar b{font-weight:400;color:var(--bone);font-variant-numeric:tabular-nums;min-width:4.5ch;text-align:right}
+.meter{position:relative;flex:1;height:11px;background:#07050b;border:1px solid var(--rule);overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(180deg,#e9625f,var(--blood));transition:width .3s}
+.meter.oil i{background:linear-gradient(180deg,#ffd27a,var(--oil))}
+.meter.foe i{background:linear-gradient(180deg,#c95a5a,#9c2f35)}
 .meter.low i{animation:pulse 1s steps(2) infinite}
-.meter>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 5px;color:#fff;text-shadow:1px 1px 0 #000;font-size:9px}
 @keyframes pulse{50%{opacity:.45}}
-.stats{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;color:var(--ash)}
-.stats b{color:var(--bone);font-weight:400;font-variant-numeric:tabular-nums}
-.stats .g b{color:var(--gold)}
-.chipbtn{font-family:var(--f-pixel);font-size:10px;color:var(--ash);background:rgba(0,0,0,.4);border:1px solid var(--rule);padding:3px 6px;cursor:pointer;margin-left:auto}
-.chipbtn:hover{border-color:var(--ember);color:var(--bone)}
+.hud-stats{display:flex;gap:6px;align-items:center}
+.st{position:relative;display:inline-flex;align-items:center;gap:5px;padding:4px 7px;min-height:28px;background:rgba(0,0,0,.35);border:1px solid #2e2638;color:var(--bone);font:inherit;cursor:default}
+.st b{display:inline-block;font-weight:400;font-variant-numeric:tabular-nums}
+.st.g b{color:var(--gold)}
+button.st{margin-left:auto;cursor:pointer}
+button.st:hover{border-color:var(--ember)}
+.st::after{content:"";position:absolute;inset:-7px -3px}
+.st.bump b{animation:bump .4s}
+@keyframes bump{35%{transform:scale(1.45);color:#fff;text-shadow:0 0 8px var(--ember)}}
 .ahead{display:flex;gap:4px;align-items:stretch}
-.ahead .lbl{display:flex;align-items:center;color:var(--ember);padding-right:2px}
-.slot{flex:1;display:flex;align-items:center;gap:5px;padding:3px 5px;border:1px solid #2b2433;background:rgba(0,0,0,.45);color:var(--ash);min-width:0}
-.slot canvas{width:18px;height:18px;image-rendering:pixelated;flex:none}
+.slot{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:4px 5px;border:1px solid #2d2536;background:rgba(0,0,0,.45);color:var(--ash);min-width:0}
 .slot span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.slot.on{border-color:var(--ember);color:var(--bone);background:rgba(242,160,61,.1)}
-.slot.wide{justify-content:center}
+.slot.on{border-color:var(--ember);color:var(--bone);background:var(--ember-soft)}
+.slot.boss{border-color:var(--blood);color:#ffd0c8;background:rgba(212,72,74,.12)}
 
 /* Controls */
 #controls{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-end;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
 #controls button{pointer-events:auto;cursor:pointer}
-.pad{width:60px;height:60px;display:grid;place-items:center;background:rgba(10,8,14,.72);border:2px solid var(--rule);color:var(--bone)}
+.pad{width:60px;height:60px;display:grid;place-items:center;background:rgba(14,10,22,.72);border:2px solid var(--rule);color:var(--bone)}
 .pad:hover,.pad:active{border-color:var(--ember);color:var(--ember)}
 .pad svg{width:20px;height:20px;fill:currentColor}
+.pad.nudge{animation:nudge 1s ease-in-out 3;border-color:var(--ember);color:var(--ember)}
+@keyframes nudge{50%{box-shadow:0 0 18px rgba(244,166,70,.6)}}
 .mid{display:flex;gap:6px}
-.small{font-family:var(--f-pixel);font-size:10px;min-width:44px;height:36px;padding:0 8px;background:rgba(10,8,14,.72);border:2px solid var(--rule);color:var(--ash)}
+.small{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-family:var(--f-pixel);font-size:10px;min-width:48px;min-height:44px;padding:0 9px;background:rgba(14,10,22,.72);border:2px solid var(--rule);color:var(--ash);cursor:pointer}
 .small:hover{border-color:var(--ember);color:var(--bone)}
-.small[aria-pressed="true"]{border-color:var(--ember);color:var(--ember);background:rgba(242,160,61,.12)}
-.small.fast{color:var(--ember)}
+.small[aria-pressed="true"],.small.on{border-color:var(--ember);color:var(--ember);background:var(--ember-soft)}
+.small svg{width:14px;height:14px;fill:currentColor}
 
-/* Toasts, region card, hurt flash */
+/* Toasts, region card, hurt flash, tips and hints */
 #toasts{position:absolute;left:0;right:0;bottom:118px;z-index:4;display:grid;justify-items:center;gap:4px;pointer-events:none}
-.toast{font-family:var(--f-pixel);font-size:11px;padding:3px 8px;background:rgba(0,0,0,.8);border:1px solid var(--rule);color:var(--bone);animation:toast 2s forwards}
+.toast{display:flex;align-items:center;gap:6px;font-family:var(--f-pixel);font-size:11px;padding:4px 9px;background:rgba(10,7,16,.85);border:1px solid var(--rule);color:var(--bone);animation:toast 2.2s forwards}
 .toast.good{color:var(--good)}
 .toast.bad{color:var(--bad);border-color:#5a2a2a}
-.toast.gold{color:var(--gold)}
-@keyframes toast{0%{opacity:0;transform:translateY(6px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
-#card{position:absolute;left:0;right:0;top:32%;z-index:4;text-align:center;pointer-events:none;opacity:0}
+.toast.gold{color:var(--gold);border-color:#6a5420}
+@keyframes toast{0%{opacity:0;transform:translateY(6px) scale(.9)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+#card{position:absolute;left:0;right:0;top:30%;z-index:4;text-align:center;pointer-events:none;opacity:0}
 #card.show{animation:card 3.4s forwards}
 #card .n{font-family:var(--f-pixel);font-size:11px;letter-spacing:.35em;color:var(--ember)}
-#card .t{font-family:var(--f-display);font-size:46px;line-height:1;text-shadow:0 0 22px #000,0 2px 0 #000}
-@keyframes card{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
-#hurt{position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 70px rgba(196,59,59,0);transition:box-shadow .35s}
-#hurt.on{box-shadow:inset 0 0 70px rgba(196,59,59,.75);transition:none}
+#card .t{font-family:var(--f-display);font-size:48px;line-height:1;text-shadow:0 0 26px rgba(244,166,70,.35),0 2px 0 #000}
+@keyframes card{0%{opacity:0;transform:translateY(10px) scale(.96);letter-spacing:.08em}15%{opacity:1;transform:none;letter-spacing:0}75%{opacity:1}100%{opacity:0}}
+#hurt{position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 70px rgba(212,72,74,0);transition:box-shadow .35s}
+#hurt.on{box-shadow:inset 0 0 70px rgba(212,72,74,.75);transition:none}
+#tip{position:absolute;z-index:14;max-width:230px;padding:8px 10px;background:#0f0b15;border:1px solid var(--ember);color:var(--bone);font-size:13.5px;line-height:1.4;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.6);animation:tipin .15s ease-out}
+#tip b{display:block;font-family:var(--f-pixel);font-weight:400;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember);margin-bottom:3px}
+@keyframes tipin{from{opacity:0;transform:translateY(4px)}}
+#hint{position:absolute;left:10px;right:10px;top:calc(10px + env(safe-area-inset-top,0px));z-index:7;display:flex;gap:10px;align-items:center;padding:10px 10px 10px 12px;background:rgba(20,14,26,.96);border:1px solid var(--ember);box-shadow:0 0 26px rgba(244,166,70,.28),0 0 0 2px #000;animation:hintin .35s ease-out}
+#hint p{margin:0;flex:1;line-height:1.4;font-size:14px}
+@keyframes hintin{from{opacity:0;transform:translateY(-10px)}}
+.fly{position:absolute;z-index:11;width:16px;height:16px;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(0 0 4px rgba(244,166,70,.7))}
 
 /* Event panel */
-#panel{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;max-height:calc(100% - 132px);overflow:auto;background:var(--stone);border:2px solid var(--rule);box-shadow:0 0 0 2px #000,0 -30px 60px rgba(0,0,0,.75);padding:16px 14px 14px;animation:rise .28s ease-out}
+#panel{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;max-height:calc(100% - 132px);overflow:auto;background:linear-gradient(180deg,#1e1725,var(--stone) 120px);border:2px solid var(--rule);box-shadow:0 0 0 2px #000,inset 0 1px 0 rgba(244,166,70,.22),0 -30px 60px rgba(0,0,0,.75);padding:16px 14px 14px;animation:rise .3s cubic-bezier(.2,.9,.3,1.15)}
 #panel.tall{max-height:calc(100% - 16px)}
-@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@keyframes rise{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
 .kicker{font-family:var(--f-pixel);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
 h1,h2{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0}
 h2{font-size:29px;line-height:1.02;margin-top:3px}
 .ev-head{display:flex;gap:12px;align-items:center}
-.ev-head canvas{width:46px;height:46px;image-rendering:pixelated;flex:none}
+.ev-head .ico{width:46px;height:46px;filter:drop-shadow(0 0 8px rgba(244,166,70,.35))}
 .ev-text{line-height:1.55;margin:10px 0 14px;max-width:60ch}
 .choices{display:grid;gap:8px}
-.btn{display:block;width:100%;text-align:left;font-family:var(--f-pixel);font-size:11px;letter-spacing:.05em;text-transform:uppercase;line-height:1.35;background:var(--stone-2);color:var(--bone);border:2px solid var(--rule);padding:10px 12px;cursor:pointer}
-.btn:hover:not(:disabled){border-color:var(--ember);box-shadow:0 0 14px rgba(242,160,61,.22)}
+.btn{display:block;width:100%;text-align:left;font-family:var(--f-pixel);font-size:11px;letter-spacing:.05em;text-transform:uppercase;line-height:1.35;background:var(--stone-2);color:var(--bone);border:2px solid var(--rule);padding:11px 12px;min-height:44px;cursor:pointer;transition:transform .08s,border-color .15s}
+.btn:hover:not(:disabled){border-color:var(--ember);box-shadow:0 0 14px rgba(244,166,70,.22)}
+.btn:active:not(:disabled){transform:scale(.98)}
 .btn:disabled{opacity:.42;cursor:not-allowed}
 .btn .key{color:var(--ember);margin-right:8px}
+.btn .ico{margin-right:6px;margin-top:-2px}
 .btn .sub{display:block;margin-top:3px;font-family:var(--f-body);font-size:13.5px;text-transform:none;letter-spacing:0;color:var(--ash);line-height:1.35}
 .btn.primary{border-color:var(--ember)}
-.lines{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:4px;font-family:var(--f-pixel);font-size:11px}
+.price{float:right;display:inline-flex;align-items:center;gap:4px;color:var(--gold)}
+.price .ico{margin:0}
+.lines{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:6px;font-family:var(--f-pixel);font-size:11px}
+.lines li{display:flex;align-items:center;gap:7px;animation:linein .35s both}
+.lines li:nth-child(2){animation-delay:.08s}.lines li:nth-child(3){animation-delay:.16s}.lines li:nth-child(4){animation-delay:.24s}.lines li:nth-child(5){animation-delay:.32s}.lines li:nth-child(6){animation-delay:.4s}
+@keyframes linein{from{opacity:0;transform:translateX(-8px)}}
 .lines .good{color:var(--good)}
 .lines .bad{color:var(--bad)}
 .lines .note{color:var(--ash)}
 
+/* Relic reveal */
+.reveal{position:relative;display:grid;justify-items:center;gap:4px;padding:2px 0 8px}
+.reveal .chest{width:64px;height:64px;image-rendering:pixelated;animation:chest .55s steps(5) both}
+.reveal .glow{position:absolute;top:-6px;width:140px;height:90px;background:radial-gradient(ellipse at 50% 55%,var(--tier,rgba(244,166,70,.55)),transparent 65%);animation:glow .8s ease-out both;pointer-events:none}
+@keyframes chest{0%,60%{transform:rotate(0)}20%{transform:rotate(-6deg)}40%{transform:rotate(6deg)}}
+@keyframes glow{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+.relic-pick{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;text-transform:none;animation:cardin .4s both}
+.relic-pick:nth-child(2){animation-delay:.08s}.relic-pick:nth-child(3){animation-delay:.16s}.relic-pick:nth-child(4){animation-delay:.24s}
+.relic-pick>.ico{grid-row:1/3;width:28px;height:28px;margin:0}
+.setpips .ico{width:14px;height:14px;margin:0 2px 0 0}
+.relic-pick .nm{font-family:var(--f-display);font-size:19px;letter-spacing:0;line-height:1.05}
+.relic-pick .sub{grid-column:2;margin:0}
+.relic-pick .setpips{display:inline-flex;gap:3px;margin-left:8px;vertical-align:middle}
+.setpips{align-items:center}
+.setpips i{width:7px;height:7px;background:#3a3046;border:1px solid #5d5068}
+.setpips i.on{background:var(--ember);border-color:var(--ember)}
+@keyframes cardin{from{opacity:0;transform:translateY(12px) scale(.97)}}
+
 /* Combat */
 .combat{display:grid;gap:10px}
 .foe{position:relative;display:grid;justify-items:center;gap:6px;text-align:center}
-.foe canvas{width:132px;height:143px;image-rendering:pixelated;background:radial-gradient(circle at 50% 60%,rgba(242,160,61,.13),transparent 62%);animation:bob 1.6s steps(2) infinite}
+.foe canvas{width:132px;height:143px;image-rendering:pixelated;background:radial-gradient(circle at 50% 62%,rgba(244,166,70,.16),transparent 62%);animation:bob 1.6s steps(2) infinite}
 .foe.boss canvas{width:168px;height:182px}
 .foe canvas.hit{animation:shake .32s}
+.foe canvas.flash{filter:brightness(2.6) saturate(.4)}
+.foe canvas.lunge{animation:lunge .28s ease-in}
 .foe canvas.dead{animation:sink .6s forwards}
 @keyframes bob{50%{transform:translateY(-3px)}}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes lunge{50%{transform:translateY(14px) scale(1.12)}}
 @keyframes sink{to{transform:translateY(20px);opacity:0;filter:brightness(3)}}
-.intent{font-family:var(--f-pixel);font-size:11px;padding:4px 9px;background:#000;border:1px solid var(--blood);color:#f2b4a6}
+.intent{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-pixel);font-size:12px;padding:4px 10px 4px 7px;background:#07050b;border:1px solid var(--blood);color:#f6c0b2;cursor:help}
+.intent b{font-size:15px;font-weight:700;color:#fff}
 .intent.def{border-color:var(--ward);color:var(--ward)}
 .intent.cur{border-color:var(--doom);color:var(--doom)}
+.intent.nudge{animation:nudge 1s ease-in-out 3}
 .foe-name{font-family:var(--f-display);font-size:25px;line-height:1}
-.foe .meter{width:min(240px,100%)}
-.tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;font-family:var(--f-pixel);font-size:9px;min-height:15px}
-.tag{padding:2px 5px;border:1px solid var(--rule);color:var(--ash)}
+.foe .meter{width:min(240px,100%);flex:none;height:13px}
+.meter>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-shadow:1px 1px 0 #000;font-family:var(--f-pixel);font-size:9px}
+.tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;font-family:var(--f-pixel);font-size:10px;min-height:20px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 6px 2px 4px;border:1px solid var(--rule);color:var(--ash);cursor:help}
 .tag.block{border-color:var(--ward);color:var(--ward)}
 .tag.doom{border-color:var(--doom);color:var(--doom)}
 .tag.weak,.tag.bleed,.tag.rage{border-color:#6a2a2a;color:var(--bad)}
@@ -145,97 +203,137 @@ h2{font-size:29px;line-height:1.02;margin-top:3px}
 .log{font-style:italic;color:var(--ash);text-align:center;min-height:1.5em;margin:0;line-height:1.4}
 .me{position:relative;display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--rule)}
 .me-row{display:flex;gap:8px;align-items:center}
-.me-row .meter{flex:1}
 .me-row .tags{justify-content:flex-end;min-width:0}
 .actions{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
-.actions .btn{grid-column:span 2;text-align:center;padding:9px 6px}
+.actions .btn{grid-column:span 2;text-align:center;padding:9px 4px}
 .actions .btn.wide{grid-column:span 3}
+.actions .btn .ico{display:block;margin:0 auto 4px;width:21px;height:21px}
+.actions .btn.wide .ico{display:inline-block;margin:-3px 6px 0 0;width:14px;height:14px}
 .actions .btn .sub{font-size:12px}
 .fx{position:absolute;left:50%;top:38%;z-index:2;font-family:var(--f-pixel);font-weight:700;font-size:18px;color:#fff;text-shadow:2px 2px 0 #000;pointer-events:none;animation:up .95s ease-out forwards;transform:translateX(-50%);white-space:nowrap}
+.fx.big{font-size:26px;color:#ffe3a6}
+.fx.huge{font-size:34px;color:#ffd06a;text-shadow:0 0 12px rgba(244,166,70,.8),2px 2px 0 #000}
 .fx.heal{color:var(--good)}
 .fx.doom{color:var(--doom)}
 .fx.ward{color:var(--ward)}
 .fx.me{top:-6px}
 .fx.proc{font-size:11px;font-weight:400;color:var(--ember);top:58%}
 .fx.me.proc{top:16px}
+@keyframes up{0%{transform:translate(-50%,6px) scale(.6)}18%{transform:translate(-50%,-6px) scale(1.15)}100%{transform:translate(-50%,-38px) scale(1);opacity:0}}
 .math{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;font-family:var(--f-pixel);font-size:10px;font-variant-numeric:tabular-nums}
-.math .chip{padding:2px 5px;border:1px solid var(--rule);background:#000;color:var(--bone)}
+.math>*{animation:mathin .25s both}
+.math>*:nth-child(2){animation-delay:.05s}.math>*:nth-child(3){animation-delay:.1s}.math>*:nth-child(4){animation-delay:.15s}.math>*:nth-child(5){animation-delay:.2s}.math>*:nth-child(6){animation-delay:.25s}.math>*:nth-child(7){animation-delay:.3s}.math>*:nth-child(n+8){animation-delay:.35s}
+@keyframes mathin{from{opacity:0;transform:translateY(4px) scale(.8)}}
+.math .chip{padding:2px 5px;border:1px solid var(--rule);background:#07050b;color:var(--bone)}
 .math .chip.relic{border-color:var(--ember);color:var(--ember)}
 .math .chip.bad{border-color:#6a2a2a;color:var(--bad)}
 .math .op{color:var(--ash)}
 .math b{font-size:15px;font-weight:700;color:#fff;margin-left:2px}
 .math .note{color:var(--ward);margin-left:4px}
-.region .mode{font-family:var(--f-pixel);font-size:9px;letter-spacing:.08em;color:var(--ember);border:1px solid var(--ember);padding:1px 4px;margin-left:8px;vertical-align:middle}
-.relic.set-on{border-color:var(--ember)}
-.tabs{display:flex;gap:6px;flex-wrap:wrap}
-.tabs .small.on{border-color:var(--ember);color:var(--ember)}
-.beasts{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.beast{display:grid;justify-items:center;gap:3px;padding:8px 6px;background:var(--stone-2);border:1px solid var(--rule);text-align:center;min-width:0}
-.beast canvas{width:72px;height:78px;image-rendering:pixelated}
-.beast .nm{font-family:var(--f-display);font-size:16px;line-height:1.1}
-.beast .k{font-family:var(--f-pixel);font-size:8px;letter-spacing:.06em;color:var(--ash);text-transform:uppercase}
-.beast.unseen .nm{color:var(--ash)}
-.dark{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--ember)}
-.dark .small{min-width:40px;font-size:16px}
-.dark .small:disabled{opacity:.35}
-.dark .nm{font-family:var(--f-display);font-size:22px;line-height:1}
-.dark .ds{color:var(--ash);font-size:13.5px;line-height:1.4;margin-top:2px}
-@keyframes up{to{transform:translate(-50%,-36px);opacity:0}}
 
 /* Full screens */
-#screen{position:absolute;inset:0;z-index:8;overflow:auto;display:flex;flex-direction:column;padding:28px 18px 22px;background:linear-gradient(180deg,rgba(10,8,14,.35) 0%,rgba(10,8,14,.86) 48%,rgba(10,8,14,.97) 100%)}
-#screen.solid{background:rgba(10,8,14,.93)}
-.title-wrap{margin-top:auto;display:grid;gap:6px}
-.title{font-size:clamp(54px,15vw,76px);line-height:.88;color:var(--bone);text-shadow:0 0 26px rgba(242,160,61,.5),0 3px 0 #000}
-.tagline{margin:4px 0 0;color:var(--ash);font-style:italic;line-height:1.45;max-width:34ch}
-.menu{display:grid;gap:8px;margin-top:18px}
-.foot{margin-top:14px;font-family:var(--f-pixel);font-size:9px;color:#6d6474;letter-spacing:.05em}
+#screen{position:absolute;inset:0;z-index:8;overflow:auto;display:flex;flex-direction:column;padding:calc(26px + env(safe-area-inset-top,0px)) 18px calc(22px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(11,9,19,.2) 0%,rgba(11,9,19,.82) 46%,rgba(11,9,19,.97) 100%)}
+#screen.solid{background:rgba(13,10,20,.94)}
+.title-wrap{margin-top:auto;display:grid;gap:8px}
+.title{font-size:clamp(56px,16vw,80px);line-height:.86;color:var(--bone);text-shadow:0 0 30px rgba(244,166,70,.55),0 3px 0 #000;animation:titlein 1.2s ease-out both}
+@keyframes titlein{from{opacity:0;transform:translateY(8px);text-shadow:0 0 0 rgba(244,166,70,0)}}
+.tagline{margin:2px 0 0;color:var(--ash);font-style:italic;line-height:1.45;max-width:34ch}
+.menu{display:grid;gap:8px;margin-top:16px}
+.play{text-align:center;font-size:14px;padding:16px 12px;background:linear-gradient(180deg,#3d2816,#2a1a0e);border-color:var(--ember);box-shadow:0 0 22px rgba(244,166,70,.25),inset 0 1px 0 rgba(255,220,160,.25);animation:breathe 2.6s ease-in-out infinite}
+.play .sub{text-align:center;color:#d9c3a4}
+@keyframes breathe{50%{box-shadow:0 0 32px rgba(244,166,70,.42),inset 0 1px 0 rgba(255,220,160,.25)}}
+.textbtn{background:none;border:none;color:var(--ash);font-family:var(--f-pixel);font-size:10px;letter-spacing:.06em;text-transform:uppercase;min-height:44px;cursor:pointer;justify-self:center}
+.textbtn:hover{color:var(--bone)}
+.daily{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center}
+.daily .ico{grid-row:1/3;width:28px;height:28px;margin:0}
+.daily .sub{grid-column:2;margin:0}
+.iconrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{position:relative;display:grid;justify-items:center;gap:6px;padding:10px 4px 9px;min-height:66px;background:var(--stone-2);border:2px solid var(--rule);color:var(--ash);font-family:var(--f-pixel);font-size:9px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.tile:hover{border-color:var(--ember);color:var(--bone)}
+.tile .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--ember);box-shadow:0 0 6px var(--ember)}
+.unlockbar{display:grid;gap:5px;padding:9px 12px;background:rgba(0,0,0,.3);border:1px solid var(--rule);font-family:var(--f-pixel);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--ash)}
+.unlockbar .row{display:flex;align-items:center;gap:6px}
+.unlockbar .row b{font-weight:400;color:var(--bone);margin-left:auto;font-variant-numeric:tabular-nums}
+.unlockbar .meter{height:8px}
+.unlockbar .meter i{background:linear-gradient(180deg,#ffc36a,var(--ember))}
+.foot{margin-top:12px;font-family:var(--f-pixel);font-size:9px;color:var(--dim);letter-spacing:.05em;text-align:center}
+@media (hover:none){.foot,.btn .key{display:none}}
 .page{display:grid;gap:14px;align-content:start}
 .page h1{font-size:40px;line-height:1}
 .page p{margin:0;line-height:1.55}
 .back{justify-self:start;width:auto}
-.embers{font-family:var(--f-pixel);font-size:12px;color:var(--ember)}
+.embers{display:flex;align-items:center;gap:6px;font-family:var(--f-pixel);font-size:12px;color:var(--ember)}
 .list{display:grid;gap:8px}
 .item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--rule)}
 .item .k,.item .nm{grid-column:1}
 .item.locked{opacity:.55}
 .item .k.got{color:var(--good)}
-.item .k{font-family:var(--f-pixel);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.item .k{display:flex;align-items:center;gap:6px;font-family:var(--f-pixel);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
 .item .nm{font-family:var(--f-display);font-size:21px;line-height:1.05}
 .item .ds{grid-column:1/-1;color:var(--ash);font-size:14px;line-height:1.4}
 .item .btn{width:auto;padding:7px 10px;grid-row:1/3;grid-column:2;align-self:center}
-.item.owned{opacity:.75}
 .item.owned .k{color:var(--good)}
+.item.kindled{animation:kindle .9s ease-out}
+@keyframes kindle{0%{box-shadow:0 0 0 rgba(244,166,70,0);border-color:var(--ember)}30%{box-shadow:0 0 30px rgba(244,166,70,.7);border-color:var(--ember)}}
 table.rec{width:100%;border-collapse:collapse;font-family:var(--f-pixel);font-size:10px;font-variant-numeric:tabular-nums}
 .rec th{text-align:left;color:var(--ash);font-weight:400;padding:6px 4px;border-bottom:1px solid var(--rule)}
-.rec td{padding:7px 4px;border-bottom:1px solid #241e2a}
+.rec td{padding:8px 4px;border-bottom:1px solid #261f2d}
 .rec td.num,.rec th.num{text-align:right}
 .rec .won{color:var(--ember)}
-.score{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-family:var(--f-pixel);font-size:11px;font-variant-numeric:tabular-nums;padding:12px;background:var(--stone-2);border:1px solid var(--rule)}
-.score .tot{padding-top:8px;border-top:1px solid var(--rule);color:var(--ember);font-size:13px}
+.score{display:grid;grid-template-columns:1fr auto;gap:7px 12px;font-family:var(--f-pixel);font-size:11px;font-variant-numeric:tabular-nums;padding:12px;background:var(--stone-2);border:1px solid var(--rule)}
+.score>span{animation:linein .3s both;animation-delay:calc(var(--i,0)*.12s)}
+.score .tot{padding-top:8px;border-top:1px solid var(--rule);color:var(--ember);font-size:14px}
 .score span:nth-child(even){text-align:right}
 .rules{display:grid;gap:12px}
 .rules h3{font-family:var(--f-pixel);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember);margin:4px 0 0;font-weight:400}
 .rules ul{margin:0;padding-left:18px;display:grid;gap:5px;line-height:1.5}
 .cls{display:grid;gap:3px}
-.cls .stat{font-family:var(--f-pixel);font-size:9px;color:var(--ash);letter-spacing:.06em}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.beasts{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.beast{display:grid;justify-items:center;gap:3px;padding:8px 6px;background:var(--stone-2);border:1px solid var(--rule);text-align:center;min-width:0;cursor:pointer;color:inherit;font:inherit}
+.beast:hover{border-color:var(--ember)}
+.beast canvas{width:72px;height:78px;image-rendering:pixelated}
+.beast .nm{font-family:var(--f-display);font-size:16px;line-height:1.1}
+.beast .k{font-family:var(--f-pixel);font-size:8px;letter-spacing:.06em;color:var(--ash);text-transform:uppercase}
+.beast.unseen{cursor:default}
+.beast.unseen .nm{color:var(--ash)}
+.lore{display:grid;justify-items:center;gap:8px;text-align:center}
+.lore canvas{width:132px;height:143px;image-rendering:pixelated;background:radial-gradient(circle at 50% 62%,rgba(244,166,70,.16),transparent 62%)}
+.lore p{margin:0;font-style:italic;color:var(--bone);line-height:1.5}
+.lore .k{font-family:var(--f-pixel);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash)}
+.dark{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--ember)}
+.dark .small{font-size:16px}
+.dark .small:disabled{opacity:.35}
+.dark .nm{font-family:var(--f-display);font-size:22px;line-height:1}
+.dark .ds{color:var(--ash);font-size:13.5px;line-height:1.4;margin-top:2px}
+.pyre{width:100%;aspect-ratio:120/64;image-rendering:pixelated;border:1px solid var(--rule);background:#0c0a12}
+.setting{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--rule)}
+.setting .nm{font-family:var(--f-pixel);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.setting .ds{grid-column:1;color:var(--ash);font-size:13.5px;line-height:1.35}
+.setting .small{grid-row:1/3;grid-column:2;min-width:64px}
+.version{font-family:var(--f-pixel);font-size:9px;color:var(--dim);text-align:center;letter-spacing:.08em}
 
-/* Sheet (pause, relics) */
-#sheet{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:rgba(5,4,8,.78)}
-#sheet .box{width:100%;max-height:100%;overflow:auto;background:var(--stone);border:2px solid var(--rule);box-shadow:0 0 0 2px #000;padding:16px 14px;display:grid;gap:12px}
-.relic{padding:8px 10px;background:var(--stone-2);border:1px solid var(--rule)}
+/* Sheet (pause, relics, lore) */
+#sheet{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:rgba(6,4,10,.8)}
+#sheet .box{width:100%;max-height:100%;overflow:auto;background:linear-gradient(180deg,#1e1725,var(--stone) 120px);border:2px solid var(--rule);box-shadow:0 0 0 2px #000,inset 0 1px 0 rgba(244,166,70,.22);padding:16px 14px;display:grid;gap:12px;animation:rise .25s ease-out}
+.relic{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:8px 10px;background:var(--stone-2);border:1px solid var(--rule)}
+.relic .ico{grid-row:1/3;width:21px;height:21px}
 .relic b{font-family:var(--f-display);font-weight:400;font-size:19px;display:block;line-height:1.1}
 .relic span{color:var(--ash);font-size:14px}
+.relic .setpips{margin-left:8px}
+.relic.set-on{border-color:var(--ember)}
 
 @media (prefers-reduced-motion:reduce){
-  #panel,.foe canvas,.foe canvas.hit,.fx,#card.show{animation-duration:.01ms!important;animation-iteration-count:1!important}
+  #panel,.foe canvas,.foe canvas.hit,.foe canvas.lunge,.fx,#card.show,.play,.lines li,.math>*,.score>span,.relic-pick,.reveal .chest,.title{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important}
   .fx{animation:none!important;opacity:0}
 }
+.calm #frame,.calm .foe canvas,.calm .play{animation:none!important}
 </style>
 
 <div id="app">
   <div id="frame">
     <canvas id="world" aria-label="The road ahead"></canvas>
+    <div id="vig"></div>
     <div id="hurt"></div>
     <header id="hud" hidden></header>
     <div id="toasts" aria-live="polite"></div>
@@ -243,15 +341,17 @@ table.rec{width:100%;border-collapse:collapse;font-family:var(--f-pixel);font-si
     <div id="controls" hidden>
       <button class="pad" id="btnL" aria-label="Move left"><svg viewBox="0 0 10 10"><path d="M7 1v8L2 5z"/></svg></button>
       <div class="mid">
-        <button class="small" id="btnSpeed" aria-label="Game speed">1×</button>
-        <button class="small" id="btnAuto" aria-pressed="false">Auto</button>
-        <button class="small" id="btnPause" aria-label="Pause">Pause</button>
+        <button class="small" id="btnSpeed" aria-label="Walking speed">1×</button>
+        <button class="small" id="btnAuto" aria-pressed="false" aria-label="Auto play">Auto</button>
+        <button class="small" id="btnPause" aria-label="Pause"><svg viewBox="0 0 10 10"><path d="M2 1h2v8H2zM6 1h2v8H6z"/></svg></button>
       </div>
       <button class="pad" id="btnR" aria-label="Move right"><svg viewBox="0 0 10 10"><path d="M3 1v8l5-4z"/></svg></button>
     </div>
     <section id="panel" hidden></section>
+    <div id="hint" hidden></div>
     <section id="screen" hidden></section>
     <div id="sheet" hidden></div>
+    <div id="tip" hidden></div>
   </div>
 </div>
 
@@ -265,7 +365,7 @@ const ROAD_L = 22, ROAD_R = 98;
 const SPACING = 96, FIRST = 80;
 const BASE_SPEED = 16;          // world pixels per second at 1×
 const OIL_PER_PX = 1 / 22;      // lantern oil burned per pixel walked
-const DARK_STEP = 24;           // pixels walked in darkness per 1 HP lost
+const DARK_STEP = 24;           // pixels walked in darkness per 1 health lost
 
 const $ = s => document.querySelector(s);
 // Gameplay randomness comes from the run's own seeded generator (mulberry32), so the Daily Road is the same
@@ -288,7 +388,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms / speed)); // combat pacin
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function hash(n) { n |= 0; n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n ^= n >>> 16; return (n >>> 0) / 4294967296; }
 const h2 = (a, b) => hash(Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263));
-const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const osReduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const noMotion = () => osReduce || !settings.motion;
 
 function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
@@ -301,7 +402,7 @@ function h(tag, attrs, ...kids) {
     else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
     else el.setAttribute(k, v);
   }
-  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid);
   return el;
 }
 
@@ -317,12 +418,19 @@ function sprite(map, pal, key) {
   return c;
 }
 
-const PLAYER_A = [
-  "....hhhh....", "...hhhhhh...", "...hddddh...", "...hhhhhh...",
-  "..cccccccc..", ".cccccccccc.", ".ccdccccdcy.", ".ccdccccdcy.",
-  ".ccdccccdcy.", ".cccccccc.LL", "..cccccc..LL", "..dccccd....",
-  "..kk..kk....", "..kk........"];
-const PLAYER_B = PLAYER_A.slice(0, 13).concat(["......kk...."]);
+// The lantern-bearer, seen from behind. The lantern itself is drawn separately so it can swing.
+const HERO_BODY = [
+  ".....hhhh.....", "....hHhhHh....", "....hhhhhh....", "....hhhhhh....",
+  "...sssssssa...", "..cccssscca...", ".cccccccccca..", ".cCcccccccCc..",
+  ".cCcccccccCc..", ".cCcccccccCc..", "..cCcccccCc...", "..cCcccccCc...",
+  "..ccccccccc...", "...CcccccC....", "...CC...CC...."];
+const HERO_LEGS = [
+  ["...kk...kk....", "...kk...kk...."],
+  ["...kk.........", "...kk...kk...."],
+  ["...kk...kk....", "...kk...kk...."],
+  [".........kk...", "...kk...kk...."]];
+const LANTERN = [".bb.", "b..b", "byyb", "bywb", "byyb", ".bb."];
+const LANTERN_PAL = { b: '#6b5236', y: '#ffc65a', w: '#fff3c8' };
 
 const ICONS = {
   fight: { map: ["x.......x", ".x.....x.", "..x...x..", "...x.x...", "....x....", "...x.x...", "..h...h..", ".h.....h.", "h.......h"], pal: { x: '#e2ddd0', h: '#a0703a' } },
@@ -332,18 +440,69 @@ const ICONS = {
   merchant: { map: ["...b.b...", "....b....", "..xxxxx..", ".xxxxxxx.", "xxxyyyxxx", "xxyxxxxxx", "xxxyyxxxx", ".xxxxxyx.", "..xxxxx.."], pal: { x: '#a8824a', y: '#f1dc8a', b: '#6b4a2e' } },
   shrine: { map: ["....y....", "...yxy...", "....y....", "...www...", "...www...", "...www...", "...www...", "..wwwww..", ".bbbbbbb."], pal: { y: '#f7c24a', x: '#fff2c0', w: '#d8d0bc', b: '#5a4a40' } },
   treasure: { map: [".........", ".bbbbbbb.", "bxxxxxxxb", "bbbbbbbbb", "bxxxyxxxb", "bxxxxxxxb", "bxxxxxxxb", "bbbbbbbbb", "........."], pal: { b: '#7a5232', x: '#b08040', y: '#f1dc8a' } },
+  chestOpen: { map: ["bbbbbbbbb", "bxxxxxxxb", "b.......b", "byywwwyyb", "bbbbbbbbb", "bxxxyxxxb", "bxxxxxxxb", "bxxxxxxxb", "bbbbbbbbb"], pal: { b: '#7a5232', x: '#b08040', y: '#f1dc8a', w: '#fff7d0' } },
   boss: { map: ["x...x...x", "xx.xxx.xx", "xxxxxxxxx", "xyxxyxxyx", "xxxxxxxxx", "xxxxxxxxx", ".........", ".........", "........."], pal: { x: '#e8c24a', y: '#c43b3b' } },
   flask: { map: [".b.", ".w.", "oyo", "ooo", "ooo"], pal: { b: '#7a5232', w: '#d8d0bc', o: '#c07a20', y: '#ffd27a' } },
   coin: { map: [".y.", "yzy", ".y."], pal: { y: '#f1dc8a', z: '#b8962e' } },
 };
 const TYPE_NAMES = { fight: 'Fight', elite: 'Elite', mystery: 'Mystery', camp: 'Campfire', merchant: 'Merchant', shrine: 'Shrine', treasure: 'Treasure', boss: 'Boss' };
 
-function iconCanvas(type) {
-  const ic = ICONS[type]; const s = sprite(ic.map, ic.pal, 'i:' + type);
-  const c = document.createElement('canvas'); c.width = 11; c.height = 11;
-  c.getContext('2d').drawImage(s, Math.floor((11 - s.width) / 2), Math.floor((11 - s.height) / 2));
-  return c;
+// Interface icons: small pixel glyphs that stand in for words wherever a number is enough.
+const UI_ICONS = {
+  heart: { map: [".rr.rr.", "rrrrrrr", "rwrrrrr", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."], pal: { r: '#e0484a', w: '#ffb8ae' } },
+  oil: { map: ["...y...", "..yy...", "..yoy..", ".yoooy.", ".yowoy.", "yoowooy", ".yoooy."], pal: { y: '#f7c24a', o: '#f2802d', w: '#fff2c0' } },
+  gold: { map: ["..yyy..", ".yyyyy.", "yywyyyz", "yywyyyz", "yyyyyyz", ".yyyyz.", "..zzz.."], pal: { y: '#f1d36a', w: '#fff5c0', z: '#b8892e' } },
+  draught: { map: ["..bbb..", "...w...", "..rwr..", ".rrrrr.", "rrwrrrr", "rrrrrrr", ".rrrrr."], pal: { b: '#8a5a32', w: '#ece4d2', r: '#d24a64' } },
+  score: { map: ["...y...", "...y...", "yyyyyyy", ".yywyy.", "..yyy..", ".yy.yy.", "y.....y"], pal: { y: '#f4c45a', w: '#fff3c8' } },
+  relic: { map: [".bbbbb.", "b.....b", ".b...b.", "..ggg..", ".gwgug.", ".ggggg.", "..ggg.."], pal: { b: '#c8b07a', g: '#6ad0c0', w: '#e8fff8', u: '#3a8a80' } },
+  ember: { map: ["...o...", "..oo...", "..ooo.o", ".ooyoo.", ".oyyyo.", "oyywyyo", ".oyyyo."], pal: { o: '#e2582e', y: '#f7b34a', w: '#fff0c0' } },
+  sword: { map: ["......w", ".....ww", "....ww.", "h..ww..", ".hww...", ".bh....", "b..h..."], pal: { w: '#eceaf2', h: '#c08a46', b: '#6b4a2e' } },
+  shield: { map: ["bbbbbbb", "bwwbbbb", "bwbbbbb", "bbbbbbb", ".bbbbb.", "..bbb..", "...b..."], pal: { b: '#6aa8d8', w: '#dcf2ff' } },
+  curse: { map: [".......", "..ppp..", ".pwwwp.", "pwwkwwp", ".pwwwp.", "..ppp..", "......."], pal: { p: '#bb96ee', w: '#f2e4ff', k: '#2a1040' } },
+  bleed: { map: ["...r...", "...r...", "..rrr..", ".rrwrr.", ".rwrrr.", ".rrrrr.", "..rrr.."], pal: { r: '#d83a46', w: '#ffb0b0' } },
+  doom: { map: [".ppppp.", "ppppppp", "pkkpkkp", "ppppppp", ".ppkpp.", ".p.p.p.", "......."], pal: { p: '#bb96ee', k: '#24103a' } },
+  rage: { map: ["...r...", "..rrr..", ".rrrrr.", "rrrrrrr", "..rrr..", "..rrr..", "..rrr.."], pal: { r: '#e5574a' } },
+  charge: { map: ["bbbbbbb", ".yyyyy.", "..yyy..", "...y...", "..y.y..", ".y...y.", "bbbbbbb"], pal: { b: '#9a8a70', y: '#f7c24a' } },
+  drain: { map: [".rr.rr.", "rrrrrrr", "rr.r.rr", "r.....r", ".r...r.", "..r.r..", "...r..."], pal: { r: '#b04a8a' } },
+  holy: { map: ["y..y..y", ".y.y.y.", "..www..", "yywwwyy", "..www..", ".y.y.y.", "y..y..y"], pal: { y: '#f7d36a', w: '#fffbe0' } },
+  cleave: { map: ["..www..", ".wwwww.", "wwwhwww", "...h...", "...h...", "...h...", "...b..."], pal: { w: '#eceaf2', h: '#c08a46', b: '#6b4a2e' } },
+  flee: { map: ["..bbb..", "..bbb..", "..bbb..", "..bbbb.", "..bbbbb", ".bbbbbb", ".bbbbbb"], pal: { b: '#a8845a' } },
+  gear: { map: ["..g.g..", ".ggggg.", "gg...gg", ".g...g.", "gg...gg", ".ggggg.", "..g.g.."], pal: { g: '#b4a8b6' } },
+  book: { map: ["bbbbbbb", "bwwbwwb", "bwwbwwb", "bwwbwwb", "bwwbwwb", "bbbbbbb", "......."], pal: { b: '#8a5a3a', w: '#ece4d2' } },
+  trophy: { map: ["yyyyyyy", "yywyyyy", ".yyyyy.", "..yyy..", "...y...", "..yyy..", ".yyyyy."], pal: { y: '#f1d36a', w: '#fff5c0' } },
+  sun: { map: ["...y...", ".y.y.y.", "..yyy..", "yyywyyy", "..yyy..", ".y.y.y.", "...y..."], pal: { y: '#f7c24a', w: '#fff3c8' } },
+  lantern: { map: ["..bbb..", "..b.b..", ".bbbbb.", ".byyyb.", ".bywyb.", ".byyyb.", ".bbbbb."], pal: { b: '#9a8a6a', y: '#f7c24a', w: '#fff2c0' } },
+  check: { map: [".......", "......g", ".....g.", "g...g..", ".g.g...", "..g....", "......."], pal: { g: '#b4de98' } },
+  lock: { map: ["..bbb..", ".b...b.", ".b...b.", "bbbbbbb", "bbbybbb", "bbbybbb", "bbbbbbb"], pal: { b: '#7d7186', y: '#2a2233' } },
+};
+// Each relic style has a mark: Blood a drop, Ward a shield, Hex an eye, Lantern a lantern.
+const TAG_ICONS = { blood: 'bleed', ward: 'shield', hex: 'curse', lantern: 'lantern' };
+const iconURLs = new Map();
+function iconURL(name) {
+  if (iconURLs.has(name)) return iconURLs.get(name);
+  const ic = UI_ICONS[name] || ICONS[name]; const s = sprite(ic.map, ic.pal, 'i:' + name);
+  const n = Math.max(s.width, s.height), c = document.createElement('canvas'); c.width = n; c.height = n;
+  c.getContext('2d').drawImage(s, Math.floor((n - s.width) / 2), Math.floor((n - s.height) / 2));
+  const url = c.toDataURL(); iconURLs.set(name, url); return url;
 }
+const ico = (name, cls = '') => h('img', { class: 'ico ' + cls, src: iconURL(name), alt: '', draggable: 'false' });
+const iconCanvas = type => ico(type, 'lg');
+
+// Tap anything with a data-tip to see what it means; the tip closes on the next tap or after a moment.
+let tipTimer = 0;
+function showTip(el) {
+  const tip = $('#tip'), fr = frameEl.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const [title, body] = el.dataset.tip.split('|');
+  tip.replaceChildren(...(body ? [h('b', { text: title }), body] : [title]));
+  tip.hidden = false;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let x = r.left - fr.left + r.width / 2 - tw / 2, y = r.bottom - fr.top + 6;
+  if (y + th > fr.height - 8) y = r.top - fr.top - th - 6;
+  tip.style.left = clamp(x, 8, fr.width - tw - 8) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+  clearTimeout(tipTimer); tipTimer = setTimeout(hideTip, 3200);
+}
+function hideTip() { $('#tip').hidden = true; }
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) showTip(t); else hideTip(); }, true);
 
 const PROPS = {
   grave: { map: [".sss.", "sssss", "sdsss", "sssss", "sssds", "sssss", "ddddd"] },
@@ -361,6 +520,9 @@ const PROPS = {
   rubble: { map: [".s..", "ssd.", "sdss"] },
   ash: { map: [".aaa.", "aaaaa"] },
   statue: { map: [".sss.", ".sss.", "..s..", "sssss", "s.s.s", "..s..", ".sss.", ".s.s.", ".s.s.", "sssss", "ddddd"] },
+  // Warm pockets along the road: wayside lanterns and grave candles.
+  post: { map: [".ddd.", ".dfd.", ".dyd.", ".dfd.", ".ddd.", "..d..", "..d..", "..d..", "..d..", "..d..", "..d..", ".ddd."], glow: [2, 2, 15], warm: true },
+  candle: { map: ["..y..", "..f..", ".sss.", "sssss", "ss.ss", "sssss", "sssss", "ddddd"], glow: [2, 0, 10], warm: true },
 };
 
 const TEMPLATES = {
@@ -388,41 +550,41 @@ const CLASSES = {
     blurb: 'A hired blade who reads the opening and punishes it.',
     passive: 'Riposte: after you Guard, your next Strike deals +3.',
     skill: { name: 'Cleave', desc: lv => `Deal ${[2, 2.5, 3][lv - 1]}× your Strike damage.` },
-    pal: { h: '#6e3426', d: '#2a120c', c: '#8a4430', k: '#2a1810', y: '#9a8a6a', L: '#ffd27a' },
+    pal: { h: '#7a3a2a', H: '#9e5638', s: '#dcaa52', c: '#8a4430', C: '#5e2a1c', a: '#8a4430', k: '#3a2418' },
   },
   hexblade: {
     name: 'Hexblade', hp: 52, str: 5, guard: 6, draughts: 1, maxDraughts: 3, unlock: 'cls_hexblade',
     blurb: 'A cursed duelist who rots foes from within and drinks what spills.',
-    passive: 'Blood Price: your Strikes heal 2 HP.',
+    passive: 'Blood Price: your Strikes heal 2 health.',
     skill: { name: 'Hex', desc: lv => `Deal 4 damage and inflict Doom: ${[4, 6, 8][lv - 1]} damage at the start of each of its next 3 turns. Doom grows as your Strike grows.` },
-    pal: { h: '#4a2a5e', d: '#1a0c22', c: '#5e3478', k: '#1e1424', y: '#9a8a6a', L: '#ffd27a' },
+    pal: { h: '#4e2c62', H: '#704688', s: '#c2506e', c: '#5e3478', C: '#3a1e4c', a: '#5e3478', k: '#24182c' },
   },
   pilgrim: {
     name: 'Pilgrim', hp: 62, str: 6, guard: 7, draughts: 2, maxDraughts: 4, unlock: 'cls_pilgrim',
     blurb: 'A road-worn believer whose faith is mostly stubbornness.',
     passive: 'Faithful: carries up to 4 draughts and starts with 2.',
-    skill: { name: 'Holy Light', desc: lv => `Deal 1.5× your Strike damage and heal ${[5, 7, 9][lv - 1]} HP.` },
-    pal: { h: '#bdb3a0', d: '#4a4236', c: '#d6ccb6', k: '#4a4236', y: '#9a8a6a', L: '#ffd27a' },
+    skill: { name: 'Holy Light', desc: lv => `Deal 1.5× your Strike damage and heal ${[5, 7, 9][lv - 1]} health.` },
+    pal: { h: '#c6bba6', H: '#e4dac4', s: '#7aa8cc', c: '#d6ccb6', C: '#a89c84', a: '#d6ccb6', k: '#5a4e3e' },
   },
 };
 
 // Tagged relics belong to a build style. Carrying 3 of one tag switches on that style's set bonus.
 const RELICS = {
   whetstone: { name: 'Whetstone', desc: '+2 Strike damage.' },
-  locket: { name: 'Iron Locket', desc: '+12 max HP.', gain: () => { run.maxHp += 12; run.hp += 12; }, lose: () => { run.maxHp -= 12; run.hp = Math.min(run.hp, run.maxHp); } },
+  locket: { name: 'Iron Locket', desc: '+12 max health.', gain: () => { run.maxHp += 12; run.hp += 12; }, lose: () => { run.maxHp -= 12; run.hp = Math.min(run.hp, run.maxHp); } },
   gravesalt: { name: 'Grave Salt', tag: 'blood', desc: 'Your first Strike in each fight deals double damage.' },
   oilskin: { name: 'Oilskin Hood', tag: 'lantern', desc: 'Your lantern burns 35% slower.' },
   mothlantern: { name: 'Moth-Glass Lantern', tag: 'lantern', desc: '+30 max oil.', gain: () => { run.maxOil += 30; run.oil += 30; }, lose: () => { run.maxOil -= 30; run.oil = Math.min(run.oil, run.maxOil); } },
   tithe: { name: 'Tithe Coin', desc: '+30% gold from fights.' },
   boneward: { name: 'Bone Ward', tag: 'ward', desc: 'Guard grants +4 Block.' },
-  leech: { name: 'Leech Tooth', tag: 'blood', desc: 'Strikes heal 1 HP.' },
+  leech: { name: 'Leech Tooth', tag: 'blood', desc: 'Strikes heal 1 health.' },
   blackcandle: { name: 'Black Candle', tag: 'hex', desc: 'Your skill recharges 1 turn faster.' },
   rustedbell: { name: 'Rusted Bell', tag: 'ward', desc: 'Start each fight with 6 Block.' },
-  knuckle: { name: "Saint's Knuckle", desc: 'Heal 4 HP after each fight.' },
+  knuckle: { name: "Saint's Knuckle", desc: 'Heal 4 health after each fight.' },
   deepflask: { name: 'Deep Flask', desc: 'Draughts heal 50% more.' },
   thornmail: { name: 'Thorn Mail', tag: 'ward', desc: 'When a foe hits you, it takes 3 damage.' },
   crow: { name: 'Crow Feather', desc: 'Fleeing costs nothing.' },
-  widow: { name: "Widow's Ring", tag: 'blood', desc: 'Below 30% HP, you deal 50% more damage.' },
+  widow: { name: "Widow's Ring", tag: 'blood', desc: 'Below 30% health, you deal 50% more damage.' },
   luckybone: { name: 'Lucky Knucklebone', desc: '15% chance to dodge each attack.' },
   serrated: { name: 'Serrated Edge', tag: 'blood', desc: 'Your Strikes make the foe Bleed 2.' },
   butcher: { name: "Butcher's Hook", tag: 'blood', desc: 'Your Strikes deal +3 damage to a Bleeding foe.' },
@@ -433,8 +595,8 @@ const RELICS = {
   lampeater: { name: 'Lamp-Eater', tag: 'lantern', desc: '+1 Strike damage for every 30 oil in your lantern.' },
   wickcharm: { name: 'Wick Charm', tag: 'lantern', desc: 'Winning a fight refills 8 more oil.' },
   hunter: { name: "Hunter's Mark", desc: 'Elites and bosses take 25% more damage from you.', unlock: 'rel_hunter' },
-  waxseal: { name: 'Wax Seal', desc: 'The first time you would die, survive at 1 HP. Then it breaks.', unlock: 'rel_waxseal' },
-  chalice: { name: 'Blood Chalice', tag: 'blood', desc: 'Strikes deal +1 damage for every 10 HP you are missing.', unlock: 'rel_chalice' },
+  waxseal: { name: 'Wax Seal', desc: 'The first time you would die, survive at 1 health. Then it breaks.', unlock: 'rel_waxseal' },
+  chalice: { name: 'Blood Chalice', tag: 'blood', desc: 'Strikes deal +1 damage for every 10 health you are missing.', unlock: 'rel_chalice' },
   ghostmoth: { name: 'Ghost Moth', tag: 'lantern', desc: 'Oil flasks and gold on the road are worth double.', unlock: 'rel_ghostmoth' },
 };
 const TAG_NAMES = { blood: 'Blood', ward: 'Ward', hex: 'Hex', lantern: 'Lantern' };
@@ -461,7 +623,7 @@ const ACHIEVEMENTS = [
   { id: 'set_lantern', name: 'Lamplighter', desc: 'Complete the Lantern set in one walk.', embers: 2 },
   { id: 'hoarder', name: 'Hoarder', desc: 'Carry 8 relics at once.', embers: 2 },
   { id: 'miser', name: 'Miser', desc: 'Hold 300 gold at once.', embers: 2 },
-  { id: 'flawless', name: 'Untouched', desc: 'Defeat an elite without losing any HP.', embers: 3 },
+  { id: 'flawless', name: 'Untouched', desc: 'Defeat an elite without losing any health.', embers: 3 },
   { id: 'daily1', name: 'Daily Bread', desc: 'Finish a Daily Road.', embers: 2 },
   { id: 'streak3', name: 'Creature of Habit', desc: 'Reach a 3-day Daily Road streak.', embers: 3 },
   { id: 'streak7', name: 'Pilgrim of Days', desc: 'Reach a 7-day Daily Road streak.', embers: 5 },
@@ -508,20 +670,20 @@ const ENEMIES = {
 const PC = (o) => Object.assign({ s: '#5f6266', d: '#3a3c41', t: '#3b3026', b: '#bfb8a6', g: '#2c3a24', r: '#6b2b22', p: '#1d3136', q: '#3d5a63', f: '#f29a3a', a: '#4a4542', y: '#d8b44a' }, o);
 const REGIONS = [
   { name: 'Gravefields', num: 'I', normals: ['ghoul', 'rats', 'bones'], elite: 'warden', boss: 'sexton',
-    pal: { ground: '#1a1e17', speck: '#252b21', speck2: '#2c3326', road: '#38322a', roadSpeck: '#463e34', edge: '#26211b', seam: '#2e2922', tiles: false, night: '#050308', dark: .86, density: .55, props: ['grave', 'grave', 'cross', 'deadtree', 'skulls', 'stone'], pc: PC({}), particle: 'mist' } },
+    pal: { ground: '#1a1e17', speck: '#252b21', speck2: '#2c3326', road: '#38322a', roadSpeck: '#463e34', edge: '#26211b', seam: '#2e2922', tiles: false, night: '#140f2a', dark: .8, density: .58, props: ['grave', 'grave', 'cross', 'deadtree', 'skulls', 'stone', 'candle', 'post'], pc: PC({}), particle: 'mist' } },
   { name: 'Drowned Chapel', num: 'II', normals: ['acolyte', 'bloat', 'bellwraith'], elite: 'choir', boss: 'bishop',
-    pal: { ground: '#121d1d', speck: '#1a2a29', speck2: '#1f3332', road: '#2c3534', roadSpeck: '#384342', edge: '#1b2423', seam: '#222b2a', tiles: true, night: '#03060a', dark: .87, density: .5, props: ['pillar', 'broken', 'puddle', 'puddle', 'grave', 'stone'], pc: PC({ s: '#56605e', d: '#353e3d', p: '#173038', q: '#4a7480' }), particle: 'rain' } },
+    pal: { ground: '#121d1d', speck: '#1a2a29', speck2: '#1f3332', road: '#2c3534', roadSpeck: '#384342', edge: '#1b2423', seam: '#222b2a', tiles: true, night: '#0a1426', dark: .8, density: .52, props: ['pillar', 'broken', 'puddle', 'puddle', 'grave', 'stone', 'candle', 'post'], pc: PC({ s: '#56605e', d: '#353e3d', p: '#173038', q: '#4a7480' }), particle: 'rain' } },
   { name: 'Thornwood', num: 'III', normals: ['wolf', 'witch', 'hanged'], elite: 'bramble', boss: 'antlered',
-    pal: { ground: '#121a0f', speck: '#1a2416', speck2: '#202d1a', road: '#3a2e21', roadSpeck: '#4a3c2c', edge: '#251d15', seam: '#2e251b', tiles: false, night: '#030502', dark: .89, density: .75, props: ['pine', 'pine', 'bush', 'bush', 'deadtree', 'stone'], pc: PC({ s: '#4e4a44', d: '#2e2b27', t: '#3a2a1c', g: '#22351c', r: '#8a2a2a' }), particle: 'fireflies' } },
+    pal: { ground: '#121a0f', speck: '#1a2416', speck2: '#202d1a', road: '#3a2e21', roadSpeck: '#4a3c2c', edge: '#251d15', seam: '#2e251b', tiles: false, night: '#0b1714', dark: .82, density: .75, props: ['pine', 'pine', 'bush', 'bush', 'deadtree', 'stone', 'post'], pc: PC({ s: '#4e4a44', d: '#2e2b27', t: '#3a2a1c', g: '#22351c', r: '#8a2a2a' }), particle: 'fireflies' } },
   { name: 'Ashen Keep', num: 'IV', normals: ['ashknight', 'hound', 'squire'], elite: 'kiln', boss: 'marshal',
-    pal: { ground: '#1f1714', speck: '#2a1f1b', speck2: '#33251f', road: '#3a3230', roadSpeck: '#4a403c', edge: '#251d1a', seam: '#2c2523', tiles: true, night: '#070302', dark: .85, density: .55, props: ['brazier', 'banner', 'rubble', 'broken', 'ash', 'stone'], pc: PC({ s: '#5a5250', d: '#38302e', r: '#7a2418', f: '#ff8a2a', y: '#ffd27a' }), particle: 'embers' } },
+    pal: { ground: '#1f1714', speck: '#2a1f1b', speck2: '#33251f', road: '#3a3230', roadSpeck: '#4a403c', edge: '#251d1a', seam: '#2c2523', tiles: true, night: '#1a0c10', dark: .78, density: .55, props: ['brazier', 'banner', 'rubble', 'broken', 'ash', 'stone', 'post'], pc: PC({ s: '#5a5250', d: '#38302e', r: '#7a2418', f: '#ff8a2a', y: '#ffd27a' }), particle: 'embers' } },
   { name: 'Hollow Throne', num: 'V', normals: ['courtier', 'shade', 'herald'], elite: 'kingsguard', boss: 'king',
-    pal: { ground: '#16131d', speck: '#1e1a28', speck2: '#252031', road: '#2d2937', roadSpeck: '#3a3546', edge: '#1d1a25', seam: '#24202e', tiles: true, night: '#040208', dark: .88, density: .5, props: ['statue', 'pillar', 'banner', 'brazier', 'skulls', 'stone'], pc: PC({ s: '#7a7488', d: '#4a4558', b: '#cfc8d8', r: '#5a2a4a', f: '#b88aff', y: '#e8d6ff' }), particle: 'motes' } },
+    pal: { ground: '#16131d', speck: '#1e1a28', speck2: '#252031', road: '#2d2937', roadSpeck: '#3a3546', edge: '#1d1a25', seam: '#24202e', tiles: true, night: '#120a26', dark: .82, density: .52, props: ['statue', 'pillar', 'banner', 'brazier', 'skulls', 'stone', 'candle'], pc: PC({ s: '#7a7488', d: '#4a4558', b: '#cfc8d8', r: '#5a2a4a', f: '#b88aff', y: '#e8d6ff' }), particle: 'motes' } },
 ];
 
 const UNLOCKS = [
-  { id: 'cls_hexblade', kind: 'Class', name: 'The Hexblade', cost: 25, desc: 'Curses foes with Doom and heals on every Strike. 52 HP.' },
-  { id: 'cls_pilgrim', kind: 'Class', name: 'The Pilgrim', cost: 25, desc: 'Heals as they fight with Holy Light. 62 HP, carries up to 4 draughts.' },
+  { id: 'cls_hexblade', kind: 'Class', name: 'The Hexblade', cost: 25, desc: 'Curses foes with Doom and heals on every Strike. 52 health.' },
+  { id: 'cls_pilgrim', kind: 'Class', name: 'The Pilgrim', cost: 25, desc: 'Heals as they fight with Holy Light. 62 health, carries up to 4 draughts.' },
   { id: 'start_relic', kind: 'Boon', name: 'Kindred Gift', cost: 30, desc: 'At the start of each walk, choose one of three relics to carry.' },
   { id: 'rel_hunter', kind: 'Relic', name: "Hunter's Mark", cost: 8, desc: RELICS.hunter.desc },
   { id: 'rel_ghostmoth', kind: 'Relic', name: 'Ghost Moth', cost: 8, desc: RELICS.ghostmoth.desc },
@@ -529,20 +691,19 @@ const UNLOCKS = [
   { id: 'rel_chalice', kind: 'Relic', name: 'Blood Chalice', cost: 10, desc: RELICS.chalice.desc },
   { id: 'ev_palemerchant', kind: 'Event', name: 'The Pale Merchant', cost: 8, desc: 'A mystery where you can trade one relic for two.' },
   { id: 'ev_mirror', kind: 'Event', name: 'The Mirror Pool', cost: 8, desc: 'A mystery that sharpens your skill at a price.' },
-  { id: 'ev_angel', kind: 'Event', name: 'The Chained Angel', cost: 10, desc: 'A mystery that can heal you fully and raise your max HP.' },
+  { id: 'ev_angel', kind: 'Event', name: 'The Chained Angel', cost: 10, desc: 'A mystery that can heal you fully and raise your max health.' },
 ];
-const UNLOCK_NOTE = 'Unlocks add the item to the pool for future walks. They are new options, not extra power.';
 
 // ───────────────────────── save data
 const LS_KEY = 'lantern-road-save-v1';
 const defaultMeta = () => ({ v: 1, embers: 0, unlocks: [], records: [], runs: 0, rev: 0, dark: 0,
-  daily: { streak: 0, last: null, best: 0, results: [] }, ach: [], foes: {}, relicsSeen: [] });
+  daily: { streak: 0, last: null, best: 0, results: [] }, ach: [], foes: {}, relicsSeen: [], tips: [] });
 function normalizeMeta(d) {
   const m = defaultMeta();
   if (d && typeof d === 'object') {
     const strs = a => Array.isArray(a) ? a.filter(u => typeof u === 'string') : [];
     m.embers = Number(d.embers) || 0; m.runs = Number(d.runs) || 0; m.rev = Number(d.rev) || 0;
-    m.unlocks = strs(d.unlocks); m.ach = strs(d.ach); m.relicsSeen = strs(d.relicsSeen);
+    m.unlocks = strs(d.unlocks); m.ach = strs(d.ach); m.relicsSeen = strs(d.relicsSeen); m.tips = strs(d.tips);
     m.records = Array.isArray(d.records) ? d.records.slice(0, 10) : [];
     m.dark = clamp(Number(d.dark) || 0, 0, 5);
     if (d.foes && typeof d.foes === 'object') for (const k in d.foes) m.foes[k] = Number(d.foes[k]) || 0;
@@ -601,54 +762,159 @@ function award(id) {
   const a = ACHIEVEMENTS.find(x => x.id === id); if (!a) return;
   meta.ach.push(id); meta.embers += a.embers;
   if (run) run.newAch.push(id);
-  commitMeta(); sfx('relic'); toast(`Achievement: ${a.name} (+${a.embers} embers)`, 'gold');
+  commitMeta(); sfx('relic'); toast(`${a.name} · +${a.embers}`, 'gold', 'trophy');
 }
 
 // ───────────────────────── sound
-let AC = null, muted = false;
-try { muted = localStorage.getItem('lantern-road-muted') === '1'; } catch (e) { }
-function tone(f, d, type = 'square', vol = .05, slide = 0, delay = 0) {
+// Player settings, remembered on this device.
+const settings = { sfx: true, music: true, motion: true };
+try {
+  Object.assign(settings, JSON.parse(localStorage.getItem('lantern-road-settings') || '{}'));
+  if (localStorage.getItem('lantern-road-muted') === '1') settings.sfx = settings.music = false;
+} catch (e) { }
+function saveSettings() { try { localStorage.setItem('lantern-road-settings', JSON.stringify(settings)); } catch (e) { } document.body.classList.toggle('calm', !settings.motion); }
+// Developer mode unlocks the 3×, 5× and 10× speeds. Open it by tapping the title seven times, or with #dev.
+let devMode = false;
+try { devMode = localStorage.getItem('lantern-road-dev') === '1' || location.hash === '#dev'; } catch (e) { }
+let AC = null;
+// Everything plays through a soft low-pass and a short echo, so nothing is shrill.
+let sfxBus = null, musicBus = null, echoIn = null;
+function audio() {
+  if (!AC) {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    const master = AC.createGain(), soft = AC.createBiquadFilter();
+    master.gain.value = .9; soft.type = 'lowpass'; soft.frequency.value = 5200;
+    master.connect(soft).connect(AC.destination);
+    sfxBus = AC.createGain(); sfxBus.connect(master);
+    musicBus = AC.createGain(); musicBus.gain.value = 0; musicBus.connect(master);
+    const delay = AC.createDelay(), fb = AC.createGain(), wet = AC.createGain();
+    delay.delayTime.value = .32; fb.gain.value = .32; wet.gain.value = .35;
+    echoIn = AC.createGain(); echoIn.connect(delay); delay.connect(fb).connect(delay); delay.connect(wet).connect(master);
+  }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(f, d, type = 'triangle', vol = .05, slide = 0, delay = 0, echo = 0, bus = sfxBus) {
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t);
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
-  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .03);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g); g.connect(bus);
+  if (echo) { const e = AC.createGain(); e.gain.value = echo; g.connect(e).connect(echoIn); }
+  o.start(t); o.stop(t + d + .05);
 }
-function noise(d, vol = .08) {
-  const len = Math.floor(AC.sampleRate * d), b = AC.createBuffer(1, len, AC.sampleRate), ch = b.getChannelData(0);
-  for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
-  const s = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
-  s.buffer = b; f.type = 'lowpass'; f.frequency.value = 1600; g.gain.value = vol;
-  s.connect(f).connect(g).connect(AC.destination); s.start();
+const noiseBuf = () => { const len = AC.sampleRate * 2, b = AC.createBuffer(1, len, AC.sampleRate), ch = b.getChannelData(0); for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1; return b; };
+let NOISE = null;
+function noise(d, vol = .08, freq = 1400, delay = 0, bus = sfxBus) {
+  NOISE = NOISE || noiseBuf();
+  const t = AC.currentTime + delay, s = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  s.buffer = NOISE; f.type = 'lowpass'; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  s.connect(f).connect(g).connect(bus); s.start(t, Math.random()); s.stop(t + d + .02);
 }
 function sfx(k) {
-  if (muted) return;
+  if (!settings.sfx) return;
   try {
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    if (AC.state === 'suspended') AC.resume();
+    audio();
     switch (k) {
-      case 'hit': noise(.1, .12); tone(140, .1, 'square', .04, -70); break;
-      case 'hurt': noise(.18, .14); tone(90, .22, 'sawtooth', .05, -40); break;
-      case 'block': tone(190, .07, 'triangle', .08); tone(120, .1, 'triangle', .06, 0, .04); break;
-      case 'coin': tone(990, .05, 'square', .03); tone(1320, .08, 'square', .03, 0, .05); break;
-      case 'oil': tone(300, .14, 'sine', .08, 240); break;
-      case 'click': tone(520, .03, 'square', .02); break;
-      case 'win': [392, 494, 587, 784].forEach((f, i) => tone(f, .18, 'triangle', .05, 0, i * .08)); break;
-      case 'die': [330, 262, 196, 131].forEach((f, i) => tone(f, .35, 'sawtooth', .04, 0, i * .18)); break;
-      case 'skill': tone(200, .25, 'sawtooth', .045, 420); noise(.15, .07); break;
-      case 'heal': [523, 659, 784].forEach((f, i) => tone(f, .2, 'sine', .06, 0, i * .07)); break;
-      case 'relic': [587, 740, 880, 1175].forEach((f, i) => tone(f, .22, 'triangle', .045, 0, i * .08)); break;
+      case 'hit': noise(.09, .1, 900); tone(170, .12, 'triangle', .07, -80); break;
+      case 'bighit': noise(.18, .16, 700); tone(110, .26, 'triangle', .09, -60); tone(330, .14, 'sine', .035); break;
+      case 'hurt': noise(.16, .12, 600); tone(120, .24, 'sine', .07, -50); break;
+      case 'block': tone(260, .08, 'sine', .07); tone(180, .14, 'triangle', .05, 0, .03); break;
+      case 'coin': tone(1046, .1, 'sine', .035, 0, 0, .3); tone(1568, .16, 'sine', .03, 0, .06, .3); break;
+      case 'oil': tone(392, .2, 'sine', .06, 180, 0, .3); break;
+      case 'click': tone(700, .04, 'sine', .022); break;
+      case 'tick': tone(880 + Math.random() * 60, .05, 'sine', .022); break;
+      case 'win': [523, 659, 784, 1046].forEach((f, i) => tone(f, .4, 'triangle', .045, 0, i * .09, .4)); break;
+      case 'die': [392, 330, 262, 196].forEach((f, i) => tone(f, .7, 'sine', .05, 0, i * .24, .4)); break;
+      case 'skill': tone(330, .32, 'triangle', .05, 330); noise(.14, .05, 2400); break;
+      case 'heal': [523, 659, 784].forEach((f, i) => tone(f, .35, 'sine', .05, 0, i * .07, .4)); break;
+      case 'relic': [587, 740, 880, 1175].forEach((f, i) => tone(f, .45, 'triangle', .04, 0, i * .08, .5)); break;
+      case 'chest': noise(.28, .06, 500); tone(196, .22, 'triangle', .05); [784, 988, 1175, 1568].forEach((f, i) => tone(f, .45, 'sine', .032, 0, .28 + i * .06, .5)); break;
+      case 'kindle': noise(.45, .08, 900); [392, 523, 659, 784].forEach((f, i) => tone(f, .55, 'triangle', .04, 0, .1 + i * .1, .5)); break;
+      case 'region': [392, 494, 587].forEach((f, i) => tone(f, 1.4, 'triangle', .035, 0, i * .18, .5)); break;
     }
   } catch (e) { }
 }
+
+// Ambient music: a low drone and a slow, sparse melody on a soft pluck, composed on the fly in each region's key.
+const SCALES = [
+  { root: 110, steps: [0, 3, 5, 7, 10, 12, 15], tempo: 1.1 },    // Gravefields
+  { root: 98, steps: [0, 2, 3, 7, 9, 10, 14], tempo: 1.25, rain: true }, // Drowned Chapel
+  { root: 82.41, steps: [0, 3, 5, 7, 10, 12, 14], tempo: 1 },    // Thornwood
+  { root: 87.31, steps: [0, 1, 5, 7, 8, 12, 13], tempo: .95 },   // Ashen Keep
+  { root: 92.5, steps: [0, 3, 7, 8, 10, 12, 15], tempo: 1.3 },   // Hollow Throne
+];
+const HEARTH_SCALE = { root: 110, steps: [0, 4, 7, 9, 12, 14, 16], tempo: 1.4 }; // the title and the Pyre
+const music = { on: false, key: null, next: 0, timer: 0, drone: null };
+const musicKey = () => (run && screen === 'travel') ? SCALES[run.region] : HEARTH_SCALE;
+function startMusic() {
+  if (!settings.music || music.on) return;
+  try { audio(); } catch (e) { return; }
+  music.on = true; music.key = null; music.next = AC.currentTime + .3;
+  musicBus.gain.cancelScheduledValues(AC.currentTime); musicBus.gain.setValueAtTime(musicBus.gain.value, AC.currentTime);
+  musicBus.gain.linearRampToValueAtTime(.6, AC.currentTime + 2.5);
+  music.timer = setInterval(scheduleMusic, 200);
+}
+function stopMusic() {
+  if (!music.on) return;
+  music.on = false; clearInterval(music.timer); stopDrone();
+  if (AC) { musicBus.gain.cancelScheduledValues(AC.currentTime); musicBus.gain.linearRampToValueAtTime(0, AC.currentTime + .6); }
+}
+function scheduleMusic() {
+  const key = musicKey();
+  if (key !== music.key) { music.key = key; setDrone(key); }
+  while (music.next < AC.currentTime + .7) {
+    const t = music.next, beat = key.tempo;
+    if (Math.random() < .6) {
+      const f = key.root * 4 * 2 ** (key.steps[Math.floor(Math.random() * key.steps.length)] / 12);
+      pluck(f, t, 1);
+      if (Math.random() < .22) pluck(f * 2 ** (key.steps[2] / 12), t + beat / 2, .55);
+    }
+    if (key !== HEARTH_SCALE && Math.random() < .35) noise(.025, .012, 2600, t - AC.currentTime + Math.random() * beat, musicBus); // the lantern's crackle
+    music.next += beat * (Math.random() < .2 ? 2 : 1);
+  }
+}
+function pluck(f, t, v) {
+  const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter(), e = AC.createGain();
+  o.type = 'triangle'; o.frequency.value = f; lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(2400, t); lp.frequency.exponentialRampToValueAtTime(480, t + 1.2);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05 * v, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + 1.9);
+  e.gain.value = .6; o.connect(lp).connect(g); g.connect(musicBus); g.connect(e).connect(echoIn);
+  o.start(t); o.stop(t + 2);
+}
+function setDrone(key) {
+  stopDrone();
+  const t = AC.currentTime, g = AC.createGain(), lp = AC.createBiquadFilter();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + 3);
+  lp.type = 'lowpass'; lp.frequency.value = 420;
+  const nodes = [key.root, key.root * 1.5, key.root * 2.003].map((f, i) => { const o = AC.createOscillator(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = f; o.connect(lp); o.start(t); return o; });
+  const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = .07; lg.gain.value = .02; lfo.connect(lg).connect(g.gain); lfo.start(t); nodes.push(lfo);
+  lp.connect(g).connect(musicBus);
+  if (key.rain) { // soft rain on the chapel stones
+    NOISE = NOISE || noiseBuf();
+    const r = AC.createBufferSource(), bp = AC.createBiquadFilter(), rg = AC.createGain();
+    r.buffer = NOISE; r.loop = true; bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = .6; rg.gain.value = .5;
+    r.connect(bp).connect(rg).connect(g); r.start(t); nodes.push(r);
+  }
+  music.drone = { g, nodes };
+}
+function stopDrone() {
+  const d = music.drone; if (!d || !AC) return;
+  const t = AC.currentTime; d.g.gain.cancelScheduledValues(t); d.g.gain.setValueAtTime(d.g.gain.value, t); d.g.gain.linearRampToValueAtTime(0, t + 1.5);
+  d.nodes.forEach(n => n.stop(t + 1.6)); music.drone = null;
+}
+// Browsers only allow sound after the player has touched the page.
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => startMusic(), { passive: true }));
 
 // ───────────────────────── run state
 let screen = 'title';
 let run = null, C = null, paused = false, lastRun = null;
 // Game speed and auto mode are per-viewer conveniences, remembered in this browser.
-const SPEEDS = [1, 2, 3, 5, 10];
+// Players get 1× and 2×; developer mode adds 3×, 5× and 10×.
+const speedList = () => devMode ? [1, 2, 3, 5, 10] : [1, 2];
 let speed = 1, auto = false, chosenDark = 0;
-try { const s = JSON.parse(localStorage.getItem('lantern-road-play') || '{}'); if (SPEEDS.includes(s.speed)) speed = s.speed; auto = !!s.auto; chosenDark = Number(s.dark) || 0; } catch (e) { }
+try { const s = JSON.parse(localStorage.getItem('lantern-road-play') || '{}'); if (speedList().includes(s.speed)) speed = s.speed; auto = !!s.auto; chosenDark = Number(s.dark) || 0; } catch (e) { }
 function savePlayPrefs() { try { localStorage.setItem('lantern-road-play', JSON.stringify({ speed, auto, dark: chosenDark })); } catch (e) { } }
 const demo = { region: 0, dist: 0, lane: 1, px: LANES[1], oil: 85, maxOil: 100, cls: 'sellsword', t: 0, beats: null, pickups: null, beatIdx: 0 };
 const has = id => !!run && run.relics.includes(id);
@@ -672,11 +938,11 @@ function newRun(cls, opts = {}) {
 // Darkness levels stack: choosing Darkness III also applies I and II.
 const DARKNESS = [
   { name: 'No Darkness', desc: 'The road as it was meant to be walked.' },
-  { name: 'Darkness I', desc: 'Foes have 15% more HP.' },
+  { name: 'Darkness I', desc: 'Foes have 15% more health.' },
   { name: 'Darkness II', desc: 'Your lantern burns 25% faster.' },
   { name: 'Darkness III', desc: 'Elites and bosses hit 2 harder.' },
   { name: 'Darkness IV', desc: 'Merchants charge 25% more, and fights drop less gold.' },
-  { name: 'Darkness V', desc: 'Foes have 30% more HP and every foe hits 1 harder.' },
+  { name: 'Darkness V', desc: 'Foes have 30% more health and every foe hits 1 harder.' },
 ];
 const darkAt = n => !!run && run.dark >= n;
 const darkMult = d => 1 + .25 * d; // score bonus per Darkness level
@@ -723,13 +989,13 @@ function showRegionCard() {
   const c = $('#card'); const R = REGIONS[run.region];
   c.querySelector('.n').textContent = (run.daily ? 'Daily Road · ' : run.dark ? DARKNESS[run.dark].name + ' · ' : '') + 'Region ' + R.num;
   c.querySelector('.t').textContent = R.name;
-  c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
+  c.classList.remove('show'); void c.offsetWidth; c.classList.add('show'); sfx('region');
 }
 
 // ───────────────────────── helpers that change the run
 function heal(n) { const b = run.hp; run.hp = Math.min(run.maxHp, run.hp + n); return run.hp - b; }
 function addOil(n) { const b = run.oil; run.oil = Math.min(run.maxOil, run.oil + n); const g = Math.round(run.oil - b); return g > 0 ? ['good', `+${g} oil`] : null; }
-function hurt(n, cause) { run.hp -= n; sfx('hurt'); flashHurt(); const l = ['bad', `−${n} HP`]; checkDeath(cause); return l; }
+function hurt(n, cause) { run.hp -= n; sfx('hurt'); flashHurt(); const l = ['bad', `−${n} health`]; checkDeath(cause); return l; }
 function checkDeath(cause) {
   if (run.hp > 0) return false;
   if (has('waxseal')) { run.hp = 1; loseRelic('waxseal'); toast('The Wax Seal breaks. You live.', 'good'); return false; }
@@ -738,9 +1004,11 @@ function checkDeath(cause) {
 function grantRelic(id) {
   if (has(id)) return;
   const tag = RELICS[id].tag, before = tag && setOn(tag);
-  run.relics.push(id); RELICS[id].gain && RELICS[id].gain(); sfx('relic'); toast('Relic: ' + RELICS[id].name, 'gold');
+  run.relics.push(id); RELICS[id].gain && RELICS[id].gain(); sfx('relic'); toast(RELICS[id].name, 'gold', 'relic');
+  if (!hint('relic', 'Relics last for the whole walk. Tap the relic counter at the top to see yours.', '[data-stat="relic"]') && tag && tagCount(tag) === 2)
+    hint('sets', `Relics of one style work together. Find one more ${TAG_NAMES[tag]} relic to awaken ${SETS[tag].name}.`);
   if (!meta.relicsSeen.includes(id)) { meta.relicsSeen.push(id); saveLocal(); }
-  if (tag && !before && setOn(tag)) { toast(`Set bonus: ${SETS[tag].name}`, 'gold'); award('set_' + tag); }
+  if (tag && !before && setOn(tag)) { toast(`${SETS[tag].name} awakens`, 'gold', TAG_ICONS[tag]); award('set_' + tag); }
   if (run.relics.length >= 8) award('hoarder');
 }
 function loseRelic(id) { const i = run.relics.indexOf(id); if (i < 0) return; run.relics.splice(i, 1); RELICS[id].lose && RELICS[id].lose(); }
@@ -748,12 +1016,11 @@ function loseRelic(id) { const i = run.relics.indexOf(id); if (i < 0) return; ru
 const pooled = u => !u || (!run.daily && unlocked(u));
 function relicPool() { return Object.keys(RELICS).filter(id => !has(id) && pooled(RELICS[id].unlock)); }
 function drawRelics(n) { return shuffle(relicPool()).slice(0, n); }
-const relicLabel = id => RELICS[id].name + (RELICS[id].tag ? ` · ${TAG_NAMES[RELICS[id].tag]}` : '');
 const tagCount = tag => run.relics.filter(id => RELICS[id].tag === tag).length;
 function setHint(id) {
   const t = RELICS[id].tag; if (!t) return '';
   const n = tagCount(t);
-  return n >= 3 ? ` (${SETS[t].name} is already active.)` : ` (${TAG_NAMES[t]} ${n}/3${n === 2 ? `: this completes ${SETS[t].name}` : ''}.)`;
+  return n >= 3 ? ` ${SETS[t].name} is already awake.` : n === 2 ? ` Awakens ${SETS[t].name}!` : ` ${TAG_NAMES[t]} style: you carry ${n} of 3.`;
 }
 const setOn = tag => !!run && tagCount(tag) >= 3;
 // Strike damage as visible parts, so combat can show the math the way it adds up.
@@ -781,7 +1048,7 @@ function resize() {
   ctx.imageSmoothingEnabled = false;
 }
 
-let parts = [];
+let parts = [], stepWas = 0;
 function spawnPart(kind) {
   const P = {
     mist: () => ({ x: vrand(-4, W), y: vrand(0, H), vx: vrand(-3, 3), vy: vrand(-1, 1), life: vrand(3, 6), c: 'rgba(170,180,190,.16)', w: 3, h: 1 }),
@@ -794,7 +1061,7 @@ function spawnPart(kind) {
 }
 function updParts(dt, scrollV, kind) {
   const rate = { mist: 7, rain: 70, fireflies: 3, embers: 9, motes: 5 }[kind] || 0;
-  let n = rate * dt * (reduceMotion ? .3 : 1);
+  let n = rate * dt * (noMotion() ? .3 : 1);
   while (n > 0) { if (Math.random() < n) spawnPart(kind); n -= 1; }
   for (const p of parts) {
     if (kind === 'fireflies') { p.vx += vrand(-25, 25) * dt; p.vy += vrand(-25, 25) * dt; p.vx *= .98; p.vy *= .98; }
@@ -843,7 +1110,7 @@ function render(t) {
     const y = base - spr.height;
     if (y > H || base < 0) continue;
     ctx.drawImage(spr, x, y);
-    if (pr.glow) lights.push([x + pr.glow[0], y + pr.glow[1], pr.glow[2] + Math.sin(t * 9 + s) * 1.2, .85]);
+    if (pr.glow) lights.push([x + pr.glow[0], y + pr.glow[1], pr.glow[2] + (noMotion() ? 0 : Math.sin(t * 9 + s) * 1.2), .85, pr.warm]);
   }
   // beats: fork dividers and road bands
   const icons = [];
@@ -877,39 +1144,46 @@ function render(t) {
     ctx.drawImage(spr, x - Math.floor(spr.width / 2), y - Math.floor(spr.height / 2));
     lights.push([x, y, 7, .6]);
   }
-  // player
+  // the lantern-bearer: a 4-step walk, a soft shadow, and a lantern that swings from the hand
   const moving = inRun ? (!run.event && !paused) : true;
-  const fr = moving && !reduceMotion ? Math.floor(t * 4) % 2 : 0;
-  const cls = inRun ? run.cls : demo.cls;
-  const ps = sprite(fr ? PLAYER_B : PLAYER_A, CLASSES[cls].pal, 'pl' + cls + fr);
-  const px = Math.round(v.px);
-  ctx.drawImage(ps, px - 6, PY - 14);
-  const lx = px + 5, ly = PY - 4;
+  const step = moving && !noMotion() ? Math.floor(t * 6) % 4 : 0;
+  const lift = step === 1 || step === 3 ? 1 : 0;
+  const cls = inRun ? run.cls : demo.cls, pal = CLASSES[cls].pal;
+  const px = Math.round(v.px), hx = px - 7, hy = PY - 17 + lift;
+  ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(hx + 3, PY, 9, 1); ctx.fillRect(hx + 2, PY - 1, 11, 1);
+  ctx.drawImage(sprite(HERO_LEGS[step], pal, 'hl' + cls + step), hx, PY - 2);
+  ctx.drawImage(sprite(HERO_BODY, pal, 'hb' + cls), hx, hy);
+  const swing = noMotion() ? 0 : Math.round(Math.sin(t * 4.2) * 1.2);
+  ctx.drawImage(sprite(LANTERN, LANTERN_PAL, 'lantern'), hx + 10 + swing, hy + 7);
+  const lx = hx + 12 + swing, ly = hy + 10;
+  if (moving && step !== stepWas && (step === 0 || step === 2) && !noMotion()) parts.push({ x: hx + (step ? 9 : 4), y: PY, vx: vrand(-3, 3), vy: -4, life: .45, c: 'rgba(196,170,140,.35)', w: 1, h: 1 });
+  stepWas = step;
   // darkness
   const oilR = v.maxOil ? v.oil / v.maxOil : .8;
-  const flick = reduceMotion ? 0 : Math.sin(t * 11) * .8 + Math.sin(t * 23.7) * .5;
-  const R0 = 13 + 50 * Math.sqrt(oilR) + flick;
+  const flick = noMotion() ? 0 : Math.sin(t * 11) * .8 + Math.sin(t * 23.7) * .5;
+  const R0 = 18 + 54 * Math.sqrt(oilR) + flick;
   mctx.globalCompositeOperation = 'source-over'; mctx.clearRect(0, 0, W, H);
   mctx.globalAlpha = P.dark; mctx.fillStyle = P.night; mctx.fillRect(0, 0, W, H); mctx.globalAlpha = 1;
   mctx.globalCompositeOperation = 'destination-out';
+  punch(lx, ly, R0 * 1.75, .35);
   punch(lx, ly, R0, 1);
   for (const l of lights) punch(l[0], l[1], l[2], l[3]);
   for (const p of parts) if (p.glow) punch(p.x, p.y, 4, .5);
   ctx.drawImage(mask, 0, 0);
   ctx.globalCompositeOperation = 'lighter';
-  const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, R0 * .85);
-  g.addColorStop(0, 'rgba(242,150,50,.24)'); g.addColorStop(1, 'rgba(242,150,50,0)');
-  ctx.fillStyle = g; ctx.fillRect(lx - R0, ly - R0, R0 * 2, R0 * 2);
+  const warm = (x, y, r, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(255,160,70,${a})`); g.addColorStop(.6, `rgba(230,110,60,${a * .35})`); g.addColorStop(1, 'rgba(230,110,60,0)'); ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); };
+  warm(lx, ly, R0, .3);
+  for (const l of lights) if (l[4]) warm(l[0], l[1], l[2] * 1.2, .22);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#ffe2a0'; ctx.fillRect(lx - 1, ly - 1, 1, 1);
+  ctx.fillStyle = '#fff3c8'; ctx.fillRect(lx - 1, ly - 1, 1, 1);
   // event icons sit above the darkness, like will-o'-wisps
   for (const [type, x, cy, sel] of icons) {
     const ic = ICONS[type], spr = sprite(ic.map, ic.pal, 'i:' + type);
-    const bob = reduceMotion ? 0 : Math.round(Math.sin(t * 3 + x * .3));
+    const bob = noMotion() ? 0 : Math.round(Math.sin(t * 3 + x * .3));
     const ix = Math.round(x - spr.width / 2), iy = Math.round(cy - spr.height / 2) + bob;
     ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(ix - 1, iy - 1, spr.width + 2, spr.height + 2);
     ctx.drawImage(spr, ix, iy);
-    if (sel) { ctx.fillStyle = '#f2a03d'; ctx.fillRect(x - 2, iy + spr.height + 2, 5, 1); ctx.fillRect(x - 1, iy + spr.height + 3, 3, 1); ctx.fillRect(x, iy + spr.height + 4, 1, 1); }
+    if (sel) { ctx.fillStyle = '#f4a646'; ctx.fillRect(x - 2, iy + spr.height + 2, 5, 1); ctx.fillRect(x - 1, iy + spr.height + 3, 3, 1); ctx.fillRect(x, iy + spr.height + 4, 1, 1); }
   }
   // particles
   for (const p of parts) {
@@ -940,6 +1214,9 @@ function update(dt) {
     for (const p of run.pickups) {
       if (!p.done && run.dist >= p.pos) { p.done = true; if (Math.abs(run.px - LANES[p.lane]) < 10) collect(p); }
     }
+    const nb = run.beats[run.beatIdx];
+    if (nb && nb.kind === 'fork' && beatPos(run.beatIdx) - run.dist < 130) hint('steer', 'The road splits ahead. Steer into the path you want before you reach it.', '#btnL, #btnR');
+    if (run.oil < run.maxOil * .3) hint('oil', 'Your lantern is running low. Oil flasks, won fights and campfires refill it.');
     if (run.beatIdx < run.beats.length && run.dist >= beatPos(run.beatIdx)) { run.dist = beatPos(run.beatIdx); triggerBeat(); }
   } else if (!inRun) {
     demo.dist += 11 * dt; scrollV = 11; demo.t += dt;
@@ -949,9 +1226,9 @@ function update(dt) {
   updParts(dt, scrollV, REGIONS[v.region].pal.particle);
 }
 function collect(p) {
-  const mult = has('ghostmoth') ? 2 : 1;
-  if (p.type === 'flask') { const l = addOil(12 * mult); sfx('oil'); toast(l ? l[1] : 'Your lantern is already full', 'good'); }
-  else { run.gold += 6 * mult; sfx('coin'); toast(`+${6 * mult} gold`, 'gold'); }
+  const mult = has('ghostmoth') ? 2 : 1, from = heroPoint();
+  if (p.type === 'flask') { const l = addOil(12 * mult); sfx('oil'); flyTo('oil', from, 'oil'); if (l) toast(l[1].replace(' oil', ''), 'good', 'oil'); }
+  else { run.gold += 6 * mult; sfx('coin'); flyTo('gold', from, 'gold'); toast(`+${6 * mult}`, 'gold', 'gold'); }
 }
 function move(dir) {
   if (!run || screen !== 'travel' || run.event || paused) return;
@@ -968,6 +1245,7 @@ let last = 0;
 function loop(ts) {
   const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
   update(dt); autoTick(ts); render(ts / 1000); updateHUD();
+  if (screen === 'pyre') drawPyre(ts / 1000);
   requestAnimationFrame(loop);
 }
 
@@ -981,7 +1259,7 @@ function updateHUD() {
   if (k === hudKey) return; hudKey = k;
   if (run.gold >= 300) award('miser');
   const R = REGIONS[run.region];
-  const mode = run.daily ? 'Daily' : run.dark ? `D${run.dark}` : '';
+  const mode = run.daily ? 'Daily' : run.dark ? DARKNESS[run.dark].name.replace('Darkness ', 'Dark ') : '';
   const pips = h('div', { class: 'pips', 'aria-label': `Event ${Math.min(run.beatIdx + 1, 10)} of 10` });
   for (let i = 0; i < run.beats.length; i++) {
     const last = i === run.beats.length - 1;
@@ -990,28 +1268,74 @@ function updateHUD() {
   const hpLow = run.hp / run.maxHp < .3, oilLow = run.oil / run.maxOil < .2;
   const nb = run.beats[run.beatIdx];
   let ahead;
-  if (!nb) ahead = h('div', { class: 'slot wide' }, h('span', { text: 'The road ends here' }));
-  else if (nb.kind === 'fork') ahead = nb.opts.map((o, l) => h('div', { class: 'slot' + (l === run.lane ? ' on' : '') }, iconCanvas(o), h('span', { text: TYPE_NAMES[o] })));
-  else ahead = h('div', { class: 'slot wide on' }, iconCanvas(nb.type), h('span', { text: TYPE_NAMES[nb.type] + (nb.type === 'boss' ? ': ' + ENEMIES[R.boss].name : ' blocks the road') }));
+  if (!nb) ahead = h('div', { class: 'slot' }, h('span', { text: 'The road is quiet' }));
+  else if (nb.kind === 'fork') ahead = nb.opts.map((o, l) => h('div', { class: 'slot' + (l === run.lane ? ' on' : '') }, ico(o), h('span', { text: TYPE_NAMES[o] })));
+  else if (nb.type === 'boss') ahead = h('div', { class: 'slot boss' }, ico('boss'), h('span', { text: ENEMIES[R.boss].name }));
+  else ahead = h('div', { class: 'slot on' }, ico(nb.type), h('span', { text: TYPE_NAMES[nb.type] }));
+  const vals = { gold: run.gold, draught: run.draughts, score: run.score, relic: run.relics.length };
+  const stat = (key, icon, text, tip, extra = {}) => h(extra.onclick ? 'button' : 'span',
+    Object.assign({ class: 'st' + (key === 'gold' ? ' g' : '') + (hudPrev[key] != null && vals[key] > hudPrev[key] ? ' bump' : ''), 'data-stat': key, 'data-tip': tip }, extra), ico(icon), h('b', { text }));
   $('#hud').replaceChildren(
     h('div', { class: 'hud-top' }, h('div', { class: 'region' }, h('b', { text: R.num }), R.name, mode ? h('span', { class: 'mode', text: mode }) : null), pips),
-    h('div', { class: 'meters' },
-      h('div', { class: 'meter' + (hpLow ? ' low' : ''), role: 'img', 'aria-label': `HP ${run.hp} of ${run.maxHp}` }, h('i', { style: `width:${100 * run.hp / run.maxHp}%` }), h('span', {}, h('span', { text: 'HP' }), h('span', { text: `${run.hp}/${run.maxHp}` }))),
-      h('div', { class: 'meter oil' + (oilLow ? ' low' : ''), role: 'img', 'aria-label': `Oil ${Math.ceil(run.oil)} of ${run.maxOil}` }, h('i', { style: `width:${100 * run.oil / run.maxOil}%` }), h('span', {}, h('span', { text: 'OIL' }), h('span', { text: `${Math.ceil(run.oil)}/${run.maxOil}` })))),
-    h('div', { class: 'stats' },
-      h('span', { class: 'g' }, 'Gold ', h('b', { text: run.gold })),
-      h('span', {}, 'Draughts ', h('b', { text: `${run.draughts}/${run.maxDraughts}` })),
-      h('span', {}, 'Score ', h('b', { text: run.score })),
-      h('button', { class: 'chipbtn', onclick: openRelics, text: `Relics ${run.relics.length}` })),
-    h('div', { class: 'ahead' }, h('span', { class: 'lbl', text: 'Next' }), ahead));
+    h('div', { class: 'hud-bars' },
+      h('div', { class: 'bar', 'data-stat': 'hp', 'data-tip': 'Health|When it runs out, the walk is over.' }, ico('heart'),
+        h('div', { class: 'meter' + (hpLow ? ' low' : ''), role: 'img', 'aria-label': `Health ${run.hp} of ${run.maxHp}` }, h('i', { style: `width:${100 * run.hp / run.maxHp}%` })), h('b', { text: `${run.hp}/${run.maxHp}` })),
+      h('div', { class: 'bar', 'data-stat': 'oil', 'data-tip': 'Lantern oil|Burns as you walk. If it runs out, the dark hurts you.' }, ico('oil'),
+        h('div', { class: 'meter oil' + (oilLow ? ' low' : ''), role: 'img', 'aria-label': `Oil ${Math.ceil(run.oil)} of ${run.maxOil}` }, h('i', { style: `width:${100 * run.oil / run.maxOil}%` })), h('b', { text: Math.ceil(run.oil) }))),
+    h('div', { class: 'hud-stats' },
+      stat('gold', 'gold', run.gold, 'Gold|Spend it at merchants and shrines.'),
+      stat('draught', 'draught', `${run.draughts}/${run.maxDraughts}`, 'Healing draughts|Drink one in a fight without losing your turn.'),
+      stat('score', 'score', run.score, 'Score|Foes, bosses and regions add to it.'),
+      stat('relic', 'relic', run.relics.length, null, { onclick: openRelics, 'aria-label': `Relics: ${run.relics.length}` })),
+    h('div', { class: 'ahead' }, ahead));
+  hudPrev = vals;
 }
+let hudPrev = {};
 
-function toast(text, cls = '') {
-  const el = h('div', { class: 'toast ' + cls, text });
-  $('#toasts').append(el); setTimeout(() => el.remove(), 2000);
+function toast(text, cls = '', icon) {
+  const el = h('div', { class: 'toast ' + cls }, icon ? ico(icon) : null, text);
+  $('#toasts').append(el); setTimeout(() => el.remove(), 2200);
   const all = $('#toasts').children; if (all.length > 4) all[0].remove();
 }
 function flashHurt() { const el = $('#hurt'); el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 90); }
+// Shake the whole frame; bigger hits shake harder.
+function shakeFrame(level) {
+  if (noMotion() || !level) return;
+  frameEl.classList.remove('shake1', 'shake2', 'shake3'); void frameEl.offsetWidth; frameEl.classList.add('shake' + Math.min(3, level));
+  setTimeout(() => frameEl.classList.remove('shake' + Math.min(3, level)), 500);
+}
+// Where the lantern-bearer stands on screen, in frame pixels.
+function heroPoint() {
+  const fr = frameEl.getBoundingClientRect(), r = cv.getBoundingClientRect();
+  return { x: r.left - fr.left + (run ? run.px : 60) / W * r.width, y: r.top - fr.top + (PY - 10) / H * r.height };
+}
+// A small icon flies from a point into its counter on the HUD.
+function flyTo(icon, from, stat) {
+  const target = $(`#hud [data-stat="${stat}"] .ico`); if (!target) return;
+  const fr = frameEl.getBoundingClientRect(), r = target.getBoundingClientRect();
+  const to = { x: r.left - fr.left + r.width / 2, y: r.top - fr.top + r.height / 2 };
+  const el = h('img', { class: 'fly', src: iconURL(icon), alt: '' }); frameEl.append(el);
+  const dx = vrand(-30, 30);
+  const anim = el.animate([
+    { transform: `translate(${from.x - 8}px,${from.y - 8}px) scale(.6)` },
+    { transform: `translate(${from.x - 8 + dx}px,${from.y - 40}px) scale(1.3)`, offset: .3 },
+    { transform: `translate(${to.x - 8}px,${to.y - 8}px) scale(.9)` }], { duration: noMotion() ? 1 : 650, easing: 'cubic-bezier(.5,0,.6,1)' });
+  anim.onfinish = () => el.remove();
+}
+// One-time hints that teach the game during the first walks. Dismissed hints never return.
+let hintTimer = 0, hintNudge = null;
+function hint(id, text, nudge) {
+  if (auto || meta.tips.includes(id) || !$('#hint').hidden) return false;
+  meta.tips.push(id); saveLocal();
+  const box = $('#hint');
+  box.replaceChildren(ico('lantern', 'lg'), h('p', { text }), h('button', { class: 'small', onclick: closeHint, text: 'Got it' }));
+  box.hidden = false;
+  hintNudge = nudge ? [...document.querySelectorAll(nudge)] : null;
+  if (hintNudge) hintNudge.forEach(el => el.classList.add('nudge'));
+  clearTimeout(hintTimer); hintTimer = setTimeout(closeHint, 9000);
+  return true;
+}
+function closeHint() { $('#hint').hidden = true; if (hintNudge) hintNudge.forEach(el => el.classList.remove('nudge')); hintNudge = null; }
 
 // ───────────────────────── panels
 const panel = $('#panel');
@@ -1028,8 +1352,13 @@ function closePanel() { panel.hidden = true; panel.replaceChildren(); }
 
 function choiceBtn(c, i) {
   return h('button', { class: 'btn', disabled: c.disabled, 'data-k': i + 1, onclick: () => { sfx('click'); c.run(); } },
-    h('span', { class: 'key', text: i + 1 }), c.label, c.hint ? h('span', { class: 'sub', text: c.hint }) : null);
+    c.icon ? ico(c.icon) : null, h('span', { class: 'key', text: i + 1 }), c.label,
+    c.price != null ? h('span', { class: 'price' }, ico('gold'), c.price) : null,
+    c.hint ? h('span', { class: 'sub', text: c.hint }) : null);
 }
+// Reward lines get the icon of whatever they give.
+const LINE_ICONS = [[/score/i, 'score'], [/gold/i, 'gold'], [/oil|lantern/i, 'oil'], [/relic|lost:/i, 'relic'], [/draught/i, 'draught'], [/strike/i, 'sword'], [/ember/i, 'ember'], [/HP|health/i, 'heart']];
+const lineIcon = t => { for (const [re, i] of LINE_ICONS) if (re.test(t)) return i; return null; };
 function eventCard({ art, kicker, title, text, choices, autoPick }) {
   openPanel(h('div', { class: 'ev' },
     h('div', { class: 'ev-head' }, art ? iconCanvas(art) : null, h('div', {}, h('div', { class: 'kicker', text: kicker }), h('h2', { text: title }))),
@@ -1041,7 +1370,7 @@ function result(title, text, lines = [], then = finishEvent, kicker = 'Outcome')
   openPanel(h('div', { class: 'ev' },
     h('div', { class: 'kicker', text: kicker }), h('h2', { text: title }),
     text ? h('p', { class: 'ev-text', text }) : null,
-    lines.length ? h('ul', { class: 'lines' }, lines.map(l => h('li', { class: l[0], text: l[1] }))) : null,
+    lines.length ? h('ul', { class: 'lines' }, lines.map(l => h('li', { class: l[0] }, lineIcon(l[1]) ? ico(lineIcon(l[1])) : null, l[1]))) : null,
     h('div', { class: 'choices' }, h('button', { class: 'btn primary', 'data-k': 1, onclick: () => { sfx('click'); then(); } }, h('span', { class: 'key', text: '1' }), 'Continue'))));
 }
 function finishEvent() {
@@ -1049,12 +1378,26 @@ function finishEvent() {
   if (run.dead) return endRun(false, run.dead);
   closePanel(); run.event = false; C = null; saveRun();
 }
-function relicChoice(n, title, onDone) {
+// Three pips show how close a relic brings you to its style's set bonus.
+function setPips(id) {
+  const t = RELICS[id].tag; if (!t) return null;
+  const n = Math.min(3, tagCount(t));
+  return h('span', { class: 'setpips', 'data-tip': `${TAG_NAMES[t]} style|Carry 3 ${TAG_NAMES[t]} relics for ${SETS[t].name}: ${SETS[t].desc}` }, ico(TAG_ICONS[t]), [0, 1, 2].map(i => h('i', { class: i < n ? 'on' : '' })));
+}
+// A chest shakes, opens and spills light, then the relics fan out. The glow's colour marks where it came from.
+const TIERS = { ember: 'rgba(244,166,70,.55)', gold: 'rgba(241,211,106,.65)', boss: 'rgba(187,150,238,.65)', shrine: 'rgba(140,196,230,.6)' };
+function relicChoice(n, title, onDone, tier = 'ember') {
   const opts = drawRelics(n);
   if (!opts.length) { run.gold += 30; return result(title, 'There is nothing left to find. You pocket what coin you can.', [['good', '+30 gold']], onDone); }
-  eventCard({ art: 'treasure', kicker: 'Choose a relic', title, text: 'Take one. The rest crumble to ash.',
-    choices: opts.map(id => ({ label: relicLabel(id), hint: RELICS[id].desc + setHint(id), run: () => { grantRelic(id); onDone(); } }))
-      .concat([{ label: 'Take nothing', hint: 'Leave them on the road.', run: onDone }]) });
+  sfx('chest');
+  const chest = h('img', { class: 'chest', src: iconURL('treasure'), alt: '' });
+  setTimeout(() => { chest.src = iconURL('chestOpen'); }, noMotion() ? 0 : 480 / speed);
+  const cards = opts.map((id, i) => h('button', { class: 'btn relic-pick', 'data-k': i + 1, onclick: () => { grantRelic(id); onDone(); } },
+    ico('relic'), h('span', { class: 'nm' }, RELICS[id].name, setPips(id)), h('span', { class: 'sub', text: RELICS[id].desc + setHint(id) })));
+  openPanel(h('div', { class: 'ev' },
+    h('div', { class: 'kicker', text: 'Choose a relic' }), h('h2', { text: title }),
+    h('div', { class: 'reveal', style: `--tier:${TIERS[tier] || TIERS.ember}` }, h('div', { class: 'glow' }), chest),
+    h('div', { class: 'choices' }, cards, choiceBtn({ label: 'Take nothing', hint: 'Leave them where they lie.', run: onDone }, opts.length))));
 }
 
 function openEvent(type, beat) {
@@ -1081,7 +1424,7 @@ function openCamp() {
   eventCard({ art: 'camp', kicker: 'Campfire', title: 'A Fire Someone Left',
     text: `Embers still glow in a ring of stones, and a tin of lamp oil sits beside them (${oilLine ? oilLine[1] : 'your lantern is already full'}). You can rest here, or work on your craft.`,
     choices: [
-      { label: 'Rest', hint: run.hp >= run.maxHp ? 'You are already at full health.' : `Heal ${Math.min(rest, run.maxHp - run.hp)} HP.`, disabled: run.hp >= run.maxHp, run:() => { const g = heal(rest); sfx('heal'); result('You rest', 'You sleep a little, lantern hooded, blade across your knees.', [['good', `+${g} HP`]]); } },
+      { label: 'Rest', hint: run.hp >= run.maxHp ? 'You are already at full health.' : `Heal ${Math.min(rest, run.maxHp - run.hp)} health.`, disabled: run.hp >= run.maxHp, run:() => { const g = heal(rest); sfx('heal'); result('You rest', 'You sleep a little, lantern hooded, blade across your knees.', [['good', `+${g} health`]]); } },
       lv < 3
         ? { label: `Temper: ${sk.name} to level ${lv + 1}`, hint: sk.desc(lv + 1), run: () => { run.skillLv++; sfx('skill'); result('You temper your craft', `${sk.name} is now level ${run.skillLv}.`, [['good', sk.desc(run.skillLv)]]); } }
         : { label: 'Hone your blade', hint: '+1 Strike damage.', run: () => { run.bonusStr++; sfx('skill'); result('You hone your blade', 'The edge drinks the firelight.', [['good', '+1 Strike damage']]); } },
@@ -1091,14 +1434,14 @@ function openCamp() {
 function openMerchant() {
   const r = run.region;
   const stock = [
-    { k: 'oil', label: 'Lamp oil', hint: '+35 oil.', price: priceOf(12) },
-    { k: 'draught', label: 'Healing draught', hint: 'Heals 40% of max HP. Drinking one in a fight is a free action.', price: priceOf(18) },
+    { k: 'oil', label: 'Lamp oil', hint: 'Refills 35 oil.', price: priceOf(12) },
+    { k: 'draught', label: 'Healing draught', hint: 'Heals 40% of your health. Drinking one in a fight does not use your turn.', price: priceOf(18) },
   ];
-  drawRelics(2).forEach(id => stock.push({ k: 'relic', id, label: relicLabel(id), hint: RELICS[id].desc + setHint(id), price: priceOf(46 + 7 * r + ri(0, 8)) }));
+  drawRelics(2).forEach(id => stock.push({ k: 'relic', id, label: RELICS[id].name, hint: RELICS[id].desc + setHint(id), price: priceOf(46 + 7 * r + ri(0, 8)) }));
   const show = msg => eventCard({ art: 'merchant', kicker: 'Merchant', title: 'The Lantern-Seller',
     text: msg || 'A hunched seller squats under a tarp of sewn shrouds. "Light, blood, trinkets. Coin first."',
     choices: stock.map(s => ({
-      label: `${s.label} · ${s.price} gold`,
+      label: s.label, price: s.price, icon: s.k === 'relic' ? 'relic' : s.k,
       hint: s.sold ? 'Sold.' : (s.k === 'draught' && run.draughts >= run.maxDraughts) ? 'You cannot carry more.' : s.hint,
       disabled: s.sold || run.gold < s.price || (s.k === 'draught' && run.draughts >= run.maxDraughts) || (s.k === 'oil' && run.oil >= run.maxOil),
       run: () => {
@@ -1106,7 +1449,7 @@ function openMerchant() {
         if (s.k === 'oil') addOil(35); else if (s.k === 'draught') run.draughts++; else { grantRelic(s.id); s.sold = true; }
         show(`Bought: ${s.label}. You have ${run.gold} gold left.`);
       },
-    })).concat([{ label: 'Leave', hint: `You have ${run.gold} gold.`, run: finishEvent }]),
+    })).concat([{ label: 'Leave', hint: `You carry ${run.gold} gold.`, run: finishEvent }]),
     autoPick: () => {
       // Auto mode shops in this order: a draught, then relics, then oil when low; otherwise it leaves.
       const want = [1, ...stock.map((s, i) => s.k === 'relic' ? i : -1).filter(i => i >= 0)];
@@ -1122,7 +1465,7 @@ function openShrine() {
   eventCard({ art: 'shrine', kicker: 'Shrine', title: 'A Shrine of Black Candles',
     text: 'Candles burn without melting before a faceless saint. A bowl waits for an offering.',
     choices: [
-      { label: `Offer blood (−${blood} HP)`, hint: 'Choose 1 of 2 relics.', disabled: run.hp <= blood, run: () => { run.hp -= blood; sfx('hurt'); flashHurt(); relicChoice(2, 'The saint accepts', finishEvent); } },
+      { label: `Offer blood (−${blood} health)`, hint: 'Choose 1 of 2 relics.', disabled: run.hp <= blood, run: () => { run.hp -= blood; sfx('hurt'); flashHurt(); relicChoice(2, 'The saint accepts', finishEvent, 'shrine'); } },
       { label: `Offer gold (−${gold} gold)`, hint: 'Receive a random relic.', disabled: run.gold < gold, run: () => {
         run.gold -= gold; const id = drawRelics(1)[0]; const L = [['bad', `−${gold} gold`]];
         if (id) { grantRelic(id); L.push(['good', `Relic: ${RELICS[id].name}`]); } else { run.gold += gold; L.push(['note', 'The saint returns your coins.']); }
@@ -1144,7 +1487,7 @@ function relicLine() { const id = drawRelics(1)[0]; if (!id) { run.gold += 30; r
 const MYSTERIES = [
   { id: 'well', title: 'The Black Well', text: 'A well of still, black water. Something far below hums your name.', choices: () => [
     { label: 'Drink', hint: 'It might strengthen you. It might not.', run: () => {
-      if (rng() < .5) { run.maxHp += 8; run.hp += 8; result('Cold strength', 'The water burns cold all the way down.', [['good', '+8 max HP']]); }
+      if (rng() < .5) { run.maxHp += 8; run.hp += 8; result('Cold strength', 'The water burns cold all the way down.', [['good', '+8 max health']]); }
       else result('Grave water', 'It tastes of wet earth and old coins.', [hurt(8 + run.region * 2, 'Poisoned by the Black Well')]);
     } },
     { label: 'Drop a coin (10 gold)', hint: 'Make a wish.', disabled: run.gold < 10, run: () => {
@@ -1156,7 +1499,7 @@ const MYSTERIES = [
   ] },
   { id: 'knight', title: 'The Kneeling Knight', text: 'A dead knight kneels at the roadside, his sword planted in the earth.', choices: () => [
     { label: 'Take his sword', hint: 'Its grip looks hungry.', run: () => { run.bonusStr += 1; result('The grip bites', 'It draws blood from your palm, then settles.', [['good', '+1 Strike damage'], hurt(6, 'Bled dry by a dead knight\'s sword')]); } },
-    { label: 'Bury him (−10 oil)', hint: 'A short rite by lantern light.', disabled: run.oil < 10, run: () => { run.oil -= 10; run.maxHp += 5; run.hp += 5; result('You bury him', 'You feel watched over, for a while.', [['bad', '−10 oil'], ['good', '+5 max HP']]); } },
+    { label: 'Bury him (−10 oil)', hint: 'A short rite by lantern light.', disabled: run.oil < 10, run: () => { run.oil -= 10; run.maxHp += 5; run.hp += 5; result('You bury him', 'You feel watched over, for a while.', [['bad', '−10 oil'], ['good', '+5 max health']]); } },
     { label: 'Leave him', hint: 'He has waited this long.', run: finishEvent },
   ] },
   { id: 'cages', title: 'The Hanging Cages', text: 'Iron cages creak from a dead oak. A voice in one of them begs to be let out.', choices: () => [
@@ -1167,8 +1510,8 @@ const MYSTERIES = [
     { label: 'Ignore the voice', hint: 'Keep walking.', run: finishEvent },
   ] },
   { id: 'peddler', title: 'The Bone Peddler', text: 'A crooked figure with a tray of vials sells by the pint, and buys by it too.', choices: () => [
-    { label: 'Sell blood (−10 HP)', hint: '+35 gold.', disabled: run.hp <= 10, run: () => { run.gold += 35; result('A fair price', 'He corks the vial and tips his hat.', [hurt(10, 'Bled out for the Bone Peddler'), ['good', '+35 gold']]); } },
-    { label: 'Buy a draught (18 gold)', hint: 'Heals 40% of max HP.', disabled: run.gold < 18 || run.draughts >= run.maxDraughts, run: () => { run.gold -= 18; run.draughts++; result('A cloudy draught', 'It is probably medicine.', [['bad', '−18 gold'], ['good', '+1 draught']]); } },
+    { label: 'Sell blood (−10 health)', hint: '+35 gold.', disabled: run.hp <= 10, run: () => { run.gold += 35; result('A fair price', 'He corks the vial and tips his hat.', [hurt(10, 'Bled out for the Bone Peddler'), ['good', '+35 gold']]); } },
+    { label: 'Buy a draught (18 gold)', hint: 'Heals 40% of max health.', disabled: run.gold < 18 || run.draughts >= run.maxDraughts, run: () => { run.gold -= 18; run.draughts++; result('A cloudy draught', 'It is probably medicine.', [['bad', '−18 gold'], ['good', '+1 draught']]); } },
     { label: 'Pass by', hint: 'Keep your blood.', run: finishEvent },
   ] },
   { id: 'moths', title: 'The Moth Swarm', text: 'Pale moths smother your lantern, drinking at the flame.', choices: () => [
@@ -1189,11 +1532,11 @@ const MYSTERIES = [
     { label: 'Leave it', hint: 'Let the dead keep their things.', run: finishEvent },
   ] },
   { id: 'statue', title: 'The Weeping Saint', text: 'A stone saint weeps a thin, clear water into a cracked basin.', choices: () => [
-    { label: 'Collect the tears', hint: run.draughts < run.maxDraughts ? '+1 draught.' : 'Your flasks are full. Heal 10 HP instead.', run: () => {
+    { label: 'Collect the tears', hint: run.draughts < run.maxDraughts ? '+1 draught.' : 'Your flasks are full. Heal 10 health instead.', run: () => {
       if (run.draughts < run.maxDraughts) { run.draughts++; result('A vial of tears', 'It glows faintly in the bottle.', [['good', '+1 draught']]); }
-      else { const g = heal(10); result('You drink deep', 'It tastes of rain.', [['good', `+${g} HP`]]); }
+      else { const g = heal(10); result('You drink deep', 'It tastes of rain.', [['good', `+${g} health`]]); }
     } },
-    { label: 'Pray', hint: `Heal ${Math.round(run.maxHp * .3)} HP.`, run: () => { const g = heal(Math.round(run.maxHp * .3)); sfx('heal'); result('The saint listens', 'For once, something does.', [['good', `+${g} HP`]]); } },
+    { label: 'Pray', hint: `Heal ${Math.round(run.maxHp * .3)} health.`, run: () => { const g = heal(Math.round(run.maxHp * .3)); sfx('heal'); result('The saint listens', 'For once, something does.', [['good', `+${g} health`]]); } },
   ] },
   { id: 'wisp', title: "The Will-o'-Wisp", text: 'A cold light bobs off the road, beckoning you into the dark.', choices: () => [
     { label: 'Follow it', hint: 'It might lead somewhere good.', run: () => {
@@ -1212,7 +1555,7 @@ const MYSTERIES = [
       if (rng() < .5) { run.gold += 20; result('You win', 'The skeletons rattle with disappointment.', [['good', '+20 gold']]); }
       else { run.gold -= 20; result('You lose', 'They rattle with delight.', [['bad', '−20 gold']]); }
     } },
-    { label: 'Wager blood (8 HP)', hint: 'Win a relic, or bleed.', disabled: run.hp <= 8, run: () => {
+    { label: 'Wager blood (8 health)', hint: 'Win a relic, or bleed.', disabled: run.hp <= 8, run: () => {
       if (rng() < .5) result('You win', 'One of them hands over something it was saving.', [relicLine()]);
       else result('You lose', 'They take their winnings with a little knife.', [hurt(8, 'Lost at dice to the dead')]);
     } },
@@ -1226,16 +1569,16 @@ const MYSTERIES = [
     { label: 'Decline', hint: 'Keep what you have.', run: finishEvent },
   ] },
   { id: 'mirror', unlock: 'ev_mirror', title: 'The Mirror Pool', text: 'Your reflection in the still pool holds a weapon you have never owned.', choices: () => [
-    { label: 'Reach in (−6 max HP)', hint: run.skillLv < 3 ? `${CLASSES[run.cls].skill.name} +1 level.` : '+2 Strike damage.', run: () => {
-      run.maxHp -= 6; run.hp = Math.min(run.hp, run.maxHp); const L = [['bad', '−6 max HP']];
+    { label: 'Reach in (−6 max health)', hint: run.skillLv < 3 ? `${CLASSES[run.cls].skill.name} +1 level.` : '+2 Strike damage.', run: () => {
+      run.maxHp -= 6; run.hp = Math.min(run.hp, run.maxHp); const L = [['bad', '−6 max health']];
       if (run.skillLv < 3) { run.skillLv++; L.push(['good', `${CLASSES[run.cls].skill.name} is now level ${run.skillLv}`]); } else { run.bonusStr += 2; L.push(['good', '+2 Strike damage']); }
       result('The reflection lets go', 'Your hand comes back colder, and surer.', L);
     } },
     { label: 'Look away', hint: 'Some reflections should stay put.', run: finishEvent },
   ] },
   { id: 'angel', unlock: 'ev_angel', title: 'The Chained Angel', text: 'A figure of dim light hangs in rusted chains. It asks, very quietly, to be free.', choices: () => [
-    { label: 'Pick the locks (50 gold)', hint: 'Full heal and +10 max HP.', disabled: run.gold < 50, run: () => { run.gold -= 50; run.maxHp += 10; run.hp = run.maxHp; sfx('heal'); result('It rises', 'Light floods the road, and you along with it.', [['bad', '−50 gold'], ['good', '+10 max HP, fully healed']]); } },
-    { label: 'Break them by hand (−15 HP)', hint: '+10 max HP.', disabled: run.hp <= 15, run: () => { run.maxHp += 10; const L = [hurt(15, 'Torn apart by angel chains'), ['good', '+10 max HP']]; result('The chains give way', 'So do your fingernails.', L); } },
+    { label: 'Pick the locks (50 gold)', hint: 'Full heal and +10 max health.', disabled: run.gold < 50, run: () => { run.gold -= 50; run.maxHp += 10; run.hp = run.maxHp; sfx('heal'); result('It rises', 'Light floods the road, and you along with it.', [['bad', '−50 gold'], ['good', '+10 max health, fully healed']]); } },
+    { label: 'Break them by hand (−15 health)', hint: '+10 max health.', disabled: run.hp <= 15, run: () => { run.maxHp += 10; const L = [hurt(15, 'Torn apart by angel chains'), ['good', '+10 max health']]; result('The chains give way', 'So do your fingernails.', L); } },
     { label: 'Leave it chained', hint: 'Not your burden.', run: finishEvent },
   ] },
 ];
@@ -1243,27 +1586,29 @@ function openMystery() {
   let pool = MYSTERIES.filter(m => pooled(m.unlock) && !run.seen.includes(m.id));
   if (!pool.length) { run.seen = []; pool = MYSTERIES.filter(m => pooled(m.unlock)); }
   const m = pick(pool); run.seen.push(m.id);
-  // Auto mode takes the first option, or the last (usually the safe one) when HP is low.
+  // Auto mode takes the first option, or the last (usually the safe one) when health is low.
   eventCard({ art: 'mystery', kicker: 'Mystery', title: m.title, text: m.text, choices: m.choices(), autoPick: () => run.hp < run.maxHp * .35 ? -1 : 0 });
 }
 
 // ───────────────────────── combat
 function parseIntent(s) { const n = s.slice(1).split('x').map(Number); return { t: s[0], n: n[0] || 0, x: n[1] || 1 }; }
 function intentOf() { return parseIntent(C.d.pat[C.e.i % C.d.pat.length]); }
-function intentInfo(it) {
-  const s = C.e.str;
+// What the foe will do next, as an icon, a number, and a tip that explains it.
+function intentInfo(it, str = C.e.str) {
+  const n = it.n + str;
   switch (it.t) {
-    case 'A': return [`Attack ${it.n + s}`, ''];
-    case 'M': return [`Attack ${it.n + s} ×${it.x}`, ''];
-    case 'B': return [`Block ${it.n}`, 'def'];
-    case 'W': return ['Curse: Weaken you', 'cur'];
-    case 'D': return [`Drain ${it.n + s}`, ''];
-    case 'L': return [`Rend ${it.n + s} + Bleed`, ''];
-    case 'R': return [`Rage: +${it.n} damage`, 'cur'];
-    case 'C': return ['Gathering strength…', 'cur'];
+    case 'A': return { icon: 'sword', text: n, cls: '', tip: `Attack|It will hit you for ${n}.` };
+    case 'M': return { icon: 'sword', text: `${n}×${it.x}`, cls: '', tip: `Flurry|It will hit you ${it.x} times for ${n} each.` };
+    case 'B': return { icon: 'shield', text: it.n, cls: 'def', tip: `Brace|It will gain ${it.n} Block, soaking that much of your damage.` };
+    case 'W': return { icon: 'curse', text: 'Curse', cls: 'cur', tip: 'Curse|It will make you Weak: you deal a quarter less damage for 2 turns.' };
+    case 'D': return { icon: 'drain', text: n, cls: '', tip: `Drain|It will hit you for ${n} and heal by the damage it deals.` };
+    case 'L': return { icon: 'bleed', text: n, cls: '', tip: `Rend|It will hit you for ${n} and make you Bleed.` };
+    case 'R': return { icon: 'rage', text: `+${it.n}`, cls: 'cur', tip: `Rage|Its attacks will deal ${it.n} more damage from now on.` };
+    case 'C': return { icon: 'charge', text: '', cls: 'cur', tip: 'Gathering strength|Its next attack will be much stronger. A good time to Guard.' };
   }
-  return ['…', 'cur'];
+  return { icon: 'charge', text: '', cls: 'cur', tip: '' };
 }
+const tag = (cls, icon, text, tip) => h('span', { class: 'tag ' + cls, 'data-tip': tip }, ico(icon), text);
 function skillCd() { return Math.max(1, 3 - (has('blackcandle') ? 1 : 0)); }
 function guardVal() { return run.guard + (has('boneward') ? 4 : 0) + (setOn('ward') ? 4 : 0); }
 function outMult() { let m = 1; if (C.weak > 0) m *= .75; if (has('widow') && run.hp < run.maxHp * .3) m *= 1.5; if (has('hunter') && C.kind !== 'normal') m *= 1.25; return m; }
@@ -1310,27 +1655,30 @@ function buildCombat() {
   const d = C.d, R = REGIONS[run.region];
   const u = C.ui = {};
   u.intent = h('div', { class: 'intent' });
+  u.foeMeter = h('div', { class: 'meter foe' });
   u.portrait = portrait(C.id);
   u.foeFill = h('i'); u.foeText = h('span');
   u.foeTags = h('div', { class: 'tags' });
   u.foe = h('div', { class: 'foe' + (C.kind === 'boss' ? ' boss' : '') },
     h('div', { class: 'kicker', text: `${R.name} · ${C.kind === 'normal' ? 'Fight' : C.kind === 'elite' ? 'Elite' : 'Boss'}` }),
     u.intent, u.portrait, h('div', { class: 'foe-name', text: d.name }),
-    h('div', { class: 'meter' }, u.foeFill, u.foeText), u.foeTags);
+    (u.foeMeter.append(u.foeFill, u.foeText), u.foeMeter), u.foeTags);
   u.log = h('p', { class: 'log', 'aria-live': 'polite' });
   u.math = h('div', { class: 'math', hidden: true });
   u.myFill = h('i'); u.myText = h('span'); u.myTags = h('div', { class: 'tags' });
   const sk = CLASSES[run.cls].skill;
-  const mk = (k, label, act, wide) => { const sub = h('span', { class: 'sub' }); const b = h('button', { class: 'btn' + (wide ? ' wide' : ''), 'data-k': k, onclick: () => act() }, h('span', { class: 'key', text: k }), label, sub); b.sub = sub; return b; };
-  u.bStrike = mk(1, 'Strike', () => act('strike'));
-  u.bGuard = mk(2, 'Guard', () => act('guard'));
-  u.bSkill = mk(3, sk.name, () => act('skill'));
-  u.bDraught = mk(4, 'Draught', () => act('draught'), true);
-  u.bFlee = mk(5, 'Flee', () => act('flee'), true);
+  const mk = (k, icon, label, act, wide) => { const sub = h('span', { class: 'sub' }); const b = h('button', { class: 'btn' + (wide ? ' wide' : ''), 'data-k': k, onclick: () => act() }, ico(icon), h('span', { class: 'key', text: k }), label, sub); b.sub = sub; return b; };
+  const skillIcon = { sellsword: 'cleave', hexblade: 'curse', pilgrim: 'holy' }[run.cls];
+  u.bStrike = mk(1, 'sword', 'Strike', () => act('strike'));
+  u.bGuard = mk(2, 'shield', 'Guard', () => act('guard'));
+  u.bSkill = mk(3, skillIcon, sk.name, () => act('skill'));
+  u.bDraught = mk(4, 'draught', 'Drink', () => act('draught'), true);
+  u.bFlee = mk(5, 'flee', 'Flee', () => act('flee'), true);
   u.me = h('div', { class: 'me' },
-    h('div', { class: 'me-row' }, h('div', { class: 'meter' }, u.myFill, u.myText), u.myTags),
+    h('div', { class: 'me-row' }, ico('heart'), h('div', { class: 'meter' }, u.myFill, u.myText), u.myTags),
     h('div', { class: 'actions' }, u.bStrike, u.bGuard, u.bSkill, u.bDraught, u.bFlee));
   openPanel(h('div', { class: 'combat' }, u.foe, u.log, u.math, u.me), true);
+  hint('intent', 'The sign above a foe shows what it will do next. Tap it to learn more.', '.intent');
 }
 function portrait(id) {
   const d = ENEMIES[id], c = document.createElement('canvas'); c.width = 24; c.height = 26;
@@ -1347,32 +1695,34 @@ function fx(target, text, cls = '') {
 }
 function updCombat() {
   if (!C || !C.ui) return;
-  const u = C.ui, e = C.e, it = intentOf(), [itxt, icls] = intentInfo(it);
-  u.intent.textContent = 'Next: ' + itxt; u.intent.className = 'intent ' + icls;
+  const u = C.ui, e = C.e, I = intentInfo(intentOf());
+  u.intent.replaceChildren(ico(I.icon), I.text !== '' ? h('b', { text: I.text }) : null);
+  u.intent.className = 'intent ' + I.cls + (u.intent.classList.contains('nudge') ? ' nudge' : ''); u.intent.dataset.tip = I.tip;
   u.foeFill.style.width = `${100 * e.hp / e.maxHp}%`;
-  u.foeText.replaceChildren(h('span', { text: 'HP' }), h('span', { text: `${e.hp}/${e.maxHp}` }));
-  const ft = [];
-  if (e.block) ft.push(h('span', { class: 'tag block', text: `Block ${e.block}` }));
-  if (e.doomT) ft.push(h('span', { class: 'tag doom', text: `Doom ${e.doomDmg + (has('gravebell') ? 3 : 0)} · ${e.doomT}` }));
-  if (e.bleed) ft.push(h('span', { class: 'tag bleed', text: `Bleed ${e.bleed}` }));
-  if (e.str) ft.push(h('span', { class: 'tag rage', text: `Rage +${e.str}` }));
+  u.foeText.textContent = `${e.hp}/${e.maxHp}`;
+  const doom = e.doomDmg + (has('gravebell') ? 3 : 0), ft = [];
+  if (e.block) ft.push(tag('block', 'shield', e.block, `Block|Soaks the next ${e.block} damage until its next turn.`));
+  if (e.doomT) ft.push(tag('doom', 'doom', `${doom}·${e.doomT}`, `Doom|Takes ${doom} damage at the start of each of its turns. ${e.doomT} left.`));
+  if (e.bleed) ft.push(tag('bleed', 'bleed', e.bleed, `Bleed|Loses ${e.bleed} at the start of its turn, then the bleeding eases by 1.`));
+  if (e.str) ft.push(tag('rage', 'rage', `+${e.str}`, `Rage|Its attacks deal ${e.str} more damage.`));
   u.foeTags.replaceChildren(...ft);
   u.myFill.style.width = `${100 * run.hp / run.maxHp}%`;
-  u.myText.replaceChildren(h('span', { text: 'You' }), h('span', { text: `${run.hp}/${run.maxHp}` }));
+  u.myText.textContent = `${run.hp}/${run.maxHp}`;
   const mt = [];
-  if (C.pBlock) mt.push(h('span', { class: 'tag block', text: `Block ${C.pBlock}` }));
-  if (C.weak) mt.push(h('span', { class: 'tag weak', text: `Weak ${C.weak}` }));
-  if (C.bleed) mt.push(h('span', { class: 'tag bleed', text: `Bleed ${C.bleed}` }));
-  if (C.riposte) mt.push(h('span', { class: 'tag buff', text: `Riposte +${C.riposte}` }));
+  if (C.pBlock) mt.push(tag('block', 'shield', C.pBlock, `Block|Soaks the next ${C.pBlock} damage this turn.`));
+  if (C.weak) mt.push(tag('weak', 'curse', C.weak, `Weak|You deal a quarter less damage. ${C.weak} turn${C.weak === 1 ? '' : 's'} left.`));
+  if (C.bleed) mt.push(tag('bleed', 'bleed', C.bleed, `Bleed|You lose ${C.bleed} at the end of the foe's turn, then the bleeding eases by 1.`));
+  if (C.riposte) mt.push(tag('buff', 'sword', `+${C.riposte}`, `Riposte|Your next Strike deals ${C.riposte} more.`));
   u.myTags.replaceChildren(...mt);
   // buttons
-  u.bStrike.sub.textContent = `Deal ${strikeCalc().total}`;
+  u.bStrike.sub.textContent = `${strikeCalc().total} damage`;
   u.bGuard.sub.textContent = `Block ${guardVal()}`;
   const sk = CLASSES[run.cls].skill;
   u.bSkill.sub.textContent = C.cd > 0 ? `Ready in ${C.cd}` : skillShort();
-  u.bDraught.sub.textContent = run.draughts ? `Heal ${draughtAmt()} · ${run.draughts} left · free` : 'None left';
+  u.bDraught.sub.textContent = run.draughts ? `+${draughtAmt()} health · ${run.draughts} left` : 'None left';
   const canFlee = C.kind === 'normal';
-  u.bFlee.sub.textContent = !canFlee ? 'Not from this foe' : has('crow') ? 'Free' : run.gold >= 10 ? 'Costs 10 gold' : 'Costs 6 HP';
+  u.bFlee.sub.textContent = !canFlee ? 'No escape' : has('crow') ? 'Free' : run.gold >= 10 ? 'Costs 10 gold' : 'Costs 6 health';
+  if (run.draughts && run.hp < run.maxHp * .5 && !C.busy) hint('draught', 'Drinking a draught heals you and does not use up your turn.', '[data-k="4"]');
   const busy = C.busy || C.over;
   u.bStrike.disabled = busy; u.bGuard.disabled = busy; u.bSkill.disabled = busy || C.cd > 0;
   u.bDraught.disabled = busy || !run.draughts || run.hp >= run.maxHp;
@@ -1382,17 +1732,21 @@ function updCombat() {
 function doomVal() { return [4, 6, 8][run.skillLv - 1] + Math.floor(Math.max(0, strikeBase() - CLASSES.hexblade.str) * .75); }
 function skillShort() {
   const lv = run.skillLv;
-  if (run.cls === 'sellsword') return `Deal ${calcDamage(strikeParts(), [['Cleave', [2, 2.5, 3][lv - 1]]]).total}`;
-  if (run.cls === 'hexblade') return `4 + Doom ${doomVal() + (has('gravebell') ? 3 : 0)}×3`;
-  return `Deal ${calcDamage(strikeParts(), [['Holy Light', 1.5]]).total}, heal ${[5, 7, 9][lv - 1]}`;
+  if (run.cls === 'sellsword') return `${calcDamage(strikeParts(), [['Cleave', [2, 2.5, 3][lv - 1]]]).total} damage`;
+  if (run.cls === 'hexblade') return `4, then Doom ${doomVal() + (has('gravebell') ? 3 : 0)}`;
+  return `${calcDamage(strikeParts(), [['Holy Light', 1.5]]).total} damage, +${[5, 7, 9][lv - 1]} health`;
 }
 // exact: the amount already includes the damage multipliers (used for Strikes and skills that show their math).
 function hitFoe(raw, exact) {
   const e = C.e; let dmg = Math.max(0, exact ? raw : Math.round(raw * outMult()));
   const ab = Math.min(e.block, dmg); e.block -= ab; dmg -= ab;
   e.hp = Math.max(0, e.hp - dmg);
-  fx(C.ui.foe, dmg ? `−${dmg}` : 'Blocked', dmg ? '' : 'ward');
-  const p = C.ui.portrait; p.classList.remove('hit'); void p.offsetWidth; if (!reduceMotion) p.classList.add('hit');
+  // bigger hits get bigger numbers, a flash, and a shake
+  const share = dmg / e.maxHp, size = share >= .35 ? 'huge' : share >= .18 ? 'big' : '';
+  fx(C.ui.foe, dmg ? `−${dmg}` : 'Blocked', dmg ? size : 'ward');
+  if (size) { sfx('bighit'); shakeFrame(size === 'huge' ? 2 : 1); }
+  const p = C.ui.portrait; p.classList.remove('hit', 'flash'); void p.offsetWidth;
+  if (!noMotion()) { p.classList.add('hit', 'flash'); setTimeout(() => p.classList.remove('flash'), 80); }
   return dmg;
 }
 function checkKingRage() {
@@ -1406,7 +1760,7 @@ async function act(k) {
   if (k === 'draught') {
     if (!run.draughts || run.hp >= run.maxHp) return;
     run.draughts--; const g = heal(draughtAmt()); sfx('heal'); fx(C.ui.me, `+${g}`, 'heal me');
-    setLog(`You drink a draught. +${g} HP.`); updCombat(); return;
+    setLog(`You drink a draught. +${g} health.`); updCombat(); return;
   }
   if (k === 'flee') {
     if (C.kind !== 'normal') return;
@@ -1455,7 +1809,7 @@ function hitMe(n) {
   if (has('luckybone') && rng() < .15) { fx(C.ui.me, 'Dodged', 'ward me'); return { dealt: 0, dodged: true }; }
   const ab = Math.min(C.pBlock, n); C.pBlock -= ab; const dealt = n - ab;
   run.hp -= dealt;
-  if (dealt) { sfx('hurt'); flashHurt(); fx(C.ui.me, `−${dealt}`, 'me'); } else { sfx('block'); fx(C.ui.me, 'Blocked', 'ward me'); }
+  if (dealt) { sfx('hurt'); flashHurt(); fx(C.ui.me, `−${dealt}`, 'me'); shakeFrame(dealt >= run.maxHp * .2 ? 2 : 1); } else { sfx('block'); fx(C.ui.me, 'Blocked', 'ward me'); }
   if (dealt && has('thornmail')) { e.hp = Math.max(0, e.hp - 3); proc(C.ui.foe, 'Thorn Mail −3'); }
   return { dealt, blocked: ab };
 }
@@ -1479,6 +1833,7 @@ async function enemyTurn() {
   e.block = 0;
   const it = intentOf(), n = it.n + e.str;
   let log = '';
+  if ('AMDL'.includes(it.t) && !noMotion()) { const p = C.ui.portrait; p.classList.remove('lunge'); void p.offsetWidth; p.classList.add('lunge'); await sleep(150); p.classList.remove('lunge'); }
   switch (it.t) {
     case 'A': { const r = hitMe(n); log = r.dodged ? `${who} attacks. You dodge.` : `${who} attacks for ${n}${r.blocked ? ` (${r.blocked} blocked)` : ''}.`; break; }
     case 'M': {
@@ -1522,9 +1877,9 @@ function winCombat() {
     if (darkAt(4)) gold = Math.round(gold * .8);
     run.gold += gold; L.push(['good', `+${gold} gold`]);
     L.push(addOil((kind === 'elite' ? 10 : 6) + (has('wickcharm') ? 8 : 0)));
-    if (has('knuckle')) { const g = heal(4); if (g) L.push(['good', `+${g} HP`]); }
+    if (has('knuckle')) { const g = heal(4); if (g) L.push(['good', `+${g} health`]); }
     let then = finishEvent;
-    if (kind === 'elite') then = () => relicChoice(2, 'Spoils of the elite', finishEvent);
+    if (kind === 'elite') then = () => relicChoice(2, 'Spoils of the elite', finishEvent, 'gold');
     else if (rng() < .05) L.push(relicLine());
     result(`${cap(foeRef(d))} falls`, d.death, L, then, 'Victory');
   }, 650 / speed);
@@ -1534,12 +1889,12 @@ function bossDown(d, id) {
   award(id);
   run.maxHp += 6; run.hp += 6; run.bonusStr += 1;
   const g = heal(Math.round(run.maxHp * .3)); run.oil = run.maxOil;
-  const L = [['good', '+200 score (boss)'], ['good', '+100 score (region cleared)'], ['good', '+6 max HP, +1 Strike damage'], ['good', `+${g + 6} HP`], ['good', 'Lantern refilled']];
+  const L = [['good', '+200 score (boss)'], ['good', '+100 score (region cleared)'], ['good', '+6 max health, +1 Strike damage'], ['good', `+${g + 6} health`], ['good', 'Lantern refilled']];
   const lastRegion = run.region >= REGIONS.length - 1;
   result(`${cap(foeRef(d))} is ended`, d.death, L, () => relicChoice(3, 'A relic from the fallen', () => {
     if (lastRegion) return endRun(true, 'Ended the Hollow King');
     closePanel(); run.event = false; C = null; enterRegion(run.region + 1);
-  }), 'Region cleared');
+  }, 'boss'), 'Region cleared');
 }
 
 // ───────────────────────── run start and end
@@ -1626,42 +1981,78 @@ function endRun(won, cause) {
 
 // ───────────────────────── screens
 const scr = $('#screen');
-function setScreen(el, solid) { scr.replaceChildren(el); scr.hidden = false; scr.classList.toggle('solid', !!solid); scr.scrollTop = 0; }
-function menuBtn(label, sub, fn, primary) { return h('button', { class: 'btn' + (primary ? ' primary' : ''), onclick: () => { sfx('click'); fn(); } }, label, sub ? h('span', { class: 'sub', text: sub }) : null); }
+function setScreen(el, solid) { scr.replaceChildren(el); scr.hidden = false; scr.classList.toggle('solid', !!solid); scr.scrollTop = 0; hideTip(); }
+function menuBtn(label, sub, fn, primary, icon) { return h('button', { class: 'btn' + (primary ? ' primary' : ''), onclick: () => { sfx('click'); fn(); } }, icon ? ico(icon) : null, label, sub ? h('span', { class: 'sub', text: sub }) : null); }
+const backBtn = fn => h('button', { class: 'btn back', onclick: () => { sfx('click'); fn(); } }, '← Back');
 function bestScore() { return meta.records.length ? meta.records[0].score : 0; }
+const fmt = n => n.toLocaleString('en-US');
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+// The lantern-bearer as a small picture, for class cards.
+const heroURLs = {};
+function heroURL(cls) {
+  if (heroURLs[cls]) return heroURLs[cls];
+  const c = document.createElement('canvas'); c.width = 18; c.height = 18; const x = c.getContext('2d'), pal = CLASSES[cls].pal;
+  x.drawImage(sprite(HERO_BODY, pal, 'hb' + cls), 1, 1); x.drawImage(sprite(HERO_LEGS[0], pal, 'hl' + cls + '0'), 1, 16);
+  x.drawImage(sprite(LANTERN, LANTERN_PAL, 'lantern'), 12, 8);
+  return heroURLs[cls] = c.toDataURL();
+}
+
+// The cheapest thing still waiting at the Pyre, and a bar showing how close you are to it.
+const nextUnlock = () => UNLOCKS.filter(u => !unlocked(u.id)).sort((a, b) => a.cost - b.cost)[0];
+function unlockBar(gained = 0) {
+  const u = nextUnlock(); if (!u) return null;
+  const now = Math.min(meta.embers, u.cost), before = Math.max(0, Math.min(meta.embers - gained, u.cost));
+  const fill = h('i', { style: `width:${100 * before / u.cost}%` });
+  if (gained) requestAnimationFrame(() => setTimeout(() => { fill.style.transition = 'width 1.2s ease-out'; fill.style.width = `${100 * now / u.cost}%`; }, 900));
+  return h('div', { class: 'unlockbar' },
+    h('div', { class: 'row' }, ico('ember'), meta.embers >= u.cost ? `Ready to kindle: ${u.name}` : `Next at the Pyre: ${u.name}`, h('b', { text: `${now}/${u.cost}` })),
+    h('div', { class: 'meter' }, fill));
+}
 
 function dailyBtn() {
   const key = todayKey(), res = dailyResult(key), streak = liveStreak();
-  const streakTxt = streak ? ` · ${streak}-day streak` : '';
-  if (res) return h('button', { class: 'btn', disabled: true }, 'Daily Road · done today', h('span', { class: 'sub', text: `${res.score} score${streakTxt}. A new road opens tomorrow.` }));
-  const at = meta.daily.last === todayKey(-1) ? ` Walk it to keep your ${streak}-day streak.` : '';
-  return menuBtn('Daily Road', `Today: the ${CLASSES[dailyClass(key)].name}. The same road for every player, double embers.${at}`, startDaily);
+  const streakTxt = streak ? ` · ${plural(streak, 'day')} in a row` : '';
+  if (res) return h('button', { class: 'btn daily', disabled: true }, ico('sun'), 'Daily Road · walked today', h('span', { class: 'sub', text: `${fmt(res.score)} score${streakTxt}. A new road opens tomorrow.` }));
+  const keep = meta.daily.last === todayKey(-1) ? ` Walk it to keep your ${streak}-day streak.` : ' The same road for everyone, and double embers.';
+  return h('button', { class: 'btn daily', onclick: () => { sfx('click'); startDaily(); } }, ico('sun'), 'Daily Road', h('span', { class: 'sub', text: `Today walks the ${CLASSES[dailyClass(key)].name}.${keep}` }));
+}
+let titleTaps = 0, titleTapTimer = 0;
+function titleTap() {
+  if (devMode) return;
+  titleTaps++; clearTimeout(titleTapTimer); titleTapTimer = setTimeout(() => { titleTaps = 0; }, 2500);
+  if (titleTaps >= 7) { devMode = true; try { localStorage.setItem('lantern-road-dev', '1'); } catch (e) { } syncPlayButtons(); sfx('relic'); showTitle(); }
 }
 function showTitle() {
-  screen = 'title'; closePanel(); closeSheet();
-  const saved = loadSavedRun();
+  screen = 'title'; closePanel(); closeSheet(); closeHint();
+  const saved = loadSavedRun(), nu = nextUnlock();
+  const tile = (icon, label, fn, dot) => h('button', { class: 'tile', onclick: () => { sfx('click'); fn(); } }, dot ? h('span', { class: 'dot' }) : null, ico(icon, 'lg'), label);
   setScreen(h('div', { class: 'title-wrap' },
-    h('div', { class: 'kicker', text: 'A roguelike of the cursed road' }),
-    h('h1', { class: 'title', text: 'Lantern Road' }),
+    h('h1', { class: 'title', text: 'Lantern Road', onclick: titleTap }),
     h('p', { class: 'tagline', text: 'Walk the dead kingdom. Keep your flame alive. End the Hollow King.' }),
     h('div', { class: 'menu' },
-      saved ? menuBtn('Continue the walk', `${CLASSES[saved.cls].name}${saved.daily ? ' · Daily Road' : ''} · ${REGIONS[saved.region].name} · ${saved.score} score`, resumeRun, true) : null,
-      menuBtn('Begin the walk', bestScore() ? `Best score: ${bestScore()}` : 'Five regions. About 15–20 minutes.', beginWalk, !saved),
+      saved
+        ? h('button', { class: 'btn play', onclick: () => { sfx('click'); resumeRun(); } }, 'Continue the walk', h('span', { class: 'sub', text: `${CLASSES[saved.cls].name}${saved.daily ? ' · Daily Road' : ''} · ${REGIONS[saved.region].name}` }))
+        : h('button', { class: 'btn play', onclick: () => { sfx('click'); beginWalk(); } }, 'Begin the walk', h('span', { class: 'sub', text: bestScore() ? `Your best: ${fmt(bestScore())}` : 'Five regions stand between you and the Hollow King.' })),
+      saved ? h('button', { class: 'textbtn', onclick: () => { sfx('click'); beginWalk(); } }, 'Start a new walk instead') : null,
       dailyBtn(),
-      menuBtn('The Pyre', `${meta.embers} ember${meta.embers === 1 ? '' : 's'} to spend on unlocks`, showPyre),
-      menuBtn('Codex', `${meta.ach.length}/${ACHIEVEMENTS.length} achievements · ${Object.keys(meta.foes).length} foes recorded`, () => showCodex('ach')),
-      menuBtn('Records', meta.runs ? `${meta.runs} walk${meta.runs === 1 ? '' : 's'} so far` : 'No walks yet', showRecords),
-      menuBtn('How to play', 'Rules, scoring and controls', () => showHowTo(showTitle))),
-    h('div', { class: 'foot', text: 'Arrow keys or A/D to change lanes · 1–5 to choose' })));
+      unlockBar(),
+      h('div', { class: 'iconrow' },
+        tile('camp', 'Pyre', showPyre, nu && meta.embers >= nu.cost),
+        tile('book', 'Codex', () => showCodex('ach')),
+        tile('trophy', 'Records', showRecords),
+        tile('gear', 'Settings', () => showSettings(showTitle)))),
+    h('div', { class: 'foot', text: (devMode ? 'Developer mode · ' : '') + '← → to steer · 1–5 to choose · P to pause' })));
 }
 function showClassSelect() {
   screen = 'class';
   const cards = Object.entries(CLASSES).map(([id, c]) => {
     const open = !c.unlock || unlocked(c.unlock);
-    return h('div', { class: 'item' + (open ? '' : ' owned') },
-      h('div', { class: 'cls' }, h('div', { class: 'k', text: open ? `${c.hp} HP · Strike ${c.str} · Guard ${c.guard}` : 'Locked' }), h('div', { class: 'nm', text: c.name })),
-      open ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startRun(id, { dark: chosenDark }); }, text: 'Walk' }) : h('button', { class: 'btn', disabled: true, text: `${UNLOCKS.find(u => u.id === c.unlock).cost} embers` }),
-      h('div', { class: 'ds' }, `${c.blurb} `, h('br'), `Skill: ${c.skill.name}. ${c.skill.desc(1)} `, h('br'), c.passive));
+    return h('div', { class: 'item' + (open ? '' : ' locked') },
+      h('div', { class: 'cls' }, h('div', { class: 'k' }, h('img', { class: 'ico xl', src: heroURL(id), alt: '' }), open ? `${c.hp} health · Strike ${c.str} · Guard ${c.guard}` : 'Waiting at the Pyre'), h('div', { class: 'nm', text: c.name })),
+      open ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startRun(id, { dark: chosenDark }); }, text: 'Walk' })
+        : h('button', { class: 'btn', disabled: true }, ico('ember'), UNLOCKS.find(u => u.id === c.unlock).cost),
+      h('div', { class: 'ds' }, `${c.blurb} `, h('br'), `${c.skill.name}: ${c.skill.desc(1)} `, h('br'), c.passive));
   });
   chosenDark = clamp(chosenDark, 0, meta.dark);
   const step = dir => { chosenDark = clamp(chosenDark + dir, 0, meta.dark); savePlayPrefs(); showClassSelect(); };
@@ -1669,143 +2060,244 @@ function showClassSelect() {
   const darkPicker = meta.dark > 0 ? h('div', { class: 'dark' },
     h('button', { class: 'small', 'aria-label': 'Less darkness', disabled: chosenDark === 0, onclick: () => step(-1), text: '−' }),
     h('div', { class: 'dk' }, h('div', { class: 'nm', text: D.name }),
-      h('div', { class: 'ds', text: chosenDark ? `${DARKNESS.slice(1, chosenDark + 1).map(x => x.desc).join(' ')} Score ×${darkMult(chosenDark)}.` : `${D.desc} Win to unlock the next level.` })),
+      h('div', { class: 'ds', text: chosenDark ? `${DARKNESS.slice(1, chosenDark + 1).map(x => x.desc).join(' ')} Score ×${darkMult(chosenDark)}.` : `${D.desc} Win a walk to unlock the next level.` })),
     h('button', { class: 'small', 'aria-label': 'More darkness', disabled: chosenDark >= meta.dark, onclick: () => step(1), text: '+' })) : null;
   setScreen(h('div', { class: 'page' },
-    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Choose who walks' }), h('h1', { text: 'The Lantern-Bearers' }),
+    backBtn(showTitle), h('div', { class: 'kicker', text: 'Choose who walks' }), h('h1', { text: 'The Lantern-Bearers' }),
     darkPicker, h('div', { class: 'list' }, cards)), true);
-  scr.querySelector('.btn').classList.add('back');
 }
-function showPyre() {
+
+// ── The Pyre: a campfire where every unlock lights one of the lanterns around it.
+const PYRE_W = 120, PYRE_H = 64;
+let pyreCv = null, pyreFlash = {}, pyreParts = [];
+const pyreSpot = i => { const a = Math.PI * (i / (UNLOCKS.length - 1)); return { x: Math.round(12 + i * (96 / (UNLOCKS.length - 1))), y: Math.round(50 - Math.sin(a) * 12) }; };
+function drawPyre(t) {
+  if (!pyreCv || !pyreCv.isConnected) { pyreCv = null; return; }
+  const x = pyreCv.getContext('2d'), now = performance.now();
+  x.fillStyle = '#0c0a16'; x.fillRect(0, 0, PYRE_W, PYRE_H);
+  for (let i = 0; i < 40; i++) { if (h2(i, 3) < .5) { x.fillStyle = h2(i, 4) < .2 ? '#6b5f8a' : '#2e2846'; x.fillRect(Math.floor(h2(i, 5) * PYRE_W), Math.floor(h2(i, 6) * 30), 1, 1); } }
+  x.fillStyle = '#1a1420'; x.fillRect(0, 48, PYRE_W, 16);
+  x.fillStyle = '#231b28'; for (let i = 0; i < 30; i++) x.fillRect(Math.floor(h2(i, 9) * PYRE_W), 49 + Math.floor(h2(i, 10) * 14), 2, 1);
+  // the fire
+  const fx0 = 60, fy0 = 50;
+  x.globalCompositeOperation = 'lighter';
+  const flick = noMotion() ? 0 : Math.sin(t * 9) * 2 + Math.sin(t * 17) * 1.2;
+  const g = x.createRadialGradient(fx0, fy0 - 4, 0, fx0, fy0 - 4, 44 + flick); g.addColorStop(0, 'rgba(255,150,60,.45)'); g.addColorStop(.5, 'rgba(220,90,50,.14)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0, 0, PYRE_W, PYRE_H);
+  x.globalCompositeOperation = 'source-over';
+  x.fillStyle = '#5a3a24'; x.fillRect(fx0 - 6, fy0, 12, 2); x.fillStyle = '#3e2818'; x.fillRect(fx0 - 4, fy0 + 1, 8, 2);
+  for (let i = -4; i <= 4; i++) {
+    const hgt = Math.max(1, Math.round(9 - Math.abs(i) * 1.6 + (noMotion() ? 0 : Math.sin(t * 12 + i * 1.7) * 2)));
+    for (let y = 0; y < hgt; y++) { x.fillStyle = y < hgt * .3 ? '#fff0b0' : y < hgt * .65 ? '#f7a83a' : '#e0502a'; x.fillRect(fx0 + i, fy0 - 1 - y, 1, 1); }
+  }
+  // the lantern-bearer, resting by the fire
+  const cls = demo.cls || 'sellsword';
+  x.drawImage(sprite(HERO_BODY, CLASSES[cls].pal, 'hb' + cls), 40, 36);
+  // lanterns: one per unlock, lit once kindled
+  UNLOCKS.forEach((u, i) => {
+    const p = pyreSpot(i), lit = unlocked(u.id), flash = pyreFlash[i] ? Math.max(0, 1 - (now - pyreFlash[i]) / 1200) : 0;
+    x.fillStyle = '#4a3c30'; x.fillRect(p.x, p.y - 7, 1, 8);
+    x.fillStyle = lit ? '#8a6a3a' : '#3a3240'; x.fillRect(p.x - 1, p.y - 11, 3, 4);
+    x.fillStyle = lit ? (flash > 0 ? '#fffbe0' : '#ffc65a') : '#221c28'; x.fillRect(p.x, p.y - 10, 1, 2);
+    if (lit || flash) {
+      x.globalCompositeOperation = 'lighter';
+      const r = 7 + flash * 14 + (noMotion() ? 0 : Math.sin(t * 6 + i) * .6);
+      const gg = x.createRadialGradient(p.x, p.y - 9, 0, p.x, p.y - 9, r); gg.addColorStop(0, `rgba(255,180,80,${.35 + flash * .5})`); gg.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = gg; x.fillRect(p.x - r, p.y - 9 - r, r * 2, r * 2);
+      x.globalCompositeOperation = 'source-over';
+    }
+  });
+  // embers rising from the fire
+  if (!noMotion() && Math.random() < .35) pyreParts.push({ x: fx0 + vrand(-3, 3), y: fy0 - 6, vx: vrand(-4, 4), vy: vrand(-14, -8), life: vrand(1.2, 2.4) });
+  for (const p of pyreParts) { p.x += p.vx / 60; p.y += p.vy / 60; p.life -= 1 / 60; x.globalAlpha = clamp(p.life, 0, 1); x.fillStyle = '#ffb04a'; x.fillRect(Math.round(p.x), Math.round(p.y), 1, 1); }
+  x.globalAlpha = 1; pyreParts = pyreParts.filter(p => p.life > 0);
+}
+const KIND_ICONS = { Class: 'sword', Boon: 'relic', Relic: 'relic', Event: 'mystery' };
+function showPyre(justKindled) {
   screen = 'pyre';
-  const items = UNLOCKS.map(u => {
-    const own = unlocked(u.id);
-    return h('div', { class: 'item' + (own ? ' owned' : '') },
-      h('div', { class: 'k', text: own ? `${u.kind} · Kindled` : u.kind }), h('div', { class: 'nm', text: u.name }),
-      own ? null : h('button', { class: 'btn' + (meta.embers >= u.cost ? ' primary' : ''), disabled: meta.embers < u.cost, onclick: () => { if (meta.embers < u.cost) return; meta.embers -= u.cost; meta.unlocks.push(u.id); commitMeta(); sfx('relic'); showPyre(); }, text: `Kindle · ${u.cost}` }),
+  const keep = scr.scrollTop;
+  pyreCv = h('canvas', { class: 'pyre', width: PYRE_W, height: PYRE_H, 'aria-label': `${UNLOCKS.filter(u => unlocked(u.id)).length} of ${UNLOCKS.length} lanterns lit` });
+  const items = UNLOCKS.map((u, i) => {
+    const own = unlocked(u.id), icon = u.id === 'cls_hexblade' ? 'curse' : u.id === 'cls_pilgrim' ? 'holy' : KIND_ICONS[u.kind];
+    return h('div', { class: 'item' + (own ? ' owned' : '') + (justKindled === u.id ? ' kindled' : '') },
+      h('div', { class: 'k' }, ico(own ? 'check' : icon), own ? `${u.kind} · lit` : u.kind), h('div', { class: 'nm', text: u.name }),
+      own ? null : h('button', { class: 'btn' + (meta.embers >= u.cost ? ' primary' : ''), disabled: meta.embers < u.cost, 'aria-label': `Kindle ${u.name} for ${u.cost} embers`,
+        onclick: () => { if (meta.embers < u.cost) return; meta.embers -= u.cost; meta.unlocks.push(u.id); commitMeta(); sfx('kindle'); pyreFlash[i] = performance.now(); showPyre(u.id); } }, ico('ember'), u.cost),
       h('div', { class: 'ds', text: u.desc }));
   });
+  const lit = UNLOCKS.filter(u => unlocked(u.id)).length;
   setScreen(h('div', { class: 'page' },
-    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Spend your embers' }), h('h1', { text: 'The Pyre' }),
-    h('div', { class: 'embers', text: `${meta.embers} ember${meta.embers === 1 ? '' : 's'}` }),
-    h('p', { class: 'tagline', text: 'Every walk, win or lose, leaves embers behind: one for every 100 points. ' + UNLOCK_NOTE }),
+    backBtn(showTitle), h('div', { class: 'kicker', text: `${lit} of ${UNLOCKS.length} lanterns lit` }), h('h1', { text: 'The Pyre' }),
+    pyreCv,
+    h('div', { class: 'embers' }, ico('ember'), plural(meta.embers, 'ember')),
+    h('p', { class: 'tagline', text: 'Every walk leaves embers behind, win or lose. Kindle them here to bring new lantern-bearers, relics and stories onto the road.' }),
     h('div', { class: 'list' }, items)), true);
-  scr.querySelector('.btn').classList.add('back');
+  if (justKindled) scr.scrollTop = keep;
 }
 function showRecords() {
   screen = 'records';
   const rows = meta.records.map((r, i) => h('tr', {},
-    h('td', { text: i + 1 }), h('td', { class: 'num' + (r.won ? ' won' : ''), text: r.score }),
-    h('td', { text: (CLASSES[r.cls] ? CLASSES[r.cls].name : r.cls) + (r.daily ? ' · Daily' : '') + (r.dark ? ` · D${r.dark}` : '') }),
+    h('td', { text: i + 1 }), h('td', { class: 'num' + (r.won ? ' won' : ''), text: fmt(r.score) }),
+    h('td', { text: (CLASSES[r.cls] ? CLASSES[r.cls].name : r.cls) + (r.daily ? ' · Daily' : '') + (r.dark ? ` · ${DARKNESS[r.dark].name.replace('Darkness ', 'Dark ')}` : '') }),
     h('td', { class: r.won ? 'won' : '', text: r.won ? 'Victory' : (REGIONS[r.region] ? REGIONS[r.region].name : '') }), h('td', { text: r.date })));
   setScreen(h('div', { class: 'page' },
-    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Best walks' }), h('h1', { text: 'Records' }),
+    backBtn(showTitle), h('div', { class: 'kicker', text: 'Your best walks' }), h('h1', { text: 'Records' }),
     rows.length ? h('div', { style: 'overflow-x:auto' }, h('table', { class: 'rec' },
-      h('thead', {}, h('tr', {}, h('th', { text: '#' }), h('th', { class: 'num', text: 'Score' }), h('th', { text: 'Class' }), h('th', { text: 'Reached' }), h('th', { text: 'Date' }))),
-      h('tbody', {}, rows))) : h('p', { text: 'No walks yet. Your ten best scores will be kept here.' })), true);
-  scr.querySelector('.btn').classList.add('back');
+      h('thead', {}, h('tr', {}, h('th', { text: '#' }), h('th', { class: 'num', text: 'Score' }), h('th', { text: 'Walked as' }), h('th', { text: 'Reached' }), h('th', { text: 'Date' }))),
+      h('tbody', {}, rows))) : h('p', { text: 'Your ten best walks will be kept here.' })), true);
 }
 function howToContent() {
   const li = t => h('li', { text: t });
   return h('div', { class: 'rules' },
-    h('h3', { text: 'The walk' }), h('ul', {},
-      li('Your lantern-bearer walks the road on their own. Steer between three lanes with the ◂ ▸ buttons, arrow keys, A/D, or by tapping either side of the road.'),
-      li('Each region has 10 events and ends with a boss. There are 5 regions.'),
-      li('At a fork, the road splits into three paths. You take whichever path your lane is on when you reach it. The Next bar at the top shows what is ahead.'),
-      li('Oil flasks and gold drift past in the lanes. Walk over them to pick them up.'),
-      li('The speed button cycles through 1×, 2×, 3×, 5× and 10×. Auto makes the game play itself until you turn it off or pause.')),
-    h('h3', { text: 'Lantern oil' }), h('ul', {},
-      li('Oil burns as you walk. Fights, flasks, campfires and merchants refill it.'),
-      li('If it runs out, the dark takes 1 HP every few steps until you refill it.')),
-    h('h3', { text: 'Combat' }), h('ul', {},
-      li('The foe shows its next move above its head. Plan around it.'),
-      li('Strike deals damage. Guard blocks damage for one enemy turn. Your skill is strong but has a cooldown.'),
-      li('A draught heals 40% of your max HP and does not use your turn.'),
-      li('You can flee normal fights for 10 gold, or 6 HP if you are broke. You cannot flee elites or bosses.')),
-    h('h3', { text: 'Scoring' }), h('ul', {},
-      li('Normal enemy +10 · Elite +50 · Boss +200 · Region cleared +100.'),
-      li('Gold you hold at the end adds 1 point each.'),
-      li('Defeating the Hollow King adds 500, then multiplies your score by 1.5.')),
-    h('h3', { text: 'Relic sets' }), h('ul', {},
-      li('Many relics belong to a style: Blood, Ward, Hex or Lantern. Carry 3 of the same style to switch on its set bonus.'),
-      li('Combat shows how your damage adds up, so you can see each relic at work.')),
-    h('h3', { text: 'The end, and after' }), h('ul', {},
-      li('The walk ends when your HP reaches 0, or when the Hollow King falls.'),
-      li('Your walk is saved between events. If you close the game, Continue picks up where you left off.'),
-      li('Every walk earns 1 ember per 100 points. Spend embers at the Pyre to unlock classes, relics and events. Achievements earn embers too.')),
-    h('h3', { text: 'Daily Road and Darkness' }), h('ul', {},
-      li('The Daily Road is one shared road per day: the same class, foes and forks for every player. You get one walk at it, it earns double embers, and playing on consecutive days builds a streak.'),
-      li('Win a walk to unlock the next Darkness level, up to Darkness V. Each level makes the road harder and multiplies your score by an extra 0.25.')));
+    h('h3', { text: 'The road' }), h('ul', {},
+      li('Your lantern-bearer walks on their own. Steer between the three lanes with the arrow buttons, or tap either side of the road.'),
+      li('Where the road splits, you take whichever path you are on when you reach it. The bar under your health shows what lies ahead.'),
+      li('Oil flasks and gold lie in the lanes. Walk over them to pick them up.'),
+      li('Each of the five regions ends with a boss. End the Hollow King to win.')),
+    h('h3', { text: 'Your lantern' }), h('ul', {},
+      li('Oil burns as you walk. Flasks, won fights, campfires and merchants refill it.'),
+      li('If the lantern goes out, the dark wears you down until you find more oil.')),
+    h('h3', { text: 'Fighting' }), h('ul', {},
+      li('The sign above a foe shows its next move. Tap any sign or status to learn what it means.'),
+      li('Strike to deal damage, Guard to block the next blow, and use your skill when it is ready.'),
+      li('Drinking a draught heals you without using your turn. You can flee ordinary fights, but never elites or bosses.')),
+    h('h3', { text: 'Relics' }), h('ul', {},
+      li('Relics last for the whole walk. Many belong to a style: Blood, Ward, Hex or Lantern.'),
+      li('Carry three relics of one style to awaken its set bonus. Your strikes show how each relic adds up.')),
+    h('h3', { text: 'Between walks' }), h('ul', {},
+      li('Every walk earns embers, win or lose. Kindle them at the Pyre to unlock new lantern-bearers, relics and stories.'),
+      li('The Daily Road is the same road for everyone, once a day, for double embers. Walk it on consecutive days to build a streak.'),
+      li('Winning opens the next level of Darkness: a harder road for a bigger score.'),
+      li('Your walk is kept safe between events. Close the game whenever you like and continue later.'),
+      li('Auto plays the road for you, and 2× walks faster. Both are at the bottom of the screen.')));
 }
 function showHowTo(back) {
   screen = 'howto';
-  setScreen(h('div', { class: 'page' }, menuBtn('← Back', null, back), h('div', { class: 'kicker', text: 'Rules' }), h('h1', { text: 'How to Play' }), howToContent()), true);
-  scr.querySelector('.btn').classList.add('back');
+  setScreen(h('div', { class: 'page' }, backBtn(back), h('div', { class: 'kicker', text: 'Learn the road' }), h('h1', { text: 'How to Play' }), howToContent()), true);
 }
+
+// ── Settings, from the title screen or the pause menu.
+const toggle = (on, fn, label) => h('button', { class: 'small' + (on ? ' on' : ''), role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': label, onclick: () => { fn(); sfx('click'); } }, on ? 'On' : 'Off');
+function settingRows(redraw) {
+  const row = (name, desc, on, fn) => h('div', { class: 'setting' }, h('div', { class: 'nm', text: name }), h('div', { class: 'ds', text: desc }), toggle(on, () => { fn(); saveSettings(); redraw(); }, name));
+  return [
+    row('Sound effects', 'Hits, coins, chests and footfalls.', settings.sfx, () => { settings.sfx = !settings.sfx; }),
+    row('Music', 'A quiet tune for each region.', settings.music, () => { settings.music = !settings.music; settings.music ? startMusic() : stopMusic(); }),
+    row('Screen shake and motion', 'Turn off for a calmer screen.', settings.motion, () => { settings.motion = !settings.motion; }),
+  ];
+}
+function showSettings(back, confirming) {
+  screen = 'settings';
+  const redraw = () => showSettings(back, false);
+  setScreen(h('div', { class: 'page' },
+    backBtn(back), h('div', { class: 'kicker', text: 'Make it yours' }), h('h1', { text: 'Settings' }),
+    h('div', { class: 'list' }, settingRows(redraw)),
+    menuBtn('How to play', null, () => showHowTo(() => showSettings(back)), false, 'mystery'),
+    confirming
+      ? h('div', { class: 'list' }, h('p', { text: 'Erase all embers, unlocks, records, achievements and your Daily Road streak? This cannot be undone.' }),
+          menuBtn('Erase everything', null, () => { clearSavedRun(); meta = defaultMeta(); meta.rev = Date.now(); persist(); toast('Progress erased'); showTitle(); }),
+          menuBtn('Keep my progress', null, redraw, true))
+      : menuBtn('Erase progress', 'Start over from nothing', () => showSettings(back, true)),
+    devMode ? menuBtn('Leave developer mode', 'Hides the 3×, 5× and 10× speeds', () => { devMode = false; try { localStorage.removeItem('lantern-road-dev'); } catch (e) { } syncPlayButtons(); redraw(); }) : null,
+    h('div', { class: 'version', text: 'Lantern Road · 1.0' })), true);
+}
+
+// ── The end of a walk: the score adds up line by line, then the embers fill the next unlock.
 function showEnd() {
   screen = 'end';
   const r = lastRun, R = REGIONS[r.region];
-  const row = (a, b) => [h('span', { text: a }), h('span', { text: b })];
+  let i = 0;
+  const row = (a, b) => { const k = i++; return [h('span', { style: `--i:${k}`, text: a }), h('span', { style: `--i:${k}`, text: b })]; };
   const achs = r.newAch.map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
+  const total = h('span', { class: 'tot', text: '0' });
+  const rows = [
+    row(`Foes slain · ${r.kills} × 10`, fmt(r.kills * 10)), row(`Elites slain · ${r.elites} × 50`, fmt(r.elites * 50)),
+    row(`Bosses ended · ${r.bosses} × 200`, fmt(r.bosses * 200)), row(`Regions cleared · ${r.regions} × 100`, fmt(r.regions * 100)),
+    row('Gold carried', fmt(r.gold)),
+    r.won ? row('Victory', '+500') : null, r.won ? row('Victory bonus', '× 1.5') : null,
+    r.dark ? row(DARKNESS[r.dark].name, `× ${darkMult(r.dark)}`) : null];
+  const totalLabel = h('span', { class: 'tot', style: `--i:${i}`, text: r.best ? 'Final score · your best' : 'Final score' });
+  total.style.setProperty('--i', i);
   setScreen(h('div', { class: 'page' },
-    h('div', { class: 'kicker', text: (r.won ? 'Victory' : 'The walk is over') + (r.daily ? ` · Daily Road ${r.daily}` : '') }),
+    h('div', { class: 'kicker', text: (r.won ? 'Victory' : 'The walk is over') + (r.daily ? ` · Daily Road` : '') }),
     h('h1', { text: r.won ? 'The Hollow King is Ended' : `You Fell in the ${R.name}` }),
     h('p', { class: 'tagline', text: r.won ? 'The crown is dust, and the road behind you is lit.' : r.cause + '.' }),
-    h('div', { class: 'score' },
-      row(`Enemies slain · ${r.kills} × 10`, r.kills * 10), row(`Elites slain · ${r.elites} × 50`, r.elites * 50),
-      row(`Bosses ended · ${r.bosses} × 200`, r.bosses * 200), row(`Regions cleared · ${r.regions} × 100`, r.regions * 100),
-      row('Gold held', r.gold),
-      r.won ? row('Victory bonus', 500) : null, r.won ? row('Victory multiplier', '× 1.5') : null,
-      r.dark ? row(DARKNESS[r.dark].name, `× ${darkMult(r.dark)}`) : null,
-      h('span', { class: 'tot', text: r.best ? 'Final score · new best' : 'Final score' }), h('span', { class: 'tot', text: r.total })),
-    h('div', { class: 'embers', text: `+${r.embers} ember${r.embers === 1 ? '' : 's'}${r.daily ? ' (doubled for the Daily Road)' : ''} · ${meta.embers} total` }),
-    r.daily ? h('p', { class: 'tagline', text: `Daily streak: ${meta.daily.streak} day${meta.daily.streak === 1 ? '' : 's'}. A new road opens tomorrow.` }) : null,
-    r.unlockedDark ? h('p', { class: 'tagline', text: `${DARKNESS[r.unlockedDark].name} unlocked: ${DARKNESS[r.unlockedDark].desc}` }) : null,
-    achs.length ? h('div', { class: 'list' }, achs.map(a => h('div', { class: 'item' }, h('div', { class: 'k', text: `Achievement · +${a.embers} embers` }), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })))) : null,
-    h('div', { class: 'menu' }, menuBtn('Walk again', null, beginWalk, true), menuBtn('The Pyre', `${meta.embers} embers to spend`, showPyre), menuBtn('Title', null, showTitle))));
+    h('div', { class: 'score' }, rows, totalLabel, total),
+    h('div', { class: 'embers' }, ico('ember'), `+${plural(r.embers, 'ember')}${r.daily ? ', doubled by the Daily Road' : ''}`),
+    unlockBar(r.embers),
+    r.daily ? h('p', { class: 'tagline', text: `${plural(meta.daily.streak, 'day')} in a row on the Daily Road. A new road opens tomorrow.` }) : null,
+    r.unlockedDark ? h('p', { class: 'tagline', text: `${DARKNESS[r.unlockedDark].name} awaits: ${DARKNESS[r.unlockedDark].desc}` }) : null,
+    achs.length ? h('div', { class: 'list' }, achs.map(a => h('div', { class: 'item' }, h('div', { class: 'k got' }, ico('trophy'), `Achievement · +${plural(a.embers, 'ember')}`), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })))) : null,
+    h('div', { class: 'menu' }, menuBtn('Walk again', null, beginWalk, true),
+      menuBtn('Visit the Pyre', nextUnlock() && meta.embers >= nextUnlock().cost ? 'Something is ready to kindle' : plural(meta.embers, 'ember') + ' to spend', showPyre, false, 'camp'),
+      menuBtn('Title', null, showTitle))));
+  // count the total up once the rows have landed
+  const start = performance.now() + (noMotion() ? 0 : i * 120 + 200), dur = noMotion() ? 1 : 900;
+  let lastTick = 0;
+  const step = now => {
+    if (!total.isConnected) return;
+    const k = clamp((now - start) / dur, 0, 1), v = Math.round(r.total * (1 - (1 - k) ** 3));
+    total.textContent = fmt(v);
+    if (k > 0 && k < 1 && now - lastTick > 70) { sfx('tick'); lastTick = now; }
+    if (k < 1) requestAnimationFrame(step); else if (r.best || r.won) sfx('win');
+  };
+  requestAnimationFrame(step);
 }
 
-// ── Codex: achievements, the foes you have defeated, and the relics you have found.
+// ── Codex: achievements, the foes you have met (with what you have learned of them), and the relics you have found.
 function silhouette(c) { const x = c.getContext('2d'); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#2e2738'; x.fillRect(0, 0, c.width, c.height); return c; }
+const foeRegion = id => REGIONS.find(R => R.normals.includes(id) || R.elite === id || R.boss === id);
+function openLore(id) {
+  const d = ENEMIES[id], n = meta.foes[id] || 0, R = foeRegion(id);
+  const moves = [...new Set(d.pat)].map(m => { const I = intentInfo(parseIntent(m), 0); return h('span', { class: 'intent ' + I.cls, 'data-tip': I.tip }, ico(I.icon), I.text !== '' ? h('b', { text: I.text }) : null); });
+  openSheet(h('div', { class: 'lore' },
+    h('div', { class: 'k', text: `${R ? R.name : 'A mystery on the road'} · defeated ×${n}` }), h('h2', { text: d.name }), portrait(id),
+    h('p', { text: d.intro }),
+    n >= 3 ? h('div', { class: 'tags' }, moves) : h('div', { class: 'k', text: 'Defeat it 3 times to learn its moves.' }),
+    n >= 5 ? h('p', { text: d.death }) : h('div', { class: 'k', text: 'Defeat it 5 times to learn how it ends.' }),
+    h('button', { class: 'btn primary', onclick: closeSheet, text: 'Close' })));
+}
 function showCodex(tab) {
   screen = 'codex';
   const tabs = h('div', { class: 'tabs', role: 'tablist' }, [['ach', 'Achievements'], ['foes', 'Bestiary'], ['relics', 'Relics']].map(([id, label]) =>
     h('button', { class: 'small' + (tab === id ? ' on' : ''), role: 'tab', 'aria-selected': tab === id ? 'true' : 'false', onclick: () => showCodex(id), text: label })));
-  let body;
+  let body, lead;
   if (tab === 'ach') {
+    lead = `${meta.ach.length} of ${ACHIEVEMENTS.length} earned`;
     body = h('div', { class: 'list' }, ACHIEVEMENTS.map(a => { const got = meta.ach.includes(a.id);
-      return h('div', { class: 'item' + (got ? '' : ' locked') }, h('div', { class: 'k' + (got ? ' got' : ''), text: got ? `Earned · +${a.embers} embers` : `+${a.embers} embers` }), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })); }));
+      return h('div', { class: 'item' + (got ? '' : ' locked') }, h('div', { class: 'k' + (got ? ' got' : '') }, ico(got ? 'trophy' : 'lock'), `+${plural(a.embers, 'ember')}`), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })); }));
   } else if (tab === 'foes') {
     const ids = REGIONS.flatMap(R => [...R.normals, R.elite, R.boss]).concat(['mimic', 'moths']);
-    body = h('div', { class: 'beasts' }, ids.map(id => { const n = meta.foes[id] || 0, d = ENEMIES[id];
-      const where = REGIONS.find(R => R.normals.includes(id) || R.elite === id || R.boss === id);
+    lead = `${ids.filter(id => meta.foes[id]).length} of ${ids.length} met · tap one to read about it`;
+    body = h('div', { class: 'beasts' }, ids.map(id => { const n = meta.foes[id] || 0, d = ENEMIES[id], where = foeRegion(id);
       const pc = portrait(id); if (!n) silhouette(pc);
-      return h('div', { class: 'beast' + (n ? '' : ' unseen') }, pc, h('div', { class: 'nm', text: n ? d.name : 'Unknown' }), h('div', { class: 'k', text: n ? `Defeated ×${n}` : (where ? where.name : 'A mystery') })); }));
+      return h(n ? 'button' : 'div', { class: 'beast' + (n ? '' : ' unseen'), onclick: n ? () => { sfx('click'); openLore(id); } : null }, pc, h('div', { class: 'nm', text: n ? d.name : 'Unknown' }), h('div', { class: 'k', text: n ? `Defeated ×${n}` : (where ? where.name : 'A mystery') })); }));
   } else {
-    body = h('div', { class: 'list' }, Object.keys(RELICS).map(id => { const seen = meta.relicsSeen.includes(id), R = RELICS[id];
-      return h('div', { class: 'item' + (seen ? '' : ' locked') }, h('div', { class: 'k', text: (R.tag ? TAG_NAMES[R.tag] : 'Relic') + (seen ? '' : ' · not found yet') }), h('div', { class: 'nm', text: seen ? R.name : '???' }), h('div', { class: 'ds', text: seen ? R.desc : 'Find it on the road to learn what it does.' })); }));
+    lead = `${meta.relicsSeen.length} of ${Object.keys(RELICS).length} found`;
+    body = h('div', { class: 'list' },
+      Object.keys(SETS).map(t => h('div', { class: 'item' }, h('div', { class: 'k' }, ico(TAG_ICONS[t]), `${TAG_NAMES[t]} set · carry 3 ${TAG_NAMES[t]} relics`), h('div', { class: 'nm', text: SETS[t].name }), h('div', { class: 'ds', text: SETS[t].desc }))),
+      Object.keys(RELICS).map(id => { const seen = meta.relicsSeen.includes(id), R = RELICS[id];
+        return h('div', { class: 'item' + (seen ? '' : ' locked') }, h('div', { class: 'k' }, ico(seen ? (R.tag ? TAG_ICONS[R.tag] : 'relic') : 'lock'), (R.tag ? TAG_NAMES[R.tag] : 'Relic') + (seen ? '' : ' · not yet found')), h('div', { class: 'nm', text: seen ? R.name : '???' }), h('div', { class: 'ds', text: seen ? R.desc : 'Find it on the road to learn what it does.' })); }));
   }
-  const setsInfo = tab === 'relics' ? h('div', { class: 'list' }, Object.keys(SETS).map(t => h('div', { class: 'item' }, h('div', { class: 'k', text: `${TAG_NAMES[t]} set · carry 3 ${TAG_NAMES[t]} relics` }), h('div', { class: 'nm', text: SETS[t].name }), h('div', { class: 'ds', text: SETS[t].desc })))) : null;
-  setScreen(h('div', { class: 'page' }, menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'What you have learned' }), h('h1', { text: 'Codex' }), tabs, setsInfo, body), true);
-  scr.querySelector('.btn').classList.add('back');
+  setScreen(h('div', { class: 'page' }, backBtn(showTitle), h('div', { class: 'kicker', text: lead }), h('h1', { text: 'Codex' }), tabs, body), true);
 }
 
 // ───────────────────────── sheet: pause and relics
 const sheet = $('#sheet');
-function openSheet(el) { sheet.replaceChildren(h('div', { class: 'box', role: 'dialog' }, el)); sheet.hidden = false; const b = sheet.querySelector('.btn'); if (b) b.focus({ preventScroll: true }); }
+function openSheet(el) { sheet.replaceChildren(h('div', { class: 'box', role: 'dialog' }, el)); sheet.hidden = false; hideTip(); const b = sheet.querySelector('.btn'); if (b && matchMedia('(hover:hover)').matches) b.focus({ preventScroll: true }); }
 function closeSheet() { sheet.hidden = true; sheet.replaceChildren(); }
 function openRelics() {
   if (!run) return; const wasPaused = paused; paused = true;
   const close = () => { closeSheet(); paused = wasPaused; };
-  const list = run.relics.length ? run.relics.map(id => h('div', { class: 'relic' }, h('b', { text: relicLabel(id) }), h('span', { text: RELICS[id].desc })))
+  const list = run.relics.length ? run.relics.map(id => h('div', { class: 'relic' }, ico(RELICS[id].tag ? TAG_ICONS[RELICS[id].tag] : 'relic'), h('b', { text: RELICS[id].name }), h('span', { text: RELICS[id].desc })))
     : [h('p', { class: 'ev-text', text: 'No relics yet. Elites, shrines, merchants and bosses carry them.' })];
-  const sets = Object.keys(SETS).filter(t => tagCount(t) > 0).map(t => h('div', { class: 'relic' + (setOn(t) ? ' set-on' : '') },
-    h('b', { text: `${SETS[t].name} · ${TAG_NAMES[t]} ${Math.min(3, tagCount(t))}/3${setOn(t) ? ' · active' : ''}` }), h('span', { text: SETS[t].desc })));
+  const sets = Object.keys(SETS).filter(t => tagCount(t) > 0).map(t => h('div', { class: 'relic' + (setOn(t) ? ' set-on' : '') }, ico(TAG_ICONS[t]),
+    h('b', {}, SETS[t].name, h('span', { class: 'setpips' }, [0, 1, 2].map(k => h('i', { class: k < tagCount(t) ? 'on' : '' })))), h('span', { text: (setOn(t) ? 'Awake. ' : `${TAG_NAMES[t]} ${tagCount(t)} of 3. `) + SETS[t].desc })));
   const c = CLASSES[run.cls];
   openSheet(h('div', { style: 'display:grid;gap:10px' },
     h('div', { class: 'kicker', text: `${c.name} · Strike ${strikeBase()} · Guard ${guardVal()}` }), h('h2', { text: 'Your Relics' }),
     h('p', { class: 'ev-text', style: 'margin:0', text: `${c.skill.name} (level ${run.skillLv}): ${c.skill.desc(run.skillLv)} ${c.passive}` }),
-    ...sets, ...list, h('button', { class: 'btn primary', onclick: close, text: 'Close' })));
+    ...sets, ...list, h('button', { class: 'btn primary', onclick: close, text: 'Back to the road' })));
 }
 function togglePause() {
   if (!run || screen !== 'travel') return;
@@ -1816,14 +2308,14 @@ function openPause(confirming) {
   paused = true;
   const resume = () => { closeSheet(); paused = false; };
   openSheet(h('div', { style: 'display:grid;gap:10px' },
-    h('div', { class: 'kicker', text: 'Paused' }), h('h2', { text: confirming ? 'Abandon this walk?' : 'Rest a Moment' }),
-    confirming ? h('p', { class: 'ev-text', style: 'margin:0', text: 'The walk ends now and is scored as it stands. You still earn embers.' }) : null,
+    h('div', { class: 'kicker', text: 'Paused' }), h('h2', { text: confirming ? 'Turn back?' : 'Rest a Moment' }),
+    confirming ? h('p', { class: 'ev-text', style: 'margin:0', text: 'Your walk ends here and is scored as it stands. You still earn your embers.' }) : null,
     confirming
-      ? [menuBtn('Yes, abandon the walk', null, () => { closeSheet(); paused = false; if (run) { run.dead = 'Turned back in the ' + regionName(); endRun(false, run.dead); } }), menuBtn('Keep walking', null, resume, true)]
+      ? [menuBtn('Turn back', null, () => { closeSheet(); paused = false; if (run) { run.dead = 'Turned back in the ' + regionName(); endRun(false, run.dead); } }), menuBtn('Keep walking', null, resume, true)]
       : [menuBtn('Resume', null, resume, true),
-        menuBtn(muted ? 'Sound: off' : 'Sound: on', 'Toggle sound effects', () => { muted = !muted; try { localStorage.setItem('lantern-road-muted', muted ? '1' : '0'); } catch (e) { } openPause(); }),
+        ...settingRows(() => openPause()),
         menuBtn('How to play', null, () => openSheet(h('div', { style: 'display:grid;gap:10px' }, h('h2', { text: 'How to Play' }), howToContent(), menuBtn('Back', null, () => openPause(), true)))),
-        menuBtn('Abandon walk', 'End this walk and keep your score', () => openPause(true))]));
+        menuBtn('Turn back', 'End this walk and keep your score', () => openPause(true))]));
 }
 
 // ───────────────────────── auto mode
@@ -1890,11 +2382,12 @@ $('#btnR').addEventListener('click', () => move(1));
 $('#btnPause').addEventListener('click', togglePause);
 function syncPlayButtons() {
   const sb = $('#btnSpeed'), ab = $('#btnAuto');
-  sb.textContent = speed + '×'; sb.classList.toggle('fast', speed > 1);
-  ab.setAttribute('aria-pressed', auto ? 'true' : 'false'); ab.textContent = auto ? 'Auto on' : 'Auto';
+  if (!speedList().includes(speed)) speed = 1;
+  sb.textContent = speed + '×'; sb.classList.toggle('on', speed > 1);
+  ab.setAttribute('aria-pressed', auto ? 'true' : 'false');
 }
-function cycleSpeed() { speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]; savePlayPrefs(); syncPlayButtons(); }
-function toggleAuto() { auto = !auto; autoAt = performance.now() + autoDelay(); savePlayPrefs(); syncPlayButtons(); toast(auto ? 'Auto mode on' : 'Auto mode off'); }
+function cycleSpeed() { const l = speedList(); speed = l[(l.indexOf(speed) + 1) % l.length]; savePlayPrefs(); syncPlayButtons(); }
+function toggleAuto() { auto = !auto; autoAt = performance.now() + autoDelay(); savePlayPrefs(); syncPlayButtons(); toast(auto ? 'Auto play on' : 'Auto play off'); }
 $('#btnSpeed').addEventListener('click', cycleSpeed);
 $('#btnAuto').addEventListener('click', toggleAuto);
 syncPlayButtons();
@@ -1916,7 +2409,11 @@ document.addEventListener('keydown', e => {
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); move(1); }
   else if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); togglePause(); }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && run && screen === 'travel' && !run.event && sheet.hidden) openPause(); if (document.hidden) saveRun(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && run && screen === 'travel' && !run.event && sheet.hidden) openPause();
+  if (document.hidden) saveRun();
+  if (AC) { if (document.hidden) AC.suspend(); else if (music.on || settings.sfx) AC.resume(); }
+});
 window.addEventListener('pagehide', saveRun);
 window.addEventListener('resize', resize);
 if (window.ResizeObserver) new ResizeObserver(resize).observe($('#app'));
