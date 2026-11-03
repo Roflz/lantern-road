@@ -2,10 +2,14 @@
 <title>Lantern Road</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Silkscreen:wght@400;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
+/* Fonts ship with the game (fonts/, SIL Open Font License) so it works offline. */
+@font-face{font-family:"Pirata One";src:url(fonts/pirata-one-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"Spectral";src:url(fonts/spectral-400.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Spectral";src:url(fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(fonts/spectral-600.woff2) format("woff2");font-weight:600;font-style:normal;font-display:swap}
 :root{
   /* Layout: one portrait road-frame centred in the void. The HUD rides its top edge, lane controls its bottom, and event cards rise from below into the lantern light. */
   --void:#0a080e;
@@ -152,6 +156,30 @@ h2{font-size:29px;line-height:1.02;margin-top:3px}
 .fx.doom{color:var(--doom)}
 .fx.ward{color:var(--ward)}
 .fx.me{top:-6px}
+.fx.proc{font-size:11px;font-weight:400;color:var(--ember);top:58%}
+.fx.me.proc{top:16px}
+.math{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;font-family:var(--f-pixel);font-size:10px;font-variant-numeric:tabular-nums}
+.math .chip{padding:2px 5px;border:1px solid var(--rule);background:#000;color:var(--bone)}
+.math .chip.relic{border-color:var(--ember);color:var(--ember)}
+.math .chip.bad{border-color:#6a2a2a;color:var(--bad)}
+.math .op{color:var(--ash)}
+.math b{font-size:15px;font-weight:700;color:#fff;margin-left:2px}
+.math .note{color:var(--ward);margin-left:4px}
+.region .mode{font-family:var(--f-pixel);font-size:9px;letter-spacing:.08em;color:var(--ember);border:1px solid var(--ember);padding:1px 4px;margin-left:8px;vertical-align:middle}
+.relic.set-on{border-color:var(--ember)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs .small.on{border-color:var(--ember);color:var(--ember)}
+.beasts{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.beast{display:grid;justify-items:center;gap:3px;padding:8px 6px;background:var(--stone-2);border:1px solid var(--rule);text-align:center;min-width:0}
+.beast canvas{width:72px;height:78px;image-rendering:pixelated}
+.beast .nm{font-family:var(--f-display);font-size:16px;line-height:1.1}
+.beast .k{font-family:var(--f-pixel);font-size:8px;letter-spacing:.06em;color:var(--ash);text-transform:uppercase}
+.beast.unseen .nm{color:var(--ash)}
+.dark{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--ember)}
+.dark .small{min-width:40px;font-size:16px}
+.dark .small:disabled{opacity:.35}
+.dark .nm{font-family:var(--f-display);font-size:22px;line-height:1}
+.dark .ds{color:var(--ash);font-size:13.5px;line-height:1.4;margin-top:2px}
 @keyframes up{to{transform:translate(-50%,-36px);opacity:0}}
 
 /* Full screens */
@@ -169,6 +197,9 @@ h2{font-size:29px;line-height:1.02;margin-top:3px}
 .embers{font-family:var(--f-pixel);font-size:12px;color:var(--ember)}
 .list{display:grid;gap:8px}
 .item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--rule)}
+.item .k,.item .nm{grid-column:1}
+.item.locked{opacity:.55}
+.item .k.got{color:var(--good)}
 .item .k{font-family:var(--f-pixel);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
 .item .nm{font-family:var(--f-display);font-size:21px;line-height:1.05}
 .item .ds{grid-column:1/-1;color:var(--ash);font-size:14px;line-height:1.4}
@@ -237,11 +268,22 @@ const OIL_PER_PX = 1 / 22;      // lantern oil burned per pixel walked
 const DARK_STEP = 24;           // pixels walked in darkness per 1 HP lost
 
 const $ = s => document.querySelector(s);
-const rand = (a, b) => a + Math.random() * (b - a);
-const ri = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
-const pick = a => a[Math.floor(Math.random() * a.length)];
+// Gameplay randomness comes from the run's own seeded generator (mulberry32), so the Daily Road is the same
+// road for everyone and a saved run resumes the same way. Visual effects use vrand, which never touches the seed.
+function rng() {
+  if (!run) return Math.random();
+  let t = run.seed = (run.seed + 0x6D2B79F5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function withSeed(seed, fn) { const saved = run.seed; run.seed = seed | 0; try { return fn(); } finally { run.seed = saved; } }
+const vrand = (a, b) => a + Math.random() * (b - a);
+const rand = (a, b) => a + rng() * (b - a);
+const ri = (a, b) => Math.floor(a + rng() * (b - a + 1));
+const pick = a => a[Math.floor(rng() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const strSeed = s => { let x = 2166136261; for (const ch of s) x = Math.imul(x ^ ch.charCodeAt(0), 16777619); return x | 0; };
 const sleep = ms => new Promise(r => setTimeout(r, ms / speed)); // combat pacing follows the game speed
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function hash(n) { n |= 0; n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n ^= n >>> 16; return (n >>> 0) / 4294967296; }
@@ -364,28 +406,68 @@ const CLASSES = {
   },
 };
 
+// Tagged relics belong to a build style. Carrying 3 of one tag switches on that style's set bonus.
 const RELICS = {
   whetstone: { name: 'Whetstone', desc: '+2 Strike damage.' },
   locket: { name: 'Iron Locket', desc: '+12 max HP.', gain: () => { run.maxHp += 12; run.hp += 12; }, lose: () => { run.maxHp -= 12; run.hp = Math.min(run.hp, run.maxHp); } },
-  gravesalt: { name: 'Grave Salt', desc: 'Your first Strike in each fight deals double damage.' },
-  oilskin: { name: 'Oilskin Hood', desc: 'Your lantern burns 35% slower.' },
-  mothlantern: { name: 'Moth-Glass Lantern', desc: '+30 max oil.', gain: () => { run.maxOil += 30; run.oil += 30; }, lose: () => { run.maxOil -= 30; run.oil = Math.min(run.oil, run.maxOil); } },
+  gravesalt: { name: 'Grave Salt', tag: 'blood', desc: 'Your first Strike in each fight deals double damage.' },
+  oilskin: { name: 'Oilskin Hood', tag: 'lantern', desc: 'Your lantern burns 35% slower.' },
+  mothlantern: { name: 'Moth-Glass Lantern', tag: 'lantern', desc: '+30 max oil.', gain: () => { run.maxOil += 30; run.oil += 30; }, lose: () => { run.maxOil -= 30; run.oil = Math.min(run.oil, run.maxOil); } },
   tithe: { name: 'Tithe Coin', desc: '+30% gold from fights.' },
-  boneward: { name: 'Bone Ward', desc: 'Guard grants +4 Block.' },
-  leech: { name: 'Leech Tooth', desc: 'Strikes heal 1 HP.' },
-  blackcandle: { name: 'Black Candle', desc: 'Your skill recharges 1 turn faster.' },
-  rustedbell: { name: 'Rusted Bell', desc: 'Start each fight with 6 Block.' },
+  boneward: { name: 'Bone Ward', tag: 'ward', desc: 'Guard grants +4 Block.' },
+  leech: { name: 'Leech Tooth', tag: 'blood', desc: 'Strikes heal 1 HP.' },
+  blackcandle: { name: 'Black Candle', tag: 'hex', desc: 'Your skill recharges 1 turn faster.' },
+  rustedbell: { name: 'Rusted Bell', tag: 'ward', desc: 'Start each fight with 6 Block.' },
   knuckle: { name: "Saint's Knuckle", desc: 'Heal 4 HP after each fight.' },
   deepflask: { name: 'Deep Flask', desc: 'Draughts heal 50% more.' },
-  thornmail: { name: 'Thorn Mail', desc: 'When a foe hits you, it takes 3 damage.' },
+  thornmail: { name: 'Thorn Mail', tag: 'ward', desc: 'When a foe hits you, it takes 3 damage.' },
   crow: { name: 'Crow Feather', desc: 'Fleeing costs nothing.' },
-  widow: { name: "Widow's Ring", desc: 'Below 30% HP, you deal 50% more damage.' },
+  widow: { name: "Widow's Ring", tag: 'blood', desc: 'Below 30% HP, you deal 50% more damage.' },
   luckybone: { name: 'Lucky Knucklebone', desc: '15% chance to dodge each attack.' },
+  serrated: { name: 'Serrated Edge', tag: 'blood', desc: 'Your Strikes make the foe Bleed 2.' },
+  butcher: { name: "Butcher's Hook", tag: 'blood', desc: 'Your Strikes deal +3 damage to a Bleeding foe.' },
+  bastion: { name: 'Bastion Plate', tag: 'ward', desc: 'Half of any Block you have left carries over to your next turn.' },
+  counter: { name: 'Counterweight', tag: 'ward', desc: 'Guarding also hits the foe for half the Block you gain.' },
+  witchnail: { name: "Witch's Nail", tag: 'hex', desc: 'Your Strikes inflict Doom 3 for 2 turns.' },
+  gravebell: { name: 'Grave Bell', tag: 'hex', desc: 'Doom deals 3 more damage.' },
+  lampeater: { name: 'Lamp-Eater', tag: 'lantern', desc: '+1 Strike damage for every 30 oil in your lantern.' },
+  wickcharm: { name: 'Wick Charm', tag: 'lantern', desc: 'Winning a fight refills 8 more oil.' },
   hunter: { name: "Hunter's Mark", desc: 'Elites and bosses take 25% more damage from you.', unlock: 'rel_hunter' },
   waxseal: { name: 'Wax Seal', desc: 'The first time you would die, survive at 1 HP. Then it breaks.', unlock: 'rel_waxseal' },
-  chalice: { name: 'Blood Chalice', desc: 'Strikes deal +1 damage for every 10 HP you are missing.', unlock: 'rel_chalice' },
-  ghostmoth: { name: 'Ghost Moth', desc: 'Oil flasks and gold on the road are worth double.', unlock: 'rel_ghostmoth' },
+  chalice: { name: 'Blood Chalice', tag: 'blood', desc: 'Strikes deal +1 damage for every 10 HP you are missing.', unlock: 'rel_chalice' },
+  ghostmoth: { name: 'Ghost Moth', tag: 'lantern', desc: 'Oil flasks and gold on the road are worth double.', unlock: 'rel_ghostmoth' },
 };
+const TAG_NAMES = { blood: 'Blood', ward: 'Ward', hex: 'Hex', lantern: 'Lantern' };
+const SETS = {
+  blood: { name: 'Bloodletter', desc: 'Your Strikes make the foe Bleed 2 more, and you heal 1 each time a foe takes Bleed damage.' },
+  ward: { name: 'Bulwark', desc: 'Guard grants 4 more Block, and after you Guard your next Strike deals +4.' },
+  hex: { name: 'Hexed Path', desc: 'Every fight starts with the foe under Doom 4 for 3 turns.' },
+  lantern: { name: 'Lamplighter', desc: '+2 Strike damage while your lantern is more than half full.' },
+};
+
+const ACHIEVEMENTS = [
+  { id: 'first', name: 'First Steps', desc: 'Finish your first walk.', embers: 2 },
+  { id: 'sexton', name: 'Gravedigger Buried', desc: 'End the Sexton.', embers: 2 },
+  { id: 'bishop', name: 'Font Sealed', desc: 'End the Drowned Bishop.', embers: 3 },
+  { id: 'antlered', name: 'Antlers Broken', desc: 'End the Antlered One.', embers: 3 },
+  { id: 'marshal', name: 'Ash to Ash', desc: 'End the Burnt Marshal.', embers: 4 },
+  { id: 'king', name: 'Kingslayer', desc: 'End the Hollow King.', embers: 5 },
+  { id: 'win_sellsword', name: 'Paid in Full', desc: 'Win as the Sellsword.', embers: 3 },
+  { id: 'win_hexblade', name: 'The Curse Holds', desc: 'Win as the Hexblade.', embers: 3 },
+  { id: 'win_pilgrim', name: 'Pilgrimage', desc: 'Win as the Pilgrim.', embers: 3 },
+  { id: 'set_blood', name: 'Bloodletter', desc: 'Complete the Blood set in one walk.', embers: 2 },
+  { id: 'set_ward', name: 'Bulwark', desc: 'Complete the Ward set in one walk.', embers: 2 },
+  { id: 'set_hex', name: 'Hexed Path', desc: 'Complete the Hex set in one walk.', embers: 2 },
+  { id: 'set_lantern', name: 'Lamplighter', desc: 'Complete the Lantern set in one walk.', embers: 2 },
+  { id: 'hoarder', name: 'Hoarder', desc: 'Carry 8 relics at once.', embers: 2 },
+  { id: 'miser', name: 'Miser', desc: 'Hold 300 gold at once.', embers: 2 },
+  { id: 'flawless', name: 'Untouched', desc: 'Defeat an elite without losing any HP.', embers: 3 },
+  { id: 'daily1', name: 'Daily Bread', desc: 'Finish a Daily Road.', embers: 2 },
+  { id: 'streak3', name: 'Creature of Habit', desc: 'Reach a 3-day Daily Road streak.', embers: 3 },
+  { id: 'streak7', name: 'Pilgrim of Days', desc: 'Reach a 7-day Daily Road streak.', embers: 5 },
+  { id: 'dark1', name: 'Into the Dark', desc: 'Win on Darkness I or higher.', embers: 4 },
+  { id: 'dark5', name: 'Lightless', desc: 'Win on Darkness V.', embers: 10 },
+];
 
 const ENEMIES = {
   // Gravefields
@@ -438,30 +520,47 @@ const REGIONS = [
 ];
 
 const UNLOCKS = [
-  { id: 'cls_hexblade', kind: 'Class', name: 'The Hexblade', cost: 10, desc: 'Curses foes with Doom and heals on every Strike. 52 HP.' },
-  { id: 'cls_pilgrim', kind: 'Class', name: 'The Pilgrim', cost: 10, desc: 'Heals as they fight with Holy Light. 62 HP, carries up to 4 draughts.' },
-  { id: 'start_relic', kind: 'Boon', name: 'Kindred Gift', cost: 10, desc: 'At the start of each walk, choose one of three relics to carry.' },
-  { id: 'rel_hunter', kind: 'Relic', name: "Hunter's Mark", cost: 3, desc: RELICS.hunter.desc },
-  { id: 'rel_ghostmoth', kind: 'Relic', name: 'Ghost Moth', cost: 3, desc: RELICS.ghostmoth.desc },
-  { id: 'rel_waxseal', kind: 'Relic', name: 'Wax Seal', cost: 4, desc: RELICS.waxseal.desc },
-  { id: 'rel_chalice', kind: 'Relic', name: 'Blood Chalice', cost: 4, desc: RELICS.chalice.desc },
-  { id: 'ev_palemerchant', kind: 'Event', name: 'The Pale Merchant', cost: 3, desc: 'A mystery where you can trade one relic for two.' },
-  { id: 'ev_mirror', kind: 'Event', name: 'The Mirror Pool', cost: 3, desc: 'A mystery that sharpens your skill at a price.' },
-  { id: 'ev_angel', kind: 'Event', name: 'The Chained Angel', cost: 4, desc: 'A mystery that can heal you fully and raise your max HP.' },
+  { id: 'cls_hexblade', kind: 'Class', name: 'The Hexblade', cost: 25, desc: 'Curses foes with Doom and heals on every Strike. 52 HP.' },
+  { id: 'cls_pilgrim', kind: 'Class', name: 'The Pilgrim', cost: 25, desc: 'Heals as they fight with Holy Light. 62 HP, carries up to 4 draughts.' },
+  { id: 'start_relic', kind: 'Boon', name: 'Kindred Gift', cost: 30, desc: 'At the start of each walk, choose one of three relics to carry.' },
+  { id: 'rel_hunter', kind: 'Relic', name: "Hunter's Mark", cost: 8, desc: RELICS.hunter.desc },
+  { id: 'rel_ghostmoth', kind: 'Relic', name: 'Ghost Moth', cost: 8, desc: RELICS.ghostmoth.desc },
+  { id: 'rel_waxseal', kind: 'Relic', name: 'Wax Seal', cost: 12, desc: RELICS.waxseal.desc },
+  { id: 'rel_chalice', kind: 'Relic', name: 'Blood Chalice', cost: 10, desc: RELICS.chalice.desc },
+  { id: 'ev_palemerchant', kind: 'Event', name: 'The Pale Merchant', cost: 8, desc: 'A mystery where you can trade one relic for two.' },
+  { id: 'ev_mirror', kind: 'Event', name: 'The Mirror Pool', cost: 8, desc: 'A mystery that sharpens your skill at a price.' },
+  { id: 'ev_angel', kind: 'Event', name: 'The Chained Angel', cost: 10, desc: 'A mystery that can heal you fully and raise your max HP.' },
 ];
 const UNLOCK_NOTE = 'Unlocks add the item to the pool for future walks. They are new options, not extra power.';
 
 // ───────────────────────── save data
 const LS_KEY = 'lantern-road-save-v1';
-const defaultMeta = () => ({ v: 1, embers: 0, unlocks: [], records: [], runs: 0, rev: 0 });
+const defaultMeta = () => ({ v: 1, embers: 0, unlocks: [], records: [], runs: 0, rev: 0, dark: 0,
+  daily: { streak: 0, last: null, best: 0, results: [] }, ach: [], foes: {}, relicsSeen: [] });
 function normalizeMeta(d) {
   const m = defaultMeta();
   if (d && typeof d === 'object') {
+    const strs = a => Array.isArray(a) ? a.filter(u => typeof u === 'string') : [];
     m.embers = Number(d.embers) || 0; m.runs = Number(d.runs) || 0; m.rev = Number(d.rev) || 0;
-    m.unlocks = Array.isArray(d.unlocks) ? d.unlocks.filter(u => typeof u === 'string') : [];
+    m.unlocks = strs(d.unlocks); m.ach = strs(d.ach); m.relicsSeen = strs(d.relicsSeen);
     m.records = Array.isArray(d.records) ? d.records.slice(0, 10) : [];
+    m.dark = clamp(Number(d.dark) || 0, 0, 5);
+    if (d.foes && typeof d.foes === 'object') for (const k in d.foes) m.foes[k] = Number(d.foes[k]) || 0;
+    if (d.daily && typeof d.daily === 'object') {
+      m.daily.streak = Number(d.daily.streak) || 0; m.daily.best = Number(d.daily.best) || 0;
+      m.daily.last = typeof d.daily.last === 'string' ? d.daily.last : null;
+      m.daily.results = Array.isArray(d.daily.results) ? d.daily.results.slice(-30) : [];
+    }
   }
   return m;
+}
+// The walk in progress, saved between events so closing the app never loses it.
+const RUN_KEY = 'lantern-road-run-v1';
+function saveRun() { if (!run || run.over || run.event) return; try { localStorage.setItem(RUN_KEY, JSON.stringify(run)); } catch (e) { } }
+function clearSavedRun() { try { localStorage.removeItem(RUN_KEY); } catch (e) { } }
+function loadSavedRun() {
+  try { const r = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); return r && Array.isArray(r.beats) && CLASSES[r.cls] && !r.over ? r : null; }
+  catch (e) { return null; }
 }
 function loadLocal() { try { const s = localStorage.getItem(LS_KEY); return s ? normalizeMeta(JSON.parse(s)) : null; } catch (e) { return null; } }
 function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(meta)); } catch (e) { } }
@@ -497,6 +596,13 @@ async function initCloud() {
   } catch (e) { saveDoc = null; }
 }
 const unlocked = id => meta.unlocks.includes(id);
+function award(id) {
+  if (meta.ach.includes(id)) return;
+  const a = ACHIEVEMENTS.find(x => x.id === id); if (!a) return;
+  meta.ach.push(id); meta.embers += a.embers;
+  if (run) run.newAch.push(id);
+  commitMeta(); sfx('relic'); toast(`Achievement: ${a.name} (+${a.embers} embers)`, 'gold');
+}
 
 // ───────────────────────── sound
 let AC = null, muted = false;
@@ -541,28 +647,43 @@ let screen = 'title';
 let run = null, C = null, paused = false, lastRun = null;
 // Game speed and auto mode are per-viewer conveniences, remembered in this browser.
 const SPEEDS = [1, 2, 3, 5, 10];
-let speed = 1, auto = false;
-try { const s = JSON.parse(localStorage.getItem('lantern-road-play') || '{}'); if (SPEEDS.includes(s.speed)) speed = s.speed; auto = !!s.auto; } catch (e) { }
-function savePlayPrefs() { try { localStorage.setItem('lantern-road-play', JSON.stringify({ speed, auto })); } catch (e) { } }
+let speed = 1, auto = false, chosenDark = 0;
+try { const s = JSON.parse(localStorage.getItem('lantern-road-play') || '{}'); if (SPEEDS.includes(s.speed)) speed = s.speed; auto = !!s.auto; chosenDark = Number(s.dark) || 0; } catch (e) { }
+function savePlayPrefs() { try { localStorage.setItem('lantern-road-play', JSON.stringify({ speed, auto, dark: chosenDark })); } catch (e) { } }
 const demo = { region: 0, dist: 0, lane: 1, px: LANES[1], oil: 85, maxOil: 100, cls: 'sellsword', t: 0, beats: null, pickups: null, beatIdx: 0 };
 const has = id => !!run && run.relics.includes(id);
 const beatPos = i => FIRST + i * SPACING;
 const regionName = () => REGIONS[run.region].name;
 const foeRef = d => 'the ' + d.name.replace(/^The /, '');
 
-function newRun(cls) {
+function newRun(cls, opts = {}) {
   const c = CLASSES[cls];
+  const seed = opts.seed != null ? opts.seed : (Math.random() * 2147483647) | 0;
   run = {
     cls, hp: c.hp, maxHp: c.hp, str: c.str, bonusStr: 0, guard: c.guard,
     draughts: c.draughts, maxDraughts: c.maxDraughts, oil: 100, maxOil: 100, gold: 15,
     relics: [], skillLv: 1, region: 0, beats: [], beatIdx: 0, dist: 0, lane: 1, px: LANES[1],
     score: 0, kills: 0, elites: 0, bosses: 0, regionsCleared: 0, pickups: [], event: false,
     darkAcc: 0, darkWarned: false, dead: null, over: false, seen: [], lastFoe: null,
+    seed, baseSeed: seed, daily: opts.daily || null, dark: opts.daily ? 0 : (opts.dark || 0), newAch: [],
   };
 }
 
+// Darkness levels stack: choosing Darkness III also applies I and II.
+const DARKNESS = [
+  { name: 'No Darkness', desc: 'The road as it was meant to be walked.' },
+  { name: 'Darkness I', desc: 'Foes have 15% more HP.' },
+  { name: 'Darkness II', desc: 'Your lantern burns 25% faster.' },
+  { name: 'Darkness III', desc: 'Elites and bosses hit 2 harder.' },
+  { name: 'Darkness IV', desc: 'Merchants charge 25% more, and fights drop less gold.' },
+  { name: 'Darkness V', desc: 'Foes have 30% more HP and every foe hits 1 harder.' },
+];
+const darkAt = n => !!run && run.dark >= n;
+const darkMult = d => 1 + .25 * d; // score bonus per Darkness level
+function priceOf(p) { return Math.round(p * (darkAt(4) ? 1.25 : 1)); }
+
 function weighted(pairs) {
-  const tot = pairs.reduce((s, p) => s + p[1], 0); let r = Math.random() * tot;
+  const tot = pairs.reduce((s, p) => s + p[1], 0); let r = rng() * tot;
   for (const p of pairs) { r -= p[1]; if (r < 0) return p[0]; }
   return pairs[pairs.length - 1][0];
 }
@@ -578,24 +699,29 @@ function genRegion(r) {
     } else beats.push({ kind: 'single', type: i === 0 ? 'fight' : weighted([['fight', 64], ['mystery', 22], ['treasure', 14]]) });
   }
   beats.push({ kind: 'single', type: 'boss' });
+  // Each beat knows which foe a Fight there would be, so the Daily Road has the same foes for everyone.
+  let prev = null;
+  for (const b of beats) { b.foe = pick(REGIONS[r].normals.filter(n => n !== prev)); prev = b.foe; }
   return beats;
 }
 function genPickups(beats) {
   const out = [];
   for (let i = 0; i < beats.length; i++) {
     const a = i === 0 ? 10 : beatPos(i - 1) + 22, b = beatPos(i) - 22;
-    if (Math.random() < .6) out.push({ pos: rand(a, b), lane: ri(0, 2), type: Math.random() < .6 ? 'flask' : 'coin', done: false });
+    if (rng() < .6) out.push({ pos: rand(a, b), lane: ri(0, 2), type: rng() < .6 ? 'flask' : 'coin', done: false });
   }
   return out;
 }
 function enterRegion(r) {
-  run.region = r; run.beats = genRegion(r); run.beatIdx = 0; run.dist = -20;
-  run.pickups = genPickups(run.beats); parts = [];
-  showRegionCard();
+  run.region = r; run.beatIdx = 0; run.dist = -20;
+  run.beats = withSeed(run.baseSeed + 7919 * (r + 1), () => genRegion(r));
+  run.pickups = withSeed(run.baseSeed + 104729 * (r + 1), () => genPickups(run.beats));
+  parts = [];
+  showRegionCard(); saveRun();
 }
 function showRegionCard() {
   const c = $('#card'); const R = REGIONS[run.region];
-  c.querySelector('.n').textContent = 'Region ' + R.num;
+  c.querySelector('.n').textContent = (run.daily ? 'Daily Road · ' : run.dark ? DARKNESS[run.dark].name + ' · ' : '') + 'Region ' + R.num;
   c.querySelector('.t').textContent = R.name;
   c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
 }
@@ -609,11 +735,37 @@ function checkDeath(cause) {
   if (has('waxseal')) { run.hp = 1; loseRelic('waxseal'); toast('The Wax Seal breaks. You live.', 'good'); return false; }
   run.dead = cause; return true;
 }
-function grantRelic(id) { if (has(id)) return; run.relics.push(id); RELICS[id].gain && RELICS[id].gain(); sfx('relic'); toast('Relic: ' + RELICS[id].name, 'gold'); }
+function grantRelic(id) {
+  if (has(id)) return;
+  const tag = RELICS[id].tag, before = tag && setOn(tag);
+  run.relics.push(id); RELICS[id].gain && RELICS[id].gain(); sfx('relic'); toast('Relic: ' + RELICS[id].name, 'gold');
+  if (!meta.relicsSeen.includes(id)) { meta.relicsSeen.push(id); saveLocal(); }
+  if (tag && !before && setOn(tag)) { toast(`Set bonus: ${SETS[tag].name}`, 'gold'); award('set_' + tag); }
+  if (run.relics.length >= 8) award('hoarder');
+}
 function loseRelic(id) { const i = run.relics.indexOf(id); if (i < 0) return; run.relics.splice(i, 1); RELICS[id].lose && RELICS[id].lose(); }
-function relicPool() { return Object.keys(RELICS).filter(id => !has(id) && (!RELICS[id].unlock || unlocked(RELICS[id].unlock))); }
+// The Daily Road ignores Pyre unlocks so every player draws from the same pool.
+const pooled = u => !u || (!run.daily && unlocked(u));
+function relicPool() { return Object.keys(RELICS).filter(id => !has(id) && pooled(RELICS[id].unlock)); }
 function drawRelics(n) { return shuffle(relicPool()).slice(0, n); }
-function strikeBase() { let s = run.str + run.bonusStr; if (has('whetstone')) s += 2; if (has('chalice')) s += Math.floor((run.maxHp - run.hp) / 10); return s; }
+const relicLabel = id => RELICS[id].name + (RELICS[id].tag ? ` · ${TAG_NAMES[RELICS[id].tag]}` : '');
+const tagCount = tag => run.relics.filter(id => RELICS[id].tag === tag).length;
+function setHint(id) {
+  const t = RELICS[id].tag; if (!t) return '';
+  const n = tagCount(t);
+  return n >= 3 ? ` (${SETS[t].name} is already active.)` : ` (${TAG_NAMES[t]} ${n}/3${n === 2 ? `: this completes ${SETS[t].name}` : ''}.)`;
+}
+const setOn = tag => !!run && tagCount(tag) >= 3;
+// Strike damage as visible parts, so combat can show the math the way it adds up.
+function strikeParts() {
+  const p = [['Base', run.str + run.bonusStr]];
+  if (has('whetstone')) p.push(['Whetstone', 2]);
+  if (has('chalice')) { const v = Math.floor((run.maxHp - run.hp) / 10); if (v) p.push(['Blood Chalice', v]); }
+  if (has('lampeater')) { const v = Math.floor(run.oil / 30); if (v) p.push(['Lamp-Eater', v]); }
+  if (setOn('lantern') && run.oil > run.maxOil / 2) p.push(['Lamplighter', 2]);
+  return p;
+}
+function strikeBase() { return strikeParts().reduce((s, p) => s + p[1], 0); }
 
 // ───────────────────────── canvas & rendering
 const frameEl = $('#frame'), cv = $('#world'), ctx = cv.getContext('2d');
@@ -632,11 +784,11 @@ function resize() {
 let parts = [];
 function spawnPart(kind) {
   const P = {
-    mist: () => ({ x: rand(-4, W), y: rand(0, H), vx: rand(-3, 3), vy: rand(-1, 1), life: rand(3, 6), c: 'rgba(170,180,190,.16)', w: 3, h: 1 }),
-    rain: () => ({ x: rand(0, W + 30), y: -4, vx: -16, vy: 130, life: 3, c: 'rgba(140,180,210,.32)', w: 1, h: 3 }),
-    fireflies: () => ({ x: rand(0, W), y: rand(0, H), vx: 0, vy: 0, life: rand(2, 5), c: '#d8ff7a', w: 1, h: 1, glow: true }),
-    embers: () => ({ x: rand(0, W), y: H + 2, vx: rand(-4, 4), vy: rand(-26, -14), life: rand(4, 8), c: '#ff9a3a', w: 1, h: 1, glow: true }),
-    motes: () => ({ x: rand(0, W), y: rand(0, H), vx: rand(-3, 3), vy: rand(-4, 2), life: rand(3, 6), c: 'rgba(225,215,255,.55)', w: 1, h: 1 }),
+    mist: () => ({ x: vrand(-4, W), y: vrand(0, H), vx: vrand(-3, 3), vy: vrand(-1, 1), life: vrand(3, 6), c: 'rgba(170,180,190,.16)', w: 3, h: 1 }),
+    rain: () => ({ x: vrand(0, W + 30), y: -4, vx: -16, vy: 130, life: 3, c: 'rgba(140,180,210,.32)', w: 1, h: 3 }),
+    fireflies: () => ({ x: vrand(0, W), y: vrand(0, H), vx: 0, vy: 0, life: vrand(2, 5), c: '#d8ff7a', w: 1, h: 1, glow: true }),
+    embers: () => ({ x: vrand(0, W), y: H + 2, vx: vrand(-4, 4), vy: vrand(-26, -14), life: vrand(4, 8), c: '#ff9a3a', w: 1, h: 1, glow: true }),
+    motes: () => ({ x: vrand(0, W), y: vrand(0, H), vx: vrand(-3, 3), vy: vrand(-4, 2), life: vrand(3, 6), c: 'rgba(225,215,255,.55)', w: 1, h: 1 }),
   }[kind];
   if (P) parts.push(P());
 }
@@ -645,7 +797,7 @@ function updParts(dt, scrollV, kind) {
   let n = rate * dt * (reduceMotion ? .3 : 1);
   while (n > 0) { if (Math.random() < n) spawnPart(kind); n -= 1; }
   for (const p of parts) {
-    if (kind === 'fireflies') { p.vx += rand(-25, 25) * dt; p.vy += rand(-25, 25) * dt; p.vx *= .98; p.vy *= .98; }
+    if (kind === 'fireflies') { p.vx += vrand(-25, 25) * dt; p.vy += vrand(-25, 25) * dt; p.vx *= .98; p.vy *= .98; }
     p.x += p.vx * dt; p.y += (p.vy + scrollV) * dt; p.life -= dt;
   }
   parts = parts.filter(p => p.life > 0 && p.y < H + 6 && p.y > -12 && p.x > -6 && p.x < W + 34);
@@ -775,7 +927,8 @@ function update(dt) {
   if (inRun && !run.event && !paused && !run.over) {
     const d = BASE_SPEED * speed * dt; scrollV = BASE_SPEED * speed;
     run.dist += d;
-    run.oil = Math.max(0, run.oil - d * OIL_PER_PX * (has('oilskin') ? .65 : 1));
+    run.oil = Math.max(0, run.oil - d * OIL_PER_PX * (has('oilskin') ? .65 : 1) * (darkAt(2) ? 1.25 : 1));
+    saveTimer += dt; if (saveTimer > 2) { saveTimer = 0; saveRun(); }
     if (run.oil <= 0) {
       if (!run.darkWarned) { toast('Your lantern is out. The dark bites.', 'bad'); run.darkWarned = true; }
       run.darkAcc += d;
@@ -790,7 +943,7 @@ function update(dt) {
     if (run.beatIdx < run.beats.length && run.dist >= beatPos(run.beatIdx)) { run.dist = beatPos(run.beatIdx); triggerBeat(); }
   } else if (!inRun) {
     demo.dist += 11 * dt; scrollV = 11; demo.t += dt;
-    if (demo.t > 3.2) { demo.t = 0; demo.lane = clamp(demo.lane + pick([-1, 1]), 0, 2); }
+    if (demo.t > 3.2) { demo.t = 0; demo.lane = clamp(demo.lane + (Math.random() < .5 ? -1 : 1), 0, 2); }
   }
   v.px += (LANES[v.lane] - v.px) * Math.min(1, dt * 10);
   updParts(dt, scrollV, REGIONS[v.region].pal.particle);
@@ -804,9 +957,11 @@ function move(dir) {
   if (!run || screen !== 'travel' || run.event || paused) return;
   run.lane = clamp(run.lane + dir, 0, 2);
 }
+let saveTimer = 0;
 function triggerBeat() {
+  saveRun(); // saved before the event, so a closed app replays this event on return
   const b = run.beats[run.beatIdx]; run.beatIdx++;
-  openEvent(b.kind === 'fork' ? b.opts[run.lane] : b.type);
+  openEvent(b.kind === 'fork' ? b.opts[run.lane] : b.type, b);
 }
 
 let last = 0;
@@ -824,7 +979,9 @@ function updateHUD() {
   if (!show) { hudKey = ''; return; }
   const k = [run.hp, run.maxHp, Math.ceil(run.oil), run.maxOil, run.gold, run.draughts, run.maxDraughts, run.score, run.relics.length, run.region, run.beatIdx, run.lane, speed].join('|');
   if (k === hudKey) return; hudKey = k;
+  if (run.gold >= 300) award('miser');
   const R = REGIONS[run.region];
+  const mode = run.daily ? 'Daily' : run.dark ? `D${run.dark}` : '';
   const pips = h('div', { class: 'pips', 'aria-label': `Event ${Math.min(run.beatIdx + 1, 10)} of 10` });
   for (let i = 0; i < run.beats.length; i++) {
     const last = i === run.beats.length - 1;
@@ -837,7 +994,7 @@ function updateHUD() {
   else if (nb.kind === 'fork') ahead = nb.opts.map((o, l) => h('div', { class: 'slot' + (l === run.lane ? ' on' : '') }, iconCanvas(o), h('span', { text: TYPE_NAMES[o] })));
   else ahead = h('div', { class: 'slot wide on' }, iconCanvas(nb.type), h('span', { text: TYPE_NAMES[nb.type] + (nb.type === 'boss' ? ': ' + ENEMIES[R.boss].name : ' blocks the road') }));
   $('#hud').replaceChildren(
-    h('div', { class: 'hud-top' }, h('div', { class: 'region' }, h('b', { text: R.num }), R.name), pips),
+    h('div', { class: 'hud-top' }, h('div', { class: 'region' }, h('b', { text: R.num }), R.name, mode ? h('span', { class: 'mode', text: mode }) : null), pips),
     h('div', { class: 'meters' },
       h('div', { class: 'meter' + (hpLow ? ' low' : ''), role: 'img', 'aria-label': `HP ${run.hp} of ${run.maxHp}` }, h('i', { style: `width:${100 * run.hp / run.maxHp}%` }), h('span', {}, h('span', { text: 'HP' }), h('span', { text: `${run.hp}/${run.maxHp}` }))),
       h('div', { class: 'meter oil' + (oilLow ? ' low' : ''), role: 'img', 'aria-label': `Oil ${Math.ceil(run.oil)} of ${run.maxOil}` }, h('i', { style: `width:${100 * run.oil / run.maxOil}%` }), h('span', {}, h('span', { text: 'OIL' }), h('span', { text: `${Math.ceil(run.oil)}/${run.maxOil}` })))),
@@ -890,22 +1047,22 @@ function result(title, text, lines = [], then = finishEvent, kicker = 'Outcome')
 function finishEvent() {
   if (!run) return;
   if (run.dead) return endRun(false, run.dead);
-  closePanel(); run.event = false; C = null;
+  closePanel(); run.event = false; C = null; saveRun();
 }
 function relicChoice(n, title, onDone) {
   const opts = drawRelics(n);
   if (!opts.length) { run.gold += 30; return result(title, 'There is nothing left to find. You pocket what coin you can.', [['good', '+30 gold']], onDone); }
   eventCard({ art: 'treasure', kicker: 'Choose a relic', title, text: 'Take one. The rest crumble to ash.',
-    choices: opts.map(id => ({ label: RELICS[id].name, hint: RELICS[id].desc, run: () => { grantRelic(id); onDone(); } }))
+    choices: opts.map(id => ({ label: relicLabel(id), hint: RELICS[id].desc + setHint(id), run: () => { grantRelic(id); onDone(); } }))
       .concat([{ label: 'Take nothing', hint: 'Leave them on the road.', run: onDone }]) });
 }
 
-function openEvent(type) {
+function openEvent(type, beat) {
   run.event = true;
   switch (type) {
     case 'fight': {
       const R = REGIONS[run.region];
-      const id = pick(R.normals.filter(n => n !== run.lastFoe));
+      const id = (beat && beat.foe) || pick(R.normals.filter(n => n !== run.lastFoe));
       run.lastFoe = id; return startCombat(id, 'normal');
     }
     case 'elite': return startCombat(REGIONS[run.region].elite, 'elite');
@@ -934,10 +1091,10 @@ function openCamp() {
 function openMerchant() {
   const r = run.region;
   const stock = [
-    { k: 'oil', label: 'Lamp oil', hint: '+35 oil.', price: 12 },
-    { k: 'draught', label: 'Healing draught', hint: 'Heals 40% of max HP. Drinking one in a fight is a free action.', price: 18 },
+    { k: 'oil', label: 'Lamp oil', hint: '+35 oil.', price: priceOf(12) },
+    { k: 'draught', label: 'Healing draught', hint: 'Heals 40% of max HP. Drinking one in a fight is a free action.', price: priceOf(18) },
   ];
-  drawRelics(2).forEach(id => stock.push({ k: 'relic', id, label: RELICS[id].name, hint: RELICS[id].desc, price: 40 + 6 * r + ri(0, 8) }));
+  drawRelics(2).forEach(id => stock.push({ k: 'relic', id, label: relicLabel(id), hint: RELICS[id].desc + setHint(id), price: priceOf(46 + 7 * r + ri(0, 8)) }));
   const show = msg => eventCard({ art: 'merchant', kicker: 'Merchant', title: 'The Lantern-Seller',
     text: msg || 'A hunched seller squats under a tarp of sewn shrouds. "Light, blood, trinkets. Coin first."',
     choices: stock.map(s => ({
@@ -961,7 +1118,7 @@ function openMerchant() {
   show();
 }
 function openShrine() {
-  const blood = Math.max(6, Math.round(run.maxHp * .18)), gold = 35 + 5 * run.region;
+  const blood = Math.max(6, Math.round(run.maxHp * .18)), gold = priceOf(40 + 6 * run.region);
   eventCard({ art: 'shrine', kicker: 'Shrine', title: 'A Shrine of Black Candles',
     text: 'Candles burn without melting before a faceless saint. A bowl waits for an offering.',
     choices: [
@@ -978,7 +1135,7 @@ function openShrine() {
 function openTreasure() {
   const g = ri(18, 30) + 5 * run.region; run.gold += g; sfx('coin');
   const L = [['good', `+${g} gold`]];
-  if (Math.random() < .3) { const id = drawRelics(1)[0]; if (id) { grantRelic(id); L.push(['good', `Relic: ${RELICS[id].name}`]); } }
+  if (rng() < .2) { const id = drawRelics(1)[0]; if (id) { grantRelic(id); L.push(['good', `Relic: ${RELICS[id].name}`]); } }
   result('A Toppled Reliquary', 'A reliquary lies cracked open by the road. Its saint is long gone, but not its offerings.', L, finishEvent, 'Treasure');
 }
 
@@ -987,12 +1144,12 @@ function relicLine() { const id = drawRelics(1)[0]; if (!id) { run.gold += 30; r
 const MYSTERIES = [
   { id: 'well', title: 'The Black Well', text: 'A well of still, black water. Something far below hums your name.', choices: () => [
     { label: 'Drink', hint: 'It might strengthen you. It might not.', run: () => {
-      if (Math.random() < .5) { run.maxHp += 8; run.hp += 8; result('Cold strength', 'The water burns cold all the way down.', [['good', '+8 max HP']]); }
+      if (rng() < .5) { run.maxHp += 8; run.hp += 8; result('Cold strength', 'The water burns cold all the way down.', [['good', '+8 max HP']]); }
       else result('Grave water', 'It tastes of wet earth and old coins.', [hurt(8 + run.region * 2, 'Poisoned by the Black Well')]);
     } },
     { label: 'Drop a coin (10 gold)', hint: 'Make a wish.', disabled: run.gold < 10, run: () => {
       run.gold -= 10; const L = [['bad', '−10 gold']];
-      if (Math.random() < .45) { L.push(relicLine()); result('Something answers', 'A relic bobs to the surface, bone dry.', L); }
+      if (rng() < .45) { L.push(relicLine()); result('Something answers', 'A relic bobs to the surface, bone dry.', L); }
       else result('Nothing answers', 'The coin falls a long way. You never hear it land.', L);
     } },
     { label: 'Walk on', hint: 'Leave the well to its humming.', run: finishEvent },
@@ -1004,7 +1161,7 @@ const MYSTERIES = [
   ] },
   { id: 'cages', title: 'The Hanging Cages', text: 'Iron cages creak from a dead oak. A voice in one of them begs to be let out.', choices: () => [
     { label: 'Break the lock', hint: 'Probably a prisoner. Probably.', run: () => {
-      if (Math.random() < .65) result('A grateful ghost', 'Something pale slips out, presses a gift into your hand, and is gone.', [relicLine()]);
+      if (rng() < .65) result('A grateful ghost', 'Something pale slips out, presses a gift into your hand, and is gone.', [relicLine()]);
       else startCombat('mimic', 'normal', run.region);
     } },
     { label: 'Ignore the voice', hint: 'Keep walking.', run: finishEvent },
@@ -1026,7 +1183,7 @@ const MYSTERIES = [
   { id: 'satchel', title: 'A Corpse with a Satchel', text: 'A traveller lies face down, still clutching a heavy satchel.', choices: () => [
     { label: 'Search it', hint: 'Something might be living in it.', run: () => {
       const g = ri(20, 40); run.gold += g; const L = [['good', `+${g} gold`]];
-      if (Math.random() < .3) L.push(hurt(6, 'Bitten to death by a satchel'));
+      if (rng() < .3) L.push(hurt(6, 'Bitten to death by a satchel'));
       result('You search the body', L.length > 1 ? 'Coins, and teeth. Something bit you on the way out.' : 'Coins, a stub of candle, and a letter you choose not to read.', L);
     } },
     { label: 'Leave it', hint: 'Let the dead keep their things.', run: finishEvent },
@@ -1040,7 +1197,7 @@ const MYSTERIES = [
   ] },
   { id: 'wisp', title: "The Will-o'-Wisp", text: 'A cold light bobs off the road, beckoning you into the dark.', choices: () => [
     { label: 'Follow it', hint: 'It might lead somewhere good.', run: () => {
-      if (Math.random() < .55) { run.gold += 15; result('A hidden cache', 'The wisp hovers over a buried tin of oil and coins, then winks out.', [addOil(35), ['good', '+15 gold']]); }
+      if (rng() < .55) { run.gold += 15; result('A hidden cache', 'The wisp hovers over a buried tin of oil and coins, then winks out.', [addOil(35), ['good', '+15 gold']]); }
       else { const lost = Math.min(20, Math.floor(run.oil)); run.oil -= lost; result('Led astray', 'You wander in circles until the wisp grows bored of you.', [['bad', `−${lost} oil`]]); }
     } },
     { label: 'Stay on the road', hint: 'The road is the road.', run: finishEvent },
@@ -1052,11 +1209,11 @@ const MYSTERIES = [
   ] },
   { id: 'dice', title: 'The Dice of Bone', text: 'Two skeletons play dice on a tombstone. They offer you a seat.', choices: () => [
     { label: 'Wager 20 gold', hint: 'Double or nothing.', disabled: run.gold < 20, run: () => {
-      if (Math.random() < .5) { run.gold += 20; result('You win', 'The skeletons rattle with disappointment.', [['good', '+20 gold']]); }
+      if (rng() < .5) { run.gold += 20; result('You win', 'The skeletons rattle with disappointment.', [['good', '+20 gold']]); }
       else { run.gold -= 20; result('You lose', 'They rattle with delight.', [['bad', '−20 gold']]); }
     } },
     { label: 'Wager blood (8 HP)', hint: 'Win a relic, or bleed.', disabled: run.hp <= 8, run: () => {
-      if (Math.random() < .5) result('You win', 'One of them hands over something it was saving.', [relicLine()]);
+      if (rng() < .5) result('You win', 'One of them hands over something it was saving.', [relicLine()]);
       else result('You lose', 'They take their winnings with a little knife.', [hurt(8, 'Lost at dice to the dead')]);
     } },
     { label: 'Decline', hint: 'Never gamble with the dead.', run: finishEvent },
@@ -1083,8 +1240,8 @@ const MYSTERIES = [
   ] },
 ];
 function openMystery() {
-  let pool = MYSTERIES.filter(m => (!m.unlock || unlocked(m.unlock)) && !run.seen.includes(m.id));
-  if (!pool.length) { run.seen = []; pool = MYSTERIES.filter(m => !m.unlock || unlocked(m.unlock)); }
+  let pool = MYSTERIES.filter(m => pooled(m.unlock) && !run.seen.includes(m.id));
+  if (!pool.length) { run.seen = []; pool = MYSTERIES.filter(m => pooled(m.unlock)); }
   const m = pick(pool); run.seen.push(m.id);
   // Auto mode takes the first option, or the last (usually the safe one) when HP is low.
   eventCard({ art: 'mystery', kicker: 'Mystery', title: m.title, text: m.text, choices: m.choices(), autoPick: () => run.hp < run.maxHp * .35 ? -1 : 0 });
@@ -1108,16 +1265,47 @@ function intentInfo(it) {
   return ['…', 'cur'];
 }
 function skillCd() { return Math.max(1, 3 - (has('blackcandle') ? 1 : 0)); }
-function guardVal() { return run.guard + (has('boneward') ? 4 : 0); }
+function guardVal() { return run.guard + (has('boneward') ? 4 : 0) + (setOn('ward') ? 4 : 0); }
 function outMult() { let m = 1; if (C.weak > 0) m *= .75; if (has('widow') && run.hp < run.maxHp * .3) m *= 1.5; if (has('hunter') && C.kind !== 'normal') m *= 1.25; return m; }
 function draughtAmt() { return Math.round(run.maxHp * .4 * (has('deepflask') ? 1.5 : 1)); }
 
 function startCombat(id, kind, scale = 0) {
-  const d = ENEMIES[id], hp = Math.round(d.hp * (1 + .35 * scale));
-  C = { id, d, kind, e: { hp, maxHp: hp, block: 0, str: scale * 2, i: 0, doomDmg: 0, doomT: 0, raged: false },
-    pBlock: has('rustedbell') ? 6 : 0, weak: 0, bleed: 0, first: true, riposte: false, cd: 0, busy: false, over: false };
-  buildCombat(); setLog(d.intro); updCombat();
+  const d = ENEMIES[id];
+  const hp = Math.round(d.hp * (1 + .35 * scale) * (darkAt(5) ? 1.3 : darkAt(1) ? 1.15 : 1));
+  const str = scale * 2 + (darkAt(3) && kind !== 'normal' ? 2 : 0) + (darkAt(5) ? 1 : 0);
+  C = { id, d, kind, e: { hp, maxHp: hp, block: 0, str, i: 0, doomDmg: 0, doomT: 0, bleed: 0, raged: false },
+    pBlock: has('rustedbell') ? 6 : 0, weak: 0, bleed: 0, first: true, riposte: 0, cd: 0, busy: false, over: false, startHp: run.hp };
+  if (setOn('hex')) { C.e.doomDmg = 4; C.e.doomT = 3; }
+  buildCombat(); setLog(d.intro + (setOn('hex') ? ' Hexed Path: it starts under Doom.' : '')); updCombat();
 }
+// Damage as a visible sum and product, shown under the combat log.
+function calcDamage(parts, extra = []) {
+  const mults = extra.slice();
+  if (C.weak > 0) mults.push(['Weak', .75]);
+  if (has('widow') && run.hp < run.maxHp * .3) mults.push(["Widow's Ring", 1.5]);
+  if (has('hunter') && C.kind !== 'normal') mults.push(["Hunter's Mark", 1.25]);
+  const base = parts.reduce((s, p) => s + p[1], 0);
+  return { parts, mults, total: Math.max(0, Math.round(base * mults.reduce((m, x) => m * x[1], 1))) };
+}
+function strikeCalc() {
+  const parts = strikeParts();
+  if (C.riposte) parts.push(['Riposte', C.riposte]);
+  if (has('butcher') && C.e.bleed > 0) parts.push(["Butcher's Hook", 3]);
+  return calcDamage(parts, C.first && has('gravesalt') ? [['Grave Salt', 2]] : []);
+}
+function showMath(calc, dealt) {
+  if (calc.parts.length === 1 && !calc.mults.length) return; // nothing to explain beyond the base number
+  const kids = [];
+  calc.parts.forEach((p, i) => {
+    if (i) kids.push(h('span', { class: 'op', text: '+' }));
+    kids.push(h('span', { class: 'chip' + (i ? ' relic' : ''), text: i ? `${p[1]} ${p[0]}` : String(p[1]) }));
+  });
+  for (const m of calc.mults) kids.push(h('span', { class: 'op', text: '×' }), h('span', { class: 'chip ' + (m[1] < 1 ? 'bad' : 'relic'), text: `${m[1]} ${m[0]}` }));
+  kids.push(h('span', { class: 'op', text: '=' }), h('b', { text: calc.total }));
+  if (dealt < calc.total) kids.push(h('span', { class: 'note', text: `${calc.total - dealt} blocked` }));
+  C.ui.math.replaceChildren(...kids); C.ui.math.hidden = false;
+}
+const proc = (target, text) => fx(target, text, 'proc');
 function buildCombat() {
   const d = C.d, R = REGIONS[run.region];
   const u = C.ui = {};
@@ -1130,6 +1318,7 @@ function buildCombat() {
     u.intent, u.portrait, h('div', { class: 'foe-name', text: d.name }),
     h('div', { class: 'meter' }, u.foeFill, u.foeText), u.foeTags);
   u.log = h('p', { class: 'log', 'aria-live': 'polite' });
+  u.math = h('div', { class: 'math', hidden: true });
   u.myFill = h('i'); u.myText = h('span'); u.myTags = h('div', { class: 'tags' });
   const sk = CLASSES[run.cls].skill;
   const mk = (k, label, act, wide) => { const sub = h('span', { class: 'sub' }); const b = h('button', { class: 'btn' + (wide ? ' wide' : ''), 'data-k': k, onclick: () => act() }, h('span', { class: 'key', text: k }), label, sub); b.sub = sub; return b; };
@@ -1141,7 +1330,7 @@ function buildCombat() {
   u.me = h('div', { class: 'me' },
     h('div', { class: 'me-row' }, h('div', { class: 'meter' }, u.myFill, u.myText), u.myTags),
     h('div', { class: 'actions' }, u.bStrike, u.bGuard, u.bSkill, u.bDraught, u.bFlee));
-  openPanel(h('div', { class: 'combat' }, u.foe, u.log, u.me), true);
+  openPanel(h('div', { class: 'combat' }, u.foe, u.log, u.math, u.me), true);
 }
 function portrait(id) {
   const d = ENEMIES[id], c = document.createElement('canvas'); c.width = 24; c.height = 26;
@@ -1164,7 +1353,8 @@ function updCombat() {
   u.foeText.replaceChildren(h('span', { text: 'HP' }), h('span', { text: `${e.hp}/${e.maxHp}` }));
   const ft = [];
   if (e.block) ft.push(h('span', { class: 'tag block', text: `Block ${e.block}` }));
-  if (e.doomT) ft.push(h('span', { class: 'tag doom', text: `Doom ${e.doomDmg} · ${e.doomT}` }));
+  if (e.doomT) ft.push(h('span', { class: 'tag doom', text: `Doom ${e.doomDmg + (has('gravebell') ? 3 : 0)} · ${e.doomT}` }));
+  if (e.bleed) ft.push(h('span', { class: 'tag bleed', text: `Bleed ${e.bleed}` }));
   if (e.str) ft.push(h('span', { class: 'tag rage', text: `Rage +${e.str}` }));
   u.foeTags.replaceChildren(...ft);
   u.myFill.style.width = `${100 * run.hp / run.maxHp}%`;
@@ -1173,11 +1363,10 @@ function updCombat() {
   if (C.pBlock) mt.push(h('span', { class: 'tag block', text: `Block ${C.pBlock}` }));
   if (C.weak) mt.push(h('span', { class: 'tag weak', text: `Weak ${C.weak}` }));
   if (C.bleed) mt.push(h('span', { class: 'tag bleed', text: `Bleed ${C.bleed}` }));
-  if (C.riposte) mt.push(h('span', { class: 'tag buff', text: 'Riposte' }));
+  if (C.riposte) mt.push(h('span', { class: 'tag buff', text: `Riposte +${C.riposte}` }));
   u.myTags.replaceChildren(...mt);
   // buttons
-  let sd = strikeBase(); if (C.riposte) sd += 3; if (C.first && has('gravesalt')) sd *= 2;
-  u.bStrike.sub.textContent = `Deal ${Math.round(sd * outMult())}`;
+  u.bStrike.sub.textContent = `Deal ${strikeCalc().total}`;
   u.bGuard.sub.textContent = `Block ${guardVal()}`;
   const sk = CLASSES[run.cls].skill;
   u.bSkill.sub.textContent = C.cd > 0 ? `Ready in ${C.cd}` : skillShort();
@@ -1193,12 +1382,13 @@ function updCombat() {
 function doomVal() { return [4, 6, 8][run.skillLv - 1] + Math.floor(Math.max(0, strikeBase() - CLASSES.hexblade.str) * .75); }
 function skillShort() {
   const lv = run.skillLv;
-  if (run.cls === 'sellsword') return `Deal ${Math.round(strikeBase() * [2, 2.5, 3][lv - 1] * outMult())}`;
-  if (run.cls === 'hexblade') return `4 + Doom ${doomVal()}×3`;
-  return `Deal ${Math.round(strikeBase() * 1.5 * outMult())}, heal ${[5, 7, 9][lv - 1]}`;
+  if (run.cls === 'sellsword') return `Deal ${calcDamage(strikeParts(), [['Cleave', [2, 2.5, 3][lv - 1]]]).total}`;
+  if (run.cls === 'hexblade') return `4 + Doom ${doomVal() + (has('gravebell') ? 3 : 0)}×3`;
+  return `Deal ${calcDamage(strikeParts(), [['Holy Light', 1.5]]).total}, heal ${[5, 7, 9][lv - 1]}`;
 }
-function hitFoe(raw) {
-  const e = C.e; let dmg = Math.max(0, Math.round(raw * outMult()));
+// exact: the amount already includes the damage multipliers (used for Strikes and skills that show their math).
+function hitFoe(raw, exact) {
+  const e = C.e; let dmg = Math.max(0, exact ? raw : Math.round(raw * outMult()));
   const ab = Math.min(e.block, dmg); e.block -= ab; dmg -= ab;
   e.hp = Math.max(0, e.hp - dmg);
   fx(C.ui.foe, dmg ? `−${dmg}` : 'Blocked', dmg ? '' : 'ward');
@@ -1230,22 +1420,26 @@ async function act(k) {
   if (k === 'skill' && C.cd > 0) return;
   C.busy = true;
   let log = '';
+  C.ui.math.hidden = true;
   if (k === 'strike') {
-    let dmg = strikeBase(); if (C.riposte) { dmg += 3; C.riposte = false; }
-    if (C.first && has('gravesalt')) dmg *= 2;
-    C.first = false;
-    const dealt = hitFoe(dmg); sfx('hit'); log = `You strike for ${dealt}.`;
-    let hl = (has('leech') ? 1 : 0) + (run.cls === 'hexblade' ? 2 : 0);
-    if (hl) { const g = heal(hl); if (g) fx(C.ui.me, `+${g}`, 'heal me'); }
+    const calc = strikeCalc(); C.riposte = 0; C.first = false;
+    const dealt = hitFoe(calc.total, true); sfx('hit'); showMath(calc, dealt); log = `You strike for ${dealt}.`;
+    const bleed = (has('serrated') ? 2 : 0) + (setOn('blood') ? 2 : 0);
+    if (bleed && e.hp > 0) { e.bleed += bleed; log += ` It bleeds (${e.bleed}).`; }
+    if (has('witchnail') && e.hp > 0) { e.doomDmg = Math.max(e.doomDmg, 3); e.doomT = Math.max(e.doomT, 2); proc(C.ui.foe, "Witch's Nail"); }
+    if (has('leech')) { const g = heal(1); if (g) proc(C.ui.me, 'Leech Tooth +1'); }
+    if (run.cls === 'hexblade') { const g = heal(2); if (g) fx(C.ui.me, `+${g}`, 'heal me'); }
   } else if (k === 'guard') {
     const b = guardVal(); C.pBlock += b; sfx('block');
-    if (run.cls === 'sellsword') C.riposte = true;
+    if (run.cls === 'sellsword') C.riposte += 3;
+    if (setOn('ward')) C.riposte += 4;
     log = `You raise your guard. Block ${b}.`;
+    if (has('counter')) { const dealt = hitFoe(Math.floor(b / 2)); log += ` Counterweight hits for ${dealt}.`; }
   } else if (k === 'skill') {
     const lv = run.skillLv; sfx('skill');
-    if (run.cls === 'sellsword') { const dealt = hitFoe(strikeBase() * [2, 2.5, 3][lv - 1]); log = `You cleave for ${dealt}.`; }
+    if (run.cls === 'sellsword') { const calc = calcDamage(strikeParts(), [['Cleave', [2, 2.5, 3][lv - 1]]]); const dealt = hitFoe(calc.total, true); showMath(calc, dealt); log = `You cleave for ${dealt}.`; }
     else if (run.cls === 'hexblade') { const dealt = hitFoe(4); e.doomDmg = Math.max(e.doomDmg, doomVal()); e.doomT = 3; log = `You hex ${foeRef(d)} for ${dealt}. Doom takes hold.`; }
-    else { const dealt = hitFoe(strikeBase() * 1.5); const g = heal([5, 7, 9][lv - 1]); if (g) fx(C.ui.me, `+${g}`, 'heal me'); log = `Holy light sears ${foeRef(d)} for ${dealt}.${g ? ` You heal ${g}.` : ''}`; }
+    else { const calc = calcDamage(strikeParts(), [['Holy Light', 1.5]]); const dealt = hitFoe(calc.total, true); showMath(calc, dealt); const g = heal([5, 7, 9][lv - 1]); if (g) fx(C.ui.me, `+${g}`, 'heal me'); log = `Holy light sears ${foeRef(d)} for ${dealt}.${g ? ` You heal ${g}.` : ''}`; }
     C.cd = skillCd() + 1;
   }
   if (C.weak > 0) C.weak--;
@@ -1258,20 +1452,29 @@ async function act(k) {
 }
 function hitMe(n) {
   const e = C.e;
-  if (has('luckybone') && Math.random() < .15) { fx(C.ui.me, 'Dodged', 'ward me'); return { dealt: 0, dodged: true }; }
+  if (has('luckybone') && rng() < .15) { fx(C.ui.me, 'Dodged', 'ward me'); return { dealt: 0, dodged: true }; }
   const ab = Math.min(C.pBlock, n); C.pBlock -= ab; const dealt = n - ab;
   run.hp -= dealt;
   if (dealt) { sfx('hurt'); flashHurt(); fx(C.ui.me, `−${dealt}`, 'me'); } else { sfx('block'); fx(C.ui.me, 'Blocked', 'ward me'); }
-  if (dealt && has('thornmail')) { e.hp = Math.max(0, e.hp - 3); fx(C.ui.foe, '−3', ''); }
+  if (dealt && has('thornmail')) { e.hp = Math.max(0, e.hp - 3); proc(C.ui.foe, 'Thorn Mail −3'); }
   return { dealt, blocked: ab };
 }
 async function enemyTurn() {
   const e = C.e, d = C.d, who = cap(foeRef(d));
   if (e.doomT > 0) {
-    e.hp = Math.max(0, e.hp - e.doomDmg); e.doomT--; fx(C.ui.foe, `−${e.doomDmg}`, 'doom');
-    setLog(`Doom eats at ${foeRef(d)}. −${e.doomDmg}.` + checkKingRage()); updCombat();
+    const doom = e.doomDmg + (has('gravebell') ? 3 : 0);
+    e.hp = Math.max(0, e.hp - doom); e.doomT--; fx(C.ui.foe, `−${doom}`, 'doom');
+    setLog(`Doom eats at ${foeRef(d)}. −${doom}.` + checkKingRage()); updCombat();
     if (e.hp <= 0) { await sleep(450); return winCombat(); }
     await sleep(500);
+  }
+  if (e.bleed > 0) {
+    const b = e.bleed; e.hp = Math.max(0, e.hp - b); e.bleed--; fx(C.ui.foe, `−${b}`, '');
+    let msg = `${cap(foeRef(d))} bleeds for ${b}.`;
+    if (setOn('blood')) { const g = heal(1); if (g) { proc(C.ui.me, 'Bloodletter +1'); } }
+    setLog(msg + checkKingRage()); updCombat();
+    if (e.hp <= 0) { await sleep(450); return winCombat(); }
+    await sleep(400);
   }
   e.block = 0;
   const it = intentOf(), n = it.n + e.str;
@@ -1291,7 +1494,7 @@ async function enemyTurn() {
     case 'C': log = `${who} gathers its strength. Something big is coming.`; break;
   }
   if (C.bleed > 0 && run.hp > 0) { run.hp -= C.bleed; fx(C.ui.me, `−${C.bleed}`, 'me'); log += ` Bleed: −${C.bleed}.`; C.bleed--; }
-  C.pBlock = 0; e.i++; C.cd = Math.max(0, C.cd - 1);
+  C.pBlock = has('bastion') ? Math.floor(C.pBlock / 2) : 0; e.i++; C.cd = Math.max(0, C.cd - 1);
   if (e.hp > 0 && e.hp <= e.maxHp / 2) log += checkKingRage();
   setLog(log);
   if (run.hp <= 0 && checkDeath(`Slain by ${foeRef(d)} in the ${regionName()}`)) {
@@ -1307,24 +1510,28 @@ function winCombat() {
   const d = C.d, kind = C.kind, r = run.region;
   C.ui.portrait.classList.add('dead');
   sfx('win');
+  meta.foes[C.id] = (meta.foes[C.id] || 0) + 1; saveLocal();
+  if (kind === 'elite' && run.hp >= C.startHp) award('flawless');
   setTimeout(() => {
-    if (kind === 'boss') return bossDown(d);
+    if (kind === 'boss') return bossDown(d, C.id);
     const L = [];
     if (kind === 'elite') { run.elites++; run.score += 50; L.push(['good', '+50 score']); }
     else { run.kills++; run.score += 10; L.push(['good', '+10 score']); }
-    let gold = kind === 'elite' ? ri(22, 32) + 4 * r : ri(8, 13) + 2 * r;
+    let gold = kind === 'elite' ? ri(22, 30) + 4 * r : ri(7, 11) + 2 * r;
     if (has('tithe')) gold = Math.round(gold * 1.3);
+    if (darkAt(4)) gold = Math.round(gold * .8);
     run.gold += gold; L.push(['good', `+${gold} gold`]);
-    L.push(addOil(kind === 'elite' ? 10 : 6));
+    L.push(addOil((kind === 'elite' ? 10 : 6) + (has('wickcharm') ? 8 : 0)));
     if (has('knuckle')) { const g = heal(4); if (g) L.push(['good', `+${g} HP`]); }
     let then = finishEvent;
     if (kind === 'elite') then = () => relicChoice(2, 'Spoils of the elite', finishEvent);
-    else if (Math.random() < .08) L.push(relicLine());
+    else if (rng() < .05) L.push(relicLine());
     result(`${cap(foeRef(d))} falls`, d.death, L, then, 'Victory');
   }, 650 / speed);
 }
-function bossDown(d) {
+function bossDown(d, id) {
   run.bosses++; run.regionsCleared++; run.score += 300;
+  award(id);
   run.maxHp += 6; run.hp += 6; run.bonusStr += 1;
   const g = heal(Math.round(run.maxHp * .3)); run.oil = run.maxOil;
   const L = [['good', '+200 score (boss)'], ['good', '+100 score (region cleared)'], ['good', '+6 max HP, +1 Strike damage'], ['good', `+${g + 6} HP`], ['good', 'Lantern refilled']];
@@ -1337,27 +1544,81 @@ function bossDown(d) {
 
 // ───────────────────────── run start and end
 function beginWalk() {
-  const any = unlocked('cls_hexblade') || unlocked('cls_pilgrim');
+  if (loadSavedRun()) return showInProgress(beginWalk);
+  const any = unlocked('cls_hexblade') || unlocked('cls_pilgrim') || meta.dark > 0;
   if (any) showClassSelect(); else startRun('sellsword');
 }
-function startRun(cls) {
-  newRun(cls); C = null; paused = false;
+function startRun(cls, opts = {}) {
+  newRun(cls, opts); C = null; paused = false;
   screen = 'travel'; $('#screen').hidden = true; closeSheet();
   enterRegion(0);
-  if (unlocked('start_relic')) { run.event = true; relicChoice(3, 'Kindred Gift', finishEvent); }
+  if (unlocked('start_relic') && !run.daily) { run.event = true; relicChoice(3, 'Kindred Gift', finishEvent); }
 }
+function resumeRun() {
+  const saved = loadSavedRun(); if (!saved) return showTitle();
+  run = saved; run.event = false; run.dead = null; run.newAch = run.newAch || [];
+  C = null; paused = false; screen = 'travel'; scr.hidden = true; closeSheet();
+  parts = []; showRegionCard(); toast('Walk resumed');
+}
+// A walk is already saved: continue it, or end it (scored as it stands) before starting another.
+function showInProgress(next) {
+  const s = loadSavedRun(); if (!s) return next();
+  screen = 'inprogress';
+  setScreen(h('div', { class: 'page' },
+    h('div', { class: 'kicker', text: 'A walk is in progress' }), h('h1', { text: 'Your Lantern Still Burns' }),
+    h('p', { class: 'tagline', text: `${CLASSES[s.cls].name}${s.daily ? ' · Daily Road' : ''} · ${REGIONS[s.region].name} · ${s.score} score. Starting a new walk ends this one and scores it as it stands.` }),
+    h('div', { class: 'menu' },
+      menuBtn('Continue that walk', null, resumeRun, true),
+      menuBtn('End it and start fresh', 'It is scored and earns embers as usual', () => { resumeRun(); run.dead = 'Turned back in the ' + regionName(); endRun(false, run.dead); }),
+      menuBtn('← Back', null, showTitle))), true);
+}
+
+// ── Daily Road: one shared road per calendar day, the same seed and class for every player.
+function todayKey(offset = 0) {
+  const d = new Date(); d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dailyClass(key) { const ids = Object.keys(CLASSES); return ids[(strSeed(key) >>> 0) % ids.length]; }
+const dailyResult = key => meta.daily.results.find(r => r.date === key);
+function startDaily() {
+  if (loadSavedRun()) return showInProgress(startDaily);
+  const key = todayKey();
+  if (dailyResult(key)) return;
+  startRun(dailyClass(key), { seed: strSeed('lantern-road:' + key), daily: key });
+}
+function recordDaily(key, total, won) {
+  const dly = meta.daily;
+  if (dly.results.some(r => r.date === key)) return;
+  dly.results.push({ date: key, score: total, won }); dly.results = dly.results.slice(-30);
+  const yesterday = (() => { const [y, m, d] = key.split('-').map(Number); const t = new Date(y, m - 1, d - 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; })();
+  dly.streak = dly.last === yesterday ? dly.streak + 1 : 1;
+  dly.last = key; dly.best = Math.max(dly.best, total);
+}
+// The streak only counts while you have played yesterday's or today's road.
+const liveStreak = () => (meta.daily.last === todayKey() || meta.daily.last === todayKey(-1)) ? meta.daily.streak : 0;
+
 function endRun(won, cause) {
   if (!run || run.over) return;
-  run.over = true; C = null; closePanel(); closeSheet();
+  run.over = true; C = null; closePanel(); closeSheet(); clearSavedRun();
   const base = run.score, gold = run.gold;
   let total = base + gold;
   if (won) total = Math.round((total + 500) * 1.5);
-  const embers = Math.max(1, Math.floor(total / 100));
+  total = Math.round(total * darkMult(run.dark));
+  let embers = Math.max(1, Math.floor(total / 100));
+  if (run.daily) embers *= 2;
   meta.embers += embers; meta.runs++;
-  meta.records.push({ score: total, cls: run.cls, region: run.region, won, date: new Date().toISOString().slice(0, 10) });
+  meta.records.push({ score: total, cls: run.cls, region: run.region, won, date: todayKey(), dark: run.dark, daily: !!run.daily });
   meta.records.sort((a, b) => b.score - a.score); meta.records = meta.records.slice(0, 10);
+  const prevDark = meta.dark;
+  if (won && run.dark >= meta.dark && meta.dark < 5) meta.dark = run.dark + 1;
+  if (run.daily) recordDaily(run.daily, total, won);
   commitMeta();
-  lastRun = { won, cause, total, embers, gold, kills: run.kills, elites: run.elites, bosses: run.bosses, regions: run.regionsCleared, region: run.region, cls: run.cls, best: meta.records[0] && meta.records[0].score === total };
+  award('first');
+  if (won) { award('win_' + run.cls); if (run.dark >= 1) award('dark1'); if (run.dark >= 5) award('dark5'); }
+  if (run.daily) { award('daily1'); if (meta.daily.streak >= 3) award('streak3'); if (meta.daily.streak >= 7) award('streak7'); }
+  lastRun = { won, cause, total, embers, gold, kills: run.kills, elites: run.elites, bosses: run.bosses, regions: run.regionsCleared, region: run.region, cls: run.cls,
+    dark: run.dark, daily: run.daily, newAch: run.newAch.slice(), unlockedDark: meta.dark > prevDark ? meta.dark : 0,
+    best: meta.records[0] && meta.records[0].score === total };
   demo.region = run.region; demo.cls = run.cls;
   sfx(won ? 'relic' : 'die');
   run = null; showEnd();
@@ -1369,15 +1630,26 @@ function setScreen(el, solid) { scr.replaceChildren(el); scr.hidden = false; scr
 function menuBtn(label, sub, fn, primary) { return h('button', { class: 'btn' + (primary ? ' primary' : ''), onclick: () => { sfx('click'); fn(); } }, label, sub ? h('span', { class: 'sub', text: sub }) : null); }
 function bestScore() { return meta.records.length ? meta.records[0].score : 0; }
 
+function dailyBtn() {
+  const key = todayKey(), res = dailyResult(key), streak = liveStreak();
+  const streakTxt = streak ? ` · ${streak}-day streak` : '';
+  if (res) return h('button', { class: 'btn', disabled: true }, 'Daily Road · done today', h('span', { class: 'sub', text: `${res.score} score${streakTxt}. A new road opens tomorrow.` }));
+  const at = meta.daily.last === todayKey(-1) ? ` Walk it to keep your ${streak}-day streak.` : '';
+  return menuBtn('Daily Road', `Today: the ${CLASSES[dailyClass(key)].name}. The same road for every player, double embers.${at}`, startDaily);
+}
 function showTitle() {
   screen = 'title'; closePanel(); closeSheet();
+  const saved = loadSavedRun();
   setScreen(h('div', { class: 'title-wrap' },
     h('div', { class: 'kicker', text: 'A roguelike of the cursed road' }),
     h('h1', { class: 'title', text: 'Lantern Road' }),
     h('p', { class: 'tagline', text: 'Walk the dead kingdom. Keep your flame alive. End the Hollow King.' }),
     h('div', { class: 'menu' },
-      menuBtn('Begin the walk', bestScore() ? `Best score: ${bestScore()}` : 'Five regions. About 15–20 minutes.', beginWalk, true),
+      saved ? menuBtn('Continue the walk', `${CLASSES[saved.cls].name}${saved.daily ? ' · Daily Road' : ''} · ${REGIONS[saved.region].name} · ${saved.score} score`, resumeRun, true) : null,
+      menuBtn('Begin the walk', bestScore() ? `Best score: ${bestScore()}` : 'Five regions. About 15–20 minutes.', beginWalk, !saved),
+      dailyBtn(),
       menuBtn('The Pyre', `${meta.embers} ember${meta.embers === 1 ? '' : 's'} to spend on unlocks`, showPyre),
+      menuBtn('Codex', `${meta.ach.length}/${ACHIEVEMENTS.length} achievements · ${Object.keys(meta.foes).length} foes recorded`, () => showCodex('ach')),
       menuBtn('Records', meta.runs ? `${meta.runs} walk${meta.runs === 1 ? '' : 's'} so far` : 'No walks yet', showRecords),
       menuBtn('How to play', 'Rules, scoring and controls', () => showHowTo(showTitle))),
     h('div', { class: 'foot', text: 'Arrow keys or A/D to change lanes · 1–5 to choose' })));
@@ -1388,12 +1660,20 @@ function showClassSelect() {
     const open = !c.unlock || unlocked(c.unlock);
     return h('div', { class: 'item' + (open ? '' : ' owned') },
       h('div', { class: 'cls' }, h('div', { class: 'k', text: open ? `${c.hp} HP · Strike ${c.str} · Guard ${c.guard}` : 'Locked' }), h('div', { class: 'nm', text: c.name })),
-      open ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startRun(id); }, text: 'Walk' }) : h('button', { class: 'btn', disabled: true, text: '10 embers' }),
+      open ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startRun(id, { dark: chosenDark }); }, text: 'Walk' }) : h('button', { class: 'btn', disabled: true, text: `${UNLOCKS.find(u => u.id === c.unlock).cost} embers` }),
       h('div', { class: 'ds' }, `${c.blurb} `, h('br'), `Skill: ${c.skill.name}. ${c.skill.desc(1)} `, h('br'), c.passive));
   });
+  chosenDark = clamp(chosenDark, 0, meta.dark);
+  const step = dir => { chosenDark = clamp(chosenDark + dir, 0, meta.dark); savePlayPrefs(); showClassSelect(); };
+  const D = DARKNESS[chosenDark];
+  const darkPicker = meta.dark > 0 ? h('div', { class: 'dark' },
+    h('button', { class: 'small', 'aria-label': 'Less darkness', disabled: chosenDark === 0, onclick: () => step(-1), text: '−' }),
+    h('div', { class: 'dk' }, h('div', { class: 'nm', text: D.name }),
+      h('div', { class: 'ds', text: chosenDark ? `${DARKNESS.slice(1, chosenDark + 1).map(x => x.desc).join(' ')} Score ×${darkMult(chosenDark)}.` : `${D.desc} Win to unlock the next level.` })),
+    h('button', { class: 'small', 'aria-label': 'More darkness', disabled: chosenDark >= meta.dark, onclick: () => step(1), text: '+' })) : null;
   setScreen(h('div', { class: 'page' },
     menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Choose who walks' }), h('h1', { text: 'The Lantern-Bearers' }),
-    h('div', { class: 'list' }, cards)), true);
+    darkPicker, h('div', { class: 'list' }, cards)), true);
   scr.querySelector('.btn').classList.add('back');
 }
 function showPyre() {
@@ -1416,7 +1696,7 @@ function showRecords() {
   screen = 'records';
   const rows = meta.records.map((r, i) => h('tr', {},
     h('td', { text: i + 1 }), h('td', { class: 'num' + (r.won ? ' won' : ''), text: r.score }),
-    h('td', { text: CLASSES[r.cls] ? CLASSES[r.cls].name : r.cls }),
+    h('td', { text: (CLASSES[r.cls] ? CLASSES[r.cls].name : r.cls) + (r.daily ? ' · Daily' : '') + (r.dark ? ` · D${r.dark}` : '') }),
     h('td', { class: r.won ? 'won' : '', text: r.won ? 'Victory' : (REGIONS[r.region] ? REGIONS[r.region].name : '') }), h('td', { text: r.date })));
   setScreen(h('div', { class: 'page' },
     menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Best walks' }), h('h1', { text: 'Records' }),
@@ -1446,9 +1726,16 @@ function howToContent() {
       li('Normal enemy +10 · Elite +50 · Boss +200 · Region cleared +100.'),
       li('Gold you hold at the end adds 1 point each.'),
       li('Defeating the Hollow King adds 500, then multiplies your score by 1.5.')),
+    h('h3', { text: 'Relic sets' }), h('ul', {},
+      li('Many relics belong to a style: Blood, Ward, Hex or Lantern. Carry 3 of the same style to switch on its set bonus.'),
+      li('Combat shows how your damage adds up, so you can see each relic at work.')),
     h('h3', { text: 'The end, and after' }), h('ul', {},
       li('The walk ends when your HP reaches 0, or when the Hollow King falls.'),
-      li('Every walk earns 1 ember per 100 points. Spend embers at the Pyre to unlock classes, relics and events.')));
+      li('Your walk is saved between events. If you close the game, Continue picks up where you left off.'),
+      li('Every walk earns 1 ember per 100 points. Spend embers at the Pyre to unlock classes, relics and events. Achievements earn embers too.')),
+    h('h3', { text: 'Daily Road and Darkness' }), h('ul', {},
+      li('The Daily Road is one shared road per day: the same class, foes and forks for every player. You get one walk at it, it earns double embers, and playing on consecutive days builds a streak.'),
+      li('Win a walk to unlock the next Darkness level, up to Darkness V. Each level makes the road harder and multiplies your score by an extra 0.25.')));
 }
 function showHowTo(back) {
   screen = 'howto';
@@ -1459,19 +1746,48 @@ function showEnd() {
   screen = 'end';
   const r = lastRun, R = REGIONS[r.region];
   const row = (a, b) => [h('span', { text: a }), h('span', { text: b })];
-  const subtotal = r.kills * 10 + r.elites * 50 + r.bosses * 200 + r.regions * 100 + r.gold;
+  const achs = r.newAch.map(id => ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean);
   setScreen(h('div', { class: 'page' },
-    h('div', { class: 'kicker', text: r.won ? 'Victory' : 'The walk is over' }),
+    h('div', { class: 'kicker', text: (r.won ? 'Victory' : 'The walk is over') + (r.daily ? ` · Daily Road ${r.daily}` : '') }),
     h('h1', { text: r.won ? 'The Hollow King is Ended' : `You Fell in the ${R.name}` }),
     h('p', { class: 'tagline', text: r.won ? 'The crown is dust, and the road behind you is lit.' : r.cause + '.' }),
     h('div', { class: 'score' },
       row(`Enemies slain · ${r.kills} × 10`, r.kills * 10), row(`Elites slain · ${r.elites} × 50`, r.elites * 50),
       row(`Bosses ended · ${r.bosses} × 200`, r.bosses * 200), row(`Regions cleared · ${r.regions} × 100`, r.regions * 100),
       row('Gold held', r.gold),
-      r.won ? row('Victory bonus', 500) : null, r.won ? row('Victory multiplier', `× 1.5`) : null,
-      h('span', { class: 'tot', text: r.best ? 'Final score · new best' : 'Final score' }), h('span', { class: 'tot', text: r.won ? r.total : subtotal })),
-    h('div', { class: 'embers', text: `+${r.embers} ember${r.embers === 1 ? '' : 's'} · ${meta.embers} total` }),
+      r.won ? row('Victory bonus', 500) : null, r.won ? row('Victory multiplier', '× 1.5') : null,
+      r.dark ? row(DARKNESS[r.dark].name, `× ${darkMult(r.dark)}`) : null,
+      h('span', { class: 'tot', text: r.best ? 'Final score · new best' : 'Final score' }), h('span', { class: 'tot', text: r.total })),
+    h('div', { class: 'embers', text: `+${r.embers} ember${r.embers === 1 ? '' : 's'}${r.daily ? ' (doubled for the Daily Road)' : ''} · ${meta.embers} total` }),
+    r.daily ? h('p', { class: 'tagline', text: `Daily streak: ${meta.daily.streak} day${meta.daily.streak === 1 ? '' : 's'}. A new road opens tomorrow.` }) : null,
+    r.unlockedDark ? h('p', { class: 'tagline', text: `${DARKNESS[r.unlockedDark].name} unlocked: ${DARKNESS[r.unlockedDark].desc}` }) : null,
+    achs.length ? h('div', { class: 'list' }, achs.map(a => h('div', { class: 'item' }, h('div', { class: 'k', text: `Achievement · +${a.embers} embers` }), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })))) : null,
     h('div', { class: 'menu' }, menuBtn('Walk again', null, beginWalk, true), menuBtn('The Pyre', `${meta.embers} embers to spend`, showPyre), menuBtn('Title', null, showTitle))));
+}
+
+// ── Codex: achievements, the foes you have defeated, and the relics you have found.
+function silhouette(c) { const x = c.getContext('2d'); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#2e2738'; x.fillRect(0, 0, c.width, c.height); return c; }
+function showCodex(tab) {
+  screen = 'codex';
+  const tabs = h('div', { class: 'tabs', role: 'tablist' }, [['ach', 'Achievements'], ['foes', 'Bestiary'], ['relics', 'Relics']].map(([id, label]) =>
+    h('button', { class: 'small' + (tab === id ? ' on' : ''), role: 'tab', 'aria-selected': tab === id ? 'true' : 'false', onclick: () => showCodex(id), text: label })));
+  let body;
+  if (tab === 'ach') {
+    body = h('div', { class: 'list' }, ACHIEVEMENTS.map(a => { const got = meta.ach.includes(a.id);
+      return h('div', { class: 'item' + (got ? '' : ' locked') }, h('div', { class: 'k' + (got ? ' got' : ''), text: got ? `Earned · +${a.embers} embers` : `+${a.embers} embers` }), h('div', { class: 'nm', text: a.name }), h('div', { class: 'ds', text: a.desc })); }));
+  } else if (tab === 'foes') {
+    const ids = REGIONS.flatMap(R => [...R.normals, R.elite, R.boss]).concat(['mimic', 'moths']);
+    body = h('div', { class: 'beasts' }, ids.map(id => { const n = meta.foes[id] || 0, d = ENEMIES[id];
+      const where = REGIONS.find(R => R.normals.includes(id) || R.elite === id || R.boss === id);
+      const pc = portrait(id); if (!n) silhouette(pc);
+      return h('div', { class: 'beast' + (n ? '' : ' unseen') }, pc, h('div', { class: 'nm', text: n ? d.name : 'Unknown' }), h('div', { class: 'k', text: n ? `Defeated ×${n}` : (where ? where.name : 'A mystery') })); }));
+  } else {
+    body = h('div', { class: 'list' }, Object.keys(RELICS).map(id => { const seen = meta.relicsSeen.includes(id), R = RELICS[id];
+      return h('div', { class: 'item' + (seen ? '' : ' locked') }, h('div', { class: 'k', text: (R.tag ? TAG_NAMES[R.tag] : 'Relic') + (seen ? '' : ' · not found yet') }), h('div', { class: 'nm', text: seen ? R.name : '???' }), h('div', { class: 'ds', text: seen ? R.desc : 'Find it on the road to learn what it does.' })); }));
+  }
+  const setsInfo = tab === 'relics' ? h('div', { class: 'list' }, Object.keys(SETS).map(t => h('div', { class: 'item' }, h('div', { class: 'k', text: `${TAG_NAMES[t]} set · carry 3 ${TAG_NAMES[t]} relics` }), h('div', { class: 'nm', text: SETS[t].name }), h('div', { class: 'ds', text: SETS[t].desc })))) : null;
+  setScreen(h('div', { class: 'page' }, menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'What you have learned' }), h('h1', { text: 'Codex' }), tabs, setsInfo, body), true);
+  scr.querySelector('.btn').classList.add('back');
 }
 
 // ───────────────────────── sheet: pause and relics
@@ -1481,13 +1797,15 @@ function closeSheet() { sheet.hidden = true; sheet.replaceChildren(); }
 function openRelics() {
   if (!run) return; const wasPaused = paused; paused = true;
   const close = () => { closeSheet(); paused = wasPaused; };
-  const list = run.relics.length ? run.relics.map(id => h('div', { class: 'relic' }, h('b', { text: RELICS[id].name }), h('span', { text: RELICS[id].desc })))
+  const list = run.relics.length ? run.relics.map(id => h('div', { class: 'relic' }, h('b', { text: relicLabel(id) }), h('span', { text: RELICS[id].desc })))
     : [h('p', { class: 'ev-text', text: 'No relics yet. Elites, shrines, merchants and bosses carry them.' })];
+  const sets = Object.keys(SETS).filter(t => tagCount(t) > 0).map(t => h('div', { class: 'relic' + (setOn(t) ? ' set-on' : '') },
+    h('b', { text: `${SETS[t].name} · ${TAG_NAMES[t]} ${Math.min(3, tagCount(t))}/3${setOn(t) ? ' · active' : ''}` }), h('span', { text: SETS[t].desc })));
   const c = CLASSES[run.cls];
   openSheet(h('div', { style: 'display:grid;gap:10px' },
     h('div', { class: 'kicker', text: `${c.name} · Strike ${strikeBase()} · Guard ${guardVal()}` }), h('h2', { text: 'Your Relics' }),
     h('p', { class: 'ev-text', style: 'margin:0', text: `${c.skill.name} (level ${run.skillLv}): ${c.skill.desc(run.skillLv)} ${c.passive}` }),
-    ...list, h('button', { class: 'btn primary', onclick: close, text: 'Close' })));
+    ...sets, ...list, h('button', { class: 'btn primary', onclick: close, text: 'Close' })));
 }
 function togglePause() {
   if (!run || screen !== 'travel') return;
@@ -1598,7 +1916,8 @@ document.addEventListener('keydown', e => {
   else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); move(1); }
   else if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); togglePause(); }
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && run && screen === 'travel' && !run.event && sheet.hidden) openPause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && run && screen === 'travel' && !run.event && sheet.hidden) openPause(); if (document.hidden) saveRun(); });
+window.addEventListener('pagehide', saveRun);
 window.addEventListener('resize', resize);
 if (window.ResizeObserver) new ResizeObserver(resize).observe($('#app'));
 
