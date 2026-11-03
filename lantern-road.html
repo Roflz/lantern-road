@@ -1,0 +1,1535 @@
+<meta charset="utf-8">
+<title>Lantern Road</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Silkscreen:wght@400;700&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  /* Layout: one portrait road-frame centred in the void. The HUD rides its top edge, lane controls its bottom, and event cards rise from below into the lantern light. */
+  --void:#0a080e;
+  --stone:#15111a;
+  --stone-2:#1f1926;
+  --rule:#3a3044;
+  --bone:#ebe1cb;
+  --ash:#a59bab;
+  --ember:#f2a03d;
+  --blood:#c43b3b;
+  --oil:#e3ad4b;
+  --gold:#e9d27c;
+  --doom:#b48ae8;
+  --ward:#86bde0;
+  --good:#a5d48e;
+  --bad:#e9806e;
+  --f-display:"Pirata One","Luminari","Palatino Linotype",Georgia,serif;
+  --f-body:"Spectral",Georgia,"Times New Roman",serif;
+  --f-pixel:"Silkscreen","Lucida Console","Courier New",monospace;
+  color-scheme:dark;
+}
+html{height:100%;box-sizing:border-box;background:var(--void)}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+body{height:100%;margin:0;background:var(--void);color:var(--bone);font-family:var(--f-body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{height:100%;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;background:radial-gradient(ellipse at 50% 70%,#1b1322 0%,var(--void) 65%)}
+#frame{position:relative;height:100%;width:360px;max-width:100%;overflow:hidden;background:#000;box-shadow:0 0 0 1px var(--rule),0 0 90px rgba(0,0,0,.9)}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:crisp-edges;image-rendering:pixelated;touch-action:manipulation;cursor:pointer}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+
+/* HUD */
+#hud{position:absolute;top:0;left:0;right:0;z-index:3;display:grid;gap:7px;padding:10px 10px 22px;background:linear-gradient(180deg,rgba(10,8,14,.96) 0%,rgba(10,8,14,.86) 72%,transparent);font-family:var(--f-pixel);font-size:10px;letter-spacing:.04em}
+.hud-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.region{font-family:var(--f-display);font-size:20px;line-height:1;white-space:nowrap}
+.region b{font-weight:400;color:var(--ember);margin-right:6px}
+.pips{display:flex;gap:3px;align-items:center}
+.pip{width:7px;height:7px;background:#2b2433}
+.pip.done{background:#6d6474}
+.pip.now{background:var(--ember)}
+.pip.boss{width:10px;height:10px;background:#4a1a20;border:1px solid var(--blood)}
+.pip.boss.now{background:var(--blood)}
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.meter{position:relative;height:15px;background:#050407;border:1px solid var(--rule);overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--blood);transition:width .25s}
+.meter.oil i{background:var(--oil)}
+.meter.low i{animation:pulse 1s steps(2) infinite}
+.meter>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 5px;color:#fff;text-shadow:1px 1px 0 #000;font-size:9px}
+@keyframes pulse{50%{opacity:.45}}
+.stats{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;color:var(--ash)}
+.stats b{color:var(--bone);font-weight:400;font-variant-numeric:tabular-nums}
+.stats .g b{color:var(--gold)}
+.chipbtn{font-family:var(--f-pixel);font-size:10px;color:var(--ash);background:rgba(0,0,0,.4);border:1px solid var(--rule);padding:3px 6px;cursor:pointer;margin-left:auto}
+.chipbtn:hover{border-color:var(--ember);color:var(--bone)}
+.ahead{display:flex;gap:4px;align-items:stretch}
+.ahead .lbl{display:flex;align-items:center;color:var(--ember);padding-right:2px}
+.slot{flex:1;display:flex;align-items:center;gap:5px;padding:3px 5px;border:1px solid #2b2433;background:rgba(0,0,0,.45);color:var(--ash);min-width:0}
+.slot canvas{width:18px;height:18px;image-rendering:pixelated;flex:none}
+.slot span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.on{border-color:var(--ember);color:var(--bone);background:rgba(242,160,61,.1)}
+.slot.wide{justify-content:center}
+
+/* Controls */
+#controls{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-end;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
+#controls button{pointer-events:auto;cursor:pointer}
+.pad{width:60px;height:60px;display:grid;place-items:center;background:rgba(10,8,14,.72);border:2px solid var(--rule);color:var(--bone)}
+.pad:hover,.pad:active{border-color:var(--ember);color:var(--ember)}
+.pad svg{width:20px;height:20px;fill:currentColor}
+.mid{display:flex;gap:6px}
+.small{font-family:var(--f-pixel);font-size:10px;min-width:44px;height:36px;padding:0 8px;background:rgba(10,8,14,.72);border:2px solid var(--rule);color:var(--ash)}
+.small:hover{border-color:var(--ember);color:var(--bone)}
+
+/* Toasts, region card, hurt flash */
+#toasts{position:absolute;left:0;right:0;bottom:118px;z-index:4;display:grid;justify-items:center;gap:4px;pointer-events:none}
+.toast{font-family:var(--f-pixel);font-size:11px;padding:3px 8px;background:rgba(0,0,0,.8);border:1px solid var(--rule);color:var(--bone);animation:toast 2s forwards}
+.toast.good{color:var(--good)}
+.toast.bad{color:var(--bad);border-color:#5a2a2a}
+.toast.gold{color:var(--gold)}
+@keyframes toast{0%{opacity:0;transform:translateY(6px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+#card{position:absolute;left:0;right:0;top:32%;z-index:4;text-align:center;pointer-events:none;opacity:0}
+#card.show{animation:card 3.4s forwards}
+#card .n{font-family:var(--f-pixel);font-size:11px;letter-spacing:.35em;color:var(--ember)}
+#card .t{font-family:var(--f-display);font-size:46px;line-height:1;text-shadow:0 0 22px #000,0 2px 0 #000}
+@keyframes card{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+#hurt{position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 70px rgba(196,59,59,0);transition:box-shadow .35s}
+#hurt.on{box-shadow:inset 0 0 70px rgba(196,59,59,.75);transition:none}
+
+/* Event panel */
+#panel{position:absolute;left:8px;right:8px;bottom:8px;z-index:5;max-height:calc(100% - 132px);overflow:auto;background:var(--stone);border:2px solid var(--rule);box-shadow:0 0 0 2px #000,0 -30px 60px rgba(0,0,0,.75);padding:16px 14px 14px;animation:rise .28s ease-out}
+#panel.tall{max-height:calc(100% - 16px)}
+@keyframes rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.kicker{font-family:var(--f-pixel);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
+h1,h2{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0}
+h2{font-size:29px;line-height:1.02;margin-top:3px}
+.ev-head{display:flex;gap:12px;align-items:center}
+.ev-head canvas{width:46px;height:46px;image-rendering:pixelated;flex:none}
+.ev-text{line-height:1.55;margin:10px 0 14px;max-width:60ch}
+.choices{display:grid;gap:8px}
+.btn{display:block;width:100%;text-align:left;font-family:var(--f-pixel);font-size:11px;letter-spacing:.05em;text-transform:uppercase;line-height:1.35;background:var(--stone-2);color:var(--bone);border:2px solid var(--rule);padding:10px 12px;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ember);box-shadow:0 0 14px rgba(242,160,61,.22)}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn .key{color:var(--ember);margin-right:8px}
+.btn .sub{display:block;margin-top:3px;font-family:var(--f-body);font-size:13.5px;text-transform:none;letter-spacing:0;color:var(--ash);line-height:1.35}
+.btn.primary{border-color:var(--ember)}
+.lines{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:4px;font-family:var(--f-pixel);font-size:11px}
+.lines .good{color:var(--good)}
+.lines .bad{color:var(--bad)}
+.lines .note{color:var(--ash)}
+
+/* Combat */
+.combat{display:grid;gap:10px}
+.foe{position:relative;display:grid;justify-items:center;gap:6px;text-align:center}
+.foe canvas{width:132px;height:143px;image-rendering:pixelated;background:radial-gradient(circle at 50% 60%,rgba(242,160,61,.13),transparent 62%);animation:bob 1.6s steps(2) infinite}
+.foe.boss canvas{width:168px;height:182px}
+.foe canvas.hit{animation:shake .32s}
+.foe canvas.dead{animation:sink .6s forwards}
+@keyframes bob{50%{transform:translateY(-3px)}}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes sink{to{transform:translateY(20px);opacity:0;filter:brightness(3)}}
+.intent{font-family:var(--f-pixel);font-size:11px;padding:4px 9px;background:#000;border:1px solid var(--blood);color:#f2b4a6}
+.intent.def{border-color:var(--ward);color:var(--ward)}
+.intent.cur{border-color:var(--doom);color:var(--doom)}
+.foe-name{font-family:var(--f-display);font-size:25px;line-height:1}
+.foe .meter{width:min(240px,100%)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;font-family:var(--f-pixel);font-size:9px;min-height:15px}
+.tag{padding:2px 5px;border:1px solid var(--rule);color:var(--ash)}
+.tag.block{border-color:var(--ward);color:var(--ward)}
+.tag.doom{border-color:var(--doom);color:var(--doom)}
+.tag.weak,.tag.bleed,.tag.rage{border-color:#6a2a2a;color:var(--bad)}
+.tag.buff{border-color:var(--ember);color:var(--ember)}
+.log{font-style:italic;color:var(--ash);text-align:center;min-height:1.5em;margin:0;line-height:1.4}
+.me{position:relative;display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--rule)}
+.me-row{display:flex;gap:8px;align-items:center}
+.me-row .meter{flex:1}
+.me-row .tags{justify-content:flex-end;min-width:0}
+.actions{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.actions .btn{grid-column:span 2;text-align:center;padding:9px 6px}
+.actions .btn.wide{grid-column:span 3}
+.actions .btn .sub{font-size:12px}
+.fx{position:absolute;left:50%;top:38%;z-index:2;font-family:var(--f-pixel);font-weight:700;font-size:18px;color:#fff;text-shadow:2px 2px 0 #000;pointer-events:none;animation:up .95s ease-out forwards;transform:translateX(-50%);white-space:nowrap}
+.fx.heal{color:var(--good)}
+.fx.doom{color:var(--doom)}
+.fx.ward{color:var(--ward)}
+.fx.me{top:-6px}
+@keyframes up{to{transform:translate(-50%,-36px);opacity:0}}
+
+/* Full screens */
+#screen{position:absolute;inset:0;z-index:8;overflow:auto;display:flex;flex-direction:column;padding:28px 18px 22px;background:linear-gradient(180deg,rgba(10,8,14,.35) 0%,rgba(10,8,14,.86) 48%,rgba(10,8,14,.97) 100%)}
+#screen.solid{background:rgba(10,8,14,.93)}
+.title-wrap{margin-top:auto;display:grid;gap:6px}
+.title{font-size:clamp(54px,15vw,76px);line-height:.88;color:var(--bone);text-shadow:0 0 26px rgba(242,160,61,.5),0 3px 0 #000}
+.tagline{margin:4px 0 0;color:var(--ash);font-style:italic;line-height:1.45;max-width:34ch}
+.menu{display:grid;gap:8px;margin-top:18px}
+.foot{margin-top:14px;font-family:var(--f-pixel);font-size:9px;color:#6d6474;letter-spacing:.05em}
+.page{display:grid;gap:14px;align-content:start}
+.page h1{font-size:40px;line-height:1}
+.page p{margin:0;line-height:1.55}
+.back{justify-self:start;width:auto}
+.embers{font-family:var(--f-pixel);font-size:12px;color:var(--ember)}
+.list{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;background:var(--stone-2);border:1px solid var(--rule)}
+.item .k{font-family:var(--f-pixel);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.item .nm{font-family:var(--f-display);font-size:21px;line-height:1.05}
+.item .ds{grid-column:1/-1;color:var(--ash);font-size:14px;line-height:1.4}
+.item .btn{width:auto;padding:7px 10px;grid-row:1/3;grid-column:2;align-self:center}
+.item.owned{opacity:.75}
+.item.owned .k{color:var(--good)}
+table.rec{width:100%;border-collapse:collapse;font-family:var(--f-pixel);font-size:10px;font-variant-numeric:tabular-nums}
+.rec th{text-align:left;color:var(--ash);font-weight:400;padding:6px 4px;border-bottom:1px solid var(--rule)}
+.rec td{padding:7px 4px;border-bottom:1px solid #241e2a}
+.rec td.num,.rec th.num{text-align:right}
+.rec .won{color:var(--ember)}
+.score{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-family:var(--f-pixel);font-size:11px;font-variant-numeric:tabular-nums;padding:12px;background:var(--stone-2);border:1px solid var(--rule)}
+.score .tot{padding-top:8px;border-top:1px solid var(--rule);color:var(--ember);font-size:13px}
+.score span:nth-child(even){text-align:right}
+.rules{display:grid;gap:12px}
+.rules h3{font-family:var(--f-pixel);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember);margin:4px 0 0;font-weight:400}
+.rules ul{margin:0;padding-left:18px;display:grid;gap:5px;line-height:1.5}
+.cls{display:grid;gap:3px}
+.cls .stat{font-family:var(--f-pixel);font-size:9px;color:var(--ash);letter-spacing:.06em}
+
+/* Sheet (pause, relics) */
+#sheet{position:absolute;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:rgba(5,4,8,.78)}
+#sheet .box{width:100%;max-height:100%;overflow:auto;background:var(--stone);border:2px solid var(--rule);box-shadow:0 0 0 2px #000;padding:16px 14px;display:grid;gap:12px}
+.relic{padding:8px 10px;background:var(--stone-2);border:1px solid var(--rule)}
+.relic b{font-family:var(--f-display);font-weight:400;font-size:19px;display:block;line-height:1.1}
+.relic span{color:var(--ash);font-size:14px}
+
+@media (prefers-reduced-motion:reduce){
+  #panel,.foe canvas,.foe canvas.hit,.fx,#card.show{animation-duration:.01ms!important;animation-iteration-count:1!important}
+  .fx{animation:none!important;opacity:0}
+}
+</style>
+
+<div id="app">
+  <div id="frame">
+    <canvas id="world" aria-label="The road ahead"></canvas>
+    <div id="hurt"></div>
+    <header id="hud" hidden></header>
+    <div id="toasts" aria-live="polite"></div>
+    <div id="card"><div class="n"></div><div class="t"></div></div>
+    <div id="controls" hidden>
+      <button class="pad" id="btnL" aria-label="Move left"><svg viewBox="0 0 10 10"><path d="M7 1v8L2 5z"/></svg></button>
+      <div class="mid">
+        <button class="small" id="btnSpeed" aria-label="Walking speed">1×</button>
+        <button class="small" id="btnPause" aria-label="Pause">Pause</button>
+      </div>
+      <button class="pad" id="btnR" aria-label="Move right"><svg viewBox="0 0 10 10"><path d="M3 1v8l5-4z"/></svg></button>
+    </div>
+    <section id="panel" hidden></section>
+    <section id="screen" hidden></section>
+    <div id="sheet" hidden></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ───────────────────────── constants & utils
+const W = 120;
+let H = 214, PY = H - 40;
+const LANES = [36, 60, 84];
+const ROAD_L = 22, ROAD_R = 98;
+const SPACING = 96, FIRST = 80;
+const BASE_SPEED = 16;          // world pixels per second at 1×
+const OIL_PER_PX = 1 / 22;      // lantern oil burned per pixel walked
+const DARK_STEP = 24;           // pixels walked in darkness per 1 HP lost
+
+const $ = s => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function hash(n) { n |= 0; n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n ^= n >>> 16; return (n >>> 0) / 4294967296; }
+const h2 = (a, b) => hash(Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263));
+const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'text') el.textContent = v;
+    else if (k === 'disabled') el.disabled = !!v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+  return el;
+}
+
+// ───────────────────────── pixel art
+const spriteCache = new Map();
+function sprite(map, pal, key) {
+  if (spriteCache.has(key)) return spriteCache.get(key);
+  const w = Math.max(...map.map(r => r.length)), hh = map.length;
+  const c = document.createElement('canvas'); c.width = w; c.height = hh;
+  const x = c.getContext('2d');
+  map.forEach((row, y) => { for (let i = 0; i < row.length; i++) { const col = pal[row[i]]; if (col) { x.fillStyle = col; x.fillRect(i, y, 1, 1); } } });
+  spriteCache.set(key, c);
+  return c;
+}
+
+const PLAYER_A = [
+  "....hhhh....", "...hhhhhh...", "...hddddh...", "...hhhhhh...",
+  "..cccccccc..", ".cccccccccc.", ".ccdccccdcy.", ".ccdccccdcy.",
+  ".ccdccccdcy.", ".cccccccc.LL", "..cccccc..LL", "..dccccd....",
+  "..kk..kk....", "..kk........"];
+const PLAYER_B = PLAYER_A.slice(0, 13).concat(["......kk...."]);
+
+const ICONS = {
+  fight: { map: ["x.......x", ".x.....x.", "..x...x..", "...x.x...", "....x....", "...x.x...", "..h...h..", ".h.....h.", "h.......h"], pal: { x: '#e2ddd0', h: '#a0703a' } },
+  elite: { map: ["..xxxxx..", ".xxxxxxx.", "xxxxxxxxx", "xrrxxxrrx", "xrrxxxrrx", "xxxx.xxxx", ".xxxxxxx.", "..x.x.x..", "..x.x.x.."], pal: { x: '#ebe1cb', r: '#c43b3b' } },
+  mystery: { map: ["..xxxxx..", ".xx...xx.", ".xx...xx.", "......xx.", "....xxx..", "...xx....", "...xx....", ".........", "...xx...."], pal: { x: '#c09af0' } },
+  camp: { map: ["....y....", "...yy....", "...yxy...", "..yxxy.y.", ".yyxxxyy.", ".yxxxxxy.", "..yxxxy..", "bbbbbbbbb", ".b.b.b.b."], pal: { y: '#e0602a', x: '#f7c24a', b: '#7a5232' } },
+  merchant: { map: ["...b.b...", "....b....", "..xxxxx..", ".xxxxxxx.", "xxxyyyxxx", "xxyxxxxxx", "xxxyyxxxx", ".xxxxxyx.", "..xxxxx.."], pal: { x: '#a8824a', y: '#f1dc8a', b: '#6b4a2e' } },
+  shrine: { map: ["....y....", "...yxy...", "....y....", "...www...", "...www...", "...www...", "...www...", "..wwwww..", ".bbbbbbb."], pal: { y: '#f7c24a', x: '#fff2c0', w: '#d8d0bc', b: '#5a4a40' } },
+  treasure: { map: [".........", ".bbbbbbb.", "bxxxxxxxb", "bbbbbbbbb", "bxxxyxxxb", "bxxxxxxxb", "bxxxxxxxb", "bbbbbbbbb", "........."], pal: { b: '#7a5232', x: '#b08040', y: '#f1dc8a' } },
+  boss: { map: ["x...x...x", "xx.xxx.xx", "xxxxxxxxx", "xyxxyxxyx", "xxxxxxxxx", "xxxxxxxxx", ".........", ".........", "........."], pal: { x: '#e8c24a', y: '#c43b3b' } },
+  flask: { map: [".b.", ".w.", "oyo", "ooo", "ooo"], pal: { b: '#7a5232', w: '#d8d0bc', o: '#c07a20', y: '#ffd27a' } },
+  coin: { map: [".y.", "yzy", ".y."], pal: { y: '#f1dc8a', z: '#b8962e' } },
+};
+const TYPE_NAMES = { fight: 'Fight', elite: 'Elite', mystery: 'Mystery', camp: 'Campfire', merchant: 'Merchant', shrine: 'Shrine', treasure: 'Treasure', boss: 'Boss' };
+
+function iconCanvas(type) {
+  const ic = ICONS[type]; const s = sprite(ic.map, ic.pal, 'i:' + type);
+  const c = document.createElement('canvas'); c.width = 11; c.height = 11;
+  c.getContext('2d').drawImage(s, Math.floor((11 - s.width) / 2), Math.floor((11 - s.height) / 2));
+  return c;
+}
+
+const PROPS = {
+  grave: { map: [".sss.", "sssss", "sdsss", "sssss", "sssds", "sssss", "ddddd"] },
+  cross: { map: ["..s..", "..s..", "sssss", "..s..", "..s..", "..s..", "..s..", ".ddd."] },
+  deadtree: { map: ["t.......t", ".t..t..t.", "..t.t.t..", "...ttt.t.", "t...t.t..", ".t..tt...", "..t.t....", "...tt....", "....t....", "....t....", "...ttt...", "..t.t.t.."] },
+  skulls: { map: [".b.b.", "bbbbb", "b.b.b"] },
+  stone: { map: [".ss.", "ssds", "dssd"] },
+  pillar: { map: ["ddddd", ".sss.", ".sds.", ".sss.", ".sds.", ".sss.", ".sss.", ".sds.", ".sss.", ".sss.", "sssss", "ddddd"] },
+  broken: { map: [".s.s.", ".sss.", ".sds.", ".sss.", "sssss", "ddddd"] },
+  puddle: { map: [".ppppp.", "ppqpppp", ".ppppq."] },
+  bush: { map: ["g.g.g.g", ".ggggg.", "gggrggg", ".ggggg.", "g.g.g.g"] },
+  pine: { map: ["...g...", "..ggg..", ".ggggg.", "..ggg..", ".ggggg.", "ggggggg", "..ggg..", ".ggggg.", "ggggggg", "...t...", "...t..."] },
+  brazier: { map: [".f.f.", "ffyff", ".fff.", "ddddd", ".ddd.", "..d..", ".ddd."], glow: [2, 1, 17] },
+  banner: { map: ["d..", "drr", "drr", "dyr", "drr", "drr", "dr.", "d..", "d..", "d.."] },
+  rubble: { map: [".s..", "ssd.", "sdss"] },
+  ash: { map: [".aaa.", "aaaaa"] },
+  statue: { map: [".sss.", ".sss.", "..s..", "sssss", "s.s.s", "..s..", ".sss.", ".s.s.", ".s.s.", "sssss", "ddddd"] },
+};
+
+const TEMPLATES = {
+  humanoid: ["......hhhh......", ".....hhhhhh.....", ".....hehheh.....", ".....hhhhhh.....", "......hmmh......", "....bbbbbbbb....", "...bbbbbbbbbb...", "..bb.bbbbbb.bb..", "..b..bbbbbb..b..", "..b..bdbbdb..b..", "..c..bbbbbb..c..", ".....bbbbbb.....", ".....bb..bb.....", ".....bb..bb.....", ".....dd..dd.....", "....ddd..ddd...."],
+  hunched: ["......hhhh......", ".....hhhhhh.....", ".....hehheh.....", "...bbhhmmhhbb...", "..bbbbbbbbbbbb..", ".bbbbbbbbbbbbbb.", ".b.bbbbbbbbbb.b.", "c..bbbbbbbbbb..c", "c...bbbbbbbb...c", ".....bbbbbb.....", "....bb....bb....", "....bb....bb....", "...dd......dd...", "..ddd......ddd.."],
+  skeleton: ["......xxxx......", ".....xxxxxx.....", ".....xeexeex....", ".....xxxxxx.....", "......x.x.x.....", "......xxxx......", "....x.xxxx.x....", "...x..x..x..x...", "...x..xxxx..x...", "...c..x..x..c...", "......xxxx......", "......x..x......", "......x..x......", "......x..x......", ".....xx..xx....."],
+  wraith: ["......wwww......", "....wwwwwwww....", "...wwwwwwwwww...", "...wweewweeww...", "...wwwwwwwwww...", "...wwwwmmwwww...", "..wwwwwwwwwwww..", ".wwwwwwwwwwwwww.", "ww.wwwwwwwwww.ww", "w..wwwwwwwwww..w", "...wwwwwwwwww...", "...wwwwwwwwww...", "....wwwwwwww....", "....ww.ww.ww....", ".....w..w..w...."],
+  beast: ["..h.h...........", ".hhhh...........", "hhehhh....b.....", "hhhhhhbbbbbb.b..", "mmhhhbbbbbbbbb..", ".m.hbbbbbbbbbbb.", "....bbbbbbbbbb.b", "....bb.bb..bb.b.", "....b..b...b....", "...dd.dd..dd...."],
+  swarm: ["..bb......bb....", ".beb.....beb....", "..bb..bb..bb....", "......beb.......", "..bb...bb...bb..", ".beb.......beb..", "..bb..bb....bb..", "......beb.......", "...bb..bb..bb...", "..beb.....beb...", "...bb......bb..."],
+  knight: [".....hhhhhh.....", ".....hhhhhh.....", ".....heeeeh.....", ".....hhhhhh.....", "...aabbbbbbaa...", "..aabbbbbbbbaa..", "..a.bbbrrbbb.a..", "..a.bbbbbbbb.a.s", "..c.bbbbbbbb.cs.", "....bbbbbbbb.s..", "....aaaaaaaa....", ".....bb..bb.....", ".....bb..bb.....", ".....aa..aa.....", "....aaa..aaa...."],
+  bloat: ["......hhhh......", ".....hehheh.....", ".....hhmmhh.....", "...bbbbbbbbbb...", "..bbbbbbbbbbbb..", ".bbbbbpbbbbbbbb.", ".bbbbbbbbbpbbbb.", ".bbbpbbbbbbbbbb.", ".bbbbbbbbbbbbbb.", "..bbbbbbbbbbbb..", "...bbbbbbbbbb...", "....bb....bb....", "....dd....dd...."],
+};
+const ACCESSORIES = {
+  crown: { x: 5, y: -2, map: ["y.yy.y", "yryyry"] },
+  mitre: { x: 5, y: -4, map: ["..yy..", ".yyyy.", ".yrry.", "yyyyyy"] },
+  antlers: { x: 2, y: -4, map: ["t.t......t.t", ".tt......tt.", "..tt....tt..", "...t....t..."] },
+  horns: { x: 4, y: -2, map: ["k......k", ".k....k."] },
+  shovel: { x: 14, y: 2, map: [".w", ".w", ".w", ".w", ".w", ".w", ".w", "ss", "ss", "s."] },
+};
+
+// ───────────────────────── game data
+const CLASSES = {
+  sellsword: {
+    name: 'Sellsword', hp: 62, str: 6, guard: 7, draughts: 1, maxDraughts: 3,
+    blurb: 'A hired blade who reads the opening and punishes it.',
+    passive: 'Riposte: after you Guard, your next Strike deals +3.',
+    skill: { name: 'Cleave', desc: lv => `Deal ${[2, 2.5, 3][lv - 1]}× your Strike damage.` },
+    pal: { h: '#6e3426', d: '#2a120c', c: '#8a4430', k: '#2a1810', y: '#9a8a6a', L: '#ffd27a' },
+  },
+  hexblade: {
+    name: 'Hexblade', hp: 52, str: 5, guard: 6, draughts: 1, maxDraughts: 3, unlock: 'cls_hexblade',
+    blurb: 'A cursed duelist who rots foes from within and drinks what spills.',
+    passive: 'Blood Price: your Strikes heal 2 HP.',
+    skill: { name: 'Hex', desc: lv => `Deal 4 damage and inflict Doom: ${[4, 6, 8][lv - 1]} damage at the start of each of its next 3 turns. Doom grows as your Strike grows.` },
+    pal: { h: '#4a2a5e', d: '#1a0c22', c: '#5e3478', k: '#1e1424', y: '#9a8a6a', L: '#ffd27a' },
+  },
+  pilgrim: {
+    name: 'Pilgrim', hp: 62, str: 6, guard: 7, draughts: 2, maxDraughts: 4, unlock: 'cls_pilgrim',
+    blurb: 'A road-worn believer whose faith is mostly stubbornness.',
+    passive: 'Faithful: carries up to 4 draughts and starts with 2.',
+    skill: { name: 'Holy Light', desc: lv => `Deal 1.5× your Strike damage and heal ${[5, 7, 9][lv - 1]} HP.` },
+    pal: { h: '#bdb3a0', d: '#4a4236', c: '#d6ccb6', k: '#4a4236', y: '#9a8a6a', L: '#ffd27a' },
+  },
+};
+
+const RELICS = {
+  whetstone: { name: 'Whetstone', desc: '+2 Strike damage.' },
+  locket: { name: 'Iron Locket', desc: '+12 max HP.', gain: () => { run.maxHp += 12; run.hp += 12; }, lose: () => { run.maxHp -= 12; run.hp = Math.min(run.hp, run.maxHp); } },
+  gravesalt: { name: 'Grave Salt', desc: 'Your first Strike in each fight deals double damage.' },
+  oilskin: { name: 'Oilskin Hood', desc: 'Your lantern burns 35% slower.' },
+  mothlantern: { name: 'Moth-Glass Lantern', desc: '+30 max oil.', gain: () => { run.maxOil += 30; run.oil += 30; }, lose: () => { run.maxOil -= 30; run.oil = Math.min(run.oil, run.maxOil); } },
+  tithe: { name: 'Tithe Coin', desc: '+30% gold from fights.' },
+  boneward: { name: 'Bone Ward', desc: 'Guard grants +4 Block.' },
+  leech: { name: 'Leech Tooth', desc: 'Strikes heal 1 HP.' },
+  blackcandle: { name: 'Black Candle', desc: 'Your skill recharges 1 turn faster.' },
+  rustedbell: { name: 'Rusted Bell', desc: 'Start each fight with 6 Block.' },
+  knuckle: { name: "Saint's Knuckle", desc: 'Heal 4 HP after each fight.' },
+  deepflask: { name: 'Deep Flask', desc: 'Draughts heal 50% more.' },
+  thornmail: { name: 'Thorn Mail', desc: 'When a foe hits you, it takes 3 damage.' },
+  crow: { name: 'Crow Feather', desc: 'Fleeing costs nothing.' },
+  widow: { name: "Widow's Ring", desc: 'Below 30% HP, you deal 50% more damage.' },
+  luckybone: { name: 'Lucky Knucklebone', desc: '15% chance to dodge each attack.' },
+  hunter: { name: "Hunter's Mark", desc: 'Elites and bosses take 25% more damage from you.', unlock: 'rel_hunter' },
+  waxseal: { name: 'Wax Seal', desc: 'The first time you would die, survive at 1 HP. Then it breaks.', unlock: 'rel_waxseal' },
+  chalice: { name: 'Blood Chalice', desc: 'Strikes deal +1 damage for every 10 HP you are missing.', unlock: 'rel_chalice' },
+  ghostmoth: { name: 'Ghost Moth', desc: 'Oil flasks and gold on the road are worth double.', unlock: 'rel_ghostmoth' },
+};
+
+const ENEMIES = {
+  // Gravefields
+  ghoul: { name: 'Ghoul', tpl: 'hunched', hp: 20, pat: ['A5', 'A5', 'M3x2'], pal: { h: '#7d8a6a', e: '#e8f07a', m: '#1e1612', b: '#4d5640', c: '#c9c2a4', d: '#343a2c' }, intro: 'A ghoul lifts its head from an open grave.', death: 'It folds back into the dirt it came from.' },
+  rats: { name: 'Grave Rats', tpl: 'swarm', hp: 15, pat: ['M2x3', 'A4'], pal: { b: '#6a564c', e: '#ff5a4a' }, intro: 'The ground boils with fat grey rats.', death: 'The survivors scatter into the barrows.' },
+  bones: { name: 'Restless Bones', tpl: 'skeleton', hp: 22, pat: ['A6', 'B6', 'A5'], pal: { x: '#d8d0bc', e: '#7ad0ff', c: '#a89e88' }, intro: 'A skeleton pulls itself together, joint by joint.', death: 'It comes apart and stays apart.' },
+  warden: { name: 'The Gravewarden', tpl: 'knight', hp: 44, pat: ['A8', 'B8', 'W', 'A10'], pal: { h: '#55575e', e: '#ff7a3a', b: '#3e4047', a: '#6b6d75', r: '#6b2b22', c: '#6b6d75', s: '#c9ccd4' }, intro: 'An armoured keeper of the dead steps out of the fog.', death: 'Its armour falls empty to the ground.' },
+  sexton: { name: 'The Sexton', tpl: 'humanoid', acc: ['shovel'], hp: 64, pat: ['A8', 'M3x2', 'B8', 'C', 'A16'], pal: { h: '#a89a86', e: '#ffd36a', m: '#1e1612', b: '#3b3029', d: '#211a15', c: '#a89a86', w: '#6b4a2e', s: '#9aa0a8' }, intro: 'The gravedigger of the Gravefields has a hole dug for you.', death: 'He falls into his own last grave.' },
+  // Drowned Chapel
+  acolyte: { name: 'Drowned Acolyte', tpl: 'humanoid', hp: 26, pat: ['W', 'A7', 'A7'], pal: { h: '#7aa6a0', e: '#d8fff4', m: '#142221', b: '#2e4a4c', d: '#1b2e30', c: '#7aa6a0' }, intro: 'A sodden acolyte gargles a hymn at you.', death: 'It slumps, pouring water from its sleeves.' },
+  bloat: { name: 'Bloated Corpse', tpl: 'bloat', hp: 32, pat: ['A5', 'A6', 'C', 'A15'], pal: { h: '#8aa58a', e: '#f4fff0', m: '#1e1612', b: '#6b8a72', p: '#c9d47a', d: '#34453a' }, intro: 'Something swollen waddles out of the flooded nave.', death: 'It bursts. You will smell it for days.' },
+  bellwraith: { name: 'Bell Wraith', tpl: 'wraith', hp: 22, pat: ['D6', 'A5', 'A6'], pal: { w: '#9ab8c8', e: '#141020', m: '#141020' }, intro: 'A drowned bell tolls, and a pale shape answers.', death: 'The tolling stops.' },
+  choir: { name: 'Choir of Silt', tpl: 'swarm', hp: 50, pat: ['M3x3', 'D7', 'W'], pal: { b: '#4a6a6c', e: '#d8fff4' }, intro: 'A dozen drowned mouths sing in the dark water.', death: 'The choir falls silent, one voice at a time.' },
+  bishop: { name: 'The Drowned Bishop', tpl: 'humanoid', acc: ['mitre'], hp: 85, pat: ['W', 'A10', 'D8', 'B12', 'M5x2', 'C', 'A18'], pal: { h: '#9ab8b0', e: '#5af0d0', m: '#142221', b: '#cfc8b0', d: '#8a846e', c: '#9ab8b0', y: '#d8b44a', r: '#3a7a6a' }, intro: 'The bishop rises from the font, robes streaming.', death: 'He sinks back into the black font.' },
+  // Thornwood
+  wolf: { name: 'Briar Wolf', tpl: 'beast', hp: 30, pat: ['A8', 'M4x2'], pal: { h: '#5a4636', e: '#ffcf3a', m: '#e8e0cc', b: '#45372a', d: '#241b14' }, intro: 'A wolf with thorns for fur slinks out of the briars.', death: 'It crawls back into the brambles to die.' },
+  witch: { name: 'Thorn Witch', tpl: 'humanoid', hp: 30, pat: ['L4', 'B7', 'A8'], pal: { h: '#7a8a5a', e: '#d0ff6a', m: '#1e1612', b: '#2e3a1e', d: '#1c2412', c: '#7a8a5a' }, intro: 'A witch woven from bramble stems blocks the path.', death: 'She unravels into dead twigs.' },
+  hanged: { name: 'The Hanged Man', tpl: 'humanoid', hp: 34, pat: ['D7', 'W', 'A9'], pal: { h: '#8a8a96', e: '#ffffff', m: '#5a2020', b: '#4a4038', d: '#29231d', c: '#8a8a96' }, intro: 'A body drops from the branches and lands on its feet.', death: 'The rope finally goes slack.' },
+  bramble: { name: 'Mother Bramble', tpl: 'bloat', hp: 66, pat: ['L6', 'B10', 'M4x3'], pal: { h: '#5a6a3a', e: '#ff6a3a', m: '#1a1a10', b: '#3a4a22', p: '#a83a3a', d: '#283216' }, intro: 'The thicket itself stands up.', death: 'The thorns wither all at once.' },
+  antlered: { name: 'The Antlered One', tpl: 'humanoid', acc: ['antlers'], hp: 100, pat: ['A11', 'R2', 'M5x2', 'C', 'A20'], pal: { h: '#d8d0bc', e: '#ff3a3a', m: '#1a1a10', b: '#2a3420', d: '#192013', c: '#d8d0bc', t: '#bfb39a' }, intro: 'The old god of the wood lowers its antlers.', death: 'The forest goes quiet. Even the wind stops.' },
+  // Ashen Keep
+  ashknight: { name: 'Ash Knight', tpl: 'knight', hp: 40, pat: ['B9', 'A10', 'A10'], pal: { h: '#5a5250', e: '#ff8a3a', b: '#3e3836', a: '#6e6662', r: '#8a2a1a', c: '#6e6662', s: '#c9c2b8' }, intro: 'A knight in scorched plate still guards the gate.', death: 'It collapses in a soft grey heap.' },
+  hound: { name: 'Cinder Hound', tpl: 'beast', hp: 34, pat: ['M4x3', 'A9'], pal: { h: '#6a3220', e: '#ffcf3a', m: '#ff8a3a', b: '#4a2214', d: '#26100a' }, intro: 'A hound of coals bounds out of a doorway.', death: 'It gutters out like a spent fire.' },
+  squire: { name: 'Flayed Squire', tpl: 'humanoid', hp: 38, pat: ['L5', 'A9', 'R2'], pal: { h: '#b86a5a', e: '#ffffff', m: '#2a0a0a', b: '#8a3a30', d: '#4a1e18', c: '#b86a5a' }, intro: 'A skinless squire still serves his burnt lord.', death: 'He kneels, finally dismissed.' },
+  kiln: { name: 'The Kiln Warden', tpl: 'bloat', hp: 78, pat: ['C', 'A24', 'B12', 'A11'], pal: { h: '#4a4040', e: '#ffcf3a', m: '#ff5a1a', b: '#3a3030', p: '#ff8a3a', d: '#261e1e' }, intro: 'A furnace on legs heaves into the corridor.', death: 'Its fires go out with a long hiss.' },
+  marshal: { name: 'The Burnt Marshal', tpl: 'knight', acc: ['horns'], hp: 140, pat: ['A13', 'B14', 'M6x2', 'W', 'C', 'A26'], pal: { h: '#2a2420', e: '#ff5a1a', b: '#3a2a24', a: '#5a4a40', r: '#ff8a3a', c: '#5a4a40', s: '#e8c88a', k: '#d8c8a8' }, intro: 'The marshal who burned his own keep draws his sword.', death: 'He crumbles into the ash he made.' },
+  // Hollow Throne
+  courtier: { name: 'Hollow Courtier', tpl: 'humanoid', hp: 44, pat: ['W', 'D9', 'A11'], pal: { h: '#cfc8d8', e: '#2a1a3a', m: '#2a1a3a', b: '#4a3a6a', d: '#2a2040', c: '#cfc8d8' }, intro: 'A courtier bows to you. Its face is a mask with nothing behind it.', death: 'The empty mask clatters to the floor.' },
+  shade: { name: 'Crowned Shade', tpl: 'wraith', acc: ['crown'], hp: 40, pat: ['D9', 'M4x3'], pal: { w: '#6a5a8a', e: '#ffd36a', m: '#1a1020', y: '#d8b44a', r: '#a83a5a' }, intro: 'One of many would-be kings, still waiting for a throne.', death: 'Its tin crown rolls away.' },
+  herald: { name: 'Bone Herald', tpl: 'skeleton', hp: 46, pat: ['R3', 'A11', 'B11'], pal: { x: '#e8e0f0', e: '#b87aff', c: '#a89ec0' }, intro: 'A herald announces your death in advance.', death: 'It falls silent mid-proclamation.' },
+  kingsguard: { name: 'Kingsguard Revenant', tpl: 'knight', hp: 90, pat: ['A13', 'B13', 'M6x2', 'W'], pal: { h: '#8a84a0', e: '#b87aff', b: '#4a4466', a: '#9a94b0', r: '#d8b44a', c: '#9a94b0', s: '#e8e0f0' }, intro: 'The last of the royal guard. It never stopped guarding.', death: 'It salutes, and falls.' },
+  king: { name: 'The Hollow King', tpl: 'wraith', acc: ['crown'], hp: 180, pat: ['W', 'A14', 'D11', 'M6x3', 'B16', 'C', 'A30'], pal: { w: '#4a3d63', e: '#ffd36a', m: '#ffd36a', y: '#e8c24a', r: '#a83a5a' }, intro: 'The Hollow King rises from a throne of tallow and bone.', death: 'The crown hits the floor. The kingdom exhales.' },
+  // Mystery foes
+  mimic: { name: 'Cage Mimic', tpl: 'hunched', hp: 24, pat: ['A6', 'M3x2', 'A7'], pal: { h: '#6b6d75', e: '#ff5a3a', m: '#ff5a3a', b: '#43454c', c: '#9aa0a8', d: '#2b2c31' }, intro: 'The cage was the creature. It unfolds.', death: 'It folds shut with a clang.' },
+  moths: { name: 'Moth Swarm', tpl: 'swarm', hp: 16, pat: ['M2x3', 'A4'], pal: { b: '#d8d0bc', e: '#f2a03d' }, intro: 'The moths turn on you.', death: 'Dust and wings settle on the road.' },
+};
+
+const PC = (o) => Object.assign({ s: '#5f6266', d: '#3a3c41', t: '#3b3026', b: '#bfb8a6', g: '#2c3a24', r: '#6b2b22', p: '#1d3136', q: '#3d5a63', f: '#f29a3a', a: '#4a4542', y: '#d8b44a' }, o);
+const REGIONS = [
+  { name: 'Gravefields', num: 'I', normals: ['ghoul', 'rats', 'bones'], elite: 'warden', boss: 'sexton',
+    pal: { ground: '#1a1e17', speck: '#252b21', speck2: '#2c3326', road: '#38322a', roadSpeck: '#463e34', edge: '#26211b', seam: '#2e2922', tiles: false, night: '#050308', dark: .86, density: .55, props: ['grave', 'grave', 'cross', 'deadtree', 'skulls', 'stone'], pc: PC({}), particle: 'mist' } },
+  { name: 'Drowned Chapel', num: 'II', normals: ['acolyte', 'bloat', 'bellwraith'], elite: 'choir', boss: 'bishop',
+    pal: { ground: '#121d1d', speck: '#1a2a29', speck2: '#1f3332', road: '#2c3534', roadSpeck: '#384342', edge: '#1b2423', seam: '#222b2a', tiles: true, night: '#03060a', dark: .87, density: .5, props: ['pillar', 'broken', 'puddle', 'puddle', 'grave', 'stone'], pc: PC({ s: '#56605e', d: '#353e3d', p: '#173038', q: '#4a7480' }), particle: 'rain' } },
+  { name: 'Thornwood', num: 'III', normals: ['wolf', 'witch', 'hanged'], elite: 'bramble', boss: 'antlered',
+    pal: { ground: '#121a0f', speck: '#1a2416', speck2: '#202d1a', road: '#3a2e21', roadSpeck: '#4a3c2c', edge: '#251d15', seam: '#2e251b', tiles: false, night: '#030502', dark: .89, density: .75, props: ['pine', 'pine', 'bush', 'bush', 'deadtree', 'stone'], pc: PC({ s: '#4e4a44', d: '#2e2b27', t: '#3a2a1c', g: '#22351c', r: '#8a2a2a' }), particle: 'fireflies' } },
+  { name: 'Ashen Keep', num: 'IV', normals: ['ashknight', 'hound', 'squire'], elite: 'kiln', boss: 'marshal',
+    pal: { ground: '#1f1714', speck: '#2a1f1b', speck2: '#33251f', road: '#3a3230', roadSpeck: '#4a403c', edge: '#251d1a', seam: '#2c2523', tiles: true, night: '#070302', dark: .85, density: .55, props: ['brazier', 'banner', 'rubble', 'broken', 'ash', 'stone'], pc: PC({ s: '#5a5250', d: '#38302e', r: '#7a2418', f: '#ff8a2a', y: '#ffd27a' }), particle: 'embers' } },
+  { name: 'Hollow Throne', num: 'V', normals: ['courtier', 'shade', 'herald'], elite: 'kingsguard', boss: 'king',
+    pal: { ground: '#16131d', speck: '#1e1a28', speck2: '#252031', road: '#2d2937', roadSpeck: '#3a3546', edge: '#1d1a25', seam: '#24202e', tiles: true, night: '#040208', dark: .88, density: .5, props: ['statue', 'pillar', 'banner', 'brazier', 'skulls', 'stone'], pc: PC({ s: '#7a7488', d: '#4a4558', b: '#cfc8d8', r: '#5a2a4a', f: '#b88aff', y: '#e8d6ff' }), particle: 'motes' } },
+];
+
+const UNLOCKS = [
+  { id: 'cls_hexblade', kind: 'Class', name: 'The Hexblade', cost: 10, desc: 'Curses foes with Doom and heals on every Strike. 52 HP.' },
+  { id: 'cls_pilgrim', kind: 'Class', name: 'The Pilgrim', cost: 10, desc: 'Heals as they fight with Holy Light. 62 HP, carries up to 4 draughts.' },
+  { id: 'start_relic', kind: 'Boon', name: 'Kindred Gift', cost: 10, desc: 'At the start of each walk, choose one of three relics to carry.' },
+  { id: 'rel_hunter', kind: 'Relic', name: "Hunter's Mark", cost: 3, desc: RELICS.hunter.desc },
+  { id: 'rel_ghostmoth', kind: 'Relic', name: 'Ghost Moth', cost: 3, desc: RELICS.ghostmoth.desc },
+  { id: 'rel_waxseal', kind: 'Relic', name: 'Wax Seal', cost: 4, desc: RELICS.waxseal.desc },
+  { id: 'rel_chalice', kind: 'Relic', name: 'Blood Chalice', cost: 4, desc: RELICS.chalice.desc },
+  { id: 'ev_palemerchant', kind: 'Event', name: 'The Pale Merchant', cost: 3, desc: 'A mystery where you can trade one relic for two.' },
+  { id: 'ev_mirror', kind: 'Event', name: 'The Mirror Pool', cost: 3, desc: 'A mystery that sharpens your skill at a price.' },
+  { id: 'ev_angel', kind: 'Event', name: 'The Chained Angel', cost: 4, desc: 'A mystery that can heal you fully and raise your max HP.' },
+];
+const UNLOCK_NOTE = 'Unlocks add the item to the pool for future walks. They are new options, not extra power.';
+
+// ───────────────────────── save data
+const LS_KEY = 'lantern-road-save-v1';
+const defaultMeta = () => ({ v: 1, embers: 0, unlocks: [], records: [], runs: 0, rev: 0 });
+function normalizeMeta(d) {
+  const m = defaultMeta();
+  if (d && typeof d === 'object') {
+    m.embers = Number(d.embers) || 0; m.runs = Number(d.runs) || 0; m.rev = Number(d.rev) || 0;
+    m.unlocks = Array.isArray(d.unlocks) ? d.unlocks.filter(u => typeof u === 'string') : [];
+    m.records = Array.isArray(d.records) ? d.records.slice(0, 10) : [];
+  }
+  return m;
+}
+function loadLocal() { try { const s = localStorage.getItem(LS_KEY); return s ? normalizeMeta(JSON.parse(s)) : null; } catch (e) { return null; } }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(meta)); } catch (e) { } }
+let meta = loadLocal() || defaultMeta();
+let saveDoc = null, writing = false, writeAgain = false;
+async function persist() {
+  saveLocal();
+  if (!saveDoc) return;
+  if (writing) { writeAgain = true; return; }
+  writing = true;
+  try { await saveDoc.set(JSON.parse(JSON.stringify(meta))); }
+  catch (e) { if (e && e.code !== 'unavailable' && e.code !== 'resource_exhausted') saveDoc = null; }
+  writing = false;
+  if (writeAgain) { writeAgain = false; persist(); }
+}
+function commitMeta() { meta.rev = (meta.rev || 0) + 1; persist(); }
+async function initCloud() {
+  try {
+    const cl = window.claude;
+    if (!cl || typeof cl.use !== 'function') return;
+    const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    const ref = db.doc('data/users/' + id + '/save');
+    const snap = await ref.get();
+    saveDoc = ref;
+    if (snap.exists) {
+      const d = normalizeMeta(snap.data());
+      if (d.rev > meta.rev) { meta = d; saveLocal(); if (screen === 'title') showTitle(); }
+      else if (meta.rev > d.rev) persist();
+    } else if (meta.rev > 0) persist();
+  } catch (e) { saveDoc = null; }
+}
+const unlocked = id => meta.unlocks.includes(id);
+
+// ───────────────────────── sound
+let AC = null, muted = false;
+try { muted = localStorage.getItem('lantern-road-muted') === '1'; } catch (e) { }
+function tone(f, d, type = 'square', vol = .05, slide = 0, delay = 0) {
+  const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .03);
+}
+function noise(d, vol = .08) {
+  const len = Math.floor(AC.sampleRate * d), b = AC.createBuffer(1, len, AC.sampleRate), ch = b.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  s.buffer = b; f.type = 'lowpass'; f.frequency.value = 1600; g.gain.value = vol;
+  s.connect(f).connect(g).connect(AC.destination); s.start();
+}
+function sfx(k) {
+  if (muted) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+    switch (k) {
+      case 'hit': noise(.1, .12); tone(140, .1, 'square', .04, -70); break;
+      case 'hurt': noise(.18, .14); tone(90, .22, 'sawtooth', .05, -40); break;
+      case 'block': tone(190, .07, 'triangle', .08); tone(120, .1, 'triangle', .06, 0, .04); break;
+      case 'coin': tone(990, .05, 'square', .03); tone(1320, .08, 'square', .03, 0, .05); break;
+      case 'oil': tone(300, .14, 'sine', .08, 240); break;
+      case 'click': tone(520, .03, 'square', .02); break;
+      case 'win': [392, 494, 587, 784].forEach((f, i) => tone(f, .18, 'triangle', .05, 0, i * .08)); break;
+      case 'die': [330, 262, 196, 131].forEach((f, i) => tone(f, .35, 'sawtooth', .04, 0, i * .18)); break;
+      case 'skill': tone(200, .25, 'sawtooth', .045, 420); noise(.15, .07); break;
+      case 'heal': [523, 659, 784].forEach((f, i) => tone(f, .2, 'sine', .06, 0, i * .07)); break;
+      case 'relic': [587, 740, 880, 1175].forEach((f, i) => tone(f, .22, 'triangle', .045, 0, i * .08)); break;
+    }
+  } catch (e) { }
+}
+
+// ───────────────────────── run state
+let screen = 'title';
+let run = null, C = null, paused = false, speed = 1, lastRun = null;
+const demo = { region: 0, dist: 0, lane: 1, px: LANES[1], oil: 85, maxOil: 100, cls: 'sellsword', t: 0, beats: null, pickups: null, beatIdx: 0 };
+const has = id => !!run && run.relics.includes(id);
+const beatPos = i => FIRST + i * SPACING;
+const regionName = () => REGIONS[run.region].name;
+const foeRef = d => 'the ' + d.name.replace(/^The /, '');
+
+function newRun(cls) {
+  const c = CLASSES[cls];
+  run = {
+    cls, hp: c.hp, maxHp: c.hp, str: c.str, bonusStr: 0, guard: c.guard,
+    draughts: c.draughts, maxDraughts: c.maxDraughts, oil: 100, maxOil: 100, gold: 15,
+    relics: [], skillLv: 1, region: 0, beats: [], beatIdx: 0, dist: 0, lane: 1, px: LANES[1],
+    score: 0, kills: 0, elites: 0, bosses: 0, regionsCleared: 0, pickups: [], event: false,
+    darkAcc: 0, darkWarned: false, dead: null, over: false, seen: [], lastFoe: null,
+  };
+}
+
+function weighted(pairs) {
+  const tot = pairs.reduce((s, p) => s + p[1], 0); let r = Math.random() * tot;
+  for (const p of pairs) { r -= p[1]; if (r < 0) return p[0]; }
+  return pairs[pairs.length - 1][0];
+}
+function genRegion(r) {
+  const beats = [];
+  for (let i = 0; i < 9; i++) {
+    if (i === 8) beats.push({ kind: 'fork', opts: shuffle(['camp', 'merchant', 'shrine']) });
+    else if (i % 2 === 1) {
+      const pool = [['fight', 30], ['elite', (r === 0 && i < 3) ? 0 : 12], ['mystery', 24], ['camp', 9], ['merchant', 9], ['shrine', 7], ['treasure', 8]];
+      const opts = [];
+      while (opts.length < 3) opts.push(weighted(pool.filter(p => !opts.includes(p[0]) && p[1] > 0)));
+      beats.push({ kind: 'fork', opts });
+    } else beats.push({ kind: 'single', type: i === 0 ? 'fight' : weighted([['fight', 64], ['mystery', 22], ['treasure', 14]]) });
+  }
+  beats.push({ kind: 'single', type: 'boss' });
+  return beats;
+}
+function genPickups(beats) {
+  const out = [];
+  for (let i = 0; i < beats.length; i++) {
+    const a = i === 0 ? 10 : beatPos(i - 1) + 22, b = beatPos(i) - 22;
+    if (Math.random() < .6) out.push({ pos: rand(a, b), lane: ri(0, 2), type: Math.random() < .6 ? 'flask' : 'coin', done: false });
+  }
+  return out;
+}
+function enterRegion(r) {
+  run.region = r; run.beats = genRegion(r); run.beatIdx = 0; run.dist = -20;
+  run.pickups = genPickups(run.beats); parts = [];
+  showRegionCard();
+}
+function showRegionCard() {
+  const c = $('#card'); const R = REGIONS[run.region];
+  c.querySelector('.n').textContent = 'Region ' + R.num;
+  c.querySelector('.t').textContent = R.name;
+  c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
+}
+
+// ───────────────────────── helpers that change the run
+function heal(n) { const b = run.hp; run.hp = Math.min(run.maxHp, run.hp + n); return run.hp - b; }
+function addOil(n) { const b = run.oil; run.oil = Math.min(run.maxOil, run.oil + n); const g = Math.round(run.oil - b); return g > 0 ? ['good', `+${g} oil`] : null; }
+function hurt(n, cause) { run.hp -= n; sfx('hurt'); flashHurt(); const l = ['bad', `−${n} HP`]; checkDeath(cause); return l; }
+function checkDeath(cause) {
+  if (run.hp > 0) return false;
+  if (has('waxseal')) { run.hp = 1; loseRelic('waxseal'); toast('The Wax Seal breaks. You live.', 'good'); return false; }
+  run.dead = cause; return true;
+}
+function grantRelic(id) { if (has(id)) return; run.relics.push(id); RELICS[id].gain && RELICS[id].gain(); sfx('relic'); toast('Relic: ' + RELICS[id].name, 'gold'); }
+function loseRelic(id) { const i = run.relics.indexOf(id); if (i < 0) return; run.relics.splice(i, 1); RELICS[id].lose && RELICS[id].lose(); }
+function relicPool() { return Object.keys(RELICS).filter(id => !has(id) && (!RELICS[id].unlock || unlocked(RELICS[id].unlock))); }
+function drawRelics(n) { return shuffle(relicPool()).slice(0, n); }
+function strikeBase() { let s = run.str + run.bonusStr; if (has('whetstone')) s += 2; if (has('chalice')) s += Math.floor((run.maxHp - run.hp) / 10); return s; }
+
+// ───────────────────────── canvas & rendering
+const frameEl = $('#frame'), cv = $('#world'), ctx = cv.getContext('2d');
+const mask = document.createElement('canvas'), mctx = mask.getContext('2d');
+function resize() {
+  const app = $('#app'), cs = getComputedStyle(app);
+  const aw = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const ah = app.clientHeight;
+  const fw = Math.max(240, Math.floor(Math.min(aw, ah * 0.6)));
+  frameEl.style.width = fw + 'px';
+  H = clamp(Math.round(W * ah / fw), 170, 300); PY = H - 40;
+  cv.width = W; cv.height = H; mask.width = W; mask.height = H;
+  ctx.imageSmoothingEnabled = false;
+}
+
+let parts = [];
+function spawnPart(kind) {
+  const P = {
+    mist: () => ({ x: rand(-4, W), y: rand(0, H), vx: rand(-3, 3), vy: rand(-1, 1), life: rand(3, 6), c: 'rgba(170,180,190,.16)', w: 3, h: 1 }),
+    rain: () => ({ x: rand(0, W + 30), y: -4, vx: -16, vy: 130, life: 3, c: 'rgba(140,180,210,.32)', w: 1, h: 3 }),
+    fireflies: () => ({ x: rand(0, W), y: rand(0, H), vx: 0, vy: 0, life: rand(2, 5), c: '#d8ff7a', w: 1, h: 1, glow: true }),
+    embers: () => ({ x: rand(0, W), y: H + 2, vx: rand(-4, 4), vy: rand(-26, -14), life: rand(4, 8), c: '#ff9a3a', w: 1, h: 1, glow: true }),
+    motes: () => ({ x: rand(0, W), y: rand(0, H), vx: rand(-3, 3), vy: rand(-4, 2), life: rand(3, 6), c: 'rgba(225,215,255,.55)', w: 1, h: 1 }),
+  }[kind];
+  if (P) parts.push(P());
+}
+function updParts(dt, scrollV, kind) {
+  const rate = { mist: 7, rain: 70, fireflies: 3, embers: 9, motes: 5 }[kind] || 0;
+  let n = rate * dt * (reduceMotion ? .3 : 1);
+  while (n > 0) { if (Math.random() < n) spawnPart(kind); n -= 1; }
+  for (const p of parts) {
+    if (kind === 'fireflies') { p.vx += rand(-25, 25) * dt; p.vy += rand(-25, 25) * dt; p.vx *= .98; p.vy *= .98; }
+    p.x += p.vx * dt; p.y += (p.vy + scrollV) * dt; p.life -= dt;
+  }
+  parts = parts.filter(p => p.life > 0 && p.y < H + 6 && p.y > -12 && p.x > -6 && p.x < W + 34);
+}
+
+function punch(x, y, r, a) {
+  const g = mctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.55, `rgba(0,0,0,${a * .7})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+  mctx.fillStyle = g; mctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+function render(t) {
+  const inRun = run && screen === 'travel';
+  const v = inRun ? run : demo;
+  const R = REGIONS[v.region], P = R.pal, dist = v.dist;
+  const lights = [];
+  // ground and road
+  ctx.fillStyle = P.ground; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = P.road; ctx.fillRect(ROAD_L, 0, ROAD_R - ROAD_L, H);
+  for (let y = 0; y < H; y++) {
+    const p = Math.floor(dist + PY - y), q = p + 1000000;
+    if (h2(q, 1) < .6) { ctx.fillStyle = P.speck; ctx.fillRect(Math.floor(h2(q, 2) * W), y, 1, 1); }
+    if (h2(q, 3) < .3) { const sx = Math.floor(h2(q, 4) * W); if (sx < ROAD_L - 3 || sx > ROAD_R + 1) { ctx.fillStyle = P.speck2; ctx.fillRect(sx, y, 2, 1); } }
+    if (P.tiles) {
+      ctx.fillStyle = P.seam;
+      if (((p % 10) + 10) % 10 === 0) ctx.fillRect(ROAD_L + 1, y, ROAD_R - ROAD_L - 2, 1);
+      else { const off = (Math.floor(p / 10) & 1) ? 4 : 13; for (let sx = ROAD_L + off; sx < ROAD_R - 1; sx += 18) ctx.fillRect(sx, y, 1, 1); }
+    }
+    if (h2(q, 7) < .45) { ctx.fillStyle = P.roadSpeck; ctx.fillRect(ROAD_L + 2 + Math.floor(h2(q, 8) * (ROAD_R - ROAD_L - 4)), y, 1, 1); }
+    const wl = Math.floor(h2(q >> 2, 5) * 3), wr = Math.floor(h2(q >> 2, 6) * 3);
+    ctx.fillStyle = P.edge; ctx.fillRect(ROAD_L - wl, y, 1 + wl, 1); ctx.fillRect(ROAD_R - 1, y, 1 + wr, 1);
+  }
+  // roadside props
+  const PS = 16, lo = Math.floor((dist - (H - PY)) / PS) - 2, hi = Math.ceil((dist + PY) / PS) + 2;
+  for (let s = lo; s <= hi; s++) for (let side = 0; side < 2; side++) {
+    const q = s + 500000;
+    if (h2(q, 10 + side) > P.density) continue;
+    const name = P.props[Math.floor(h2(q, 12 + side) * P.props.length)];
+    const pr = PROPS[name], spr = sprite(pr.map, P.pc, 'p' + v.region + name);
+    const room = side ? (W - ROAD_R - 3 - spr.width) : (ROAD_L - 4 - spr.width);
+    const x = side ? ROAD_R + 3 + Math.floor(h2(q, 14 + side) * Math.max(0, room)) : 1 + Math.floor(h2(q, 14 + side) * Math.max(0, room));
+    const base = Math.round(PY - (s * PS + Math.floor(h2(q, 16 + side) * 8) - dist));
+    const y = base - spr.height;
+    if (y > H || base < 0) continue;
+    ctx.drawImage(spr, x, y);
+    if (pr.glow) lights.push([x + pr.glow[0], y + pr.glow[1], pr.glow[2] + Math.sin(t * 9 + s) * 1.2, .85]);
+  }
+  // beats: fork dividers and road bands
+  const icons = [];
+  if (v.beats) {
+    for (let i = v.beatIdx; i < v.beats.length; i++) {
+      const pos = beatPos(i), rel = pos - dist;
+      if (rel > PY + 30) break;
+      const b = v.beats[i], cy = PY - 12 - rel;
+      if (b.kind === 'fork') {
+        const st = sprite(PROPS.stone.map, P.pc, 'p' + v.region + 'stone');
+        for (let k = -44; k <= 6; k += 5) {
+          const yy = Math.round(PY - (pos + k - dist) - 6);
+          if (yy < -4 || yy > H) continue;
+          for (const dx of [48, 72]) ctx.drawImage(st, dx - 2 + Math.floor(h2(i * 97 + k + 200, dx) * 3) - 1, yy);
+        }
+        b.opts.forEach((o, l) => { icons.push([o, LANES[l], cy, l === v.lane]); lights.push([LANES[l], cy, o === 'camp' ? 16 : 10, .7]); });
+      } else {
+        ctx.fillStyle = b.type === 'boss' ? 'rgba(196,59,59,.45)' : 'rgba(242,160,61,.22)';
+        ctx.fillRect(ROAD_L + 2, Math.round(cy + 7), ROAD_R - ROAD_L - 4, 1);
+        icons.push([b.type, LANES[1], cy, false]);
+        lights.push([LANES[1], cy, b.type === 'boss' ? 18 : 11, .75]);
+      }
+    }
+  }
+  // pickups
+  if (v.pickups) for (const p of v.pickups) {
+    if (p.done) continue;
+    const rel = p.pos - dist; if (rel > PY + 10 || rel < -20) continue;
+    const ic = ICONS[p.type], spr = sprite(ic.map, ic.pal, 'i:' + p.type);
+    const x = LANES[p.lane], y = Math.round(PY - 7 - rel);
+    ctx.drawImage(spr, x - Math.floor(spr.width / 2), y - Math.floor(spr.height / 2));
+    lights.push([x, y, 7, .6]);
+  }
+  // player
+  const moving = inRun ? (!run.event && !paused) : true;
+  const fr = moving && !reduceMotion ? Math.floor(t * 4) % 2 : 0;
+  const cls = inRun ? run.cls : demo.cls;
+  const ps = sprite(fr ? PLAYER_B : PLAYER_A, CLASSES[cls].pal, 'pl' + cls + fr);
+  const px = Math.round(v.px);
+  ctx.drawImage(ps, px - 6, PY - 14);
+  const lx = px + 5, ly = PY - 4;
+  // darkness
+  const oilR = v.maxOil ? v.oil / v.maxOil : .8;
+  const flick = reduceMotion ? 0 : Math.sin(t * 11) * .8 + Math.sin(t * 23.7) * .5;
+  const R0 = 13 + 50 * Math.sqrt(oilR) + flick;
+  mctx.globalCompositeOperation = 'source-over'; mctx.clearRect(0, 0, W, H);
+  mctx.globalAlpha = P.dark; mctx.fillStyle = P.night; mctx.fillRect(0, 0, W, H); mctx.globalAlpha = 1;
+  mctx.globalCompositeOperation = 'destination-out';
+  punch(lx, ly, R0, 1);
+  for (const l of lights) punch(l[0], l[1], l[2], l[3]);
+  for (const p of parts) if (p.glow) punch(p.x, p.y, 4, .5);
+  ctx.drawImage(mask, 0, 0);
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, R0 * .85);
+  g.addColorStop(0, 'rgba(242,150,50,.24)'); g.addColorStop(1, 'rgba(242,150,50,0)');
+  ctx.fillStyle = g; ctx.fillRect(lx - R0, ly - R0, R0 * 2, R0 * 2);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#ffe2a0'; ctx.fillRect(lx - 1, ly - 1, 1, 1);
+  // event icons sit above the darkness, like will-o'-wisps
+  for (const [type, x, cy, sel] of icons) {
+    const ic = ICONS[type], spr = sprite(ic.map, ic.pal, 'i:' + type);
+    const bob = reduceMotion ? 0 : Math.round(Math.sin(t * 3 + x * .3));
+    const ix = Math.round(x - spr.width / 2), iy = Math.round(cy - spr.height / 2) + bob;
+    ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(ix - 1, iy - 1, spr.width + 2, spr.height + 2);
+    ctx.drawImage(spr, ix, iy);
+    if (sel) { ctx.fillStyle = '#f2a03d'; ctx.fillRect(x - 2, iy + spr.height + 2, 5, 1); ctx.fillRect(x - 1, iy + spr.height + 3, 3, 1); ctx.fillRect(x, iy + spr.height + 4, 1, 1); }
+  }
+  // particles
+  for (const p of parts) {
+    ctx.globalAlpha = clamp(p.life, 0, 1) * (p.glow ? (.6 + .4 * Math.sin(t * 6 + p.x)) : 1);
+    ctx.fillStyle = p.c; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.w, p.h);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ───────────────────────── travel loop
+function update(dt) {
+  const inRun = run && screen === 'travel';
+  const v = inRun ? run : demo;
+  let scrollV = 0;
+  if (inRun && !run.event && !paused && !run.over) {
+    const d = BASE_SPEED * speed * dt; scrollV = BASE_SPEED * speed;
+    run.dist += d;
+    run.oil = Math.max(0, run.oil - d * OIL_PER_PX * (has('oilskin') ? .65 : 1));
+    if (run.oil <= 0) {
+      if (!run.darkWarned) { toast('Your lantern is out. The dark bites.', 'bad'); run.darkWarned = true; }
+      run.darkAcc += d;
+      while (run.darkAcc >= DARK_STEP) {
+        run.darkAcc -= DARK_STEP; run.hp -= 1; flashHurt();
+        if (checkDeath('Swallowed by the dark in the ' + regionName())) { endRun(false, run.dead); return; }
+      }
+    } else run.darkWarned = false;
+    for (const p of run.pickups) {
+      if (!p.done && run.dist >= p.pos) { p.done = true; if (Math.abs(run.px - LANES[p.lane]) < 10) collect(p); }
+    }
+    if (run.beatIdx < run.beats.length && run.dist >= beatPos(run.beatIdx)) { run.dist = beatPos(run.beatIdx); triggerBeat(); }
+  } else if (!inRun) {
+    demo.dist += 11 * dt; scrollV = 11; demo.t += dt;
+    if (demo.t > 3.2) { demo.t = 0; demo.lane = clamp(demo.lane + pick([-1, 1]), 0, 2); }
+  }
+  v.px += (LANES[v.lane] - v.px) * Math.min(1, dt * 10);
+  updParts(dt, scrollV, REGIONS[v.region].pal.particle);
+}
+function collect(p) {
+  const mult = has('ghostmoth') ? 2 : 1;
+  if (p.type === 'flask') { const l = addOil(12 * mult); sfx('oil'); toast(l ? l[1] : 'Your lantern is already full', 'good'); }
+  else { run.gold += 6 * mult; sfx('coin'); toast(`+${6 * mult} gold`, 'gold'); }
+}
+function move(dir) {
+  if (!run || screen !== 'travel' || run.event || paused) return;
+  run.lane = clamp(run.lane + dir, 0, 2);
+}
+function triggerBeat() {
+  const b = run.beats[run.beatIdx]; run.beatIdx++;
+  openEvent(b.kind === 'fork' ? b.opts[run.lane] : b.type);
+}
+
+let last = 0;
+function loop(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
+  update(dt); render(ts / 1000); updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// ───────────────────────── HUD
+let hudKey = '';
+function updateHUD() {
+  const show = !!run && screen === 'travel' && !run.over;
+  $('#hud').hidden = !show; $('#controls').hidden = !show;
+  if (!show) { hudKey = ''; return; }
+  const k = [run.hp, run.maxHp, Math.ceil(run.oil), run.maxOil, run.gold, run.draughts, run.maxDraughts, run.score, run.relics.length, run.region, run.beatIdx, run.lane, speed].join('|');
+  if (k === hudKey) return; hudKey = k;
+  const R = REGIONS[run.region];
+  const pips = h('div', { class: 'pips', 'aria-label': `Event ${Math.min(run.beatIdx + 1, 10)} of 10` });
+  for (let i = 0; i < run.beats.length; i++) {
+    const last = i === run.beats.length - 1;
+    pips.append(h('i', { class: 'pip' + (last ? ' boss' : '') + (i < run.beatIdx ? ' done' : '') + (i === run.beatIdx ? ' now' : '') }));
+  }
+  const hpLow = run.hp / run.maxHp < .3, oilLow = run.oil / run.maxOil < .2;
+  const nb = run.beats[run.beatIdx];
+  let ahead;
+  if (!nb) ahead = h('div', { class: 'slot wide' }, h('span', { text: 'The road ends here' }));
+  else if (nb.kind === 'fork') ahead = nb.opts.map((o, l) => h('div', { class: 'slot' + (l === run.lane ? ' on' : '') }, iconCanvas(o), h('span', { text: TYPE_NAMES[o] })));
+  else ahead = h('div', { class: 'slot wide on' }, iconCanvas(nb.type), h('span', { text: TYPE_NAMES[nb.type] + (nb.type === 'boss' ? ': ' + ENEMIES[R.boss].name : ' blocks the road') }));
+  $('#hud').replaceChildren(
+    h('div', { class: 'hud-top' }, h('div', { class: 'region' }, h('b', { text: R.num }), R.name), pips),
+    h('div', { class: 'meters' },
+      h('div', { class: 'meter' + (hpLow ? ' low' : ''), role: 'img', 'aria-label': `HP ${run.hp} of ${run.maxHp}` }, h('i', { style: `width:${100 * run.hp / run.maxHp}%` }), h('span', {}, h('span', { text: 'HP' }), h('span', { text: `${run.hp}/${run.maxHp}` }))),
+      h('div', { class: 'meter oil' + (oilLow ? ' low' : ''), role: 'img', 'aria-label': `Oil ${Math.ceil(run.oil)} of ${run.maxOil}` }, h('i', { style: `width:${100 * run.oil / run.maxOil}%` }), h('span', {}, h('span', { text: 'OIL' }), h('span', { text: `${Math.ceil(run.oil)}/${run.maxOil}` })))),
+    h('div', { class: 'stats' },
+      h('span', { class: 'g' }, 'Gold ', h('b', { text: run.gold })),
+      h('span', {}, 'Draughts ', h('b', { text: `${run.draughts}/${run.maxDraughts}` })),
+      h('span', {}, 'Score ', h('b', { text: run.score })),
+      h('button', { class: 'chipbtn', onclick: openRelics, text: `Relics ${run.relics.length}` })),
+    h('div', { class: 'ahead' }, h('span', { class: 'lbl', text: 'Next' }), ahead));
+}
+
+function toast(text, cls = '') {
+  const el = h('div', { class: 'toast ' + cls, text });
+  $('#toasts').append(el); setTimeout(() => el.remove(), 2000);
+  const all = $('#toasts').children; if (all.length > 4) all[0].remove();
+}
+function flashHurt() { const el = $('#hurt'); el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 90); }
+
+// ───────────────────────── panels
+const panel = $('#panel');
+function openPanel(el, tall) {
+  panel.replaceChildren(el); panel.hidden = false; panel.classList.toggle('tall', !!tall);
+  panel.scrollTop = 0;
+  panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
+  const first = panel.querySelector('.btn:not(:disabled)');
+  if (first && matchMedia('(hover:hover)').matches) first.focus({ preventScroll: true });
+}
+function closePanel() { panel.hidden = true; panel.replaceChildren(); }
+
+function choiceBtn(c, i) {
+  return h('button', { class: 'btn', disabled: c.disabled, 'data-k': i + 1, onclick: () => { sfx('click'); c.run(); } },
+    h('span', { class: 'key', text: i + 1 }), c.label, c.hint ? h('span', { class: 'sub', text: c.hint }) : null);
+}
+function eventCard({ art, kicker, title, text, choices }) {
+  openPanel(h('div', { class: 'ev' },
+    h('div', { class: 'ev-head' }, art ? iconCanvas(art) : null, h('div', {}, h('div', { class: 'kicker', text: kicker }), h('h2', { text: title }))),
+    text ? h('p', { class: 'ev-text', text }) : null,
+    h('div', { class: 'choices' }, choices.map(choiceBtn))));
+}
+function result(title, text, lines = [], then = finishEvent, kicker = 'Outcome') {
+  lines = lines.filter(Boolean);
+  openPanel(h('div', { class: 'ev' },
+    h('div', { class: 'kicker', text: kicker }), h('h2', { text: title }),
+    text ? h('p', { class: 'ev-text', text }) : null,
+    lines.length ? h('ul', { class: 'lines' }, lines.map(l => h('li', { class: l[0], text: l[1] }))) : null,
+    h('div', { class: 'choices' }, h('button', { class: 'btn primary', 'data-k': 1, onclick: () => { sfx('click'); then(); } }, h('span', { class: 'key', text: '1' }), 'Continue'))));
+}
+function finishEvent() {
+  if (!run) return;
+  if (run.dead) return endRun(false, run.dead);
+  closePanel(); run.event = false; C = null;
+}
+function relicChoice(n, title, onDone) {
+  const opts = drawRelics(n);
+  if (!opts.length) { run.gold += 30; return result(title, 'There is nothing left to find. You pocket what coin you can.', [['good', '+30 gold']], onDone); }
+  eventCard({ art: 'treasure', kicker: 'Choose a relic', title, text: 'Take one. The rest crumble to ash.',
+    choices: opts.map(id => ({ label: RELICS[id].name, hint: RELICS[id].desc, run: () => { grantRelic(id); onDone(); } }))
+      .concat([{ label: 'Take nothing', hint: 'Leave them on the road.', run: onDone }]) });
+}
+
+function openEvent(type) {
+  run.event = true;
+  switch (type) {
+    case 'fight': {
+      const R = REGIONS[run.region];
+      const id = pick(R.normals.filter(n => n !== run.lastFoe));
+      run.lastFoe = id; return startCombat(id, 'normal');
+    }
+    case 'elite': return startCombat(REGIONS[run.region].elite, 'elite');
+    case 'boss': return startCombat(REGIONS[run.region].boss, 'boss');
+    case 'mystery': return openMystery();
+    case 'camp': return openCamp();
+    case 'merchant': return openMerchant();
+    case 'shrine': return openShrine();
+    case 'treasure': return openTreasure();
+  }
+}
+
+function openCamp() {
+  const oilLine = addOil(30);
+  const sk = CLASSES[run.cls].skill, lv = run.skillLv, rest = Math.round(run.maxHp * .35);
+  eventCard({ art: 'camp', kicker: 'Campfire', title: 'A Fire Someone Left',
+    text: `Embers still glow in a ring of stones, and a tin of lamp oil sits beside them (${oilLine ? oilLine[1] : 'your lantern is already full'}). You can rest here, or work on your craft.`,
+    choices: [
+      { label: 'Rest', hint: run.hp >= run.maxHp ? 'You are already at full health.' : `Heal ${Math.min(rest, run.maxHp - run.hp)} HP.`, disabled: run.hp >= run.maxHp, run:() => { const g = heal(rest); sfx('heal'); result('You rest', 'You sleep a little, lantern hooded, blade across your knees.', [['good', `+${g} HP`]]); } },
+      lv < 3
+        ? { label: `Temper: ${sk.name} to level ${lv + 1}`, hint: sk.desc(lv + 1), run: () => { run.skillLv++; sfx('skill'); result('You temper your craft', `${sk.name} is now level ${run.skillLv}.`, [['good', sk.desc(run.skillLv)]]); } }
+        : { label: 'Hone your blade', hint: '+1 Strike damage.', run: () => { run.bonusStr++; sfx('skill'); result('You hone your blade', 'The edge drinks the firelight.', [['good', '+1 Strike damage']]); } },
+    ] });
+}
+function openMerchant() {
+  const r = run.region;
+  const stock = [
+    { k: 'oil', label: 'Lamp oil', hint: '+35 oil.', price: 12 },
+    { k: 'draught', label: 'Healing draught', hint: 'Heals 40% of max HP. Drinking one in a fight is a free action.', price: 18 },
+  ];
+  drawRelics(2).forEach(id => stock.push({ k: 'relic', id, label: RELICS[id].name, hint: RELICS[id].desc, price: 40 + 6 * r + ri(0, 8) }));
+  const show = msg => eventCard({ art: 'merchant', kicker: 'Merchant', title: 'The Lantern-Seller',
+    text: msg || 'A hunched seller squats under a tarp of sewn shrouds. "Light, blood, trinkets. Coin first."',
+    choices: stock.map(s => ({
+      label: `${s.label} · ${s.price} gold`,
+      hint: s.sold ? 'Sold.' : (s.k === 'draught' && run.draughts >= run.maxDraughts) ? 'You cannot carry more.' : s.hint,
+      disabled: s.sold || run.gold < s.price || (s.k === 'draught' && run.draughts >= run.maxDraughts) || (s.k === 'oil' && run.oil >= run.maxOil),
+      run: () => {
+        run.gold -= s.price; sfx('coin');
+        if (s.k === 'oil') addOil(35); else if (s.k === 'draught') run.draughts++; else { grantRelic(s.id); s.sold = true; }
+        show(`Bought: ${s.label}. You have ${run.gold} gold left.`);
+      },
+    })).concat([{ label: 'Leave', hint: `You have ${run.gold} gold.`, run: finishEvent }]) });
+  show();
+}
+function openShrine() {
+  const blood = Math.max(6, Math.round(run.maxHp * .18)), gold = 35 + 5 * run.region;
+  eventCard({ art: 'shrine', kicker: 'Shrine', title: 'A Shrine of Black Candles',
+    text: 'Candles burn without melting before a faceless saint. A bowl waits for an offering.',
+    choices: [
+      { label: `Offer blood (−${blood} HP)`, hint: 'Choose 1 of 2 relics.', disabled: run.hp <= blood, run: () => { run.hp -= blood; sfx('hurt'); flashHurt(); relicChoice(2, 'The saint accepts', finishEvent); } },
+      { label: `Offer gold (−${gold} gold)`, hint: 'Receive a random relic.', disabled: run.gold < gold, run: () => {
+        run.gold -= gold; const id = drawRelics(1)[0]; const L = [['bad', `−${gold} gold`]];
+        if (id) { grantRelic(id); L.push(['good', `Relic: ${RELICS[id].name}`]); } else { run.gold += gold; L.push(['note', 'The saint returns your coins.']); }
+        result('The coins vanish', id ? RELICS[id].desc : 'There is nothing left to give.', L);
+      } },
+      { label: 'Leave', hint: 'Keep walking.', run: finishEvent },
+    ] });
+}
+function openTreasure() {
+  const g = ri(18, 30) + 5 * run.region; run.gold += g; sfx('coin');
+  const L = [['good', `+${g} gold`]];
+  if (Math.random() < .3) { const id = drawRelics(1)[0]; if (id) { grantRelic(id); L.push(['good', `Relic: ${RELICS[id].name}`]); } }
+  result('A Toppled Reliquary', 'A reliquary lies cracked open by the road. Its saint is long gone, but not its offerings.', L, finishEvent, 'Treasure');
+}
+
+// ───────────────────────── mysteries
+function relicLine() { const id = drawRelics(1)[0]; if (!id) { run.gold += 30; return ['good', '+30 gold']; } grantRelic(id); return ['good', `Relic: ${RELICS[id].name}`]; }
+const MYSTERIES = [
+  { id: 'well', title: 'The Black Well', text: 'A well of still, black water. Something far below hums your name.', choices: () => [
+    { label: 'Drink', hint: 'It might strengthen you. It might not.', run: () => {
+      if (Math.random() < .5) { run.maxHp += 8; run.hp += 8; result('Cold strength', 'The water burns cold all the way down.', [['good', '+8 max HP']]); }
+      else result('Grave water', 'It tastes of wet earth and old coins.', [hurt(8 + run.region * 2, 'Poisoned by the Black Well')]);
+    } },
+    { label: 'Drop a coin (10 gold)', hint: 'Make a wish.', disabled: run.gold < 10, run: () => {
+      run.gold -= 10; const L = [['bad', '−10 gold']];
+      if (Math.random() < .45) { L.push(relicLine()); result('Something answers', 'A relic bobs to the surface, bone dry.', L); }
+      else result('Nothing answers', 'The coin falls a long way. You never hear it land.', L);
+    } },
+    { label: 'Walk on', hint: 'Leave the well to its humming.', run: finishEvent },
+  ] },
+  { id: 'knight', title: 'The Kneeling Knight', text: 'A dead knight kneels at the roadside, his sword planted in the earth.', choices: () => [
+    { label: 'Take his sword', hint: 'Its grip looks hungry.', run: () => { run.bonusStr += 1; result('The grip bites', 'It draws blood from your palm, then settles.', [['good', '+1 Strike damage'], hurt(6, 'Bled dry by a dead knight\'s sword')]); } },
+    { label: 'Bury him (−10 oil)', hint: 'A short rite by lantern light.', disabled: run.oil < 10, run: () => { run.oil -= 10; run.maxHp += 5; run.hp += 5; result('You bury him', 'You feel watched over, for a while.', [['bad', '−10 oil'], ['good', '+5 max HP']]); } },
+    { label: 'Leave him', hint: 'He has waited this long.', run: finishEvent },
+  ] },
+  { id: 'cages', title: 'The Hanging Cages', text: 'Iron cages creak from a dead oak. A voice in one of them begs to be let out.', choices: () => [
+    { label: 'Break the lock', hint: 'Probably a prisoner. Probably.', run: () => {
+      if (Math.random() < .65) result('A grateful ghost', 'Something pale slips out, presses a gift into your hand, and is gone.', [relicLine()]);
+      else startCombat('mimic', 'normal', run.region);
+    } },
+    { label: 'Ignore the voice', hint: 'Keep walking.', run: finishEvent },
+  ] },
+  { id: 'peddler', title: 'The Bone Peddler', text: 'A crooked figure with a tray of vials sells by the pint, and buys by it too.', choices: () => [
+    { label: 'Sell blood (−10 HP)', hint: '+35 gold.', disabled: run.hp <= 10, run: () => { run.gold += 35; result('A fair price', 'He corks the vial and tips his hat.', [hurt(10, 'Bled out for the Bone Peddler'), ['good', '+35 gold']]); } },
+    { label: 'Buy a draught (18 gold)', hint: 'Heals 40% of max HP.', disabled: run.gold < 18 || run.draughts >= run.maxDraughts, run: () => { run.gold -= 18; run.draughts++; result('A cloudy draught', 'It is probably medicine.', [['bad', '−18 gold'], ['good', '+1 draught']]); } },
+    { label: 'Pass by', hint: 'Keep your blood.', run: finishEvent },
+  ] },
+  { id: 'moths', title: 'The Moth Swarm', text: 'Pale moths smother your lantern, drinking at the flame.', choices: () => [
+    { label: 'Let them feed (−25 oil)', hint: 'They might leave something behind.', disabled: run.oil < 25, run: () => {
+      run.oil -= 25; const L = [['bad', '−25 oil']];
+      if (!has('mothlantern')) { grantRelic('mothlantern'); L.push(['good', 'Relic: Moth-Glass Lantern']); } else { run.gold += 25; L.push(['good', '+25 gold']); }
+      result('The moths are sated', 'They leave a gift in the glass and drift off.', L);
+    } },
+    { label: 'Shield the flame', hint: 'They bite.', run: () => result('Stung hands', 'You cup the lantern until they give up.', [hurt(5, 'Eaten by moths')]) },
+    { label: 'Swat them', hint: 'Fight the swarm.', run: () => startCombat('moths', 'normal', run.region) },
+  ] },
+  { id: 'satchel', title: 'A Corpse with a Satchel', text: 'A traveller lies face down, still clutching a heavy satchel.', choices: () => [
+    { label: 'Search it', hint: 'Something might be living in it.', run: () => {
+      const g = ri(20, 40); run.gold += g; const L = [['good', `+${g} gold`]];
+      if (Math.random() < .3) L.push(hurt(6, 'Bitten to death by a satchel'));
+      result('You search the body', L.length > 1 ? 'Coins, and teeth. Something bit you on the way out.' : 'Coins, a stub of candle, and a letter you choose not to read.', L);
+    } },
+    { label: 'Leave it', hint: 'Let the dead keep their things.', run: finishEvent },
+  ] },
+  { id: 'statue', title: 'The Weeping Saint', text: 'A stone saint weeps a thin, clear water into a cracked basin.', choices: () => [
+    { label: 'Collect the tears', hint: run.draughts < run.maxDraughts ? '+1 draught.' : 'Your flasks are full. Heal 10 HP instead.', run: () => {
+      if (run.draughts < run.maxDraughts) { run.draughts++; result('A vial of tears', 'It glows faintly in the bottle.', [['good', '+1 draught']]); }
+      else { const g = heal(10); result('You drink deep', 'It tastes of rain.', [['good', `+${g} HP`]]); }
+    } },
+    { label: 'Pray', hint: `Heal ${Math.round(run.maxHp * .3)} HP.`, run: () => { const g = heal(Math.round(run.maxHp * .3)); sfx('heal'); result('The saint listens', 'For once, something does.', [['good', `+${g} HP`]]); } },
+  ] },
+  { id: 'wisp', title: "The Will-o'-Wisp", text: 'A cold light bobs off the road, beckoning you into the dark.', choices: () => [
+    { label: 'Follow it', hint: 'It might lead somewhere good.', run: () => {
+      if (Math.random() < .55) { run.gold += 15; result('A hidden cache', 'The wisp hovers over a buried tin of oil and coins, then winks out.', [addOil(35), ['good', '+15 gold']]); }
+      else { const lost = Math.min(20, Math.floor(run.oil)); run.oil -= lost; result('Led astray', 'You wander in circles until the wisp grows bored of you.', [['bad', `−${lost} oil`]]); }
+    } },
+    { label: 'Stay on the road', hint: 'The road is the road.', run: finishEvent },
+  ] },
+  { id: 'fog', title: 'The Grey Fog', text: 'A fog rolls in so thick it swallows your lantern light. Things move in it.', choices: () => [
+    { label: 'Wait it out (−15 oil)', hint: 'Safe, but your lantern keeps burning.', run: () => { const lost = Math.min(15, Math.floor(run.oil)); run.oil -= lost; result('The fog lifts', 'Eventually.', [['bad', `−${lost} oil`]]); } },
+    { label: 'Push through', hint: 'Something will get a bite in.', run: () => result('Through the fog', 'Claws, teeth, and then clear air.', [hurt(7 + run.region, 'Taken in the Grey Fog')]) },
+    { label: 'Burn incense (8 gold)', hint: 'Drives the fog back.', disabled: run.gold < 8, run: () => { run.gold -= 8; result('Sweet smoke', 'The fog recoils from the smell.', [['bad', '−8 gold']]); } },
+  ] },
+  { id: 'dice', title: 'The Dice of Bone', text: 'Two skeletons play dice on a tombstone. They offer you a seat.', choices: () => [
+    { label: 'Wager 20 gold', hint: 'Double or nothing.', disabled: run.gold < 20, run: () => {
+      if (Math.random() < .5) { run.gold += 20; result('You win', 'The skeletons rattle with disappointment.', [['good', '+20 gold']]); }
+      else { run.gold -= 20; result('You lose', 'They rattle with delight.', [['bad', '−20 gold']]); }
+    } },
+    { label: 'Wager blood (8 HP)', hint: 'Win a relic, or bleed.', disabled: run.hp <= 8, run: () => {
+      if (Math.random() < .5) result('You win', 'One of them hands over something it was saving.', [relicLine()]);
+      else result('You lose', 'They take their winnings with a little knife.', [hurt(8, 'Lost at dice to the dead')]);
+    } },
+    { label: 'Decline', hint: 'Never gamble with the dead.', run: finishEvent },
+  ] },
+  { id: 'palemerchant', unlock: 'ev_palemerchant', title: 'The Pale Merchant', text: 'A merchant with no colour at all offers two of his relics for one of yours.', choices: () => [
+    { label: 'Trade a random relic', hint: 'Lose one relic, gain two.', disabled: run.relics.length === 0, run: () => {
+      const give = pick(run.relics); loseRelic(give); const L = [['bad', `Lost: ${RELICS[give].name}`], relicLine(), relicLine()];
+      result('A fair trade', 'He tucks your relic into his coat without looking at it.', L);
+    } },
+    { label: 'Decline', hint: 'Keep what you have.', run: finishEvent },
+  ] },
+  { id: 'mirror', unlock: 'ev_mirror', title: 'The Mirror Pool', text: 'Your reflection in the still pool holds a weapon you have never owned.', choices: () => [
+    { label: 'Reach in (−6 max HP)', hint: run.skillLv < 3 ? `${CLASSES[run.cls].skill.name} +1 level.` : '+2 Strike damage.', run: () => {
+      run.maxHp -= 6; run.hp = Math.min(run.hp, run.maxHp); const L = [['bad', '−6 max HP']];
+      if (run.skillLv < 3) { run.skillLv++; L.push(['good', `${CLASSES[run.cls].skill.name} is now level ${run.skillLv}`]); } else { run.bonusStr += 2; L.push(['good', '+2 Strike damage']); }
+      result('The reflection lets go', 'Your hand comes back colder, and surer.', L);
+    } },
+    { label: 'Look away', hint: 'Some reflections should stay put.', run: finishEvent },
+  ] },
+  { id: 'angel', unlock: 'ev_angel', title: 'The Chained Angel', text: 'A figure of dim light hangs in rusted chains. It asks, very quietly, to be free.', choices: () => [
+    { label: 'Pick the locks (50 gold)', hint: 'Full heal and +10 max HP.', disabled: run.gold < 50, run: () => { run.gold -= 50; run.maxHp += 10; run.hp = run.maxHp; sfx('heal'); result('It rises', 'Light floods the road, and you along with it.', [['bad', '−50 gold'], ['good', '+10 max HP, fully healed']]); } },
+    { label: 'Break them by hand (−15 HP)', hint: '+10 max HP.', disabled: run.hp <= 15, run: () => { run.maxHp += 10; const L = [hurt(15, 'Torn apart by angel chains'), ['good', '+10 max HP']]; result('The chains give way', 'So do your fingernails.', L); } },
+    { label: 'Leave it chained', hint: 'Not your burden.', run: finishEvent },
+  ] },
+];
+function openMystery() {
+  let pool = MYSTERIES.filter(m => (!m.unlock || unlocked(m.unlock)) && !run.seen.includes(m.id));
+  if (!pool.length) { run.seen = []; pool = MYSTERIES.filter(m => !m.unlock || unlocked(m.unlock)); }
+  const m = pick(pool); run.seen.push(m.id);
+  eventCard({ art: 'mystery', kicker: 'Mystery', title: m.title, text: m.text, choices: m.choices() });
+}
+
+// ───────────────────────── combat
+function parseIntent(s) { const n = s.slice(1).split('x').map(Number); return { t: s[0], n: n[0] || 0, x: n[1] || 1 }; }
+function intentOf() { return parseIntent(C.d.pat[C.e.i % C.d.pat.length]); }
+function intentInfo(it) {
+  const s = C.e.str;
+  switch (it.t) {
+    case 'A': return [`Attack ${it.n + s}`, ''];
+    case 'M': return [`Attack ${it.n + s} ×${it.x}`, ''];
+    case 'B': return [`Block ${it.n}`, 'def'];
+    case 'W': return ['Curse: Weaken you', 'cur'];
+    case 'D': return [`Drain ${it.n + s}`, ''];
+    case 'L': return [`Rend ${it.n + s} + Bleed`, ''];
+    case 'R': return [`Rage: +${it.n} damage`, 'cur'];
+    case 'C': return ['Gathering strength…', 'cur'];
+  }
+  return ['…', 'cur'];
+}
+function skillCd() { return Math.max(1, 3 - (has('blackcandle') ? 1 : 0)); }
+function guardVal() { return run.guard + (has('boneward') ? 4 : 0); }
+function outMult() { let m = 1; if (C.weak > 0) m *= .75; if (has('widow') && run.hp < run.maxHp * .3) m *= 1.5; if (has('hunter') && C.kind !== 'normal') m *= 1.25; return m; }
+function draughtAmt() { return Math.round(run.maxHp * .4 * (has('deepflask') ? 1.5 : 1)); }
+
+function startCombat(id, kind, scale = 0) {
+  const d = ENEMIES[id], hp = Math.round(d.hp * (1 + .35 * scale));
+  C = { id, d, kind, e: { hp, maxHp: hp, block: 0, str: scale * 2, i: 0, doomDmg: 0, doomT: 0, raged: false },
+    pBlock: has('rustedbell') ? 6 : 0, weak: 0, bleed: 0, first: true, riposte: false, cd: 0, busy: false, over: false };
+  buildCombat(); setLog(d.intro); updCombat();
+}
+function buildCombat() {
+  const d = C.d, R = REGIONS[run.region];
+  const u = C.ui = {};
+  u.intent = h('div', { class: 'intent' });
+  u.portrait = portrait(C.id);
+  u.foeFill = h('i'); u.foeText = h('span');
+  u.foeTags = h('div', { class: 'tags' });
+  u.foe = h('div', { class: 'foe' + (C.kind === 'boss' ? ' boss' : '') },
+    h('div', { class: 'kicker', text: `${R.name} · ${C.kind === 'normal' ? 'Fight' : C.kind === 'elite' ? 'Elite' : 'Boss'}` }),
+    u.intent, u.portrait, h('div', { class: 'foe-name', text: d.name }),
+    h('div', { class: 'meter' }, u.foeFill, u.foeText), u.foeTags);
+  u.log = h('p', { class: 'log', 'aria-live': 'polite' });
+  u.myFill = h('i'); u.myText = h('span'); u.myTags = h('div', { class: 'tags' });
+  const sk = CLASSES[run.cls].skill;
+  const mk = (k, label, act, wide) => { const sub = h('span', { class: 'sub' }); const b = h('button', { class: 'btn' + (wide ? ' wide' : ''), 'data-k': k, onclick: () => act() }, h('span', { class: 'key', text: k }), label, sub); b.sub = sub; return b; };
+  u.bStrike = mk(1, 'Strike', () => act('strike'));
+  u.bGuard = mk(2, 'Guard', () => act('guard'));
+  u.bSkill = mk(3, sk.name, () => act('skill'));
+  u.bDraught = mk(4, 'Draught', () => act('draught'), true);
+  u.bFlee = mk(5, 'Flee', () => act('flee'), true);
+  u.me = h('div', { class: 'me' },
+    h('div', { class: 'me-row' }, h('div', { class: 'meter' }, u.myFill, u.myText), u.myTags),
+    h('div', { class: 'actions' }, u.bStrike, u.bGuard, u.bSkill, u.bDraught, u.bFlee));
+  openPanel(h('div', { class: 'combat' }, u.foe, u.log, u.me), true);
+}
+function portrait(id) {
+  const d = ENEMIES[id], c = document.createElement('canvas'); c.width = 24; c.height = 26;
+  const x = c.getContext('2d'), s = sprite(TEMPLATES[d.tpl], d.pal, 'e:' + id);
+  const ox = Math.floor((24 - s.width) / 2), oy = 26 - s.height - 1;
+  x.drawImage(s, ox, oy);
+  for (const a of d.acc || []) { const A = ACCESSORIES[a]; x.drawImage(sprite(A.map, d.pal, 'a:' + a + id), ox + A.x, oy + A.y); }
+  return c;
+}
+function setLog(t) { if (C && C.ui) C.ui.log.textContent = t; }
+function fx(target, text, cls = '') {
+  if (!target) return;
+  const el = h('div', { class: 'fx ' + cls, text }); target.append(el); setTimeout(() => el.remove(), 1000);
+}
+function updCombat() {
+  if (!C || !C.ui) return;
+  const u = C.ui, e = C.e, it = intentOf(), [itxt, icls] = intentInfo(it);
+  u.intent.textContent = 'Next: ' + itxt; u.intent.className = 'intent ' + icls;
+  u.foeFill.style.width = `${100 * e.hp / e.maxHp}%`;
+  u.foeText.replaceChildren(h('span', { text: 'HP' }), h('span', { text: `${e.hp}/${e.maxHp}` }));
+  const ft = [];
+  if (e.block) ft.push(h('span', { class: 'tag block', text: `Block ${e.block}` }));
+  if (e.doomT) ft.push(h('span', { class: 'tag doom', text: `Doom ${e.doomDmg} · ${e.doomT}` }));
+  if (e.str) ft.push(h('span', { class: 'tag rage', text: `Rage +${e.str}` }));
+  u.foeTags.replaceChildren(...ft);
+  u.myFill.style.width = `${100 * run.hp / run.maxHp}%`;
+  u.myText.replaceChildren(h('span', { text: 'You' }), h('span', { text: `${run.hp}/${run.maxHp}` }));
+  const mt = [];
+  if (C.pBlock) mt.push(h('span', { class: 'tag block', text: `Block ${C.pBlock}` }));
+  if (C.weak) mt.push(h('span', { class: 'tag weak', text: `Weak ${C.weak}` }));
+  if (C.bleed) mt.push(h('span', { class: 'tag bleed', text: `Bleed ${C.bleed}` }));
+  if (C.riposte) mt.push(h('span', { class: 'tag buff', text: 'Riposte' }));
+  u.myTags.replaceChildren(...mt);
+  // buttons
+  let sd = strikeBase(); if (C.riposte) sd += 3; if (C.first && has('gravesalt')) sd *= 2;
+  u.bStrike.sub.textContent = `Deal ${Math.round(sd * outMult())}`;
+  u.bGuard.sub.textContent = `Block ${guardVal()}`;
+  const sk = CLASSES[run.cls].skill;
+  u.bSkill.sub.textContent = C.cd > 0 ? `Ready in ${C.cd}` : skillShort();
+  u.bDraught.sub.textContent = run.draughts ? `Heal ${draughtAmt()} · ${run.draughts} left · free` : 'None left';
+  const canFlee = C.kind === 'normal';
+  u.bFlee.sub.textContent = !canFlee ? 'Not from this foe' : has('crow') ? 'Free' : run.gold >= 10 ? 'Costs 10 gold' : 'Costs 6 HP';
+  const busy = C.busy || C.over;
+  u.bStrike.disabled = busy; u.bGuard.disabled = busy; u.bSkill.disabled = busy || C.cd > 0;
+  u.bDraught.disabled = busy || !run.draughts || run.hp >= run.maxHp;
+  u.bFlee.disabled = busy || !canFlee;
+  u.bSkill.title = sk.desc(run.skillLv);
+}
+function doomVal() { return [4, 6, 8][run.skillLv - 1] + Math.floor(Math.max(0, strikeBase() - CLASSES.hexblade.str) * .75); }
+function skillShort() {
+  const lv = run.skillLv;
+  if (run.cls === 'sellsword') return `Deal ${Math.round(strikeBase() * [2, 2.5, 3][lv - 1] * outMult())}`;
+  if (run.cls === 'hexblade') return `4 + Doom ${doomVal()}×3`;
+  return `Deal ${Math.round(strikeBase() * 1.5 * outMult())}, heal ${[5, 7, 9][lv - 1]}`;
+}
+function hitFoe(raw) {
+  const e = C.e; let dmg = Math.max(0, Math.round(raw * outMult()));
+  const ab = Math.min(e.block, dmg); e.block -= ab; dmg -= ab;
+  e.hp = Math.max(0, e.hp - dmg);
+  fx(C.ui.foe, dmg ? `−${dmg}` : 'Blocked', dmg ? '' : 'ward');
+  const p = C.ui.portrait; p.classList.remove('hit'); void p.offsetWidth; if (!reduceMotion) p.classList.add('hit');
+  return dmg;
+}
+function checkKingRage() {
+  const e = C.e;
+  if (C.id === 'king' && !e.raged && e.hp > 0 && e.hp <= e.maxHp / 2) { e.raged = true; e.str += 3; return ' The Hollow King sheds his robes of dust. His blows grow heavier.'; }
+  return '';
+}
+async function act(k) {
+  if (!C || C.busy || C.over) return;
+  const e = C.e, d = C.d;
+  if (k === 'draught') {
+    if (!run.draughts || run.hp >= run.maxHp) return;
+    run.draughts--; const g = heal(draughtAmt()); sfx('heal'); fx(C.ui.me, `+${g}`, 'heal me');
+    setLog(`You drink a draught. +${g} HP.`); updCombat(); return;
+  }
+  if (k === 'flee') {
+    if (C.kind !== 'normal') return;
+    let msg; const L = [];
+    if (has('crow')) msg = 'You slip away on crow-quick feet.';
+    else if (run.gold >= 10) { run.gold -= 10; msg = 'You toss a handful of coins behind you and run.'; L.push(['bad', '−10 gold']); }
+    else { msg = 'You break away, bloodied.'; L.push(hurt(6, `Cut down fleeing ${foeRef(d)}`)); }
+    C.over = true;
+    return result('You fled', msg, L);
+  }
+  if (k === 'skill' && C.cd > 0) return;
+  C.busy = true;
+  let log = '';
+  if (k === 'strike') {
+    let dmg = strikeBase(); if (C.riposte) { dmg += 3; C.riposte = false; }
+    if (C.first && has('gravesalt')) dmg *= 2;
+    C.first = false;
+    const dealt = hitFoe(dmg); sfx('hit'); log = `You strike for ${dealt}.`;
+    let hl = (has('leech') ? 1 : 0) + (run.cls === 'hexblade' ? 2 : 0);
+    if (hl) { const g = heal(hl); if (g) fx(C.ui.me, `+${g}`, 'heal me'); }
+  } else if (k === 'guard') {
+    const b = guardVal(); C.pBlock += b; sfx('block');
+    if (run.cls === 'sellsword') C.riposte = true;
+    log = `You raise your guard. Block ${b}.`;
+  } else if (k === 'skill') {
+    const lv = run.skillLv; sfx('skill');
+    if (run.cls === 'sellsword') { const dealt = hitFoe(strikeBase() * [2, 2.5, 3][lv - 1]); log = `You cleave for ${dealt}.`; }
+    else if (run.cls === 'hexblade') { const dealt = hitFoe(4); e.doomDmg = Math.max(e.doomDmg, doomVal()); e.doomT = 3; log = `You hex ${foeRef(d)} for ${dealt}. Doom takes hold.`; }
+    else { const dealt = hitFoe(strikeBase() * 1.5); const g = heal([5, 7, 9][lv - 1]); if (g) fx(C.ui.me, `+${g}`, 'heal me'); log = `Holy light sears ${foeRef(d)} for ${dealt}.${g ? ` You heal ${g}.` : ''}`; }
+    C.cd = skillCd() + 1;
+  }
+  if (C.weak > 0) C.weak--;
+  log += checkKingRage();
+  setLog(log); updCombat();
+  if (e.hp <= 0) { await sleep(450); return winCombat(); }
+  await sleep(650);
+  if (!C || C.over) return;
+  await enemyTurn();
+}
+function hitMe(n) {
+  const e = C.e;
+  if (has('luckybone') && Math.random() < .15) { fx(C.ui.me, 'Dodged', 'ward me'); return { dealt: 0, dodged: true }; }
+  const ab = Math.min(C.pBlock, n); C.pBlock -= ab; const dealt = n - ab;
+  run.hp -= dealt;
+  if (dealt) { sfx('hurt'); flashHurt(); fx(C.ui.me, `−${dealt}`, 'me'); } else { sfx('block'); fx(C.ui.me, 'Blocked', 'ward me'); }
+  if (dealt && has('thornmail')) { e.hp = Math.max(0, e.hp - 3); fx(C.ui.foe, '−3', ''); }
+  return { dealt, blocked: ab };
+}
+async function enemyTurn() {
+  const e = C.e, d = C.d, who = cap(foeRef(d));
+  if (e.doomT > 0) {
+    e.hp = Math.max(0, e.hp - e.doomDmg); e.doomT--; fx(C.ui.foe, `−${e.doomDmg}`, 'doom');
+    setLog(`Doom eats at ${foeRef(d)}. −${e.doomDmg}.` + checkKingRage()); updCombat();
+    if (e.hp <= 0) { await sleep(450); return winCombat(); }
+    await sleep(500);
+  }
+  e.block = 0;
+  const it = intentOf(), n = it.n + e.str;
+  let log = '';
+  switch (it.t) {
+    case 'A': { const r = hitMe(n); log = r.dodged ? `${who} attacks. You dodge.` : `${who} attacks for ${n}${r.blocked ? ` (${r.blocked} blocked)` : ''}.`; break; }
+    case 'M': {
+      let tot = 0;
+      for (let k = 0; k < it.x; k++) { const r = hitMe(n); tot += r.dealt; updCombat(); if (run.hp <= 0) break; await sleep(230); }
+      log = `${who} strikes ${it.x} times. You take ${tot}.`; break;
+    }
+    case 'B': e.block += it.n; log = `${who} braces. Block ${it.n}.`; break;
+    case 'W': C.weak = 2; log = `${who} curses you. You are Weak for 2 turns.`; break;
+    case 'D': { const r = hitMe(n); const g = Math.min(e.maxHp - e.hp, r.dealt); e.hp += g; log = `${who} drains ${r.dealt} from you${g ? ` and heals ${g}` : ''}.`; break; }
+    case 'L': { const r = hitMe(n); if (r.dealt) C.bleed += 2; log = `${who} rends you for ${r.dealt}.${r.dealt ? ' You bleed.' : ''}`; break; }
+    case 'R': e.str += it.n; log = `${who} rages. Its attacks deal +${it.n}.`; break;
+    case 'C': log = `${who} gathers its strength. Something big is coming.`; break;
+  }
+  if (C.bleed > 0 && run.hp > 0) { run.hp -= C.bleed; fx(C.ui.me, `−${C.bleed}`, 'me'); log += ` Bleed: −${C.bleed}.`; C.bleed--; }
+  C.pBlock = 0; e.i++; C.cd = Math.max(0, C.cd - 1);
+  if (e.hp > 0 && e.hp <= e.maxHp / 2) log += checkKingRage();
+  setLog(log);
+  if (run.hp <= 0 && checkDeath(`Slain by ${foeRef(d)} in the ${regionName()}`)) {
+    C.over = true; updCombat(); await sleep(900); return endRun(false, run.dead);
+  }
+  updCombat();
+  if (e.hp <= 0) { await sleep(450); return winCombat(); }
+  C.busy = false; updCombat();
+}
+function winCombat() {
+  if (!C || C.over) return;
+  C.over = true; C.busy = true; updCombat();
+  const d = C.d, kind = C.kind, r = run.region;
+  C.ui.portrait.classList.add('dead');
+  sfx('win');
+  setTimeout(() => {
+    if (kind === 'boss') return bossDown(d);
+    const L = [];
+    if (kind === 'elite') { run.elites++; run.score += 50; L.push(['good', '+50 score']); }
+    else { run.kills++; run.score += 10; L.push(['good', '+10 score']); }
+    let gold = kind === 'elite' ? ri(22, 32) + 4 * r : ri(8, 13) + 2 * r;
+    if (has('tithe')) gold = Math.round(gold * 1.3);
+    run.gold += gold; L.push(['good', `+${gold} gold`]);
+    L.push(addOil(kind === 'elite' ? 10 : 6));
+    if (has('knuckle')) { const g = heal(4); if (g) L.push(['good', `+${g} HP`]); }
+    let then = finishEvent;
+    if (kind === 'elite') then = () => relicChoice(2, 'Spoils of the elite', finishEvent);
+    else if (Math.random() < .08) L.push(relicLine());
+    result(`${cap(foeRef(d))} falls`, d.death, L, then, 'Victory');
+  }, 650);
+}
+function bossDown(d) {
+  run.bosses++; run.regionsCleared++; run.score += 300;
+  run.maxHp += 6; run.hp += 6; run.bonusStr += 1;
+  const g = heal(Math.round(run.maxHp * .3)); run.oil = run.maxOil;
+  const L = [['good', '+200 score (boss)'], ['good', '+100 score (region cleared)'], ['good', '+6 max HP, +1 Strike damage'], ['good', `+${g + 6} HP`], ['good', 'Lantern refilled']];
+  const lastRegion = run.region >= REGIONS.length - 1;
+  result(`${cap(foeRef(d))} is ended`, d.death, L, () => relicChoice(3, 'A relic from the fallen', () => {
+    if (lastRegion) return endRun(true, 'Ended the Hollow King');
+    closePanel(); run.event = false; C = null; enterRegion(run.region + 1);
+  }), 'Region cleared');
+}
+
+// ───────────────────────── run start and end
+function beginWalk() {
+  const any = unlocked('cls_hexblade') || unlocked('cls_pilgrim');
+  if (any) showClassSelect(); else startRun('sellsword');
+}
+function startRun(cls) {
+  newRun(cls); C = null; paused = false;
+  screen = 'travel'; $('#screen').hidden = true; closeSheet();
+  enterRegion(0);
+  if (unlocked('start_relic')) { run.event = true; relicChoice(3, 'Kindred Gift', finishEvent); }
+}
+function endRun(won, cause) {
+  if (!run || run.over) return;
+  run.over = true; C = null; closePanel(); closeSheet();
+  const base = run.score, gold = run.gold;
+  let total = base + gold;
+  if (won) total = Math.round((total + 500) * 1.5);
+  const embers = Math.max(1, Math.floor(total / 100));
+  meta.embers += embers; meta.runs++;
+  meta.records.push({ score: total, cls: run.cls, region: run.region, won, date: new Date().toISOString().slice(0, 10) });
+  meta.records.sort((a, b) => b.score - a.score); meta.records = meta.records.slice(0, 10);
+  commitMeta();
+  lastRun = { won, cause, total, embers, gold, kills: run.kills, elites: run.elites, bosses: run.bosses, regions: run.regionsCleared, region: run.region, cls: run.cls, best: meta.records[0] && meta.records[0].score === total };
+  demo.region = run.region; demo.cls = run.cls;
+  sfx(won ? 'relic' : 'die');
+  run = null; showEnd();
+}
+
+// ───────────────────────── screens
+const scr = $('#screen');
+function setScreen(el, solid) { scr.replaceChildren(el); scr.hidden = false; scr.classList.toggle('solid', !!solid); scr.scrollTop = 0; }
+function menuBtn(label, sub, fn, primary) { return h('button', { class: 'btn' + (primary ? ' primary' : ''), onclick: () => { sfx('click'); fn(); } }, label, sub ? h('span', { class: 'sub', text: sub }) : null); }
+function bestScore() { return meta.records.length ? meta.records[0].score : 0; }
+
+function showTitle() {
+  screen = 'title'; closePanel(); closeSheet();
+  setScreen(h('div', { class: 'title-wrap' },
+    h('div', { class: 'kicker', text: 'A roguelike of the cursed road' }),
+    h('h1', { class: 'title', text: 'Lantern Road' }),
+    h('p', { class: 'tagline', text: 'Walk the dead kingdom. Keep your flame alive. End the Hollow King.' }),
+    h('div', { class: 'menu' },
+      menuBtn('Begin the walk', bestScore() ? `Best score: ${bestScore()}` : 'Five regions. About 15–20 minutes.', beginWalk, true),
+      menuBtn('The Pyre', `${meta.embers} ember${meta.embers === 1 ? '' : 's'} to spend on unlocks`, showPyre),
+      menuBtn('Records', meta.runs ? `${meta.runs} walk${meta.runs === 1 ? '' : 's'} so far` : 'No walks yet', showRecords),
+      menuBtn('How to play', 'Rules, scoring and controls', () => showHowTo(showTitle))),
+    h('div', { class: 'foot', text: 'Arrow keys or A/D to change lanes · 1–5 to choose' })));
+}
+function showClassSelect() {
+  screen = 'class';
+  const cards = Object.entries(CLASSES).map(([id, c]) => {
+    const open = !c.unlock || unlocked(c.unlock);
+    return h('div', { class: 'item' + (open ? '' : ' owned') },
+      h('div', { class: 'cls' }, h('div', { class: 'k', text: open ? `${c.hp} HP · Strike ${c.str} · Guard ${c.guard}` : 'Locked' }), h('div', { class: 'nm', text: c.name })),
+      open ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startRun(id); }, text: 'Walk' }) : h('button', { class: 'btn', disabled: true, text: '10 embers' }),
+      h('div', { class: 'ds' }, `${c.blurb} `, h('br'), `Skill: ${c.skill.name}. ${c.skill.desc(1)} `, h('br'), c.passive));
+  });
+  setScreen(h('div', { class: 'page' },
+    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Choose who walks' }), h('h1', { text: 'The Lantern-Bearers' }),
+    h('div', { class: 'list' }, cards)), true);
+  scr.querySelector('.btn').classList.add('back');
+}
+function showPyre() {
+  screen = 'pyre';
+  const items = UNLOCKS.map(u => {
+    const own = unlocked(u.id);
+    return h('div', { class: 'item' + (own ? ' owned' : '') },
+      h('div', { class: 'k', text: own ? `${u.kind} · Kindled` : u.kind }), h('div', { class: 'nm', text: u.name }),
+      own ? null : h('button', { class: 'btn' + (meta.embers >= u.cost ? ' primary' : ''), disabled: meta.embers < u.cost, onclick: () => { if (meta.embers < u.cost) return; meta.embers -= u.cost; meta.unlocks.push(u.id); commitMeta(); sfx('relic'); showPyre(); }, text: `Kindle · ${u.cost}` }),
+      h('div', { class: 'ds', text: u.desc }));
+  });
+  setScreen(h('div', { class: 'page' },
+    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Spend your embers' }), h('h1', { text: 'The Pyre' }),
+    h('div', { class: 'embers', text: `${meta.embers} ember${meta.embers === 1 ? '' : 's'}` }),
+    h('p', { class: 'tagline', text: 'Every walk, win or lose, leaves embers behind: one for every 100 points. ' + UNLOCK_NOTE }),
+    h('div', { class: 'list' }, items)), true);
+  scr.querySelector('.btn').classList.add('back');
+}
+function showRecords() {
+  screen = 'records';
+  const rows = meta.records.map((r, i) => h('tr', {},
+    h('td', { text: i + 1 }), h('td', { class: 'num' + (r.won ? ' won' : ''), text: r.score }),
+    h('td', { text: CLASSES[r.cls] ? CLASSES[r.cls].name : r.cls }),
+    h('td', { class: r.won ? 'won' : '', text: r.won ? 'Victory' : (REGIONS[r.region] ? REGIONS[r.region].name : '') }), h('td', { text: r.date })));
+  setScreen(h('div', { class: 'page' },
+    menuBtn('← Back', null, showTitle), h('div', { class: 'kicker', text: 'Best walks' }), h('h1', { text: 'Records' }),
+    rows.length ? h('div', { style: 'overflow-x:auto' }, h('table', { class: 'rec' },
+      h('thead', {}, h('tr', {}, h('th', { text: '#' }), h('th', { class: 'num', text: 'Score' }), h('th', { text: 'Class' }), h('th', { text: 'Reached' }), h('th', { text: 'Date' }))),
+      h('tbody', {}, rows))) : h('p', { text: 'No walks yet. Your ten best scores will be kept here.' })), true);
+  scr.querySelector('.btn').classList.add('back');
+}
+function howToContent() {
+  const li = t => h('li', { text: t });
+  return h('div', { class: 'rules' },
+    h('h3', { text: 'The walk' }), h('ul', {},
+      li('Your lantern-bearer walks the road on their own. Steer between three lanes with the ◂ ▸ buttons, arrow keys, A/D, or by tapping either side of the road.'),
+      li('Each region has 10 events and ends with a boss. There are 5 regions.'),
+      li('At a fork, the road splits into three paths. You take whichever path your lane is on when you reach it. The Next bar at the top shows what is ahead.'),
+      li('Oil flasks and gold drift past in the lanes. Walk over them to pick them up.')),
+    h('h3', { text: 'Lantern oil' }), h('ul', {},
+      li('Oil burns as you walk. Fights, flasks, campfires and merchants refill it.'),
+      li('If it runs out, the dark takes 1 HP every few steps until you refill it.')),
+    h('h3', { text: 'Combat' }), h('ul', {},
+      li('The foe shows its next move above its head. Plan around it.'),
+      li('Strike deals damage. Guard blocks damage for one enemy turn. Your skill is strong but has a cooldown.'),
+      li('A draught heals 40% of your max HP and does not use your turn.'),
+      li('You can flee normal fights for 10 gold, or 6 HP if you are broke. You cannot flee elites or bosses.')),
+    h('h3', { text: 'Scoring' }), h('ul', {},
+      li('Normal enemy +10 · Elite +50 · Boss +200 · Region cleared +100.'),
+      li('Gold you hold at the end adds 1 point each.'),
+      li('Defeating the Hollow King adds 500, then multiplies your score by 1.5.')),
+    h('h3', { text: 'The end, and after' }), h('ul', {},
+      li('The walk ends when your HP reaches 0, or when the Hollow King falls.'),
+      li('Every walk earns 1 ember per 100 points. Spend embers at the Pyre to unlock classes, relics and events.')));
+}
+function showHowTo(back) {
+  screen = 'howto';
+  setScreen(h('div', { class: 'page' }, menuBtn('← Back', null, back), h('div', { class: 'kicker', text: 'Rules' }), h('h1', { text: 'How to Play' }), howToContent()), true);
+  scr.querySelector('.btn').classList.add('back');
+}
+function showEnd() {
+  screen = 'end';
+  const r = lastRun, R = REGIONS[r.region];
+  const row = (a, b) => [h('span', { text: a }), h('span', { text: b })];
+  const subtotal = r.kills * 10 + r.elites * 50 + r.bosses * 200 + r.regions * 100 + r.gold;
+  setScreen(h('div', { class: 'page' },
+    h('div', { class: 'kicker', text: r.won ? 'Victory' : 'The walk is over' }),
+    h('h1', { text: r.won ? 'The Hollow King is Ended' : `You Fell in the ${R.name}` }),
+    h('p', { class: 'tagline', text: r.won ? 'The crown is dust, and the road behind you is lit.' : r.cause + '.' }),
+    h('div', { class: 'score' },
+      row(`Enemies slain · ${r.kills} × 10`, r.kills * 10), row(`Elites slain · ${r.elites} × 50`, r.elites * 50),
+      row(`Bosses ended · ${r.bosses} × 200`, r.bosses * 200), row(`Regions cleared · ${r.regions} × 100`, r.regions * 100),
+      row('Gold held', r.gold),
+      r.won ? row('Victory bonus', 500) : null, r.won ? row('Victory multiplier', `× 1.5`) : null,
+      h('span', { class: 'tot', text: r.best ? 'Final score · new best' : 'Final score' }), h('span', { class: 'tot', text: r.won ? r.total : subtotal })),
+    h('div', { class: 'embers', text: `+${r.embers} ember${r.embers === 1 ? '' : 's'} · ${meta.embers} total` }),
+    h('div', { class: 'menu' }, menuBtn('Walk again', null, beginWalk, true), menuBtn('The Pyre', `${meta.embers} embers to spend`, showPyre), menuBtn('Title', null, showTitle))));
+}
+
+// ───────────────────────── sheet: pause and relics
+const sheet = $('#sheet');
+function openSheet(el) { sheet.replaceChildren(h('div', { class: 'box', role: 'dialog' }, el)); sheet.hidden = false; const b = sheet.querySelector('.btn'); if (b) b.focus({ preventScroll: true }); }
+function closeSheet() { sheet.hidden = true; sheet.replaceChildren(); }
+function openRelics() {
+  if (!run) return; const wasPaused = paused; paused = true;
+  const close = () => { closeSheet(); paused = wasPaused; };
+  const list = run.relics.length ? run.relics.map(id => h('div', { class: 'relic' }, h('b', { text: RELICS[id].name }), h('span', { text: RELICS[id].desc })))
+    : [h('p', { class: 'ev-text', text: 'No relics yet. Elites, shrines, merchants and bosses carry them.' })];
+  const c = CLASSES[run.cls];
+  openSheet(h('div', { style: 'display:grid;gap:10px' },
+    h('div', { class: 'kicker', text: `${c.name} · Strike ${strikeBase()} · Guard ${guardVal()}` }), h('h2', { text: 'Your Relics' }),
+    h('p', { class: 'ev-text', style: 'margin:0', text: `${c.skill.name} (level ${run.skillLv}): ${c.skill.desc(run.skillLv)} ${c.passive}` }),
+    ...list, h('button', { class: 'btn primary', onclick: close, text: 'Close' })));
+}
+function togglePause() {
+  if (!run || screen !== 'travel') return;
+  if (!sheet.hidden) { closeSheet(); paused = false; return; }
+  openPause();
+}
+function openPause(confirming) {
+  paused = true;
+  const resume = () => { closeSheet(); paused = false; };
+  openSheet(h('div', { style: 'display:grid;gap:10px' },
+    h('div', { class: 'kicker', text: 'Paused' }), h('h2', { text: confirming ? 'Abandon this walk?' : 'Rest a Moment' }),
+    confirming ? h('p', { class: 'ev-text', style: 'margin:0', text: 'The walk ends now and is scored as it stands. You still earn embers.' }) : null,
+    confirming
+      ? [menuBtn('Yes, abandon the walk', null, () => { closeSheet(); paused = false; if (run) { run.dead = 'Turned back in the ' + regionName(); endRun(false, run.dead); } }), menuBtn('Keep walking', null, resume, true)]
+      : [menuBtn('Resume', null, resume, true),
+        menuBtn(muted ? 'Sound: off' : 'Sound: on', 'Toggle sound effects', () => { muted = !muted; try { localStorage.setItem('lantern-road-muted', muted ? '1' : '0'); } catch (e) { } openPause(); }),
+        menuBtn('How to play', null, () => openSheet(h('div', { style: 'display:grid;gap:10px' }, h('h2', { text: 'How to Play' }), howToContent(), menuBtn('Back', null, () => openPause(), true)))),
+        menuBtn('Abandon walk', 'End this walk and keep your score', () => openPause(true))]));
+}
+
+// ───────────────────────── input
+$('#btnL').addEventListener('click', () => move(-1));
+$('#btnR').addEventListener('click', () => move(1));
+$('#btnPause').addEventListener('click', togglePause);
+$('#btnSpeed').addEventListener('click', () => { speed = speed === 1 ? 2 : 1; $('#btnSpeed').textContent = speed + '×'; });
+cv.addEventListener('pointerdown', e => {
+  if (!run || screen !== 'travel') return;
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+  if (x < .4) move(-1); else if (x > .6) move(1);
+});
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (!sheet.hidden) { if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); togglePause(); } return; }
+  if (/^[1-9]$/.test(k) && !panel.hidden) {
+    const b = panel.querySelector(`.btn[data-k="${k}"]`);
+    if (b && !b.disabled) { e.preventDefault(); b.click(); }
+    return;
+  }
+  if (screen !== 'travel' || !run) return;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') { e.preventDefault(); move(-1); }
+  else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); move(1); }
+  else if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); togglePause(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && run && screen === 'travel' && !run.event && sheet.hidden) openPause(); });
+window.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe($('#app'));
+
+// ───────────────────────── boot
+function start(data) {
+  resize();
+  if (data && data.run && data.meta) {
+    run = data.run; meta = normalizeMeta(data.meta); screen = 'travel'; scr.hidden = true;
+    run.event = false; C = null; openPause();
+  } else showTitle();
+  requestAnimationFrame(loop);
+  initCloud();
+}
+try {
+  const hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.snapshot === 'function') hot.snapshot(() => ({ meta, run: run && screen === 'travel' && !run.event && !run.over ? run : null }));
+} catch (e) { }
+(() => {
+  const hot = window.claude && window.claude.hot;
+  if (hot && typeof hot.ready === 'function') hot.ready(start);
+  else start((hot && hot.data) || {});
+})();
+</script>
