@@ -9,6 +9,10 @@ Open `lantern-road.html` in a browser. It needs no build step and no server. Fon
 - **Move between lanes:** arrow keys, A/D, the on-screen arrows, or tap either side of the road.
 - **Choose actions:** number keys 1–5, or click.
 - **Pause:** P or Esc.
+- **Speed:** the speed button cycles through 1×, 2×, 3×, 5× and 10×. It speeds up walking, fight animations and auto-mode decisions.
+- **Auto mode:** the Auto button makes the game play itself. It picks forks, steers toward oil and gold, fights, and makes event and shop choices. Pressing Pause or opening Relics stops it until you resume. Combined with 10×, a full run takes about a minute and a half, which is handy for development.
+
+Both settings are remembered in your browser.
 
 ## Rules
 
