@@ -77,6 +77,8 @@ button{font:inherit;color:inherit}
 .mid{display:flex;gap:6px}
 .small{font-family:var(--f-pixel);font-size:10px;min-width:44px;height:36px;padding:0 8px;background:rgba(10,8,14,.72);border:2px solid var(--rule);color:var(--ash)}
 .small:hover{border-color:var(--ember);color:var(--bone)}
+.small[aria-pressed="true"]{border-color:var(--ember);color:var(--ember);background:rgba(242,160,61,.12)}
+.small.fast{color:var(--ember)}
 
 /* Toasts, region card, hurt flash */
 #toasts{position:absolute;left:0;right:0;bottom:118px;z-index:4;display:grid;justify-items:center;gap:4px;pointer-events:none}
@@ -210,7 +212,8 @@ table.rec{width:100%;border-collapse:collapse;font-family:var(--f-pixel);font-si
     <div id="controls" hidden>
       <button class="pad" id="btnL" aria-label="Move left"><svg viewBox="0 0 10 10"><path d="M7 1v8L2 5z"/></svg></button>
       <div class="mid">
-        <button class="small" id="btnSpeed" aria-label="Walking speed">1×</button>
+        <button class="small" id="btnSpeed" aria-label="Game speed">1×</button>
+        <button class="small" id="btnAuto" aria-pressed="false">Auto</button>
         <button class="small" id="btnPause" aria-label="Pause">Pause</button>
       </div>
       <button class="pad" id="btnR" aria-label="Move right"><svg viewBox="0 0 10 10"><path d="M3 1v8l5-4z"/></svg></button>
@@ -239,7 +242,7 @@ const ri = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = ms => new Promise(r => setTimeout(r, ms / speed)); // combat pacing follows the game speed
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function hash(n) { n |= 0; n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n ^= n >>> 16; return (n >>> 0) / 4294967296; }
 const h2 = (a, b) => hash(Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263));
@@ -535,7 +538,12 @@ function sfx(k) {
 
 // ───────────────────────── run state
 let screen = 'title';
-let run = null, C = null, paused = false, speed = 1, lastRun = null;
+let run = null, C = null, paused = false, lastRun = null;
+// Game speed and auto mode are per-viewer conveniences, remembered in this browser.
+const SPEEDS = [1, 2, 3, 5, 10];
+let speed = 1, auto = false;
+try { const s = JSON.parse(localStorage.getItem('lantern-road-play') || '{}'); if (SPEEDS.includes(s.speed)) speed = s.speed; auto = !!s.auto; } catch (e) { }
+function savePlayPrefs() { try { localStorage.setItem('lantern-road-play', JSON.stringify({ speed, auto })); } catch (e) { } }
 const demo = { region: 0, dist: 0, lane: 1, px: LANES[1], oil: 85, maxOil: 100, cls: 'sellsword', t: 0, beats: null, pickups: null, beatIdx: 0 };
 const has = id => !!run && run.relics.includes(id);
 const beatPos = i => FIRST + i * SPACING;
@@ -804,7 +812,7 @@ function triggerBeat() {
 let last = 0;
 function loop(ts) {
   const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts;
-  update(dt); render(ts / 1000); updateHUD();
+  update(dt); autoTick(ts); render(ts / 1000); updateHUD();
   requestAnimationFrame(loop);
 }
 
@@ -850,7 +858,9 @@ function flashHurt() { const el = $('#hurt'); el.classList.add('on'); setTimeout
 
 // ───────────────────────── panels
 const panel = $('#panel');
-function openPanel(el, tall) {
+let panelPick = null; // auto mode's choice for the open card: a choice index, or -1 for the last enabled one
+function openPanel(el, tall, pick) {
+  panelPick = pick || null; autoAt = performance.now() + autoDelay();
   panel.replaceChildren(el); panel.hidden = false; panel.classList.toggle('tall', !!tall);
   panel.scrollTop = 0;
   panel.style.animation = 'none'; void panel.offsetWidth; panel.style.animation = '';
@@ -863,11 +873,11 @@ function choiceBtn(c, i) {
   return h('button', { class: 'btn', disabled: c.disabled, 'data-k': i + 1, onclick: () => { sfx('click'); c.run(); } },
     h('span', { class: 'key', text: i + 1 }), c.label, c.hint ? h('span', { class: 'sub', text: c.hint }) : null);
 }
-function eventCard({ art, kicker, title, text, choices }) {
+function eventCard({ art, kicker, title, text, choices, autoPick }) {
   openPanel(h('div', { class: 'ev' },
     h('div', { class: 'ev-head' }, art ? iconCanvas(art) : null, h('div', {}, h('div', { class: 'kicker', text: kicker }), h('h2', { text: title }))),
     text ? h('p', { class: 'ev-text', text }) : null,
-    h('div', { class: 'choices' }, choices.map(choiceBtn))));
+    h('div', { class: 'choices' }, choices.map(choiceBtn))), false, autoPick);
 }
 function result(title, text, lines = [], then = finishEvent, kicker = 'Outcome') {
   lines = lines.filter(Boolean);
@@ -918,7 +928,8 @@ function openCamp() {
       lv < 3
         ? { label: `Temper: ${sk.name} to level ${lv + 1}`, hint: sk.desc(lv + 1), run: () => { run.skillLv++; sfx('skill'); result('You temper your craft', `${sk.name} is now level ${run.skillLv}.`, [['good', sk.desc(run.skillLv)]]); } }
         : { label: 'Hone your blade', hint: '+1 Strike damage.', run: () => { run.bonusStr++; sfx('skill'); result('You hone your blade', 'The edge drinks the firelight.', [['good', '+1 Strike damage']]); } },
-    ] });
+    ],
+    autoPick: () => run.hp < run.maxHp * .6 ? 0 : 1 });
 }
 function openMerchant() {
   const r = run.region;
@@ -938,7 +949,15 @@ function openMerchant() {
         if (s.k === 'oil') addOil(35); else if (s.k === 'draught') run.draughts++; else { grantRelic(s.id); s.sold = true; }
         show(`Bought: ${s.label}. You have ${run.gold} gold left.`);
       },
-    })).concat([{ label: 'Leave', hint: `You have ${run.gold} gold.`, run: finishEvent }]) });
+    })).concat([{ label: 'Leave', hint: `You have ${run.gold} gold.`, run: finishEvent }]),
+    autoPick: () => {
+      // Auto mode shops in this order: a draught, then relics, then oil when low; otherwise it leaves.
+      const want = [1, ...stock.map((s, i) => s.k === 'relic' ? i : -1).filter(i => i >= 0)];
+      if (run.oil < run.maxOil * .5) want.push(0);
+      const btns = [...panel.querySelectorAll('.btn[data-k]')];
+      const i = want.find(i => btns[i] && !btns[i].disabled);
+      return i === undefined ? -1 : i;
+    } });
   show();
 }
 function openShrine() {
@@ -953,7 +972,8 @@ function openShrine() {
         result('The coins vanish', id ? RELICS[id].desc : 'There is nothing left to give.', L);
       } },
       { label: 'Leave', hint: 'Keep walking.', run: finishEvent },
-    ] });
+    ],
+    autoPick: () => run.gold >= gold ? 1 : run.hp > run.maxHp * .6 ? 0 : 2 });
 }
 function openTreasure() {
   const g = ri(18, 30) + 5 * run.region; run.gold += g; sfx('coin');
@@ -1066,7 +1086,8 @@ function openMystery() {
   let pool = MYSTERIES.filter(m => (!m.unlock || unlocked(m.unlock)) && !run.seen.includes(m.id));
   if (!pool.length) { run.seen = []; pool = MYSTERIES.filter(m => !m.unlock || unlocked(m.unlock)); }
   const m = pick(pool); run.seen.push(m.id);
-  eventCard({ art: 'mystery', kicker: 'Mystery', title: m.title, text: m.text, choices: m.choices() });
+  // Auto mode takes the first option, or the last (usually the safe one) when HP is low.
+  eventCard({ art: 'mystery', kicker: 'Mystery', title: m.title, text: m.text, choices: m.choices(), autoPick: () => run.hp < run.maxHp * .35 ? -1 : 0 });
 }
 
 // ───────────────────────── combat
@@ -1300,7 +1321,7 @@ function winCombat() {
     if (kind === 'elite') then = () => relicChoice(2, 'Spoils of the elite', finishEvent);
     else if (Math.random() < .08) L.push(relicLine());
     result(`${cap(foeRef(d))} falls`, d.death, L, then, 'Victory');
-  }, 650);
+  }, 650 / speed);
 }
 function bossDown(d) {
   run.bosses++; run.regionsCleared++; run.score += 300;
@@ -1411,7 +1432,8 @@ function howToContent() {
       li('Your lantern-bearer walks the road on their own. Steer between three lanes with the ◂ ▸ buttons, arrow keys, A/D, or by tapping either side of the road.'),
       li('Each region has 10 events and ends with a boss. There are 5 regions.'),
       li('At a fork, the road splits into three paths. You take whichever path your lane is on when you reach it. The Next bar at the top shows what is ahead.'),
-      li('Oil flasks and gold drift past in the lanes. Walk over them to pick them up.')),
+      li('Oil flasks and gold drift past in the lanes. Walk over them to pick them up.'),
+      li('The speed button cycles through 1×, 2×, 3×, 5× and 10×. Auto makes the game play itself until you turn it off or pause.')),
     h('h3', { text: 'Lantern oil' }), h('ul', {},
       li('Oil burns as you walk. Fights, flasks, campfires and merchants refill it.'),
       li('If it runs out, the dark takes 1 HP every few steps until you refill it.')),
@@ -1486,11 +1508,78 @@ function openPause(confirming) {
         menuBtn('Abandon walk', 'End this walk and keep your score', () => openPause(true))]));
 }
 
+// ───────────────────────── auto mode
+// When on, the game plays itself: it picks forks, chases pickups, fights and answers events.
+let autoAt = 0;
+const autoDelay = () => 750 / speed;
+function forkScore(t) {
+  const hp = run.hp / run.maxHp;
+  switch (t) {
+    case 'camp': return hp < .5 ? 10 : run.skillLv < 3 ? 4 : 2;
+    case 'merchant': return run.gold >= 40 ? 6 : 1;
+    case 'elite': return hp > .7 ? 7 : 0;
+    case 'treasure': return 5;
+    case 'mystery': return 4;
+    case 'shrine': return run.gold >= 35 + 5 * run.region || hp > .6 ? 4 : 1;
+    case 'fight': return hp > .4 ? 3 : 1;
+  }
+  return 0;
+}
+function bestLane(opts) {
+  let best = run.lane, bestScore = -Infinity;
+  opts.forEach((o, l) => { const s = forkScore(o) - Math.abs(l - run.lane) * .01; if (s > bestScore) { bestScore = s; best = l; } });
+  return best;
+}
+function autoSteer() {
+  const b = run.beats[run.beatIdx];
+  let target = run.lane;
+  const forkNear = b && b.kind === 'fork' && beatPos(run.beatIdx) - run.dist < 70;
+  if (forkNear) target = bestLane(b.opts);
+  else {
+    const p = run.pickups.find(p => !p.done && p.pos > run.dist && p.pos - run.dist < 60);
+    if (p) target = p.lane; else if (b && b.kind === 'fork') target = bestLane(b.opts);
+  }
+  if (target !== run.lane) move(Math.sign(target - run.lane));
+}
+function autoCombat() {
+  const it = intentOf(), s = C.e.str;
+  const inc = 'ADL'.includes(it.t) ? it.n + s : it.t === 'M' ? (it.n + s) * it.x : 0;
+  if (run.draughts && run.hp < run.maxHp * .35) return act('draught');
+  if (C.cd === 0) return act('skill');
+  if (inc >= 10 || (run.cls === 'sellsword' && inc >= guardVal() && !C.riposte)) return act('guard');
+  return act('strike');
+}
+function autoTick(now) {
+  if (!auto || !run || run.over || screen !== 'travel' || paused || !sheet.hidden) return;
+  if (!run.event) return autoSteer();
+  if (now < autoAt) return;
+  if (C && C.ui && !C.over) {
+    if (C.busy) return;
+    autoAt = now + autoDelay();
+    return autoCombat();
+  }
+  if (panel.hidden) return;
+  autoAt = now + autoDelay();
+  const btns = [...panel.querySelectorAll('.btn[data-k]')], open = btns.filter(b => !b.disabled);
+  const i = panelPick ? panelPick() : 0;
+  const b = i === -1 ? open[open.length - 1] : (btns[i] && !btns[i].disabled ? btns[i] : open[0]);
+  if (b) b.click();
+}
+
 // ───────────────────────── input
 $('#btnL').addEventListener('click', () => move(-1));
 $('#btnR').addEventListener('click', () => move(1));
 $('#btnPause').addEventListener('click', togglePause);
-$('#btnSpeed').addEventListener('click', () => { speed = speed === 1 ? 2 : 1; $('#btnSpeed').textContent = speed + '×'; });
+function syncPlayButtons() {
+  const sb = $('#btnSpeed'), ab = $('#btnAuto');
+  sb.textContent = speed + '×'; sb.classList.toggle('fast', speed > 1);
+  ab.setAttribute('aria-pressed', auto ? 'true' : 'false'); ab.textContent = auto ? 'Auto on' : 'Auto';
+}
+function cycleSpeed() { speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]; savePlayPrefs(); syncPlayButtons(); }
+function toggleAuto() { auto = !auto; autoAt = performance.now() + autoDelay(); savePlayPrefs(); syncPlayButtons(); toast(auto ? 'Auto mode on' : 'Auto mode off'); }
+$('#btnSpeed').addEventListener('click', cycleSpeed);
+$('#btnAuto').addEventListener('click', toggleAuto);
+syncPlayButtons();
 cv.addEventListener('pointerdown', e => {
   if (!run || screen !== 'travel') return;
   const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
