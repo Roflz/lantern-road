@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Road View</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* The road view (play-test note 1.21): tap the road at camp and the camera flies up it; pan along to choose a stage.
+   Each frame is a phone on its side (844×390). The top frame is live. Drawn with the game's own art and fonts. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;font-size:15px;user-select:none;touch-action:none}
+.frame.live{cursor:grab}.frame.live:active{cursor:grabbing}
+.frame canvas{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+.shade-t{position:absolute;inset:0 0 auto 0;height:90px;background:linear-gradient(rgba(6,4,10,.8),rgba(6,4,10,0));pointer-events:none}
+.shade-b{position:absolute;inset:auto 0 0 0;height:110px;background:linear-gradient(rgba(6,4,10,0),rgba(6,4,10,.82));pointer-events:none}
+.layer{position:absolute;inset:0;pointer-events:none}
+.hud>*{pointer-events:auto}
+.dot{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:var(--blood);border:2px solid #120c16;box-shadow:0 0 6px rgba(212,72,74,.8)}
+@keyframes bob{50%{translate:0 -4px}}
+
+/* the shared top bar pieces */
+.pnl{background:var(--panel);border:1px solid var(--rule)}
+.me{position:absolute;left:18px;top:12px;display:flex;align-items:center;gap:9px;height:44px;padding:0 12px 0 3px}
+.me .face{position:relative;width:38px;height:38px;border:1px solid var(--trim);background:#0f0b14;display:grid;place-items:center}
+.me .face img{width:32px;height:32px}
+.me .face em{position:absolute;right:-7px;bottom:-7px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:700 9px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
+.me .nm{font:400 19px/1 var(--f-display);color:var(--bone)}
+.purse{position:absolute;right:116px;top:17px;display:flex;gap:24px}
+.cur{position:relative;display:flex;align-items:center;height:26px;min-width:118px;padding:0 4px 0 30px;border-radius:13px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cur .ci{position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cur .ci img{width:22px;height:22px}
+.cur .cv{flex:1;text-align:center;font:700 11px/1 var(--f-pixel);color:var(--bone)}
+.cur .cv.gold{color:var(--gold)}
+.cur .plus{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:700 13px/1 var(--f-pixel);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000}
+.corner{position:absolute;right:18px;top:13px;display:flex;gap:8px}
+.round{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;font:400 23px/1 var(--f-display);color:var(--gold)}
+.round img{width:18px;height:18px}
+.round.back{position:absolute;left:18px;top:13px;width:44px;height:44px;font:400 34px/1 var(--f-display);color:var(--ember)}
+
+/* the camp's own controls, as in the camp views */
+.dock{position:absolute;right:16px;bottom:10px;display:flex;align-items:flex-end;gap:10px}
+.rb{position:relative;display:grid;justify-items:center;gap:2px;width:54px}
+.rb .orb{position:relative;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,#45304e,#1d1424 70%);border:2px solid #8a6038;box-shadow:0 0 0 1px #000,inset 0 2px 0 rgba(255,220,160,.15),inset 0 -3px 6px rgba(0,0,0,.5)}
+.rb .orb img{width:26px;height:26px}
+.rb span{font:400 14px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
+.big{position:relative;display:grid;justify-items:center;gap:3px;width:84px}
+.big .orb{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;border:2px solid #ffd68a;box-shadow:0 0 0 2px #000,0 0 22px rgba(244,166,70,.55),inset 0 3px 0 rgba(255,240,200,.35),inset 0 -6px 10px rgba(0,0,0,.45);background:radial-gradient(circle at 50% 30%,#f7b85a,#b8622a 70%)}
+.big .orb img{width:34px;height:34px;filter:drop-shadow(0 1px 0 #000)}
+.big span{font:400 16px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
+.big .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;height:20px;padding:0 7px;white-space:nowrap;font:700 9px/1 var(--f-pixel);color:var(--bone);background:#120c14;border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.big .tag .el{display:inline-block;width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
+.big.farm .orb{border-color:#d8c8a0;background:radial-gradient(circle at 50% 30%,#a88c6a,#5a4630 72%);box-shadow:0 0 0 2px #000,0 0 16px rgba(216,200,160,.3),inset 0 3px 0 rgba(255,240,200,.25),inset 0 -6px 10px rgba(0,0,0,.45)}
+.big.shut .orb{border-color:#4a4054;background:radial-gradient(circle at 50% 30%,#2e2636,#17121c 72%);box-shadow:0 0 0 2px #000}
+.big.shut span{color:var(--dim)}
+
+/* the road view: the region's name at the top, the stage's card at the bottom */
+.region{position:absolute;left:72px;top:11px;display:flex;align-items:center;gap:8px}
+.region .t{display:grid;justify-items:start;gap:3px;padding:6px 14px 7px;background:var(--panel);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.region .k{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
+.region .n{font:400 25px/1 var(--f-display);color:var(--bone)}
+.region .arw{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--trim);font:400 22px/1 var(--f-display);color:var(--ember)}
+.region .arw.shut{color:#4a4054;border-color:#2e2636}
+.card{position:absolute;left:18px;bottom:12px;width:560px;padding:10px 12px 11px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;background:linear-gradient(#1d1626,#120d18);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 10px 26px rgba(0,0,0,.5)}
+.card .hd{grid-column:1/3;display:flex;align-items:center;gap:9px}
+.card .id{font:700 12px/1 var(--f-pixel);color:var(--ember)}
+.card .id.lit{color:var(--gold)}
+.card .el{display:inline-block;width:9px;height:9px;background:var(--blood);transform:rotate(45deg)}
+.card .skull{width:14px;height:14px}
+.card .nm{font:400 23px/1 var(--f-display);color:var(--bone);margin-right:auto}
+.card .chip{display:flex;align-items:center;gap:5px;height:22px;padding:0 7px;font:700 9px/1 var(--f-pixel);letter-spacing:.06em;border:1px solid var(--rule);background:#150f1b;color:var(--ash)}
+.card .chip.ok{color:var(--good);border-color:#3e5a34}
+.card .chip.no{color:var(--bad);border-color:#5a342e}
+.card .chip img{width:12px;height:12px}
+.card .foes{display:flex;gap:4px}
+.card .foes span{width:36px;height:36px;display:grid;place-items:center;background:#0f0b14;border:1px solid #4a3a52}
+.card .foes span.dark img{filter:brightness(0) drop-shadow(0 0 0 #000);opacity:.75}
+.card .foes img{width:32px;height:32px}
+.card .loot{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.card .loot span{position:relative;width:32px;height:32px;display:grid;place-items:center;background:#150f1b;border:1px solid var(--rule)}
+.card .loot span.first{border-color:var(--ember);box-shadow:0 0 8px rgba(244,166,70,.4)}
+.card .loot img{width:20px;height:20px}
+.card .loot em{position:absolute;right:1px;bottom:0;font:700 7px/1 var(--f-pixel);font-style:normal;color:var(--bone);text-shadow:0 1px 0 #000}
+.card .loot .star{position:absolute;left:-5px;top:-6px;width:14px;height:14px}
+
+/* labels that follow the road */
+.sid{position:absolute;transform:translate(-50%,-100%);height:16px;padding:0 5px;display:grid;place-items:center;background:rgba(12,8,16,.86);border:1px solid #4a3a2a;font:700 8px/1 var(--f-pixel);letter-spacing:.04em;color:#e6d6b8;white-space:nowrap;pointer-events:none}
+.sid.lit{color:var(--gold);border-color:#7a5a36}
+.sid.dark{color:var(--dim);border-color:#2e2636}
+.sid.elite{color:var(--bad)}
+.sid.sel{border-color:var(--ember);box-shadow:0 0 10px rgba(244,166,70,.5)}
+.callout{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:7px;height:24px;padding:0 9px;background:linear-gradient(#2a1d14,#160f0c);border:1px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 14px rgba(244,166,70,.45);font:400 16px/1 var(--f-display);color:#f2e1c0;white-space:nowrap;pointer-events:none}
+.callout b{font:700 9px/1 var(--f-pixel);color:var(--ember)}
+.callout .el{display:inline-block;width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
+.bossname{position:absolute;transform:translate(-50%,-100%);font:400 20px/1 var(--f-display);color:#f08c76;text-shadow:0 1px 0 #000,0 0 10px rgba(212,72,74,.6);white-space:nowrap;pointer-events:none}
+.unlock{position:absolute;transform:translate(-50%,-100%);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff6e0,#d8c8a0);border:2px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 12px rgba(244,166,70,.5);pointer-events:none;animation:bob 1.6s ease-in-out infinite}
+.unlock img{width:16px;height:16px}
+.unlock::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-4px;border:4px solid transparent;border-top:5px solid var(--ember);border-bottom:0}
+.gate{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;background:rgba(12,10,20,.9);border:1px solid #3a4a6a;box-shadow:0 0 0 1px #000;font:400 17px/1 var(--f-display);color:#9ab0d0;white-space:nowrap;pointer-events:none}
+.gate img{width:14px;height:14px}
+.gate b{font:700 8px/1 var(--f-pixel);letter-spacing:.12em;color:#6a7a98}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">The road view · from the fire</div>
+    <h1>Up the Road</h1>
+    <p class="lede">Tap the road at camp and the camera flies up it. Drag along the road to look ahead or back, and tap a stage for its card. The back arrow flies you home. The top frame is live.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame live" data-f="live"></div></div></div><figcaption><b>Live</b> Tap the road, or Set out. Drag along the road and it settles on a stage. Drag back past 1-1, or tap ‹, to come home.</figcaption></figure>
+
+  <section class="band">
+    <h2>The road view</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r1"></div></div></div><figcaption><b>R1</b> At your light’s edge: the party waits at 1-9, the elite. Its card shows the foes, what you need, and what it gives, with Set out.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r2"></div></div></div><figcaption><b>R2</b> Panned ahead: what’s to come. Dark lanterns, foes as silhouettes, the Sexton’s chapel, and the gate to Region II.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r3"></div></div></div><figcaption><b>R3</b> A lit stage, panned back: Farm it for XP and gear.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r4"></div></div></div><figcaption><b>R4</b> Half-way through the flight from the fire.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>How it works</h2>
+    <ul class="notes">
+      <li><b>Getting there:</b> tap the road at camp, or Set out, and the camera flies up the road to the edge of your light with that stage’s card open: one more tap to go.</li>
+      <li><b>Looking along it:</b> drag up or down, and the view settles on the nearest stage; a flick carries it a little further. The mouse wheel steps one stage at a time. That stage’s card shows at the bottom.</li>
+      <li><b>Going home:</b> drag back past 1-1 and the camera starts back toward the fire; let go and it flies home. The ‹ at top left does the same from anywhere.</li>
+      <li><b>A stage’s card:</b> its foes, the level and party size it wants (green when you’re ready), and what it drops. A first clear’s unlock is marked.</li>
+      <li><b>The big button:</b> Set out at the frontier, Farm on a lit stage. Stages beyond your light are locked.</li>
+      <li><b>What’s ahead:</b> unlit stages show their foes as silhouettes. Bubbles mark stages whose first clear brings something new. The road runs on past the boss to the next region’s gate.</li>
+      <li><b>Regions:</b> ‹ › beside the name fly to the next or previous region; the next stays shut until its gate opens.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>Decided</h2>
+    <ol class="notes">
+      <li><b>Set out from camp</b> flies up the road with the next stage’s card open: one more tap to go.</li>
+      <li><b>Keep going</b> and the “come home when” rules: decided later, when the tutorial path reaches them.</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script>
+'use strict';
+(() => {
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  const RN = ['I', 'II', 'III', 'IV', 'V'];
+  const SKULL = (() => { const c = sprite(['.kkkkk.', 'kwwwwwk', 'kwkwkwk', 'kwwwwwk', '.kwkwk.'], { k: '#1a0d10', w: '#c86a6a' }, 'rv:skull'), o = document.createElement('canvas'); o.width = 14; o.height = 14; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 2, 14, 10); return o.toDataURL(); })();
+
+  const LIT = 8; // 1-1 to 1-8 lit; 1-9, the Gravewarden's Watch, is next
+  const CREW = ['sellsword', 'pilgrim', 'warden', 'crossbowman'];
+  const BASE = () => ({ heroes: CREW, lit: LIT, wick: true, sel: null, plots: [{ art: 'toll' }, { art: 'infirmary' }, { art: 'yard' }, { empty: true }, { empty: true }, null, null, null, null, null, null, null, null, null] });
+  const FRAMES = {
+    live: { live: true },
+    r1: { road: 1, sel: LIT, at: LIT },
+    r2: { road: 1, sel: 17, zc: 2590 },
+    r3: { road: 1, sel: 4, at: 4 },
+    r4: { road: 0.5, sel: LIT, at: LIT },
+  };
+  const level = 6, party = 4;
+
+  function topCamp() {
+    const cur = (ic, v, cls) => h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon(ic, 22)), h('span', { class: 'cv ' + (cls || ''), text: v }), h('span', { class: 'plus', text: '+' }));
+    return {
+      shared: [h('div', { class: 'purse' }, cur('coin', '1,240', 'gold'), cur('bone', '34')), h('div', { class: 'corner' }, h('span', { class: 'round', text: '?' }), h('span', { class: 'round' }, icon('gear', 18)))],
+      camp: [h('div', { class: 'pnl me' }, h('span', { class: 'face' }, pxImg(portraitURL('sellsword', true, LOOK('sellsword')), 32, 32), h('em', { text: '4' })), h('span', { class: 'nm', text: 'Roflz' }))],
+    };
+  }
+  function campDock(onGo) {
+    const rb = (ic, label, dot) => h('button', { class: 'rb' }, h('span', { class: 'orb' }, icon(ic, 26), dot ? h('i', { class: 'dot' }) : null), h('span', { text: label }));
+    const st = STAGES[LIT], go = h('button', { class: 'big' }, h('span', { class: 'tag' }, st.kind !== 'road' ? h('i', { class: 'el' }) : null, st.id), h('span', { class: 'orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
+    go.addEventListener('click', onGo);
+    return h('div', { class: 'dock' }, rb('helm', 'Heroes', true), rb('scroll', 'Tactics'), rb('bag', 'Bag', true), go);
+  }
+  function roadTop(onBack) {
+    const back = h('button', { class: 'round back', 'aria-label': 'Back to camp', text: '‹' });
+    back.addEventListener('click', onBack);
+    const region = h('div', { class: 'region' }, h('div', { class: 't' }, h('span', { class: 'k', text: `Region I · ${LIT} of 18 lit` }), h('span', { class: 'n', text: 'Gravefields' })), h('span', { class: 'arw shut', text: '‹' }), h('span', { class: 'arw shut', text: '›' }));
+    return [back, region];
+  }
+  // A stage's card, and the big button beside it.
+  function stageCard(k) {
+    const st = STAGES[k], lit = k < LIT, front = k === LIT, dark = k > LIT;
+    const foes = st.foes.filter(Boolean).filter(f => FOE_ART[f]), uniq = [...new Set(foes)].slice(0, 5);
+    const firsts = (st.first || []).map(id => UNLOCKS[id]).filter(Boolean);
+    const card = h('div', { class: 'card nodrag' },
+      h('div', { class: 'hd' },
+        st.kind === 'elite' ? h('i', { class: 'el' }) : st.kind === 'boss' ? pxImg(SKULL, 14, 14, 'px skull') : null,
+        h('span', { class: 'id' + (lit ? ' lit' : ''), text: st.id }), h('span', { class: 'nm', text: st.name }),
+        h('span', { class: 'chip ' + (level >= st.level ? 'ok' : 'no') }, icon('star', 12), `Lv ${st.level}`),
+        h('span', { class: 'chip ' + (party >= st.party ? 'ok' : 'no') }, icon('helm', 12), String(st.party))),
+      h('div', { class: 'foes' }, uniq.map(f => h('span', { class: dark && !front ? 'dark' : '' }, pxImg(portraitURL(f, false), 32, 32)))),
+      h('div', { class: 'loot' },
+        h('span', {}, icon('coin', 20)), h('span', {}, icon('bone', 20)), h('span', {}, icon('bag', 20)),
+        !lit ? firsts.slice(0, 2).map(u => h('span', { class: 'first' }, icon(u.icon || 'star', 20), pxImg(iconURL('star'), 14, 14, 'px star'))) : null));
+    const btn = front ? h('button', { class: 'big nodrag' }, h('span', { class: 'orb' }, icon('boot', 34)), h('span', { text: 'Set out' }))
+      : lit ? h('button', { class: 'big farm nodrag' }, h('span', { class: 'orb' }, icon('sword', 30)), h('span', { text: 'Farm' }))
+        : h('button', { class: 'big shut nodrag' }, h('span', { class: 'orb' }, icon('lock', 30)), h('span', { text: 'Locked' }));
+    btn.style.cssText = 'position:absolute;right:18px;bottom:10px';
+    return [card, btn];
+  }
+
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+
+  for (const el of document.querySelectorAll('.frame')) {
+    const F = FRAMES[el.dataset.f], S = BASE();
+    S.sel = F.sel != null ? F.sel : null;
+    const cv = h('canvas', { width: Camp3D.IW, height: Camp3D.IH, 'aria-hidden': 'true' });
+    const marks = h('div', { class: 'layer' }), campHud = h('div', { class: 'layer hud' }), roadHud = h('div', { class: 'layer hud' }), cardHud = h('div', { class: 'layer hud' });
+    const T = topCamp();
+    el.append(cv, marks, h('div', { class: 'shade-t' }), h('div', { class: 'shade-b' }), campHud, roadHud, cardHud, ...T.shared);
+    const zAt = k => Camp3D.STAGE_Z[k] - 20;
+    const api = Camp3D.live(cv, el, S, { road: F.live ? 0 : F.road, zc: F.zc != null ? F.zc : F.at != null ? zAt(F.at) : undefined, orbit: false, drag: !!F.live });
+    const goRoad = k => { S.sel = k; api.toRoad(k); };
+    const goCamp = () => { api.toCamp(); };
+    api.onSnap = k => { if (k != null) S.sel = k; };
+    el.__api = api;
+    campHud.append(...T.camp, campDock(() => goRoad(LIT)));
+    roadHud.append(...roadTop(goCamp));
+    let shownSel = -2;
+    const showCard = () => { if (shownSel === S.sel) return; shownSel = S.sel; cardHud.replaceChildren(...(S.sel != null ? stageCard(S.sel) : [])); };
+    api.onTap = p => {
+      const out = api.last; if (!out) return;
+      if (out.roadK < 0.5) {
+        const near = out.roadPts.some(([rx, ry, rz]) => rz > 40 && Math.hypot(rx - p.x, ry - p.y) < 26);
+        if (near) goRoad(LIT);
+        return;
+      }
+      let best = null, bd = 30;
+      for (const a of out.anchors) if (a.stage != null) { const d = Math.hypot(a.x - p.x, (a.y + a.top) / 2 - p.y); if (d < bd) { bd = d; best = a; } }
+      if (best) { S.sel = best.stage; api.panTo(best.stage); }
+    };
+    const pool = new Map();
+    const unlockAhead = []; for (let k = LIT; k < 18 && unlockAhead.length < 3; k++) { const u = (STAGES[k].first || []).map(id => UNLOCKS[id]).find(u2 => u2 && u2.kind !== 'condition'); if (u) unlockAhead.push([k, u.icon || 'star']); }
+    api.onFrame = out => {
+      api.last = out;
+      const R = out.roadK, wc = Math.max(0, 1 - 2 * R), wr = Math.max(0, 2 * R - 1);
+      campHud.style.opacity = wc; campHud.style.visibility = wc < 0.02 ? 'hidden' : 'visible';
+      roadHud.style.opacity = wr; roadHud.style.visibility = wr < 0.02 ? 'hidden' : 'visible';
+      cardHud.style.opacity = wr; cardHud.style.visibility = wr < 0.02 ? 'hidden' : 'visible';
+      showCard();
+      const seen = new Set();
+      const put = (key, make, x, y, o) => { seen.add(key); let n = pool.get(key); if (!n) { n = make(); pool.set(key, n); marks.append(n); } n.style.left = Math.round(x) + 'px'; n.style.top = Math.round(y) + 'px'; n.style.opacity = o; };
+      if (wr > 0.02) for (const a of out.anchors) {
+        if (a.stage != null) {
+          const st = STAGES[a.stage], ty = a.top - 4;
+          if (ty < 84 || ty > 296) continue;
+          if (a.front) put('co' + a.stage, () => h('span', { class: 'callout' }, st.kind !== 'road' ? h('i', { class: 'el' }) : null, h('b', { text: st.id }), st.name.replace(/^The /, '')), a.x, ty - 8, wr);
+          else if (a.kind === 'boss') put('boss', () => h('span', { class: 'bossname', text: 'The Sexton' }), a.x, ty - 6, wr);
+          else if (a.s > 0.42) put('id' + a.stage, () => h('span', { class: 'sid ' + (a.on ? 'lit' : 'dark') + (st.kind === 'elite' ? ' elite' : '') }, st.id), a.x, ty - 4, wr * Math.min(1, (a.s - 0.42) * 6));
+          const ua = unlockAhead.find(([k]) => k === a.stage);
+          if (ua && !a.front) put('ul' + a.stage, () => h('span', { class: 'unlock' }, icon(ua[1], 16)), a.x, ty - 26, wr);
+          const sk = 'sel' + a.stage;
+          const node = pool.get('id' + a.stage); if (node) node.classList.toggle('sel', S.sel === a.stage);
+          void sk;
+        }
+        if (a.id === 'gate' && a.top > 70 && a.top < 320) put('gate', () => h('span', { class: 'gate' }, icon('lock', 14), h('b', { text: 'Region II' }), 'The Drowned Chapel'), a.x, a.top - 4, wr);
+      }
+      for (const [key, node] of pool) if (!seen.has(key)) node.style.opacity = 0;
+    };
+  }
+})();
+</script>
+</body>
+</html>
