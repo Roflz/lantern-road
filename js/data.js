@@ -114,6 +114,23 @@ const SKILLS = {
   dig: { name: 'Dig a Grave', icon: 'charge', shape: 'foe', reach: true, cost: 20, charge: 'burial', fx: 'charge', tip: 'Picks a victim and digs. Next turn: Burial.' },
   burial: { name: 'Burial', icon: 'skull', shape: 'foe', range: 'melee', reach: true, power: 3.4, fx: 'burial' },
   gravedirt: { name: 'Grave Dirt', icon: 'dazzle', shape: 'foes', range: 'ranged', power: 0.45, cost: 20, status: { key: 'dazzled', turns: 1 }, fx: 'dirt' },
+  // marks: a charge that Marks this many heroes, the lowest health first, and lands on each (the Sexton's Two Graves)
+  dig2: { name: 'Two Graves', icon: 'charge', shape: 'foe', reach: true, cost: 20, charge: 'burial', marks: 2, fx: 'charge', tip: 'Marks the two weakest heroes and digs. Next turn: Burial on both.' },
+  grasp: { name: 'Grasp', icon: 'claw', shape: 'foe', range: 'melee', power: 1, fx: 'claw' },
+  crushblow: { name: 'Crushing Blow', icon: 'mace', shape: 'foe', range: 'melee', power: 1.9, cost: 20, fx: 'crush', tip: 'One heavy blow.' },
+  peck: { name: 'Peck', icon: 'claw', shape: 'foe', range: 'melee', reach: true, power: 0.8, fx: 'peck' },
+  dive: { name: 'Carrion Dive', icon: 'claw', shape: 'foe', range: 'melee', reach: true, power: 1.1, cost: 15, fx: 'dive', tip: 'Flies over the front row to any hero.' },
+  keen: { name: 'Keen', icon: 'bell', shape: 'foe', range: 'magic', power: 0.8, fx: 'wail' },
+  dirge: { name: 'Dirge', icon: 'kindle', shape: 'allies', cost: 25, st: [{ k: 'kindled', t: 2, v: 30 }], fx: 'dirge', tip: 'Every foe is Kindled for 2 turns: +30% damage.' },
+  shallowgrave: { name: 'Shallow Grave', icon: 'charge', shape: 'foe', reach: true, cost: 20, charge: 'shallowburial', fx: 'charge', tip: 'Marks a hero and digs. Next turn: Shallow Burial.' },
+  shallowburial: { name: 'Shallow Burial', icon: 'skull', shape: 'foe', range: 'melee', reach: true, power: 2.4, fx: 'burial' },
+  gnawingtide: { name: 'Gnawing Tide', icon: 'claw', shape: 'front', range: 'melee', power: 0.7, cost: 20, status: { key: 'bleed', turns: 2, power: 0.25 }, fx: 'swarm' },
+  // call: foes this calls into empty foe slots, front row first, at the caller's level. They drop no spoils.
+  callswarm: { name: 'Call the Swarm', icon: 'claw', shape: 'self', cost: 20, call: { key: 'rats', n: 2 }, fx: 'call', tip: 'Grave Rats rise in up to 2 empty foe slots.' },
+  flutter: { name: 'Flutter', icon: 'claw', shape: 'foe', range: 'melee', reach: true, power: 0.7, fx: 'peck' },
+  wingdust: { name: 'Wing Dust', icon: 'dazzle', shape: 'foes', range: 'ranged', power: 0.3, cost: 20, status: { key: 'dazzled', turns: 1 }, fx: 'dust' },
+  snap: { name: 'Snap', icon: 'claw', shape: 'foe', range: 'melee', power: 1, fx: 'bite' },
+  clangshut: { name: 'Clang Shut', icon: 'brace', shape: 'self', cost: 15, st: [{ k: 'braced', t: 2, v: 40 }], fx: 'guard', tip: 'Braced: −40% damage taken for 2 turns.' },
   // Drowned Chapel foes
   brinebolt: { name: 'Brine Bolt', icon: 'wave', shape: 'foe', range: 'magic', power: 1, fx: 'brine' },
   hymn: { name: 'Drowned Hymn', icon: 'cross', shape: 'allies', heal: 1.2, cost: 30, fx: 'hymn', tip: 'Heals every ally a little.' },
@@ -140,6 +157,8 @@ const SKILLS = {
   defend: { name: 'Defend', icon: 'brace', shape: 'self', basic: true, st: [{ k: 'braced', v: 30, time: 'start' }], fx: 'guard', tip: 'Braced (−30% damage taken) until its next turn, and restores mana like a basic attack.' },
   // Nothing it can do: it waits.
   wait: { name: 'Wait', icon: 'mana', shape: 'self', fx: 'none' },
+  // A waiting foe steps into an open front slot (campaign spec §3.3).
+  stepup: { name: 'Step Up', icon: 'boot', shape: 'self', fx: 'none', tip: 'Steps into the open front slot.' },
 };
 for (const id in SKILLS) SKILLS[id].id = id;
 
@@ -213,6 +232,12 @@ const CONDITIONS = {
   enraged: { group: 'battle', from: 'a battle reward', when: (r, c) => c.enrage > 0, label: () => 'Foes enraged', tip: 'True once the turn limit is reached and foes hit harder every round.' },
   allies_hurt: { group: 'battle', n: [2, 3, 4], when: (r, c) => c.allies.filter(x => hpPct(x) < 60).length >= r.n, label: r => `${r.n} or more allies below 60%` },
   allies_lt: { group: 'battle', n: [2, 3, 4, 5], from: 'a battle reward', when: (r, c) => c.allies.length < r.n, label: r => `Fewer than ${r.n} allies standing` },
+  // Between battles: only party rules use these, with the Return to base action. They are checked after each win on a
+  // trip (js/campaign.js), never in battle. x: { chars (the heroes on the trip), fell (someone fell in that battle),
+  // next (the stage the party would walk on to) }.
+  bb_fatigue: { group: 'between', between: true, n: [50, 75, 90], start: [75], when: () => false, bb: (r, x) => x.chars.some(c => c.fatigue >= r.n), label: r => `Between battles: any character at ${r.n}+ fatigue`, tip: 'Checked after each win on the road.' },
+  bb_fell: { group: 'between', between: true, when: () => false, bb: (r, x) => !!x.fell, label: () => 'Between battles: an ally fell', tip: 'Someone was knocked out in the battle just won.' },
+  bb_next_boss: { group: 'between', between: true, from: 'a battle reward', when: () => false, bb: (r, x) => !!(x.next && (x.next.boss || x.next.elite)), label: () => 'Between battles: next stage has a boss or elite' },
 };
 for (const id in CONDITIONS) CONDITIONS[id].id = id;
 
@@ -239,6 +264,10 @@ const LOADOUT = { slots: [2, 4], items: ['draught', 'salts'] };
 const PARTY_ACTIONS = {};
 for (const id in ITEMS) PARTY_ACTIONS[id] = { kind: 'item', item: id, name: ITEMS[id].name, icon: ITEMS[id].icon, tip: ITEMS[id].tip + ' Used at once, if one is packed.' };
 PARTY_ACTIONS.focus = { kind: 'focus', who: 'foe', name: 'Focus fire', icon: 'mark', tip: 'Every hero attacks this foe, unless their own rule picked a target.' };
+// Return to base: a between-battle rule's action. The party walks home after the battle it was checked after.
+PARTY_ACTIONS.home = { kind: 'home', name: 'Return to base', icon: 'lantern', tip: 'The party walks home after this battle.' };
+// The come-home rule that arrives with Keep going (1-6), on by default.
+const HOME_RULE = { if: 'bb_fatigue', n: 75, do: 'home' };
 // Party rule slots: the starting number and the most the Tactician can add (tune). rules: the starting set.
 const PARTY_RULES = { slots: [2, 5], rules: [{ if: 'ally_hp_lt', n: 30, do: 'draught' }, { if: 'foe_lowest', do: 'focus', on: false }] };
 
@@ -246,48 +275,196 @@ const ruleCond = r => (CONDITIONS[r.if] ? CONDITIONS[r.if].label(r) : r.if);
 const ruleAction = r => (PARTY_ACTIONS[r.do] ? PARTY_ACTIONS[r.do].name : SKILLS[r.do] ? SKILLS[r.do].name : r.do);
 const ruleText = r => `${ruleCond(r)} → ${ruleAction(r)}`;
 
-// ── Foes
-// tags: the kinds of foe it counts as, for rule conditions (TAGS). healer: counts for "Foe: healer".
-// elite and boss foes are marked on the turn flags, bosses drawn larger. death is the report's closing line when that foe
-// falls last. res: resistances, when they differ from FOE_RES. xp: what felling it is worth at level 1.
+/// ── Foes
+// Each foe keeps its level-1 stats here; foeStats(F, level) grows them with its stage's level (campaign spec §3.1).
+//   tags: the kinds of foe it counts as, for rule conditions (TAGS). healer: counts for "Foe: healer".
+//   elite / boss: its rank. Elites are marked on the turn flags and the map; bosses are drawn larger.
+//   res: its resistances at level 1, family shifts included (campaign spec §4.1); without it, FOE_RES by rank.
+//   phases: a boss's once-only changes below a share of its health: { below, name, line, swap: { old skill: new } }.
+//   flee: it scuttles off at the start of this round (the Cage Mimic). wander: a wandering foe (§3.4).
+//   role: one line for the stage sheet. intro and death: what the road says when it appears and when it falls.
 const FOES = {
-  ghoul: { name: 'Ghoul', tags: ['undead'], death: 'It folds back into the dirt it came from.', hp: 72, mp: 20, pow: 20, def: 3, spd: 9, crit: 5, dodge: 5, mpGain: 10, basic: 'claw', skills: ['gnaw'], rules: [{ if: 'foe_lowest', do: 'gnaw' }] },
-  rats: { name: 'Grave Rats', tags: ['beast'], death: 'The survivors scatter into the barrows.', hp: 56, mp: 20, pow: 14, def: 2, spd: 13, crit: 5, dodge: 15, mpGain: 10, basic: 'bite', skills: ['skitter'], rules: [{ if: 'front_foe', do: 'skitter' }] },
-  bones: { name: 'Restless Bones', tags: ['undead'], death: 'It comes apart and stays apart.', hp: 62, mp: 20, pow: 17, def: 6, spd: 8, crit: 5, dodge: 0, mpGain: 10, basic: 'bonetoss', skills: ['reassemble'], rules: [{ if: 'self_hp_lt', n: 50, do: 'reassemble' }, { if: 'foe_lowest', do: 'bonetoss' }] },
-  gravewarden: { name: 'The Gravewarden', tags: ['undead'], death: 'Its armour falls empty to the ground.', elite: true, hp: 210, mp: 40, pow: 22, def: 12, spd: 8, crit: 5, dodge: 0, mpGain: 10, basic: 'halberd', skills: ['watch', 'reaphook'], rules: [{ if: 'ally_hp_lt', n: 50, do: 'watch' }, { if: 'foe_lowest', do: 'reaphook' }] },
-  sexton: { name: 'The Sexton', death: 'He falls into his own last grave.', boss: true, hp: 360, mp: 40, pow: 30, def: 8, spd: 9, crit: 8, dodge: 0, mpGain: 10, basic: 'shovel', skills: ['dig', 'gravedirt'], rules: [{ if: 'foe_hp_lt', n: 75, do: 'dig' }, { if: 'foes_at_least', n: 4, do: 'gravedirt' }] },
-  acolyte: { name: 'Drowned Acolyte', healer: true, tags: ['undead'], death: 'It slumps, pouring water from its sleeves.', hp: 66, mp: 30, pow: 17, def: 4, spd: 10, crit: 5, dodge: 5, mpGain: 10, basic: 'brinebolt', skills: ['hymn'], rules: [{ if: 'ally_hp_lt', n: 60, do: 'hymn' }, { if: 'foe_lowest', do: 'brinebolt' }] },
-  bloat: { name: 'Bloated Corpse', tags: ['undead'], death: 'It bursts. You will smell it for days.', hp: 150, mp: 0, pow: 20, def: 5, spd: 6, crit: 0, dodge: 0, mpGain: 0, basic: 'slam', skills: ['burst'], rules: [{ if: 'self_hp_lt', n: 35, do: 'burst' }] },
-  bellwraith: { name: 'Bell Wraith', tags: ['spirit'], death: 'The tolling stops.', hp: 60, mp: 30, pow: 20, def: 3, spd: 11, crit: 5, dodge: 20, mpGain: 10, basic: 'wail', skills: ['wraithtoll'], rules: [{ if: 'foes_at_least', n: 3, do: 'wraithtoll' }, { if: 'foe_hp_lt', n: 50, do: 'wail' }] },
-  choir: { name: 'Choir of Silt', healer: true, tags: ['spirit'], death: 'The choir falls silent, one voice at a time.', elite: true, hp: 230, mp: 40, pow: 21, def: 6, spd: 10, crit: 5, dodge: 5, mpGain: 12, basic: 'chant', skills: ['hymn', 'requiem'], rules: [{ if: 'ally_hp_lt', n: 50, do: 'hymn' }, { if: 'foes_at_least', n: 3, do: 'requiem' }] },
-  bishop: { name: 'The Drowned Bishop', tags: ['undead'], death: 'He sinks back into the black font.', boss: true, hp: 380, mp: 50, pow: 31, def: 8, spd: 9, crit: 8, dodge: 0, mpGain: 12, basic: 'crozier', skills: ['raise', 'baptism', 'font'], rules: [{ if: 'ally_fallen', do: 'raise' }, { if: 'foe_hp_lt', n: 75, do: 'baptism' }, { if: 'foes_at_least', n: 4, do: 'font' }] },
+  // Region I: the Gravefields (campaign spec §4.1)
+  shambler: { name: 'Shambler', tags: ['undead'], role: 'Slow and weak: the first foe.', intro: 'Something in the barrow dirt sits up, slowly.', death: 'It lies back down as if it never rose.', hp: 48, mp: 0, pow: 13, def: 2, spd: 7, crit: 0, dodge: 0, mpGain: 0, basic: 'grasp', skills: [], rules: [], res: { stun: 10, move: 10, bleed: 50, blight: 30, curse: 10, debuff: 10 } },
+  ghoul: { name: 'Ghoul', tags: ['undead'], role: 'Bleeds the weakest hero.', intro: 'A ghoul lifts its head from an open grave.', death: 'It folds back into the dirt it came from.', hp: 72, mp: 20, pow: 20, def: 3, spd: 9, crit: 5, dodge: 5, mpGain: 10, basic: 'claw', skills: ['gnaw'], rules: [{ if: 'foe_lowest', do: 'gnaw' }], res: { stun: 20, move: 20, bleed: 60, blight: 40, curse: 20, debuff: 20 } },
+  rats: { name: 'Grave Rats', tags: ['beast'], role: 'Fast, and hits the whole front row.', intro: 'The ground boils with fat grey rats.', death: 'The survivors scatter into the barrows.', hp: 56, mp: 20, pow: 14, def: 2, spd: 13, crit: 5, dodge: 15, mpGain: 10, basic: 'bite', skills: ['skitter'], rules: [{ if: 'front_foe', do: 'skitter' }], res: { stun: 5, move: 25, bleed: 10, blight: 20, curse: 15, debuff: 15 } },
+  bones: { name: 'Restless Bones', tags: ['undead'], role: 'Throws from behind, and heals itself.', intro: 'A skeleton pulls itself together, joint by joint.', death: 'It comes apart and stays apart.', hp: 62, mp: 20, pow: 17, def: 6, spd: 8, crit: 5, dodge: 0, mpGain: 10, basic: 'bonetoss', skills: ['reassemble'], rules: [{ if: 'self_hp_lt', n: 50, do: 'reassemble' }, { if: 'foe_lowest', do: 'bonetoss' }], res: { stun: 20, move: 30, bleed: 60, blight: 40, curse: 25, debuff: 20 } },
+  glutton: { name: 'Grave Glutton', tags: ['undead'], role: 'Slow, and hits hardest.', intro: 'Something swollen with grave-meat heaves itself upright.', death: 'It sags into a heap and does not get up.', hp: 150, mp: 20, pow: 26, def: 4, spd: 6, crit: 5, dodge: 0, mpGain: 10, basic: 'slam', skills: ['crushblow'], rules: [{ if: 'front_foe', do: 'crushblow' }], res: { stun: 35, move: 40, bleed: 60, blight: 50, curse: 20, debuff: 25 } },
+  gravewarden: { name: 'The Gravewarden', tags: ['undead'], elite: true, role: 'Guards its allies, and hooks your back row.', intro: 'An armoured keeper of the dead steps out of the fog.', death: 'Its armour falls empty to the ground.', hp: 225, mp: 40, pow: 65, def: 8, spd: 8, crit: 5, dodge: 0, mpGain: 10, basic: 'halberd', skills: ['watch', 'reaphook'], rules: [{ if: 'ally_hp_lt', n: 75, do: 'watch' }, { if: 'foe_lowest', do: 'reaphook' }], res: { stun: 45, move: 55, bleed: 80, blight: 55, curse: 35, debuff: 40 } },
+  crows: { name: 'Carrion Crows', tags: ['beast'], role: 'Reach: dives on the weakest hero.', intro: 'A black flock settles on the headstones, watching.', death: 'The last of them flaps off, cawing.', hp: 40, mp: 20, pow: 14, def: 1, spd: 13, crit: 10, dodge: 20, mpGain: 10, basic: 'peck', skills: ['dive'], rules: [{ if: 'foe_lowest', do: 'dive' }, { if: 'foe_lowest', do: 'peck' }], res: { stun: 10, move: 40, bleed: 10, blight: 20, curse: 20, debuff: 20 } },
+  mourner: { name: 'Mourner', role: 'Kindles the other foes. Kill her first.', intro: 'A veiled woman keens over a grave that is not hers.', death: 'Her veil drifts down onto the grass.', hp: 58, mp: 30, pow: 13, def: 3, spd: 10, crit: 5, dodge: 5, mpGain: 12, basic: 'keen', skills: ['dirge'], rules: [{ if: 'ally_without', s: 'kindled', do: 'dirge' }], res: { stun: 20, move: 20, bleed: 25, blight: 25, curse: 40, debuff: 30 } },
+  digger: { name: 'Gravedigger', role: 'Marks a hero, then strikes.', intro: 'A man with a spade measures you by eye.', death: 'He drops his spade into the hole he dug.', hp: 80, mp: 30, pow: 18, def: 4, spd: 9, crit: 5, dodge: 5, mpGain: 10, basic: 'shovel', skills: ['shallowgrave'], rules: [{ if: 'foe_lowest', do: 'shallowgrave' }], res: { stun: 25, move: 25, bleed: 25, blight: 25, curse: 25, debuff: 25 } },
+  ratking: { name: 'The Rat King', tags: ['beast'], elite: true, role: 'Calls rats into empty slots while he stands.', intro: 'A knot of rats in a tin crown squeals for its subjects.', death: 'The crown rolls away. The knot comes apart.', hp: 230, mp: 40, pow: 29, def: 5, spd: 11, crit: 5, dodge: 10, mpGain: 10, basic: 'bite', skills: ['gnawingtide', 'callswarm'], rules: [{ if: 'allies_lt', n: 4, do: 'callswarm' }, { if: 'front_foe', do: 'gnawingtide' }], res: { stun: 30, move: 40, bleed: 35, blight: 40, curse: 40, debuff: 40 } },
+  sexton: { name: 'The Sexton', boss: true, role: 'Digs graves for Marked heroes, and two at half health.', intro: 'The gravedigger of the Gravefields has a hole dug for you.', death: 'He falls into his own last grave.', hp: 415, mp: 40, pow: 37, def: 8, spd: 9, crit: 8, dodge: 0, mpGain: 10, basic: 'shovel', skills: ['dig', 'gravedirt'], rules: [{ if: 'foe_hp_lt', n: 75, do: 'dig' }, { if: 'foes_at_least', n: 4, do: 'gravedirt' }], res: { stun: 60, move: 70, bleed: 55, blight: 55, curse: 50, debuff: 60 },
+    phases: [{ below: 0.5, name: 'Two Graves', line: 'He digs two graves now', swap: { dig: 'dig2' } }] },
+  // Wandering foes: they join replays only, rolled from the battle's seed (campaign spec §3.4, §4.2)
+  moths: { name: 'Moth Swarm', tags: ['beast'], wander: true, role: 'A wandering swarm that dazzles everyone.', intro: 'Pale moths pour out of a cracked lantern.', death: 'The dust settles.', hp: 50, mp: 20, pow: 12, def: 1, spd: 14, crit: 5, dodge: 25, mpGain: 10, basic: 'flutter', skills: ['wingdust'], rules: [{ if: 'foes_at_least', n: 3, do: 'wingdust' }], res: { stun: 10, move: 50, bleed: 10, blight: 20, curse: 20, debuff: 20 } },
+  mimic: { name: 'Cage Mimic', wander: true, flee: 6, role: 'A wandering cage. It runs at round 6; killed, it drops better gear.', intro: 'An iron gibbet-cage by the road opens one eye.', death: 'It springs open, and something glints inside.', hp: 90, mp: 20, pow: 18, def: 10, spd: 8, crit: 5, dodge: 0, mpGain: 10, basic: 'snap', skills: ['clangshut'], rules: [{ if: 'self_hp_lt', n: 50, do: 'clangshut' }], res: { stun: 50, move: 60, bleed: 40, blight: 40, curse: 30, debuff: 40 } },
+  // Region II: the Drowned Chapel (step 7 builds its stages)
+  acolyte: { name: 'Drowned Acolyte', healer: true, tags: ['undead'], intro: 'A sodden acolyte gargles a hymn at you.', death: 'It slumps, pouring water from its sleeves.', hp: 66, mp: 30, pow: 17, def: 4, spd: 10, crit: 5, dodge: 5, mpGain: 10, basic: 'brinebolt', skills: ['hymn'], rules: [{ if: 'ally_hp_lt', n: 60, do: 'hymn' }, { if: 'foe_lowest', do: 'brinebolt' }] },
+  bloat: { name: 'Bloated Corpse', tags: ['undead'], intro: 'Something swollen waddles out of the flooded nave.', death: 'It bursts. You will smell it for days.', hp: 150, mp: 0, pow: 20, def: 5, spd: 6, crit: 0, dodge: 0, mpGain: 0, basic: 'slam', skills: ['burst'], rules: [{ if: 'self_hp_lt', n: 35, do: 'burst' }] },
+  bellwraith: { name: 'Bell Wraith', tags: ['spirit'], intro: 'A drowned bell tolls, and a pale shape answers.', death: 'The tolling stops.', hp: 60, mp: 30, pow: 20, def: 3, spd: 11, crit: 5, dodge: 20, mpGain: 10, basic: 'wail', skills: ['wraithtoll'], rules: [{ if: 'foes_at_least', n: 3, do: 'wraithtoll' }, { if: 'foe_hp_lt', n: 50, do: 'wail' }] },
+  choir: { name: 'Choir of Silt', healer: true, tags: ['spirit'], elite: true, intro: 'A dozen drowned mouths sing in the dark water.', death: 'The choir falls silent, one voice at a time.', hp: 230, mp: 40, pow: 21, def: 6, spd: 10, crit: 5, dodge: 5, mpGain: 12, basic: 'chant', skills: ['hymn', 'requiem'], rules: [{ if: 'ally_hp_lt', n: 50, do: 'hymn' }, { if: 'foes_at_least', n: 3, do: 'requiem' }] },
+  bishop: { name: 'The Drowned Bishop', tags: ['undead'], boss: true, intro: 'The bishop rises from the font, robes streaming.', death: 'He sinks back into the black font.', hp: 380, mp: 50, pow: 31, def: 8, spd: 9, crit: 8, dodge: 0, mpGain: 12, basic: 'crozier', skills: ['raise', 'baptism', 'font'], rules: [{ if: 'ally_fallen', do: 'raise' }, { if: 'foe_hp_lt', n: 75, do: 'baptism' }, { if: 'foes_at_least', n: 4, do: 'font' }] },
 };
-// Foe resistances, before family shifts (content spec §3): normal foes 10–40%, elites 30–60%, bosses 50–90% (tune).
-// A family shift can take one to 100% or more, which makes that foe immune.
+for (const id in FOES) FOES[id].id = id;
+const foeRank = F => (F.boss ? 'boss' : F.elite ? 'elite' : 'normal');
+// Foe resistances when a foe lists none, before family shifts (content spec §3): normal foes 10–40%, elites 30–60%,
+// bosses 50–90% (tune). A family shift can take one to 100% or more, which makes that foe immune.
 const FOE_RES = { normal: 20, elite: 40, boss: 65 };
 const FAMILY_RES = { undead: { bleed: 40, blight: 20 }, spirit: { bleed: 60, move: 40, curse: -20 }, beast: { bleed: -10, stun: -10 } };
 function foeRes(F) {
-  const base = F.boss ? FOE_RES.boss : F.elite ? FOE_RES.elite : FOE_RES.normal, r = {};
+  if (F.res) return Object.assign({}, F.res);
+  const base = FOE_RES[foeRank(F)], r = {};
   for (const k of RES_KEYS) r[k] = base;
   for (const t of F.tags || []) for (const k in FAMILY_RES[t] || {}) r[k] += FAMILY_RES[t][k];
-  return Object.assign(r, F.res || {});
+  return r;
 }
-// What felling a foe is worth, at level 1 (tune).
-const FOE_XP = { normal: 10, elite: 30, boss: 60 };
 
-// ── Regions and stages
-// foes lists the foe in each slot (null for an empty slot), in the same slot order as the party.
-// level: the stage's level. Its foes grow with it (FOE_GROWTH), and it sets their XP and their side of the Defense
-// formula (tune; the campaign map in step 6 sets the real ones).
-const REGION_NAMES = [{ name: 'Gravefields', num: 'I' }, { name: 'Drowned Chapel', num: 'II' }];
-const STAGES = [
-  { id: '1-1', region: 0, level: 1, name: 'The Barrow Gate', foes: ['ghoul', 'ghoul', null, 'bones', 'bones', null] },
-  { id: '1-2', region: 0, level: 3, name: 'Rat-Choked Crypt', foes: ['rats', 'rats', 'bones', 'bones', null, 'bones'] },
-  { id: '1-3', region: 0, level: 5, name: "The Sexton's Grave", boss: true, foes: ['sexton', 'gravewarden', 'bones', null, null, 'bones'] },
-  { id: '2-1', region: 1, level: 8, name: 'The Flooded Nave', foes: ['bloat', 'bloat', 'acolyte', 'bellwraith', null, 'acolyte'] },
-  { id: '2-2', region: 1, level: 10, name: 'The Choir Loft', foes: ['bloat', 'ghoul', 'bellwraith', 'choir', null, 'bellwraith'] },
-  { id: '2-3', region: 1, level: 12, name: 'The Black Font', boss: true, foes: ['bishop', 'bloat', 'acolyte', null, 'bellwraith', 'acolyte'] },
+// ── How foes grow with their stage's level (campaign spec §3.1, tune)
+// Health starts gentle and steepens to level 10, so early stages are quick and cheap in fatigue; Power grows faster
+// than Health, so foes stay dangerous without making battles long. From level 10 the party is full, and foes grow at
+// about the heroes' own pace. Speed rises 0.02 a level and resistances 0.1 a level; mana, Crit and Dodge stay put.
+const FOE_GROW = {
+  hp: L => (L <= 10 ? 1 + 0.064 * (L - 1) + 0.024 * (L - 1) * (L - 1) : 3.52 * (1 + 0.065 * (L - 10))),
+  pow: L => (L <= 10 ? 1 + 0.42 * (L - 1) : 4.78 * (1 + 0.06 * (L - 10))),
+  def: L => 1 + 0.06 * (L - 1),
+  spd: 0.02, res: 0.1,
+};
+// A foe's stats at a level: { hp, mp, pow, def, spd, crit, dodge, mpGain, res }.
+function foeStats(F, level) {
+  const L = Math.max(1, level || 1);
+  const res = foeRes(F);
+  for (const k in res) res[k] = +(res[k] + FOE_GROW.res * (L - 1)).toFixed(1);
+  return {
+    hp: Math.max(1, Math.round(F.hp * FOE_GROW.hp(L))), mp: F.mp, pow: F.pow * FOE_GROW.pow(L), def: F.def * FOE_GROW.def(L),
+    spd: F.spd + FOE_GROW.spd * (L - 1), crit: F.crit, dodge: F.dodge, mpGain: F.mpGain, res,
+  };
+}
+
+// ── Regions
+// Five regions along the road (campaign spec §2). Region I is built; II–V show on the map, locked until step 7.
+// mat: the material it drops most (MATERIALS in js/save.js). opens: what lights the road into it.
+const REGIONS = [
+  { num: 'I', name: 'Gravefields', levels: [1, 10], mat: 'bone_dust', boss: 'The Sexton', relic: 'gravediggersspade', stages: 18, line: 'Barrow-fields under a low moon. The dead do not stay put.' },
+  { num: 'II', name: 'Drowned Chapel', levels: [11, 30], mat: 'chapel_wax', boss: 'The Drowned Bishop', relic: 'bishopscrozier', stages: 17, opens: 'Beat the Sexton to enter', line: 'A flooded chapel where the drowned still hold their services.' },
+  { num: 'III', name: 'Thornwood', levels: [31, 50], mat: 'heartwood', boss: 'The Antlered One', relic: 'barkofoldgod', stages: 17, opens: 'Beat the Drowned Bishop to enter', line: 'An old wood where the road narrows and wolves run in packs.' },
+  { num: 'IV', name: 'Ashen Keep', levels: [51, 75], mat: 'cinder_iron', boss: 'The Burnt Marshal', relic: 'marshalsblade', stages: 18, opens: 'Beat the Antlered One to enter', line: 'A keep its own marshal burned. It is burning still.' },
+  { num: 'V', name: 'Hollow Throne', levels: [76, 100], mat: 'throne_tallow', boss: 'The Hollow King', relic: 'hollowcrown', stages: 18, opens: 'Beat the Burnt Marshal to enter', line: 'A court of the dead under a throne of tallow and bone.' },
 ];
-// How foes grow with their stage's level, per level above 1, as a share of their level-1 stats (tune). Heroes grow about
-// as fast from their class growth alone, so stat points, skills and gear are what put a party ahead.
-const FOE_GROWTH = { hp: 0.065, pow: 0.06, def: 0.04 };
+const REGION_NAMES = REGIONS; // the battle screen's older name for the same list
+const TOTAL_STAGES = REGIONS.reduce((n, R) => n + R.stages, 0);
+
+// ── What a first clear unlocks (campaign spec §5.3)
+// kind: feature (works now), condition (a rule condition), building (a blueprint: the home base, build step 5, turns
+// it into one), relic, class (joins the recruit board, step 5) or region. step: the build step that makes it do
+// something, when it does nothing yet. cond: the Tactics keys a condition unlock teaches.
+const UNLOCKS = {
+  tactics: { kind: 'feature', name: 'The Tactics screen', icon: 'book', line: 'Give your heroes rules: what to do, and when.' },
+  recruitboard: { kind: 'building', name: 'The Recruit Board', icon: 'heart', line: 'It opens, and its first recruit is free.', step: 5 },
+  items: { kind: 'feature', name: 'Party items', icon: 'flask', line: '2 loadout slots, 2 Healing Draughts, and “Ally: health below 50% → Healing Draught”.' },
+  'cond:foes_at_least': { kind: 'condition', name: 'N or more foes', icon: 'scroll', cond: ['foes_at_least'] },
+  'cond:foe_back': { kind: 'condition', name: 'Foe: in the back row', icon: 'scroll', cond: ['foe_back'] },
+  tollhouse: { kind: 'building', name: 'Toll House blueprint', icon: 'bell', line: 'Gold while you are away.', step: 5 },
+  keepgoing: { kind: 'feature', name: 'Keep going after a win', icon: 'lantern', line: 'Chain stages until fatigue or a party rule sends the party home.' },
+  'cond:foe_tag:undead': { kind: 'condition', name: 'Foe: undead', icon: 'scroll', cond: ['foe_tag:undead'] },
+  infirmary: { kind: 'building', name: 'Infirmary blueprint', icon: 'cross', line: 'Beds rest fatigue away faster.', step: 5 },
+  'cond:foe_highest_pow': { kind: 'condition', name: 'Foe: highest attack', icon: 'scroll', cond: ['foe_highest_pow'] },
+  trainingyard: { kind: 'building', name: 'Training Yard blueprint', icon: 'sword', line: 'XP while you are away.', step: 5 },
+  'cond:foe_boss': { kind: 'condition', name: 'Foe: boss or elite', icon: 'scroll', cond: ['foe_boss'] },
+  'cond:ally_hurt': { kind: 'condition', name: 'Ally: most hurt', icon: 'scroll', cond: ['ally_hurt'] },
+  shop: { kind: 'building', name: 'Shop blueprint', icon: 'coin', line: 'Party items and a small gear stall.', step: 5 },
+  tactician: { kind: 'feature', name: 'Tactician I', icon: 'book', line: 'Thresholds, Focus fire, saved rule sets and a dozen conditions. The building itself comes with the home base.' },
+  'cond:foe_charging': { kind: 'condition', name: 'Foe: charging a big attack', icon: 'scroll', cond: ['foe_charging'] },
+  scavengercamp: { kind: 'building', name: 'Scavenger Camp blueprint', icon: 'bag', line: 'Gear and materials while you are away.', step: 5 },
+  'cond:bb_next_boss': { kind: 'condition', name: 'Between battles: next stage has a boss or elite', icon: 'scroll', cond: ['bb_next_boss'] },
+  barracks: { kind: 'building', name: 'Barracks blueprint', icon: 'shield', line: 'Room for more heroes.', step: 5 },
+  salvagepit: { kind: 'building', name: 'Salvage Pit blueprint', icon: 'bone', line: 'Gear rolls while you are away.', step: 5 },
+  'cond:boss_present': { kind: 'condition', name: 'Boss present', icon: 'scroll', cond: ['boss_present'] },
+  'relic:gravediggersspade': { kind: 'relic', name: 'Relic: the Gravedigger’s Spade', icon: 'star', relic: 'gravediggersspade' },
+  gravecaller: { kind: 'class', name: 'The Gravecaller joins the recruit board', icon: 'bone', step: 5 },
+  'region:1': { kind: 'region', name: 'The Drowned Chapel opens', icon: 'lantern', line: 'Its stages come in the next build.', step: 7 },
+  'cond:ally_fallen': { kind: 'condition', name: 'Ally: fallen', icon: 'scroll', cond: ['ally_fallen'] },
+};
+for (const id in UNLOCKS) UNLOCKS[id].id = id;
+// The conditions Tactician I teaches (content spec §5), besides every threshold.
+const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell'];
+
+// ── Stages (campaign spec §5.2–5.3)
+// foes: the foe in each slot (null for an empty one): front F1 F2, then back B1–B4, as the party's slots. A slot is a
+// foe id, or { key, level?, over? } where over changes some of its level-1 stats in this stage only. A melee foe placed
+// in the back row waits there and steps up when a front slot opens (js/sim.js).
+// kind: road, elite or boss. level: its foes' level, and the hero level it recommends for `party` heroes.
+// tier: the reward tier (js/campaign.js): light, standard, rich, elite or boss. first: what its first clear unlocks.
+// teaches: what is new in the battle. hint: what the report leads with after a loss.
+// The Gravewarden's Bones throw softer than the road's, so the Watch's threat is the Gravewarden itself: fewer, bigger
+// hits make a wall less of a pure stat check (the softened cliff, campaign spec §5.6, tune).
+const WATCH_BONES = { key: 'bones', over: { pow: 10 } };
+const foeKey = x => (x && typeof x === 'object' ? x.key : x);
+const STAGES = [
+  { id: '1-1', name: 'The Edge of the Light', kind: 'road', level: 1, party: 1, tier: 'light', foes: ['shambler', null, null, null, null, null], first: ['tactics'],
+    teaches: 'How a battle runs: the turn strip, a basic attack, your skill and the callouts.', hint: 'Your skill costs mana. Basic attacks restore it.' },
+  { id: '1-2', name: 'The Barrow Gate', kind: 'road', level: 1, party: 1, tier: 'light', foes: ['shambler', 'shambler', null, null, null, null], first: ['recruitboard'],
+    teaches: 'Rules in action: each callout names the rule that fired.', hint: 'Rules fire from the top. Put the one you want most first.' },
+  { id: '1-3', name: 'Gnawed Headstones', kind: 'road', level: 2, party: 2, tier: 'light', foes: ['ghoul', 'shambler', null, 'shambler', null, null], first: ['items'],
+    teaches: 'Formation: a front row and a back row. A Shambler waits behind, and the Ghoul brings Bleeding.', hint: 'Put your sturdier hero in front. Claws can’t reach the back row while someone stands in front.' },
+  { id: '1-4', name: 'Rat-Choked Crypt', kind: 'road', level: 2, party: 2, tier: 'standard', foes: ['rats', 'rats', null, 'rats', null, null], first: ['cond:foes_at_least'],
+    teaches: 'Speed: the rats show up on the turn strip more than anyone.', hint: 'Rats act often and come in waves. A skill that hits the whole front row, like Cleave, handles many at once.' },
+  { id: '1-5', name: 'The Sunken Path', kind: 'road', level: 3, party: 2, tier: 'standard', foes: ['ghoul', 'shambler', null, 'bones', null, null], first: ['cond:foe_back', 'tollhouse'],
+    teaches: 'Back-row foes: the Bones throw from behind their front row.', hint: 'Melee can’t reach the Bones while their front row stands. Ranged and magic can.' },
+  { id: '1-6', name: 'The Ossuary Steps', kind: 'road', level: 3, party: 3, tier: 'standard', foes: ['ghoul', 'ghoul', null, 'bones', 'bones', null], first: ['keepgoing'],
+    teaches: 'Chaining: two stages in a row, and fatigue.', hint: 'Fatigue builds with every turn a hero takes. Rest at camp, or swap in a fresh hero.' },
+  { id: '1-7', name: 'Rootbound Barrows', kind: 'road', level: 4, party: 3, tier: 'standard', foes: ['ghoul', 'rats', null, 'bones', 'rats', null], first: ['cond:foe_tag:undead', 'infirmary'],
+    teaches: 'Families: undead and beasts side by side. Holy damage only doubles on the undead.', hint: 'Holy damage doubles on the undead, not on the rats.' },
+  { id: '1-8', name: 'The Glutton’s Pit', kind: 'road', level: 4, party: 3, tier: 'rich', foes: ['glutton', 'shambler', null, 'bones', 'shambler', null], first: ['cond:foe_highest_pow', 'trainingyard'],
+    teaches: 'A heavy hitter: the Glutton’s Crushing Blow.', hint: 'The Glutton hits hardest. Guard against it, Dazzle it, or kill the rest first.' },
+  { id: '1-9', name: 'The Gravewarden’s Watch', kind: 'elite', elite: true, level: 5, party: 4, tier: 'elite', foes: ['gravewarden', 'ghoul', WATCH_BONES, WATCH_BONES, null, WATCH_BONES], first: ['cond:foe_boss'],
+    teaches: 'An elite: the Gravewarden guards its allies, and its hook reaches your back row.', hint: 'The Gravewarden guards its wounded. Hits on a whole row aren’t redirected, and Doom keeps ticking.' },
+  { id: '1-10', name: 'Crowfield', kind: 'road', level: 5, party: 4, tier: 'standard', foes: ['ghoul', 'ghoul', 'crows', 'bones', null, 'crows'], first: ['cond:ally_hurt', 'shop'],
+    teaches: 'Reach: the Crows fly over your front row to the weakest hero.', hint: 'Crows go for the weakest. Heal the most hurt ally first.' },
+  { id: '1-11', name: 'The Mourning Path', kind: 'road', level: 6, party: 4, tier: 'standard', foes: ['ghoul', 'glutton', null, 'mourner', 'bones', null], first: ['tactician'],
+    teaches: 'Foe support: the Mourner’s Dirge kindles every foe.', hint: 'Kill the Mourner first. She’s in the back row.' },
+  { id: '1-12', name: 'Fresh Graves', kind: 'road', level: 6, party: 4, tier: 'standard', foes: ['digger', 'ghoul', 'bones', 'mourner', 'bones', null], first: ['cond:foe_charging'],
+    teaches: 'Charged attacks: a Gravedigger Marks a hero, then strikes.', hint: 'When a digger Marks a hero, Guard that hero or kill the digger.' },
+  { id: '1-13', name: 'The Digging Fields', kind: 'road', level: 7, party: 5, tier: 'standard', foes: ['digger', 'digger', 'crows', 'mourner', 'bones', null], first: ['scavengercamp'],
+    teaches: 'Two chargers at once.', hint: 'Two diggers, two Marks. A Warden’s Guard covers both.' },
+  { id: '1-14', name: 'The Lych-gate', kind: 'road', level: 7, party: 5, tier: 'rich', foes: ['glutton', 'ghoul', 'bones', 'mourner', 'bones', null], first: [],
+    teaches: 'Everything so far, in one stage.', hint: 'The Lych-gate mixes everything. The battle report shows what hurt most.' },
+  { id: '1-15', name: 'The Rat King’s Court', kind: 'elite', elite: true, level: 8, party: 5, tier: 'elite', foes: ['ratking', 'rats', null, 'rats', 'rats', null], first: ['cond:bb_next_boss', 'barracks'],
+    teaches: 'An elite: the Rat King calls more rats while he stands.', hint: 'The rats keep coming while the King stands. Kill the King.' },
+  { id: '1-16', name: 'The Mourners’ Walk', kind: 'road', level: 8, party: 6, tier: 'standard', foes: ['glutton', 'ghoul', 'mourner', 'bones', 'bones', 'mourner'], first: ['salvagepit'],
+    teaches: 'Two Mourners: support that stacks.', hint: 'Two Mourners keep every foe kindled. Hit the back row first.' },
+  { id: '1-17', name: 'The Sexton’s Yard', kind: 'road', level: 9, party: 6, tier: 'rich', foes: ['digger', 'digger', 'mourner', 'crows', 'bones', 'crows'], first: [],
+    teaches: 'The Sexton’s men: diggers, crows and a Mourner.', hint: 'If the yard is hard, the Sexton is harder. Farm here first.' },
+  { id: '1-18', name: 'The Sexton’s Grave', kind: 'boss', boss: true, level: 10, party: 6, tier: 'boss', foes: ['sexton', 'digger', null, 'mourner', 'bones', null], first: ['cond:boss_present', 'relic:gravediggersspade', 'gravecaller', 'region:1'],
+    teaches: 'A boss: the Sexton digs graves, throws grave dirt, and digs two graves below half health.', hint: 'When the Sexton digs, Guard the Marked hero. Below half health he digs two graves.' },
+];
+STAGES.forEach((s, i) => { s.region = 0; s.index = i; s.n = i + 1; });
+// Wandering foes on replays (campaign spec §3.4, tune): the chance per replay of each filling an empty foe slot.
+const WANDERERS = [{ key: 'moths', chance: 0.05 }, { key: 'mimic', chance: 0.02 }];
+
+// ── Rewards (home-base spec §5, tune)
+// Amounts scale with the stage's level through S = 1 + L ÷ 5. XP is a share of a level at the stage's level: what a
+// hero needs to go from L to L + 1, so a hero below the stage's level gains more than that share of their own level.
+const GOLD_SCALE = L => 1 + L / 5;
+// Battle spoils, from every foe defeated (not summoned, not fled): gold × S, XP for each hero, and the loot chance.
+const SPOILS = {
+  normal: { gold: 8, xp: 0.06, loot: 0.1, rolls: 1 },
+  elite: { gold: 24, xp: 0.18, loot: 0.4, rolls: 1 },
+  boss: { gold: 80, xp: 0.6, loot: 1, rolls: 2 },
+};
+// The clear reward, by tier. other: another reached region's material, as [chance, amount]. items: party items, as
+// [chance, amount]. gear: the chance of a gear roll. First clears double the gold and materials, and a Light or
+// Standard stage's gear roll is certain.
+const CLEAR = {
+  light: { name: 'Light', gold: 12, xp: 0.09, mat: 2, other: [0.1, 1], items: [0.1, 1], gear: 0.05 },
+  standard: { name: 'Standard', gold: 20, xp: 0.15, mat: 3, other: [0.25, 1], items: [0.15, 1], gear: 0.1 },
+  rich: { name: 'Rich', gold: 40, xp: 0.22, mat: 5, other: [1, 1], items: [1, 1], gear: 1 },
+  elite: { name: 'Elite', gold: 60, xp: 0.38, mat: 8, other: [1, 1], items: [1, 1], gear: 1 },
+  boss: { name: 'Boss', gold: 200, xp: 0.9, mat: 20, other: [1, 3], items: [1, 2], gear: 1 },
+};
+// A loot roll is a party item 60% of the time, by these odds, and a gear roll otherwise.
+const LOOT_ITEM = 0.6;
+const LOOT_ITEMS = [['draught', 50], ['lampoil', 25], ['tincture', 15], ['salts', 10]];
+// Fatigue (home-base spec §6): +1 for each turn a hero takes, nothing else. Weary 50, Exhausted 75, Spent 100.
+const FATIGUE = { PER_TURN: 1, WEARY: 50, EXHAUSTED: 75, SPENT: 100, FIT: 50 };

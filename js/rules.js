@@ -29,6 +29,8 @@ const Tactics = (() => {
   // Inside the game's save (Save.state.tactics, js/save.js) once that has loaded, so it is kept and synced with
   // everything else. Without a save (the Node tests), only in memory.
   const store = () => (typeof Save !== 'undefined' && Save.state ? Save.state : null);
+  // What the road has taught so far (js/campaign.js): party items, Focus fire, saved rule sets. Open without a save.
+  const gate = id => (typeof Campaign !== 'undefined' && store() ? Campaign.has(id) : true);
   // Makes S current: the first time, and again whenever the save's state object is replaced (a reset, or a newer
   // copy arriving from the cloud).
   function ensure() {
@@ -83,11 +85,17 @@ const Tactics = (() => {
     return o;
   };
   // Can this condition go with this action at all? The party has no "self", and focus fire needs a foe.
+  // Between-battle conditions go only with Return to base, which takes nothing else.
   function fits(o, r) {
     const C = CONDITIONS[r.if];
     if (!C) return false;
-    if (isParty(o)) { const A = PARTY_ACTIONS[r.do]; return !!A && C.who !== 'self' && (!A.who || C.who === A.who); }
-    return true;
+    if (isParty(o)) {
+      const A = PARTY_ACTIONS[r.do];
+      if (!A || C.who === 'self') return false;
+      if (A.kind === 'home' || C.between) return A.kind === 'home' && !!C.between;
+      return !A.who || C.who === A.who;
+    }
+    return !C.between;
   }
   // Rules may name any active of the character's classes, learned or not, so a respec doesn't erase them; ones the
   // character can't use yet are flagged in the editor and skipped in battle.
@@ -191,6 +199,16 @@ const Tactics = (() => {
     S.known.push(key);
     return changed();
   }
+  // A rule an unlock gives the party (the draught rule at 1-3, the come-home rule at 1-6). If the party already has a
+  // rule doing the same, it is left alone; if the list is full, a slot opens for it.
+  function grantPartyRule(rule) {
+    const b = S.party;
+    if (!S.known.includes(condKey(rule))) S.known.push(condKey(rule));
+    if (b.rules.some(r => r.do === rule.do && r.if === rule.if)) return false;
+    if (b.rules.length >= b.slots) { if (b.slots >= PARTY_RULES.slots[1]) return false; b.slots++; }
+    b.rules.push(norm(rule));
+    return changed();
+  }
   function learnAll() {
     let any = false;
     for (const id in CONDITIONS) for (const v of variants(id)) if (!S.known.includes(condKey(v))) { S.known.push(condKey(v)); any = true; }
@@ -245,11 +263,11 @@ const Tactics = (() => {
   }
   const loadout = () => ({ items: S.loadout.items.slice(), slots: S.loadout.slots, start: LOADOUT.slots[0], max: LOADOUT.slots[1] });
   // The conditions the picker offers for an owner's action, grouped, with whether each is known.
-  const GROUPS = [['self', 'Self'], ['ally', 'Allies'], ['foe', 'Foes'], ['battle', 'The battle']];
+  const GROUPS = [['self', 'Self'], ['ally', 'Allies'], ['foe', 'Foes'], ['battle', 'The battle'], ['between', 'Between battles']];
   function conditionMenu(o, action) {
     return GROUPS.map(([g, name]) => ({
       group: g, name,
-      items: Object.values(CONDITIONS).filter(C => C.group === g && (isParty(o) ? C.who !== 'self' : true) && (action == null || fits(o, { if: C.id, do: action })))
+      items: Object.values(CONDITIONS).filter(C => C.group === g && (isParty(o) ? C.who !== 'self' : !C.between) && (action == null || fits(o, { if: C.id, do: action })))
         .flatMap(C => variants(C.id).map(v => ({ rule: v, key: condKey(v), label: ruleCond(v), known: isKnown(v), from: C.from || 'the Tactician', tip: C.tip || '' }))),
     })).filter(g => g.items.length);
   }
@@ -259,7 +277,9 @@ const Tactics = (() => {
     if (!C) return { text: 'Unknown condition', warn: true };
     if (isParty(o)) {
       const A = PARTY_ACTIONS[r.do];
-      if (A.kind === 'focus') return { text: 'Heroes attack this foe when their own rule picks no target' };
+      if (A.kind === 'focus') return gate('tactician') ? { text: 'Heroes attack this foe when their own rule picks no target' } : { text: 'Focus fire comes with Tactician I (1-11): skipped until then', warn: true };
+      if (A.kind === 'home') return { text: gate('keepgoing') ? 'Checked after each win on the road' : 'Used once Keep going opens (1-6)' };
+      if (!gate('items')) return { text: 'Party items open at 1-3: skipped until then', warn: true };
       const it = ITEMS[A.item], sk = SKILLS[it.skill];
       if (sk.revive && C.who === 'ally') return { text: `Never fires: ${it.name} only reach fallen allies`, warn: true };
       if (sk.shape === 'ally' && !sk.revive && C.who === 'fallen') return { text: `Never fires: ${it.name} can’t reach a fallen ally`, warn: true };
@@ -288,7 +308,7 @@ const Tactics = (() => {
 
   // Every call makes sure the state is current first.
   const api = fn => (...a) => { ensure(); return fn(...a); };
-  const out = { condKey, variants, ownerOk, onChange: fn => listeners.push(fn), charOf: o => charOf(o), roster: () => roster(), formation: () => formation(),
+  const out = { condKey, variants, ownerOk, gate, onChange: fn => listeners.push(fn), charOf: o => charOf(o), roster: () => roster(), formation: () => formation(),
     // for the Node tests: a roster and formation of their own
     useRoster: (list, party) => { memRoster = list; memParty = party || list.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6); S = null; } };
   const calls = {
@@ -296,7 +316,7 @@ const Tactics = (() => {
     owner, loadout, actions, conditionMenu, explain, isKnown, setup, equipped,
     sets: () => S.sets.map(x => ({ name: x.name, count: roster().reduce((n, c) => n + (x.heroes[c.id] || []).length, x.party.length) })),
     // editing
-    add, replace, toggle, remove, move, unlockSlot, slotCost, learn, learnAll, setItem, unlockItemSlot, saveSet, loadSet, deleteSet,
+    add, replace, toggle, remove, move, unlockSlot, slotCost, learn, learnAll, setItem, unlockItemSlot, saveSet, loadSet, deleteSet, grantPartyRule,
     // a copy of everything, and loading one (it is checked first)
     dump: () => clone(S),
     load: data => { S = sanitize(data); return changed(); },
@@ -401,12 +421,12 @@ const TacticsEditor = (() => {
     }
     const C = party ? null : CLASSES[clsOf(o)];
     const foot = party
-      ? h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'When' }), h('span', { text: 'Item rules: between every two turns, taking no one’s turn. Focus fire: on each hero’s turn.' }))
+      ? h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'When' }), h('span', { text: 'Item rules: between every two turns, taking no one’s turn. Focus fire: on each hero’s turn. Return to base: after each win on the road.' }))
       : h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'Otherwise' }), ico(SKILLS[C.basic].icon), h('b', { text: SKILLS[C.basic].name }), h('span', { text: 'basic attack' }));
     return h('section', { class: 'tx-card', 'aria-label': `${nameOf(o)} rules` },
       h('div', { class: 'tx-who' },
         portrait(o),
-        h('div', {}, h('div', { class: 'nm', text: party ? 'Party rules' : nameOf(o) }), h('div', { class: 'k', text: party ? 'Team-wide: items and focus fire' : `${C.role} · Lv ${Tactics.charOf(o).level}` })),
+        h('div', {}, h('div', { class: 'nm', text: party ? 'Party rules' : nameOf(o) }), h('div', { class: 'k', text: party ? 'Team-wide: items, focus fire and coming home' : `${C.role} · Lv ${Tactics.charOf(o).level}` })),
         h('div', { class: 'tx-count' }, h('b', { text: `${d.rules.length}/${d.slots}` }), h('span', { text: `${d.slots} of ${d.max} slots open` }))),
       h('ol', { class: 'tx-rules' }, rows),
       foot,
@@ -415,6 +435,7 @@ const TacticsEditor = (() => {
 
   // The party's loadout: what it brings into each battle, one item per slot, each used once.
   function loadoutCard() {
+    if (!Tactics.gate('items')) return h('div', { class: 'tx-load' }, h('h4', {}, 'Bring into battle'), h('p', { class: 'tx-note' }, ico('lock'), ' Party items open when you first clear 1-3, Gnawed Headstones.'));
     const L = Tactics.loadout(), cells = [];
     L.items.forEach((id, i) => {
       const it = id && ITEMS[id];
@@ -434,6 +455,7 @@ const TacticsEditor = (() => {
   }
 
   function sets() {
+    if (!Tactics.gate('tactician')) return h('section', { class: 'tx-sets', 'aria-label': 'Saved rule sets' }, h('h3', { text: 'Rule sets' }), h('p', {}, ico('lock'), ' Saved rule sets come with Tactician I, when you first clear 1-11, the Mourning Path.'));
     const list = Tactics.sets();
     const input = h('input', { class: 'tx-name', type: 'text', maxlength: '24', placeholder: 'Name this set', 'aria-label': 'Name for the rule set', value: ui.draft, oninput: e => { ui.draft = e.target.value; } });
     const saveIt = () => {
@@ -565,10 +587,12 @@ const TacticsEditor = (() => {
     const o = ui.owner, p = ui.pick, cur = p.i >= 0 ? Tactics.owner(o).rules[p.i] : null;
     const cond = p.i >= 0 ? cur : p.cond;
     const opts = Tactics.actions(o).map(id => {
-      const a = actionInfo(o, id), ok = o !== 'party' || Tactics.conditionMenu(o, id).some(g => g.items.some(it => it.key === Tactics.condKey(cond)));
+      const A = o === 'party' && PARTY_ACTIONS[id];
+      const lock = A && (A.kind === 'focus' && !Tactics.gate('tactician') ? 'Taught by Tactician I, at 1-11' : A.kind === 'item' && !Tactics.gate('items') ? 'Party items open at 1-3' : A.kind === 'home' && !Tactics.gate('keepgoing') ? 'Opens with Keep going, at 1-6' : null);
+      const a = actionInfo(o, id), fitsIt = o !== 'party' || Tactics.conditionMenu(o, id).some(g => g.items.some(it => it.key === Tactics.condKey(cond))), ok = fitsIt && !lock;
       return h('button', { class: 'tx-opt act' + (cur && cur.do === id ? ' cur' : '') + (a.off ? ' off' : ''), disabled: !ok, onclick: () => { click(); chooseAct(id); } },
-        ico(a.icon), h('span', { class: 'nm', text: a.name }), h('span', { class: 'cost', text: a.note }),
-        h('span', { class: 'sub', text: ok ? a.tip : 'Needs a condition that names a foe' }));
+        lock ? ico('lock') : ico(a.icon), h('span', { class: 'nm', text: a.name }), h('span', { class: 'cost', text: a.note }),
+        h('span', { class: 'sub', text: lock || (fitsIt ? a.tip : A && A.kind === 'home' ? 'Needs a between-battle condition' : A && A.kind !== 'home' && CONDITIONS[cond.if] && CONDITIONS[cond.if].between ? 'A between-battle condition only goes with Return to base' : 'Needs a condition that names a foe') }));
     });
     return h('div', { class: 'box tx-sheet', role: 'dialog', 'aria-label': 'Choose an action' },
       sheetHead('Then…', `${p.i < 0 ? 'Step 2 of 2. ' : ''}When “${ruleCond(cond)}”:`),
@@ -614,5 +638,8 @@ if (typeof App !== 'undefined') {
     enter: p => TacticsEditor.open(() => (typeof p.back === 'function' ? p.back() : App.go(p.back || 'party')), p.owner),
     leave: () => TacticsEditor.dismiss(),
   });
-  App.actions.tactics = (id, back) => App.go('tactics', { owner: id, back });
+  App.actions.tactics = (id, back) => {
+    if (!Tactics.gate('tactics')) { if (typeof toast === 'function') toast('The Tactics screen opens when you first clear 1-1.'); return; }
+    App.go('tactics', { owner: id, back });
+  };
 }

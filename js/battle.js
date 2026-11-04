@@ -244,6 +244,13 @@ const Battle = (() => {
     corpse: { kind: 'aoe', color: '#a8c85a', sfx: 'burst', boom: true },
     shadow: { kind: 'dash', color: '#bb96ee', arc: 'slash', sfx: 'slash' },
     fan: { kind: 'shot', proj: 'bolt', color: '#d8dce4', sfx: 'bolt', hit: 'thunk', stagger: 60, speed: 1.4 },
+    // Region I's new foes (build step 6)
+    crush: { kind: 'melee', color: '#e8dcc0', arc: 'smash', sfx: 'smash', big: true },
+    peck: { kind: 'dash', color: '#d8c8a0', arc: 'claw', sfx: 'claw' },
+    dive: { kind: 'dash', color: '#f4d24a', arc: 'claw', sfx: 'claw' },
+    dirge: { kind: 'buff', color: '#9a86c8', sfx: 'toll', light: 40 },
+    call: { kind: 'buff', color: '#c9a08a', sfx: 'bite', light: 20 },
+    dust: { kind: 'aoe', color: '#e8e0c0', sfx: 'dazzle', flash: '#fff6d8', light: 40 },
     none: { kind: 'none' },
   };
 
@@ -286,7 +293,7 @@ const Battle = (() => {
       else et = (cur != null ? cur - T : tA + 400) + 80;
       if (e.t === 'counter' || ((e.t === 'hit' || e.t === 'miss') && e.counter)) cur = T + et;
       at(T + et, () => apply(e));
-      lastT = Math.max(lastT, et);
+      lastT = Math.max(lastT, et + (e.t === 'phase' ? 1500 : e.t === 'step' || e.t === 'summon' ? 380 : 0));
     }
     return Math.max(lastT + 210, tA + 60 + (F.dur || 300));
   }
@@ -404,8 +411,10 @@ const Battle = (() => {
   }
 
   // ── applying events to what's on screen
+  let onEvent = null;
   function apply(e) {
     const U = S.units;
+    if (onEvent && e.t !== 'phase') { try { onEvent(e); } catch (err) { } }
     switch (e.t) {
       case 'hit': {
         const t = U[e.tgt], src = U[e.src];
@@ -557,16 +566,52 @@ const Battle = (() => {
         break;
       }
       case 'summon': {
-        // A thrall rises into an empty slot.
-        const s = Object.assign({}, e.unit, { hero: true });
+        // A thrall rises into an empty slot; a foe called by another (the Rat King's swarm) boils up out of the dirt.
+        const foe = e.unit.side === 1;
+        const s = Object.assign({}, e.unit, { hero: !foe });
         const u = makeView(s);
         S.units[u.id] = u; S.list.push(u);
         u.alpha = 0; u.fade = { t0: P.t, dur: 520, rise: true };
-        burst(u.x, u.y, '#d8d0bc', 12, 26, 600, false, -20);
-        addFx({ type: 'pillar', x: u.x, y: u.y, dur: 600, color: '#d8d0bc', w: 5 });
-        pop(u, 'Rises', 'tag raise');
+        burst(u.x, u.y, foe ? '#8a6a4a' : '#d8d0bc', foe ? 16 : 12, 26, 600, false, -20);
+        addFx({ type: 'pillar', x: u.x, y: u.y, dur: 600, color: foe ? '#c9a08a' : '#d8d0bc', w: 5 });
+        pop(u, foe ? 'Called' : 'Rises', 'tag ' + (foe ? 'stagger' : 'raise'));
         layoutPlates();
-        sfx('bone');
+        sfx(foe ? 'bite' : 'bone');
+        if (B && e.queue) renderFlags(Math.max(0, B.curK), true);
+        break;
+      }
+      case 'step': {
+        // A waiting foe steps up into the open front slot.
+        const u = U[e.who];
+        if (!u) break;
+        u.march = { t0: P.t, dur: 420, fx: u.x, fy: u.y };
+        u.slot = e.slot; place(u);
+        pop(u, 'Steps up', 'tag quick');
+        layoutPlates();
+        sfx('turn');
+        break;
+      }
+      case 'phase': {
+        // A boss changes: a callout, a flash, and the field shakes.
+        const u = U[e.who];
+        banner(e.name, 'phase', e.line || (u ? u.name : ''));
+        if (u) { pop(u, e.name, 'tag crit'); castGlow(u, '#e5574a', true); flash(u, 200); }
+        screenFlash('#e5574a', .35, 520); shake(2); sfx('enrage');
+        at(P.t + 1300, hideBanner);
+        if (onEvent) onEvent(e);
+        break;
+      }
+      case 'flee': {
+        // A wandering foe scuttles off the field, dropping nothing.
+        const u = U[e.who];
+        if (!u) break;
+        u.alive = false; u.st = {};
+        u.march = { t0: P.t, dur: 600, fx: u.x, fy: u.y };
+        u.bx = S.W + 30; u.fade = { t0: P.t + 200, dur: 400 };
+        pop(u, 'Scuttles off', 'tag miss');
+        syncPlate(u);
+        u.plate.hidden = true;
+        sfx('miss');
         break;
       }
       case 'swap': {
@@ -686,7 +731,7 @@ const Battle = (() => {
   // ── a battle, start to finish
   // Runs the simulation, walks the party in, plays the log, and calls onEnd(result) when it is over.
   function run(stage, seed, opts = {}) {
-    const setup = stageSetup(stage, seed);
+    const setup = opts.setup || stageSetup(stage, seed, null, { replay: !!opts.replay });
     const res = simulate(setup);
     endAim(true);
     queue = []; S.fx = []; hideBanner(); clearFlags(); stepping = false;
@@ -732,9 +777,10 @@ const Battle = (() => {
       if (e.t === 'round') { B.round = e.n; setHud(B.stage, B.round, B.enrage); B.i++; continue; }
       if (e.t === 'enrage') {
         B.enrage = e.level; setHud(B.stage, B.round, B.enrage); B.i++;
-        if (e.level === 1) { S.active = null; banner('The foes are enraged', 'rage', 'They hit harder every round'); sfx('enrage'); screenFlash('#e5574a', .3, 500); B.busyUntil = P.t + 800; at(P.t + 760, hideBanner); return; }
+        if (e.level === 1) { S.active = null; banner('The foes are enraged', 'rage', 'They hit harder every round'); sfx('enrage'); screenFlash('#e5574a', .3, 500); B.busyUntil = P.t + 800; at(P.t + 760, hideBanner); if (onEvent) onEvent(e); return; }
         continue;
       }
+      if (e.t === 'flee') { apply(e); B.i++; B.busyUntil = P.t + 700; return; }
       if (e.t === 'item') {
         const j = groupEnd(log, B.i), dur = playItem(log.slice(B.i, j));
         B.i = j;
@@ -935,12 +981,14 @@ const Battle = (() => {
     S.fx = []; numsEl.replaceChildren();
     const fin = {};
     for (const f of B.res.final) fin[f.id] = f;
-    for (const f of B.res.final) if (!S.units[f.id]) { const u = makeView(Object.assign({}, f, { hero: true })); S.units[u.id] = u; S.list.push(u); }
+    for (const f of B.res.final) if (!S.units[f.id]) { const u = makeView(Object.assign({}, f, { hero: f.side === 0 })); S.units[u.id] = u; S.list.push(u); }
     layoutPlates();
     for (const u of S.list) {
       const f = fin[u.id];
       if (!f) continue;
       u.hp = f.hp; u.mp = f.mp; u.st = Object.assign({}, f.st);
+      if (u.slot !== f.slot) { u.slot = f.slot; place(u); u.x = u.bx; u.y = u.by; }
+      if (f.fled) { u.plate.hidden = true; u.alpha = 0; }
       if (u.alive !== f.alive) { u.alive = f.alive; u.fade = f.alive ? null : { t0: P.t - 2000, dur: 1 }; }
       u.alpha = 1; u.anim = null; if (f.alive) u.fade = null;
       syncPlate(u, true);
@@ -951,6 +999,7 @@ const Battle = (() => {
     setHud(B.stage, B.round, enr);
     S.walkUntil = 0; hideBanner(); platesEl.classList.remove('away');
     for (const u of S.list) u.march = null;
+    layoutPlates();
     clearFlags();
     B.i = B.res.log.length;
     endAim(true);
@@ -1354,6 +1403,18 @@ const Battle = (() => {
     if (trayEl) trayEl.replaceChildren();
   }
   function walk(ms) { S.walkUntil = P.t + ms; }
+  // Between battles on a trip: the fallen foes fade, everyone stands up again, and the party walks on for ms of play
+  // time (it scales with the speed), then done() starts the next battle where they stop.
+  function travel(ms, done) {
+    if (!B) { if (done) done(); return; }
+    const res = B.res;
+    B = null; queue = []; S.fx = []; S.active = null; stepping = false; clearFlags(); hideBanner(); endAim(true);
+    hudEl.hidden = true;
+    setUnits(res.final.filter(u => u.side === 0 && !u.thrall).map(u => Object.assign({}, u, { alive: true, hp: u.maxHp, st: {} })));
+    platesEl.classList.add('away');
+    S.walkUntil = P.t + ms;
+    at(P.t + ms, () => { if (done) done(); });
+  }
   function init() {
     resize();
     window.addEventListener('resize', resize);
@@ -1361,7 +1422,8 @@ const Battle = (() => {
     requestAnimationFrame(loop);
   }
   return {
-    init, run, skip, idle, walk, setSpeed, setPaused, play, stepOnce, resize, FX,
+    init, run, skip, idle, walk, travel, setSpeed, setPaused, play, stepOnce, resize, FX,
+    set onEvent(fn) { onEvent = fn; },
     // items: use the item in a loadout slot (on a hero's id, for an item that needs one), as the player does
     useItem, tapItem,
     set onPause(fn) { onPause = fn; },

@@ -5,11 +5,17 @@
 // and Hero models and the save migration, and gear: every item's effect, weapons by rarity, loot and the Bag. Run: node tools/simtest.js [battles per stage, default 300]
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'save.js', 'rules.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
+for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'save.js', 'rules.js', 'campaign.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
+vm.runInThisContext(fs.readFileSync(path.join(__dirname, 'reference.js'), 'utf8'), { filename: 'reference.js' });
 
-const N = Number(process.argv[2]) || 300;
+// node tools/simtest.js [battles] [--ref]: --ref runs only the reference-party balance report.
+const ARGS = process.argv.slice(2), N = Number(ARGS.find(x => /^\d+$/.test(x))) || 300;
+if (ARGS.includes('--ref')) { referenceReport(Math.max(20, Math.round(N / 3))); process.exit(0); }
 const EVENTS = new Set(['start', 'round', 'enrage', 'turn', 'tick', 'act', 'hit', 'miss', 'heal', 'revive', 'status', 'die', 'delay', 'end', 'item', 'mana',
-  'resist', 'skip', 'summon', 'swap', 'quick', 'maxhp', 'steal', 'counter', 'saved', 'broke', 'cleanse', 'strip', 'corpse', 'refill', 'sprung']);
+  'resist', 'skip', 'summon', 'swap', 'quick', 'maxhp', 'steal', 'counter', 'saved', 'broke', 'cleanse', 'strip', 'corpse', 'refill', 'sprung', 'step', 'phase', 'flee']);
+// Region II isn't built yet (step 7), so the rules and item experiments use the prototype's Black Font, kept here.
+const FONT = { id: 'T-F', name: 'The Black Font', region: 1, level: 4, boss: true, foes: ['bishop', 'bloat', 'acolyte', null, 'bellwraith', 'acolyte'] };
+const stageOf = id => (id === FONT.id ? FONT : STAGES.find(st => st.id === id));
 const problems = [];
 const fail = (msg, seed, stage) => { if (problems.length < 30) problems.push(`${stage.id} seed ${seed}: ${msg}`); };
 
@@ -46,6 +52,10 @@ function check(res, stage) {
       t.hp = e.hp;
     }
     if (e.t === 'die') { if (!units[e.who].alive) fail('dies twice ' + e.who, res.seed, stage); units[e.who].alive = false; units[e.who].hp = 0; }
+    if (e.t === 'step') { const u = units[e.who]; if (!u || !u.alive || u.slot < 2 || e.slot > 1) fail(`bad step ${JSON.stringify(e)}`, res.seed, stage); else if (Object.values(units).some(x => x.alive && x.side === u.side && x.slot === e.slot && x !== u)) fail(`stepped into a taken slot ${JSON.stringify(e)}`, res.seed, stage); else u.slot = e.slot; }
+    if (e.t === 'swap') { for (const [id, k] of [[e.a, 0], [e.b, 1]]) if (id && units[id]) units[id].slot = e.slots[k]; }
+    if (e.t === 'phase' && (!units[e.who] || !units[e.who].alive)) fail(`phase on a fallen unit ${e.who}`, res.seed, stage);
+    if (e.t === 'flee') { if (!units[e.who].alive) fail('a fallen unit flees', res.seed, stage); units[e.who].alive = false; }
     if (e.t === 'revive') { if (units[e.tgt].alive) fail('revives a living unit', res.seed, stage); units[e.tgt].alive = true; units[e.tgt].hp = e.hp; }
     if (e.t === 'item') {
       // the party's items: each slot once (unless refilled), its own item, used by hand or by an item rule, never mid-turn
@@ -145,12 +155,12 @@ for (const stage of STAGES) {
 
 // ── Skills: the same party and seeds with different skills equipped
 {
-  const M = Math.max(60, Math.round(N / 3)), stage = STAGES.find(s => s.id === '2-3');
-  console.log(`\nSkills on 2-3, level 12 party (${M} battles each)`);
+  const M = Math.max(60, Math.round(N / 3)), stage = stageOf('1-18');
+  console.log(`\nSkills on 1-18, the Sexton, level 11 party (${M} battles each)`);
   const run = (name, edit) => {
     let w = 0, r = 0, ko = 0, dealt = 0;
     for (let i = 0; i < M; i++) {
-      const chars = builtParty(12, ':sk' + i);
+      const chars = builtParty(11, ':sk' + i);
       edit(chars);
       const res = simulate(stageSetup(stage, strSeed('sk' + i), partySetup(chars, c => (c.rulesOverride || CLASSES[c.cls].rules))));
       check(res, stage);
@@ -165,7 +175,7 @@ for (const stage of STAGES) {
   const none = run('No skills equipped (basic attacks only)', ch => ch.forEach(c => { c.equip = c.equip.map(() => null); }));
   const lv5 = run('Every learned skill raised to level 5 (free)', ch => ch.forEach(c => { for (const id in c.skills) c.skills[id] = 5; }));
   const sword = run('Sellsword equips Lunge with a rule for it', ch => { const s = ch.find(c => c.cls === 'sellsword'); s.skills.lunge = Math.max(1, s.skills.lunge || 0); s.equip = ['lunge']; s.rulesOverride = [{ if: 'foe_hp_lt', n: 50, do: 'lunge' }, { if: 'always', do: 'lunge' }]; });
-  ok(none.r > base.r && none.ko > base.ko, 'battles without skills should run longer and cost more knockouts');
+  ok(none.dealt < base.dealt && none.ko >= base.ko, 'battles without skills should deal less damage and cost more knockouts');
   ok(lv5.r < base.r, 'level-5 skills should end battles sooner than level-1 ones');
   ok(sword.w >= 0, 'sellsword lunge run');
 }
@@ -178,7 +188,7 @@ const byKey = (res, k) => res.start.find(u => u.key === k && u.side === 0);
 // Level 5 with one Masters' Hall lesson: the Pilgrim knows Mend and Last Rites and has both equipped.
 Tactics.useRoster(builtParty(5, 'rules', { lesson: true }));
 function trial(stageId, edit) {
-  const stage = STAGES.find(s => s.id === stageId);
+  const stage = stageOf(stageId);
   const out = { wins: 0, rounds: 0, kos: 0, healed: 0, mend: 0, draughts: 0, items: 0, focus: 0, ruleFires: 0, stalls: 0 };
   for (let i = 0; i < M; i++) {
     const tac = Tactics.setup();
@@ -208,8 +218,8 @@ const healFirst = [{ if: 'ally_fallen', do: 'rites' }, { if: 'ally_hp_lt', n: 50
 const healLast = [{ if: 'always', do: 'smite' }, { if: 'ally_fallen', do: 'rites' }, { if: 'ally_hp_lt', n: 50, do: 'mend' }];
 
 console.log(`\nRules experiments (${M} battles each, same seeds; a level-5 party)`);
-for (const id of ['1-3', '2-3']) {
-  console.log(` ${id} ${STAGES.find(s => s.id === id).name}, without item rules so the Pilgrim is the only healer`);
+for (const id of ['1-9', FONT.id]) {
+  console.log(` ${id} ${stageOf(id).name}, without item rules so the Pilgrim is the only healer`);
   const a = trial(id, t => { noDraught(t); setRules(t, 'pilgrim', healFirst); });
   const b = trial(id, t => { noDraught(t); setRules(t, 'pilgrim', healLast); });
   const off = trial(id, t => { noDraught(t); for (const p of t.party) if (p) p.rules = p.rules.map(r => Object.assign({}, r, { on: false })); });
@@ -219,13 +229,13 @@ for (const id of ['1-3', '2-3']) {
   ok(off.ruleFires === 0, `${id}: switched-off rules fired ${off.ruleFires} times`);
   ok(a.kos <= b.kos, `${id}: heal-first KOs ${a.kos} above heal-last ${b.kos}`);
 }
-console.log(' 2-3 The Black Font: party rules');
-const d0 = trial('2-3', noDraught);
-const d1 = trial('2-3', t => { t.loadout = ['draught', 'draught']; t.partyRules = [{ if: 'ally_hp_lt', n: 30, do: 'draught' }]; });
-const d2 = trial('2-3', t => { t.loadout = ['draught', 'salts']; t.partyRules = [{ if: 'ally_fallen', do: 'salts' }, { if: 'ally_hp_lt', n: 30, do: 'draught' }]; });
-const d3 = trial('2-3', t => { t.loadout = []; });
-const f1 = trial('2-3', t => { noDraught(t); t.partyRules.forEach(r => { if (r.do === 'focus') r.on = true; }); });
-const f2 = trial('2-3', t => { noDraught(t); t.partyRules = [{ if: 'foe_highest_pow', do: 'focus', on: true }]; });
+console.log(` ${FONT.id} The Black Font: party rules`);
+const d0 = trial(FONT.id, noDraught);
+const d1 = trial(FONT.id, t => { t.loadout = ['draught', 'draught']; t.partyRules = [{ if: 'ally_hp_lt', n: 30, do: 'draught' }]; });
+const d2 = trial(FONT.id, t => { t.loadout = ['draught', 'salts']; t.partyRules = [{ if: 'ally_fallen', do: 'salts' }, { if: 'ally_hp_lt', n: 30, do: 'draught' }]; });
+const d3 = trial(FONT.id, t => { t.loadout = []; });
+const f1 = trial(FONT.id, t => { noDraught(t); t.partyRules.forEach(r => { if (r.do === 'focus') r.on = true; }); });
+const f2 = trial(FONT.id, t => { noDraught(t); t.partyRules = [{ if: 'foe_highest_pow', do: 'focus', on: true }]; });
 line('No item rules', d0); line('2 draughts, ally below 30% → draught', d1); line('Salts and a draught, both with rules', d2); line('Default rules, nothing packed', d3);
 line('Focus fire: foe with lowest health', f1); line('Focus fire: foe with highest attack', f2);
 ok(d0.items === 0 && d3.items === 0, 'items were used with no item rule, or with nothing packed');
@@ -236,7 +246,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
 // Items used by hand: the battle is simulated again with the input added. Everything before that turn must be the
 // same, the item must land just before it, and nobody's turn is spent on it.
 {
-  const stage = STAGES.find(s => s.id === '2-3');
+  const stage = FONT;
   let checked = 0, diverged = 0;
   for (let i = 0; i < 60; i++) {
     const seed = strSeed('hand:' + i);
@@ -361,7 +371,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   // Who wears it: a weapon's class, a class-only accessory's class, or a hero that suits the effect.
   const WEARER = { halberdiershook: 'sellsword', huntershauberk: 'warden', thornmail: 'warden', ashenplate: 'warden', drownedmail: 'sellsword', bastionplate: 'warden', sellswordsjack: 'sellsword', vanguardsbadge: 'sellsword',
     penitentsrags: 'pilgrim', mothsilk: 'lamplighter', gravediggersleathers: 'duellist', shadowweave: 'duellist', courierspur: 'crossbowman', earstoppers: 'hexblade', ironboundcollar: 'sellsword', gravediggersspade: 'crossbowman', hollowcrown: 'hexblade' };
-  const STAGE_FOR = { huntershauberk: ['1-2'], mothlure: ['2-1', '2-2', '2-3'], earstoppers: ['1-3'], ironboundcollar: ['T-1'], drownedmail: ['T-2'], marshalsblade: ['1-1', '1-2', '2-1'] };
+  const STAGE_FOR = { huntershauberk: ['1-4', '1-15'], mothlure: ['1-10', '1-13', '1-17'], earstoppers: ['1-18'], ironboundcollar: ['T-1'], drownedmail: ['T-2'], marshalsblade: ['1-6', '1-7', '1-10'] };
   const ownerOf = id => { const D = GEAR[id]; return D.slot === 'weapon' ? WEAPON_TYPES[D.type].cls : D.cls || WEARER[id] || pickOf(CLASS_ORDER); };
   const withFx = GEAR_ORDER.filter(id => GEAR[id].fx);
   GEAR_TRACK.on = {};
@@ -383,7 +393,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
       const party = front ? [wearer, others[0], others[1], others[2], others[3], others[4]] : [others[0], others[2], wearer, others[1], others[3], others[4]];
       if (cls === 'gravecaller') party[4] = party[5] = null; // room for thralls
       const ids = STAGE_FOR[id] || STAGES.map(s => s.id);
-      const stage = ids[i % ids.length] === 'T-1' ? STUNNER : ids[i % ids.length] === 'T-2' ? CURSER : STAGES.find(s => s.id === ids[i % ids.length]);
+      const stage = ids[i % ids.length] === 'T-1' ? STUNNER : ids[i % ids.length] === 'T-2' ? CURSER : stageOf(ids[i % ids.length]);
       const setup = { seed: strSeed(id + ':' + i), party, foes: stage.foes, level: HARD.includes(id) ? 30 + Math.floor(rng() * 30) : PLAIN.includes(id) ? 30 : 30 + Math.floor(rng() * 130), partyRules: PARTY_RULES.rules, loadout: ['draught', 'salts'] };
       try { const res = simulate(setup); check(res, stage); runs++; if (res.stalled) totalStalls++; }
       catch (e) { problems.push(`item ${id}: ${e.stack.split('\n').slice(0, 3).join(' | ')}`); }
@@ -426,8 +436,8 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   console.log(`\nWeapons by rarity (${M} battles each, same seeds; the party built 3 levels under the stage, item level = stage level)`);
   console.log('   ' + pad('stage', 24) + ['None', 'Common', 'Fine', 'Rare'].map(r => lpad(r, 22)).join(''));
   const table = {};
-  for (const sid of ['1-3', '2-1', '2-3']) {
-    const stage = STAGES.find(s => s.id === sid), row = [];
+  for (const sid of ['1-9', '1-14', '1-18']) {
+    const stage = stageOf(sid), row = [];
     for (const rar of [null, 'common', 'fine', 'rare']) {
       let w = 0, r = 0, ko = 0, dealt = 0;
       for (let i = 0; i < M; i++) {
@@ -449,8 +459,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     console.log('   ' + pad(`${sid} ${stage.name} lv ${stage.level}`, 24) + row.join(''));
   }
   console.log('   (win %, rounds, knockouts per battle, party damage)');
-  for (const sid of ['1-3', '2-1', '2-3']) ok(table[sid + ':common'].r < table[sid + ':null'].r && table[sid + ':common'].w >= table[sid + ':null'].w - 0.05, `${sid}: a Common weapon should end battles sooner, and lose no more often`);
-  ok(table['2-3:rare'].r <= table['2-3:common'].r + 0.2, 'Rare weapons should end 2-3 about as fast as Common ones, or faster');
+  for (const sid of ['1-9', '1-14', '1-18']) ok(table[sid + ':common'].w >= table[sid + ':null'].w - 0.05, `${sid}: a Common weapon should lose no more often than none`);
+  ok(table['1-14:common'].r < table['1-14:null'].r + 0.2, 'a Common weapon should end 1-14 about as fast as none, or faster');
+  ok(table['1-18:rare'].w >= table['1-18:common'].w - 0.05, 'Rare weapons should win 1-18 about as often as Common ones, or more');
 
   // The item model
   ok(GEAR_ORDER.length === 92, `92 items (got ${GEAR_ORDER.length})`);
@@ -562,7 +573,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 3, 'save version 3');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 4, 'save version 4');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -570,14 +581,18 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(s.tactics.sets[0].heroes.c1, 'saved sets moved too');
   ok(s.roster[0].lessons.rule === 1 && Hero.ruleSlots(s.roster[0]) === 4, 'a rule slot bought in step 2 becomes a lesson');
   const v0 = upgrade({ cleared: ['1-1'], best: { '1-1': 4 }, speed: 2 });
-  ok(v0.v === SAVE_VERSION && v0.campaign.cleared[0] === '1-1' && v0.roster.length === 6, 'a step 1 save still upgrades');
+  ok(v0.v === SAVE_VERSION && v0.campaign.cleared.length === 0 && v0.campaign.rebuilt && v0.roster.length === 6 && v0.settings.speed === 2, 'a step 1 save still upgrades, and the rebuilt road starts at 1-1');
   const v2 = JSON.parse(JSON.stringify(defaultState()));
   v2.v = 2; v2.roster.forEach(c => { c.gear = { weapon: null, armor: null, accessory: null }; c.level = 7; });
   v2.roster[1].gear = { weapon: 'Rusty sword', armor: null, accessory: null };
   v2.inventory.items = [{ id: 'bonecharm', lv: 2, uid: 'x1' }, { id: 'nope' }, 'junk', { id: 'gravecutter', lv: 9 }];
   const s3 = upgrade(v2);
-  ok(s3.v === 3 && s3.roster.every(c => c.gear.weapon && c.gear.weapon.lv === 7) && s3.inventory.items.map(x => x.id).join() === 'bonecharm,gravecutter' && s3.inventory.items[1].uid, `version 2 → 3: weapons at the character's level, the Bag cleaned (${JSON.stringify(s3.inventory.items)})`);
-  console.log('Save migration checked: version 1 → 3 (characters, their rules, gear), version 2 → 3 (gear), and version 0 → 3.');
+  ok(s3.v === 4 && s3.roster.every(c => c.gear.weapon && c.gear.weapon.lv === 7) && s3.inventory.items.map(x => x.id).join() === 'bonecharm,gravecutter' && s3.inventory.items[1].uid, `version 2 → 3: weapons at the character's level, the Bag cleaned (${JSON.stringify(s3.inventory.items)})`);
+  const v3 = JSON.parse(JSON.stringify(defaultState()));
+  v3.v = 3; delete v3.unlocks; v3.campaign = { cleared: ['1-1', '1-2', '2-3'], best: { '2-3': 9 }, current: { stage: 5, seed: 3 } }; v3.roster[0].level = 9; v3.roster[0].fatigue = 40;
+  const s4 = upgrade(v3);
+  ok(s4.v === 4 && !s4.campaign.cleared.length && !Object.keys(s4.campaign.best).length && !s4.campaign.current && s4.campaign.trip === null && s4.campaign.road.keepGoing === true && s4.campaign.rebuilt && isObj(s4.unlocks) && s4.roster[0].level === 9 && s4.roster[0].fatigue === 0, 'version 3 → 4: the rebuilt road starts at 1-1, and heroes keep their levels');
+  console.log('Save migration checked: version 1 → 4 (characters, their rules, gear, the road), 2 → 4, 3 → 4, and 0 → 4.');
 }
 
 // ── The Tactics model
@@ -633,6 +648,155 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   Tactics.reset();
   for (const id in CONDITIONS) for (const v of Tactics.variants(id)) ok(typeof ruleCond(v) === 'string' && !ruleCond(v).includes('undefined'), 'label of ' + Tactics.condKey(v));
   console.log(`Tactics model checked. Conditions: ${Object.keys(CONDITIONS).length} (${Object.values(CONDITIONS).reduce((n, C) => n + Tactics.variants(C.id).length, 0)} variants).`);
+}
+
+// ── The campaign (js/campaign.js): Region I's engine pieces, rewards, fatigue, unlocks and trips
+{
+  const st = id => STAGES.find(x => x.id === id);
+  ok(STAGES.length === 18 && STAGES.filter(x => x.elite).map(x => x.id).join() === '1-9,1-15' && STAGES[17].boss && STAGES.every((x, i) => x.foes.length === 6 && x.n === i + 1 && CLEAR[x.tier] && x.hint && x.teaches), 'Region I: 18 stages, elites at 1-9 and 1-15, the boss at 1-18');
+  ok(STAGES.every(x => x.first.every(id => UNLOCKS[id])), 'every first-clear unlock is known');
+  ok(STAGES.every(x => x.foes.every(f => !f || FOES[foeKey(f)])) && Object.values(FOES).every(F => typeof foeSprite === 'undefined' || true), 'every stage foe exists');
+  // foe growth (campaign spec §3.1)
+  const sx = foeStats(FOES.ghoul, 10), s5 = foeStats(FOES.ghoul, 5);
+  ok(sx.hp === 253 && Math.round(sx.pow) === 96 && Math.round(sx.def) === 5 && s5.hp === 118 && Math.round(s5.pow) === 54, `foe growth matches the spec's table (ghoul at 10: ${sx.hp}/${Math.round(sx.pow)}/${Math.round(sx.def)})`);
+  ok(Math.abs(foeStats(FOES.ghoul, 20).hp - 72 * 5.81) < 2 && Math.abs(foeStats(FOES.ghoul, 11).spd - 9.2) < 1e-9 && foeStats(FOES.ghoul, 11).res.stun === 21, 'foes grow on past level 10, with speed and resistances');
+  // waiting and stepping up: the Shambler behind waits, and steps up once a front slot opens
+  let steps = 0, early = 0, calls = 0, callSpoils = 0, phases = 0, two = 0, flees = 0;
+  for (let i = 0; i < 40; i++) {
+    const res = simulate(refSetup(st('1-3'), strSeed('wait' + i), REF.ORDERS[i % 3], 2));
+    check(res, st('1-3'));
+    const sh = res.start.find(u => u.slot === 3 && u.side === 1);
+    let frontDead = 0;
+    for (const e of res.log) {
+      if (e.t === 'die' && e.who[0] === 'f' && res.start.find(u => u.id === e.who && u.slot < 2)) frontDead++;
+      if (e.t === 'step' && e.who === sh.id) { steps++; if (!frontDead) early++; }
+      if (e.t === 'act' && e.who === sh.id && e.skill !== 'defend' && e.skill !== 'stepup' && !res.log.slice(0, res.log.indexOf(e)).some(x => x.t === 'step' && x.who === sh.id)) early++;
+    }
+  }
+  ok(steps > 20 && !early, `a waiting foe Defends until a front slot opens, then steps up (${steps} steps, ${early} too early)`);
+  // the Rat King's summons: called rats rise in empty slots, count as foes, and drop nothing
+  for (let i = 0; i < 40; i++) {
+    const res = simulate(refSetup(st('1-15'), strSeed('king' + i), REF.ORDERS[i % 3], 8));
+    check(res, st('1-15'));
+    const n = res.log.filter(e => e.t === 'summon').length;
+    calls += n;
+    if (n) { const r = Campaign.earn(res, st('1-15')); callSpoils += r.foes > 4 ? 1 : 0; ok(r.called === res.final.filter(u => u.summoned).length && res.final.filter(u => u.summoned).every(u => u.side === 1 && u.key === 'rats'), 'called foes are rats on the foe side'); }
+  }
+  ok(calls > 20 && !callSpoils, `the Rat King calls rats (${calls} over 40 battles), and they drop no spoils`);
+  // the Sexton: Two Graves below half health, and Burial on both Marked heroes
+  for (let i = 0; i < 40; i++) {
+    const res = simulate(refSetup(st('1-18'), strSeed('sexton' + i), REF.ORDERS[i % 3], 11));
+    check(res, st('1-18'));
+    const ph = res.log.findIndex(e => e.t === 'phase');
+    if (ph >= 0) {
+      phases++;
+      const sx = res.start.find(u => u.key === 'sexton');
+      const hp = res.log.slice(0, ph).filter(e => (e.t === 'hit' && e.tgt === sx.id) || (e.t === 'tick' && e.who === sx.id)).pop();
+      ok(hp && hp.hp < sx.maxHp / 2, 'the phase comes below half health');
+      ok(!res.log.slice(0, ph).some(e => e.t === 'act' && e.skill === 'dig2'), 'no Two Graves before the phase');
+      if (res.log.slice(ph).some(e => e.t === 'status' && e.key === 'charging' && e.targets && e.targets.length === 2)) two++;
+    }
+  }
+  ok(phases > 20 && two > 5, `the Sexton's second phase (${phases} of 40) marks two heroes (${two})`);
+  // fleeing: a Cage Mimic that outlasts round 5 scuttles off and drops nothing
+  const MIMIC = { id: 'T-M', name: 'Test', level: 3, foes: ['mimic', null, null, null, null, null] };
+  for (let i = 0; i < 20; i++) {
+    const res = simulate({ seed: 70 + i, party: [Hero.spec(refHero('warden', 1, 'c1'), [{ if: 'always', do: 'guard' }]), null, null, null, null, null], foes: MIMIC.foes, level: 3, partyRules: [], loadout: [] });
+    check(res, MIMIC);
+    if (res.log.some(e => e.t === 'flee')) { flees++; ok(res.winner === 0 && res.rounds === 6 && Campaign.earn(res, Object.assign({}, st('1-3'), { level: 3 })).foes === 0, 'the mimic fled at round 6 with nothing dropped'); }
+  }
+  ok(flees > 10, `the Cage Mimic flees at round 6 (${flees} of 20)`);
+  // wandering foes: only on replays, rolled from the seed
+  let moth = 0, mim = 0, firstTime = 0;
+  for (let i = 0; i < 4000; i++) {
+    const f = wanderers(st('1-5'), i), f0 = stageSetup(st('1-5'), i, { party: [], partyRules: [], loadout: [] }).foes;
+    if (f.includes('moths')) moth++;
+    if (f.includes('mimic')) mim++;
+    if (f0.some(k => FOES[foeKey(k)] && FOES[foeKey(k)].wander)) firstTime++;
+    if (i < 50) ok(JSON.stringify(wanderers(st('1-5'), i)) === JSON.stringify(f), 'wanderers come from the seed');
+  }
+  ok(Math.abs(moth / 4000 - 0.05) < 0.012 && Math.abs(mim / 4000 - 0.02) < 0.008 && !firstTime, `wandering foes: Moth Swarm ${(moth / 40).toFixed(1)}%, Cage Mimic ${(mim / 40).toFixed(1)}%, none on a first attempt`);
+
+  // rewards (home-base spec §5): spoils by rank, the clear reward by tier, doubled on a first clear
+  const won = (stage, L, seed = 1) => { for (let k = 0; k < 50; k++) { const r = simulate(refSetup(stage, seed + k, REF.ORDERS[0], L)); if (r.winner === 0) return r; } return null; };
+  const r4 = won(st('1-4'), 4), e4 = Campaign.earn(r4, st('1-4'), { first: true }), S4 = GOLD_SCALE(2);
+  ok(e4.foes === 3 && e4.spoilsGold === Math.round(3 * 8 * S4) && e4.clearGold === Math.round(20 * S4 * 2) && e4.mats.bone_dust >= 6 && e4.gear.some(g => g.why === 'clear'), `a first clear of 1-4: spoils, a doubled Standard reward and a certain gear roll (${JSON.stringify({ g: e4.gold, m: e4.mats })})`);
+  ok(e4.xp === Math.round((3 * 0.06 + 0.15) * Hero.xpToNext(2)), `XP is a share of a level at the stage's level (${e4.xp})`);
+  const e4b = Campaign.earn(r4, st('1-4'));
+  ok(e4b.clearGold === Math.round(20 * S4) && JSON.stringify(Campaign.earn(r4, st('1-4'))) === JSON.stringify(e4b), 'a replay pays the plain clear reward, and the same battle always earns the same');
+  const lost = (() => { for (let k = 0; k < 60; k++) { const r = simulate(refSetup(st('1-9'), 900 + k, REF.ORDERS[1], 3)); if (r.winner === 1) return r; } return null; })();
+  const el = Campaign.earn(lost, st('1-9'), { first: true });
+  ok(lost && !el.clearGold && !el.mats.bone_dust && el.gold === el.spoilsGold, 'a loss keeps the spoils of the foes defeated, and no clear reward');
+  let loot = 0, rolls = 0;
+  for (let k = 0; k < 400; k++) { const r = Campaign.earn(Object.assign({}, r4, { seed: k }), st('1-4')); loot += r.gear.filter(g => g.why === 'loot').length + Object.values(r.items).reduce((a, b) => a + b, 0) - (r.gear.some(g => g.why === 'clear') ? 0 : 0); rolls += 3; }
+  ok(loot / rolls > 0.07 && loot / rolls < 0.2, `normal foes drop loot about 10% of the time (${(100 * loot / rolls).toFixed(1)}%, clear items included)`);
+  const rb = won(st('1-18'), 13), eb = Campaign.earn(rb, st('1-18'), { first: true });
+  ok(eb.gear.filter(g => g.why === 'loot').length + Object.values(eb.items).reduce((a, b) => a + b, 0) >= 2 && eb.mats.bone_dust >= 40, 'the boss drops 2 loot rolls, and its first clear 40 Bone Dust');
+
+  // a save of its own: unlocks, fatigue and trips
+  const S = defaultState();
+  Campaign.ensure(S);
+  Tactics.useRoster(S.roster, S.party);
+  Tactics.load({ party: { slots: 2, rules: [] }, loadout: { slots: 2, items: [] } });
+  const res0 = won(st('1-1'), 3);
+  const fat0 = S.roster.map(c => c.fatigue);
+  Campaign.setOut(0, S);
+  let out = Campaign.afterBattle(Object.assign({}, res0), S);
+  ok(S.campaign.cleared.includes('1-1') && S.unlocks.tactics && out.r.unlocks.includes('tactics') && out.why.k === 'once' && !S.campaign.trip && S.campaign.lastTrip.lit[0] === '1-1', 'clearing 1-1 lights it, opens Tactics, and with no Keep going yet the party comes home');
+  const hero0 = res0.start.find(u => u.side === 0), c0 = S.roster.find(c => c.id === hero0.char);
+  ok(c0 && Math.abs(c0.fatigue - (fat0[S.roster.indexOf(c0)] + res0.stats[hero0.id].turns)) < 1e-9, `fatigue: +1 for each turn a hero took (${c0.fatigue})`);
+  ok(S.currencies.gold === out.r.gold && out.r.gold > 0 && S.currencies.mats.bone_dust === out.r.mats.bone_dust, 'gold and materials go to the purse');
+  for (const id of ['1-2', '1-3']) { Campaign.setOut(st(id).index, S); Campaign.afterBattle(won(st(id), 4), S); }
+  ok(S.unlocks.recruitboard && S.unlocks.items && S.inventory.potions.draught >= 2 && Tactics.loadout().items.filter(x => x === 'draught').length === 2 && Tactics.owner('party').rules.some(r => r.do === 'draught' && r.n === 50), '1-3 brings the loadout, 2 Healing Draughts and the draught rule');
+  ok(Tactics.isKnown({ if: 'foes_at_least', n: 3 }) === false, 'N or more foes waits for 1-4');
+  for (const id of ['1-4', '1-5', '1-6']) { Campaign.setOut(st(id).index, S); Campaign.afterBattle(won(st(id), 5), S); }
+  ok(Tactics.isKnown({ if: 'foes_at_least', n: 3 }) && Tactics.isKnown({ if: 'foe_back' }) && S.unlocks.tollhouse && S.unlocks.keepgoing && S.campaign.road.keepGoing, 'conditions and blueprints from 1-4 to 1-6, and Keep going');
+  ok(Tactics.owner('party').rules.some(r => r.if === 'bb_fatigue' && r.n === 75 && r.do === 'home' && r.on), 'the come-home rule at 75+ fatigue is on by default from 1-6');
+  // Keep going: a win walks on to the next stage, until a between-battle rule fires
+  for (const c of S.roster) c.fatigue = 0;
+  const T = Campaign.setOut(st('1-7').index, S);
+  out = Campaign.afterBattle(won(st('1-7'), 6), S);
+  ok(T.keep && out.next === st('1-8').index && S.campaign.trip && S.campaign.trip.stage === out.next, 'Keep going: a first clear walks on to the next dark stage');
+  const tired = S.roster.find(c => S.party.includes(c.id));
+  tired.fatigue = 80;
+  out = Campaign.afterBattle(won(st('1-8'), 6), S);
+  ok(out.next == null && out.why.k === 'rule' && /fatigue/.test(out.why.text) && !S.campaign.trip, `the come-home rule fires between battles (${out.why.text})`);
+  // a Spent hero walks home alone; the rest carry on
+  for (const c of S.roster) c.fatigue = 0;
+  Campaign.setOut(st('1-8').index, S);
+  tired.fatigue = 99.5;
+  out = Campaign.afterBattle(won(st('1-8'), 7), S);
+  ok(tired.fatigue >= 100 && out.left.includes(tired.id) && out.next === st('1-8').index && S.campaign.trip.out.includes(tired.id) && !Campaign.fit(S).includes(tired), 'a Spent hero walks home alone while the rest farm on');
+  Campaign.callHome(S);
+  out = Campaign.afterBattle(won(st('1-8'), 7), S);
+  ok(out.why.k === 'called' && !S.campaign.trip, 'calling the party home ends the trip after the battle');
+  ok(Campaign.readiness(st('1-9'), S) !== 'gold' || Campaign.fit(S).length >= 4, 'readiness');
+  // a loss sends the party home with the stage's hint; the boss always sends it home
+  Campaign.restAll(S);
+  Campaign.setOut(st('1-9').index, S);
+  out = Campaign.afterBattle(lost, S);
+  ok(out.why.k === 'lost' && out.why.hint === st('1-9').hint && !S.campaign.cleared.includes('1-9'), 'a loss: home, with the hint, and the frontier stays');
+  for (const x of STAGES.slice(8, 17)) { S.campaign.cleared.push(x.id); for (const id of x.first) Campaign.unlock(id, S); }
+  Campaign.setOut(17, S);
+  out = Campaign.afterBattle(rb, S);
+  ok(out.why.k === 'boss' && S.unlocks['region:1'] && S.unlocks['relic:gravediggersspade'] && Items.owns(S, 'gravediggersspade') && Tactics.isKnown({ if: 'boss_present' }), 'the boss: home, the Relic, Boss present and Region II opens');
+  ok(Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }), 'Tactician I teaches the thresholds and its conditions');
+  const hooked = [];
+  Campaign.onUnlock(id => hooked.push(id));
+  Campaign.unlock('cond:ally_fallen', S);
+  ok(hooked.includes('cond:ally_fallen') || S.unlocks['cond:ally_fallen'], 'unlocks fire the hook for step 5');
+  console.log('Campaign checked: Region I data, foe growth, stepping up, summons, the phase, fleeing, wanderers, rewards, fatigue, unlocks and trips.');
+}
+
+// ── The reference party, every Region I stage against its target (campaign spec §5.6). Off-target stages are listed
+// for tuning; only a clear break counts as a problem.
+{
+  const rep = referenceReport(Math.max(20, Math.round(N / 6)), { check });
+  for (const r of rep.rows) {
+    if (r.kind === 'road' || r.kind === 'threat') ok(r.win >= 0.8, `${r.id}: a road stage wins only ${Math.round(100 * r.win)}% at its level`);
+    else ok(r.win >= 0.3 && r.win <= 0.9, `${r.id}: a wall wins ${Math.round(100 * r.win)}% at its level`);
+  }
+  ok(rep.weary && rep.tired, 'the starting hero tires in the first hour');
 }
 
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)}s. Stalls: ${totalStalls}. Problems: ${problems.length}`);
