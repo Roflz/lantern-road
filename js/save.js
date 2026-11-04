@@ -1,7 +1,9 @@
 'use strict';
 // Lantern Road · the game state and saving.
 // One versioned state object holds everything that lasts between sessions. It is saved to localStorage and, when
-// the artifact host offers them, to the artifact db under data/users/<id>/save. The copy with the higher `rev` wins.
+// the artifact host offers them, to the artifact db under data/users/<id>/game. The copy with the higher `rev` wins.
+// (Not data/users/<id>/save: the roguelike this link used to hold keeps its own save there, with `v: 1` and a `rev`
+// of its own. Read as one of ours it would migrate into an empty game and win over the real one.)
 //
 // To extend the state in a later step:
 //   1. add the new fields to defaultState(), so new players and old saves both get them;
@@ -273,7 +275,7 @@ const Save = (() => {
       if (!db || !user) return;
       const id = await user.id();
       if (!id) return;
-      const ref = db.doc('data/users/' + id + '/save');
+      const ref = db.doc('data/users/' + id + '/game');
       const snap = await ref.get();
       doc = ref; info.cloud = 'synced';
       if (snap.exists) {
