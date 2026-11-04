@@ -17,8 +17,9 @@ const SIM = {
   QUEUE: 8,            // turns shown on the turn strip
 };
 
-// setup: { seed, party: [6 slots], foes: [6 slots], scale?: { hp, pow } }
+// setup: { seed, party: [6 slots], foes: [6 slots], scale?: { hp, pow }, partyRules?: [rules], items?: { id: count } }
 // A slot holds null, a class or foe id, or { key, name?, rules?, over? } where over replaces stats.
+// partyRules are the team-wide rules (PARTY_ACTIONS), and items the party's stock for this battle.
 function simulate(setup) {
   const rng = makeRng((setup.seed >>> 0) || 1);
   const units = [];
@@ -34,7 +35,9 @@ function simulate(setup) {
       key: spec.key, name: spec.name || src.name, hero: !side, boss: !!src.boss, elite: !!src.elite,
       maxHp: Math.round(src.hp * hpK), maxMp: src.mp, pow: Math.round(src.pow * powK), def: src.def, spd: src.spd,
       crit: src.crit, dodge: src.dodge, mpGain: src.mpGain, basic: src.basic, skills: src.skills.slice(),
+      tags: (src.tags || []).slice(),
       rules: (spec.rules || src.rules || []).map(r => Object.assign({ on: true }, r)),
+      lastTarget: null, // the foe it last attacked alone, for "Foe: the leader's target"
     };
     u.hp = u.maxHp; u.mp = Math.floor(u.maxMp / 2); u.alive = true; u.st = {};
     units.push(u);
@@ -43,12 +46,16 @@ function simulate(setup) {
   (setup.foes || []).forEach((e, i) => { if (e) make(e, 1, i); });
   const byId = {};
   for (const u of units) byId[u.id] = u;
+  const partyRules = (setup.partyRules || []).map(r => Object.assign({ on: true }, r));
+  const items = Object.assign({}, setup.items || {});
 
   const log = [];
   const emit = e => { log.push(e); return e; };
   const stats = {};
   // Per character, for the battle report: damage and healing both ways, the biggest hit, and how often each rule fired.
-  for (const u of units) stats[u.id] = { dealt: 0, taken: 0, healed: 0, healedIn: 0, soaked: 0, dot: 0, crits: 0, best: null, kills: 0, falls: 0, koRounds: [], raised: 0, revives: 0, turns: 0, basic: 0, charged: 0, rules: u.rules.map(() => 0) };
+  for (const u of units) stats[u.id] = { dealt: 0, taken: 0, healed: 0, healedIn: 0, soaked: 0, dot: 0, crits: 0, best: null, kills: 0, falls: 0, koRounds: [], raised: 0, revives: 0, turns: 0, basic: 0, charged: 0, items: 0, rules: u.rules.map(() => 0) };
+  // How often each party rule fired, and the items used.
+  const party = { rules: partyRules.map(() => 0), used: {} };
 
   let clock = 0, round = 1, enrage = 0, actor = null;
   const interval = u => 1000 / u.spd;
@@ -148,63 +155,89 @@ function simulate(setup) {
     const front = pool.filter(f => f.row === 'front');
     return near(u, front.length ? front : pool);
   }
+  // The battle as u sees it, for rule conditions (see CONDITIONS in js/data.js).
+  function view(u) {
+    const allies = living(u.side);
+    return { u, foes: living(1 - u.side), allies, fallen: fallen(u.side), round, enrage, leader: allies.reduce((b, x) => (!b || x.slot < b.slot ? x : b), null) };
+  }
   // Does the rule's condition hold? Returns false, true, or the unit it picked as the target.
   function test(u, rule, sk, pool) {
-    const n = rule.n, foes = living(1 - u.side), allies = living(u.side);
+    const C = CONDITIONS[rule.if];
+    if (!C) return false;
+    const c = view(u);
+    if (!C.who) return !!C.when(rule, c);
+    const list = C.who === 'self' ? [u] : C.who === 'foe' ? c.foes : C.who === 'ally' ? c.allies : c.fallen;
+    const cand = C.filter ? list.filter(x => C.filter(x, rule, c)) : list;
+    if (!cand.length) return false;
+    // The condition is about the side the skill hits: it picks the target, among those the skill can reach.
+    // Otherwise it only decides whether the rule fires.
     const single = sk.shape === 'foe' || sk.shape === 'ally';
-    const pickFrom = (cand, better) => {
-      if (!cand.length) return false;
-      // The condition is about the side the skill hits: it picks the target, among those the skill can reach.
-      // Otherwise it only decides whether the rule fires.
-      if (!single || !pool.length || pool[0].side !== cand[0].side) return true;
-      const ok = cand.filter(x => pool.includes(x));
-      if (!ok.length) return false;
-      return better ? ok.reduce((b, x) => (better(x, b) ? x : b)) : near(u, ok);
-    };
-    switch (rule.if) {
-      case 'always': return true;
-      case 'front_foe': return pickFrom(foes.filter(f => f.row === 'front'));
-      case 'foe_lowest': return pickFrom(foes, (x, b) => x.hp < b.hp);
-      case 'foe_hp_lt': return pickFrom(foes.filter(f => pct(f) * 100 < n), (x, b) => pct(x) < pct(b));
-      case 'foe_highest_pow': return pickFrom(foes, (x, b) => x.pow > b.pow);
-      case 'foe_charging': return pickFrom(foes.filter(f => f.st.charging));
-      case 'foe_without': return pickFrom(foes.filter(f => !f.st[rule.s]));
-      case 'foes_at_least': return foes.length >= n;
-      case 'boss_present': return foes.some(f => f.boss);
-      case 'self_hp_lt': return pct(u) * 100 < n ? pickFrom([u]) : false;
-      case 'ally_hp_lt': return pickFrom(allies.filter(a => pct(a) * 100 < n), (x, b) => pct(x) < pct(b));
-      case 'ally_fallen': return pickFrom(fallen(u.side));
-      case 'ally_without': return pickFrom(allies.filter(a => !a.st[rule.s]));
-    }
-    return false;
+    if (!single || !pool.length || pool[0].side !== cand[0].side) return true;
+    const ok = cand.filter(x => pool.includes(x));
+    if (!ok.length) return false;
+    return C.best ? ok.reduce((b, x) => (C.best(x, b, rule, c) ? x : b)) : near(u, ok);
   }
   function sample(pool, n) {
     const a = pool.slice();
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
     return a.slice(0, n);
   }
+  // The targets a skill would hit under a rule, or null if the rule doesn't hold or the skill has no target.
+  // picked: whether the rule's condition chose the target (focus fire leaves those alone).
   function resolve(u, sk, rule) {
     const pool = poolFor(u, sk);
     if (!pool.length) return null;
     let pick = true;
     if (rule) { pick = test(u, rule, sk, pool); if (!pick) return null; }
     switch (sk.shape) {
-      case 'foe': case 'ally': { const t = pick !== true ? pick : defaultTarget(u, sk, pool); return t ? [t] : null; }
-      case 'random3': return sample(pool, 3);
-      default: return pool;
+      case 'foe': case 'ally': { const t = pick !== true ? pick : defaultTarget(u, sk, pool); return t ? { targets: [t], picked: pick !== true, pool } : null; }
+      case 'random3': return { targets: sample(pool, 3), picked: false, pool };
+      default: return { targets: pool, picked: false, pool };
     }
   }
+  const usable = (u, r) => r.on && (r.do === u.basic || u.skills.includes(r.do)) && SKILLS[r.do] && (SKILLS[r.do].cost || 0) <= u.mp;
   // Read the rules from the top; the first that holds and is possible fires. Otherwise, the basic attack.
+  // Heroes read the party rules first: an item rule can spend the turn, and a focus rule can pick the foe.
   function choose(u) {
-    for (let i = 0; i < u.rules.length; i++) {
-      const r = u.rules[i], sk = SKILLS[r.do];
-      if (!r.on || !sk || (sk.cost || 0) > u.mp) continue;
-      const targets = resolve(u, sk, r);
-      if (targets) return { sk, targets, rule: i };
+    const team = u.side === 0 ? partyPlan(u) : {};
+    if (team.item) return team.item;
+    let plan = null;
+    for (let i = 0; i < u.rules.length && !plan; i++) {
+      const r = u.rules[i];
+      if (!usable(u, r)) continue;
+      const got = resolve(u, SKILLS[r.do], r);
+      if (got) plan = Object.assign(got, { sk: SKILLS[r.do], rule: i });
     }
-    const sk = SKILLS[u.basic], targets = resolve(u, sk, null);
-    if (targets) return { sk, targets, rule: -1 };
-    return { sk: SKILLS.wait, targets: [u], rule: -1 };
+    if (!plan) {
+      const got = resolve(u, SKILLS[u.basic], null);
+      plan = got ? Object.assign(got, { sk: SKILLS[u.basic], rule: -1 }) : { sk: SKILLS.wait, targets: [u], rule: -1 };
+    }
+    // Focus fire: a single-target attack whose rule didn't choose the foe goes at the party's focus.
+    const f = team.focus;
+    if (f && plan.sk.shape === 'foe' && !plan.picked && plan.pool && plan.pool.includes(f.unit)) {
+      plan.focus = f.prule;
+      if (plan.targets[0] !== f.unit) plan.targets = [f.unit];
+    }
+    return plan;
+  }
+  // The party rules, read from the top for the hero whose turn it is.
+  // Returns { item: a plan that uses an item, focus: { unit, prule } }.
+  const FOCUS = { shape: 'foe', reach: true };
+  function partyPlan(u) {
+    const out = {};
+    for (let i = 0; i < partyRules.length; i++) {
+      const r = partyRules[i], A = PARTY_ACTIONS[r.do];
+      if (!r.on || !A) continue;
+      if (A.kind === 'item' && !out.item && items[A.item] > 0) {
+        const sk = SKILLS[ITEMS[A.item].skill], got = resolve(u, sk, r);
+        if (got) { out.item = { sk, targets: got.targets, rule: -4, prule: i, item: A.item }; break; }
+      }
+      if (A.kind === 'focus' && !out.focus) {
+        const pick = test(u, r, FOCUS, living(1 - u.side));
+        if (pick && pick !== true) out.focus = { unit: pick, prule: i };
+      }
+    }
+    return out;
   }
 
   // ── a turn
@@ -212,10 +245,18 @@ function simulate(setup) {
     const { sk, targets, rule } = plan, st = stats[u.id];
     if (rule >= 0) st.rules[rule]++;
     else if (rule === -2) st.charged++;
+    else if (rule === -4) { st.items++; party.rules[plan.prule]++; items[plan.item]--; party.used[plan.item] = (party.used[plan.item] || 0) + 1; }
     else if (sk.id === u.basic) st.basic++;
+    if (plan.focus != null) party.rules[plan.focus]++;
+    if (sk.shape === 'foe') u.lastTarget = targets[0];
     u.mp -= sk.cost || 0;
     if (sk.id === u.basic) u.mp = Math.min(u.maxMp, u.mp + u.mpGain);
-    emit({ t: 'act', who: u.id, skill: sk.id, rule, targets: targets.map(x => x.id), mp: u.mp });
+    // rule: the rule that chose this (-1 none, -2 a charged attack landing, -4 a party rule: see prule).
+    // focus: the party rule that aimed it, when focus fire did. item and left: the item used and how many remain.
+    const ev = { t: 'act', who: u.id, skill: sk.id, rule, targets: targets.map(x => x.id), mp: u.mp };
+    if (rule === -4) Object.assign(ev, { prule: plan.prule, item: plan.item, left: items[plan.item] });
+    if (plan.focus != null) ev.focus = plan.focus;
+    emit(ev);
 
     if (sk.charge) {
       const tgt = targets[0];
@@ -309,7 +350,7 @@ function simulate(setup) {
   }
 
   // ── the battle
-  emit({ t: 'start', units: units.map(snap), queue: projectQueue() });
+  emit({ t: 'start', units: units.map(snap), queue: projectQueue(), partyRules: partyRules.map(r => Object.assign({}, r)), items: Object.assign({}, items) });
   let winner = -1, actions = 0, stalled = false;
   while (winner < 0) {
     const u = nextActor();
@@ -331,10 +372,19 @@ function simulate(setup) {
     else if (actions >= SIM.MAX_ACTIONS) { winner = 1; stalled = true; }
   }
   emit({ t: 'end', winner, round, actions, stalled });
-  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, start: log[0].units, final: units.map(snap) };
+  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, party, partyRules: log[0].partyRules, start: log[0].units, final: units.map(snap) };
 }
 
 // A stage's battle, with the fixed party.
-function stageSetup(stage, seed, party = PARTY) {
-  return { seed, party, foes: stage.foes, scale: stage.scale };
+// tactics: { party: [slots of { key, rules }], partyRules, items }. Without it, stageSetup.tactics() is asked (the
+// rules editor sets it, in js/rules.js), and otherwise each class's starting rules are used.
+function defaultTactics() {
+  const items = {};
+  for (const k in ITEMS) items[k] = ITEMS[k].carry;
+  return { party: PARTY, partyRules: PARTY_RULES.rules, items };
 }
+function stageSetup(stage, seed, tactics) {
+  const t = tactics || (stageSetup.tactics && stageSetup.tactics()) || defaultTactics();
+  return { seed, party: t.party, foes: stage.foes, scale: stage.scale, partyRules: t.partyRules, items: t.items };
+}
+stageSetup.tactics = null;

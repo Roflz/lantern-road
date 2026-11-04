@@ -469,7 +469,7 @@ const Battle = (() => {
       const t = { i, who: log[i].who, skill: null, rule: -1, tick: null };
       for (let j = i + 1; j < log.length && log[j].t !== 'turn'; j++) {
         const x = log[j];
-        if (x.t === 'act') { t.skill = x.skill; t.rule = x.rule; break; }
+        if (x.t === 'act') { t.skill = x.skill; t.rule = x.rule; t.prule = x.prule; t.focus = x.focus; break; }
         if (x.t === 'tick') t.tick = x.key;
       }
       out.push(t);
@@ -478,10 +478,12 @@ const Battle = (() => {
   }
   function ruleLine(u, t) {
     if (!t.skill) return [h('b', { text: t.tick ? STATUSES[t.tick].name : 'Fallen' }), 'falls before acting'];
-    if (t.rule >= 0) return [h('b', { text: `Rule ${t.rule + 1}` }), ruleCond(u.rules[t.rule])];
+    const focus = t.focus != null ? ' · focus fire' : '';
+    if (t.rule >= 0) return [h('b', { text: `Rule ${t.rule + 1}` }), ruleCond(u.rules[t.rule]) + focus];
+    if (t.rule === -4) return [h('b', { text: `Party rule ${t.prule + 1}` }), ruleCond(B.res.partyRules[t.prule])];
     if (t.rule === -2) return [h('b', { text: 'Charged' }), 'the big attack lands'];
     if (t.skill === 'wait') return [h('b', { text: 'No target' }), 'it waits'];
-    return [h('b', { text: 'No rule fit' }), 'basic attack'];
+    return [h('b', { text: 'No rule fit' }), 'basic attack' + focus];
   }
   function makeFlag(t) {
     const u = S.units[t.who], sk = t.skill && SKILLS[t.skill];

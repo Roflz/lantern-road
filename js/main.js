@@ -48,6 +48,7 @@ function showCamp() {
     h('button', { class: 'btn play', onclick: () => { sfx('click'); startStage(nextStageIndex()); } },
       allClear ? 'March again' : (save.cleared.length ? 'March on' : 'March'),
       h('span', { class: 'sub', text: `${next.id} · ${next.name}` })),
+    h('button', { class: 'btn tx-open', onclick: () => { sfx('click'); TacticsEditor.open(showCamp); } }, 'Tactics', h('span', { class: 'sub', text: 'The rules your party fights by' })),
     h('div', { class: 'stages' }, rows),
     h('div', { class: 'camp-foot' },
       h('button', { class: 'textbtn', onclick: () => { sfx('click'); showSettings(showCamp); } }, ico('gear'), 'Settings'),
