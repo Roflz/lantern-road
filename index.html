@@ -3,6 +3,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/app.css">
 
 <div id="app">
   <div id="frame">
@@ -26,6 +27,14 @@
       <button class="ctl" id="bSpeed" aria-label="Battle speed">1×</button>
       <button class="ctl wide skip" id="bSkip" aria-label="Skip to the result">Skip<svg viewBox="0 0 10 10"><path d="M1 1v8l4-4zM5 1v8l4-4z"/></svg></button>
     </div>
+    <div id="shell" hidden>
+      <header id="topbar">
+        <div id="purse" aria-label="Gold and materials"></div>
+        <button id="tbSettings" class="ctl" aria-label="Settings"></button>
+      </header>
+      <main id="views"></main>
+      <nav id="tabbar" aria-label="Screens"></nav>
+    </div>
     <div id="toasts" aria-live="polite"></div>
     <section id="screen" hidden></section>
     <div id="sheet" hidden></div>
@@ -37,5 +46,7 @@
 <script src="js/sim.js"></script>
 <script src="js/art.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/save.js"></script>
 <script src="js/battle.js"></script>
+<script src="js/app.js"></script>
 <script src="js/main.js"></script>

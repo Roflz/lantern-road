@@ -1,14 +1,10 @@
 'use strict';
-// Lantern Road · the app around the battle screen: the camp and its stage list, the battle controls, the battle
-// report, settings, saving, and boot.
+// Lantern Road · the Battle screen and its controls, the battle report, help, and boot.
+// The other screens, settings and the shell live in js/app.js; the game state and saving in js/save.js.
 
 const scr = $('#screen'), sheet = $('#sheet');
-const SAVE_KEY = 'lantern-road-idle-v1';
-const save = { cleared: [], speed: 1, best: {} };
-try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { }
-delete save.march; // the next stage never starts on its own: the player chooses when to go on
-if (![1, 2, 4].includes(save.speed)) save.speed = 1;
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
+const progress = () => Save.state.campaign;
+const speedSetting = () => Save.state.settings.speed;
 
 let current = null;        // { index, stage, seed, res } for the battle on screen
 let menuWasPaused = false; // whether the battle was paused before the menu opened
@@ -24,43 +20,24 @@ function closeScreen() { scr.hidden = true; scr.replaceChildren(); }
 function openSheet(el, cls = '') { sheet.className = cls; sheet.replaceChildren(el); sheet.hidden = false; }
 function closeSheet() { sheet.hidden = true; sheet.replaceChildren(); reportRes = null; reportView = null; }
 const btn = (label, fn, cls = '', sub) => h('button', { class: 'btn ' + cls, onclick: () => { sfx('click'); fn(); } }, label, sub ? h('span', { class: 'sub', text: sub }) : null);
-const nextStageIndex = () => { const i = STAGES.findIndex(s => !save.cleared.includes(s.id)); return i < 0 ? 0 : i; };
 
-// ── camp: the title, the march button and the stage list
-function showCamp() {
-  closeSheet();
-  Battle.play();
-  Battle.idle(STAGES[nextStageIndex()].region);
-  syncControls();
-  const next = STAGES[nextStageIndex()], allClear = STAGES.every(s => save.cleared.includes(s.id));
-  const rows = STAGES.map((s, i) => {
-    const done = save.cleared.includes(s.id), R = REGION_NAMES[s.region];
-    const foes = s.foes.filter(Boolean);
-    return h('button', { class: 'stage-row' + (done ? ' done' : '') + (s.boss ? ' boss' : '') + (s === next && !allClear ? ' next' : ''), onclick: () => { sfx('click'); startStage(i); } },
-      h('div', { class: 'k' }, `${R.num} · ${R.name} · ${s.id}`, s.boss ? h('span', { class: 'tagb', text: 'Boss' }) : null, done ? h('span', { class: 'tagd' }, ico('check'), 'Cleared') : null),
-      h('div', { class: 'nm', text: s.name }),
-      h('div', { class: 'foes' }, foes.map(k => h('img', { src: portraitURL(k, false), alt: FOES[k].name, title: FOES[k].name, class: FOES[k].boss ? 'big' : '' }))));
-  });
-  setScreen(h('div', { class: 'camp' },
-    h('div', { class: 'kicker', text: 'Idle battle prototype' }),
-    h('h1', { class: 'title', text: 'Lantern Road' }),
-    h('p', { class: 'tagline', text: 'Six lantern-bearers fight on their own, by the rules you give them. Watch, step through it turn by turn, or skip ahead.' }),
-    h('button', { class: 'btn play', onclick: () => { sfx('click'); startStage(nextStageIndex()); } },
-      allClear ? 'March again' : (save.cleared.length ? 'March on' : 'March'),
-      h('span', { class: 'sub', text: `${next.id} · ${next.name}` })),
-    h('div', { class: 'stages' }, rows),
-    h('div', { class: 'camp-foot' },
-      h('button', { class: 'textbtn', onclick: () => { sfx('click'); showSettings(showCamp); } }, ico('gear'), 'Settings'),
-      h('button', { class: 'textbtn', onclick: () => { sfx('click'); showHow(showCamp); } }, ico('book'), 'How battles work'))));
-}
+// Leave the battle for the road (the Campaign Map).
+function showCamp() { App.go('map'); }
 
 // ── a battle
+// The Battle screen. A battle in progress is remembered in the save, so a reload replays the same fight.
+App.screen('battle', {
+  enter(p) { startStage(p.stage, p.seed); },
+  leave() { current = null; progress().current = null; Save.commit(); },
+});
 function startStage(i, seed) {
   closeScreen(); closeSheet();
   const stage = STAGES[i];
   seed = seed != null ? seed : (Date.now() ^ (i * 7919)) >>> 0;
   Battle.play();
   current = { index: i, stage, seed, res: null };
+  progress().current = { stage: i, seed };
+  Save.commit();
   current.res = Battle.run(stage, seed, { onEnd: res => showReport(res), first: true });
   syncControls();
 }
@@ -77,16 +54,17 @@ function stepTurn() { if (Battle.busy) { Battle.stepOnce(); syncControls(); } }
 function onSkip() { if (Battle.busy) { sfx('click'); Battle.skip(); } }
 function cycleSpeed() {
   const l = [1, 2, 4];
-  save.speed = l[(l.indexOf(save.speed) + 1) % l.length]; persist();
-  Battle.setSpeed(save.speed); syncControls();
+  const st = Save.state.settings;
+  st.speed = l[(l.indexOf(st.speed) + 1) % l.length]; Save.commit();
+  Battle.setSpeed(st.speed); syncControls();
 }
 function syncControls() {
   const p = Battle.paused, b = $('#bPlay');
   b.innerHTML = p ? ICON_PLAY : ICON_PAUSE;
   b.setAttribute('aria-label', p ? 'Play' : 'Pause');
   b.classList.toggle('on', p);
-  $('#bSpeed').textContent = save.speed + '×';
-  $('#bSpeed').classList.toggle('on', save.speed > 1);
+  $('#bSpeed').textContent = speedSetting() + '×';
+  $('#bSpeed').classList.toggle('on', speedSetting() > 1);
   $('#pausedTag').hidden = !(p && Battle.busy && sheet.hidden);
 }
 function resumeFromMenu() { closeSheet(); closeScreen(); Battle.setPaused(menuWasPaused); syncControls(); }
@@ -97,7 +75,7 @@ function openMenu(again) {
     h('div', { class: 'kicker', text: current ? `${current.stage.id} · ${current.stage.name}` : 'Paused' }),
     h('h2', { text: 'Paused' }),
     btn('Resume', resumeFromMenu, 'primary'),
-    btn('Retreat to camp', () => { closeSheet(); showCamp(); }, '', 'Leave this battle. Nothing is lost.'),
+    btn('Retreat to the road', () => { closeSheet(); showCamp(); }, '', 'Leave this battle. Nothing is lost.'),
     settingRows(() => openMenu(true)),
     btn('How battles work', () => { closeSheet(); showHow(() => { closeScreen(); openMenu(true); }); })), 'menu');
   syncControls();
@@ -184,9 +162,11 @@ function showReport(res, opts = {}) {
   const stage = current.stage, won = res.winner === 0;
   if (!res.saved) {
     res.saved = true;
+    const save = progress();
     if (won && !save.cleared.includes(stage.id)) save.cleared.push(stage.id);
     if (won) { const b = save.best[stage.id]; if (!b || res.rounds < b) save.best[stage.id] = res.rounds; }
-    persist();
+    save.current = null; // the fight is over: a reload now returns to the road, not into this battle
+    Save.commit();
   }
   const again = reportView && reportView.res === res && !sheet.hidden;
   const v = reportView = Object.assign(again ? reportView : { res, side: 0, stat: 'dealt', sel: null }, opts);
@@ -209,9 +189,9 @@ function showReport(res, opts = {}) {
   const nextI = current.index + 1 < STAGES.length ? current.index + 1 : -1;
   const actions = won
     ? [nextI >= 0 ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startStage(nextI); } }, 'Next stage', h('span', { class: 'sub', text: `${STAGES[nextI].id} · ${STAGES[nextI].name}` }))
-      : h('button', { class: 'btn primary', onclick: () => { sfx('click'); showCamp(); } }, 'The road is clear', h('span', { class: 'sub', text: 'Back to camp' })),
-    btn('Fight again', () => startStage(current.index)), btn('Camp', showCamp)]
-    : [btn('Try again', () => startStage(current.index), 'primary'), btn('Camp', showCamp)];
+      : h('button', { class: 'btn primary', onclick: () => { sfx('click'); App.go('home'); } }, 'The road is clear', h('span', { class: 'sub', text: 'Back to base' })),
+    btn('Fight again', () => startStage(current.index)), btn('Road', showCamp)]
+    : [btn('Try again', () => startStage(current.index), 'primary'), btn('Road', showCamp)];
   const box = h('div', { class: 'box report-box wide' },
     h('div', { class: 'rhead' },
       h('div', { class: 'rtitle' },
@@ -239,19 +219,12 @@ function showReport(res, opts = {}) {
 // ── settings and help
 const toggle = (on, fn, label) => h('button', { class: 'small' + (on ? ' on' : ''), role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': label, onclick: () => { fn(); sfx('click'); } }, on ? 'On' : 'Off');
 function settingRows(redraw) {
-  const row = (name, desc, on, fn) => h('div', { class: 'setting' }, h('div', { class: 'nm', text: name }), h('div', { class: 'ds', text: desc }), toggle(on, () => { fn(); saveSettings(); persist(); redraw(); }, name));
+  const st = Save.state.settings;
+  const row = (name, desc, on, fn) => h('div', { class: 'setting' }, h('div', { class: 'nm', text: name }), h('div', { class: 'ds', text: desc }), toggle(on, () => { fn(); App.applySettings(true); Save.commit(); redraw(); }, name));
   return [
-    row('Sound effects', 'Swords, spells and footfalls.', settings.sfx, () => { settings.sfx = !settings.sfx; }),
-    row('Screen shake and flashes', 'Turn off for a calmer screen.', settings.motion, () => { settings.motion = !settings.motion; }),
+    row('Sound effects', 'Swords, spells and footfalls.', st.sfx, () => { st.sfx = !st.sfx; }),
+    row('Reduced motion', 'No screen shake or flashes.', !st.motion, () => { st.motion = !st.motion; }),
   ];
-}
-function showSettings(back) {
-  setScreen(h('div', { class: 'page' },
-    h('button', { class: 'btn back', onclick: () => { sfx('click'); back(); } }, '← Back'),
-    h('div', { class: 'kicker', text: 'Make it yours' }), h('h1', { text: 'Settings' }),
-    h('div', { class: 'list' }, settingRows(() => showSettings(back))),
-    h('p', { class: 'note', text: 'Music is off for now. It will come back in a later build.' }),
-    h('div', { class: 'version', text: 'Lantern Road · idle battle prototype · step 1' })));
 }
 function showHow(back) {
   setScreen(h('div', { class: 'page how' },
@@ -283,7 +256,13 @@ $('#bMenu').addEventListener('click', () => { sfx('click'); openMenu(); });
 $('#hudRound').addEventListener('click', e => toast(e.currentTarget.dataset.tip.replace('|', ': ')));
 document.addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
-  if (!sheet.hidden || !scr.hidden) { if (e.key === 'Escape' && !sheet.hidden && sheet.className === 'menu') resumeFromMenu(); return; }
+  if (!sheet.hidden || !scr.hidden) {
+    if (e.key !== 'Escape') return;
+    if (!sheet.hidden && sheet.className === 'menu') resumeFromMenu();
+    else if (!sheet.hidden && App.current !== 'battle') closeSheet();
+    else if (!scr.hidden && App.current !== 'battle') closeScreen();
+    return;
+  }
   if (e.key === ' ' || e.key === 'p' || e.key === 'P') { e.preventDefault(); togglePlay(); }
   else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowRight') { e.preventDefault(); stepTurn(); }
   else if (e.key === 's' || e.key === 'S') onSkip();
@@ -292,14 +271,13 @@ document.addEventListener('keydown', e => {
 });
 
 // ── boot
-// When the page is republished, a viewer mid-battle gets the same battle again: the same seed replays it.
+// When the page is republished or reloaded, a viewer mid-battle gets the same battle again: the same seed replays it.
 function boot(data) {
-  saveSettings();
+  Save.load();
+  if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) progress().current = { stage: data.stage, seed: data.seed };
   Battle.init();
   Battle.onPause = () => syncControls();
-  Battle.setSpeed(save.speed);
-  if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) startStage(data.stage, data.seed);
-  else showCamp();
+  App.start();
 }
 try {
   const hot = window.claude && window.claude.hot;
