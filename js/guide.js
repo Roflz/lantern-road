@@ -115,7 +115,7 @@ const Guide = (() => {
     recruitboard: () => ({ line: 'It stands at camp, and your first recruit is free.', label: 'Recruit', fn: goBoard }),
     items: () => ({ line: 'Two Healing Draughts are packed. A party rule uses one when an ally drops below half health, or tap one in battle.', label: 'The loadout', fn: () => App.actions.tactics('party', 'map') }),
     keepgoing: () => ({ line: 'After a win the party walks on to the next stage. The come-home rule brings everyone back at 75 fatigue.' }),
-    tactician: () => ({ line: 'A blueprint. Building it teaches Tactician I: thresholds, Focus fire, saved rule sets and a dozen conditions.', ...BUILD('tactician') }),
+    tactician: () => ({ line: 'Thresholds, Focus fire, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     gravecaller: () => ({ line: 'A new class joins the Recruit Board: the Gravecaller, who raises thralls from the fallen.', label: 'Recruit', fn: goBoard }),
   };
   function newRow(id) {
@@ -127,7 +127,7 @@ const Guide = (() => {
       : { line: 'A new condition for your rules.', label: 'Tactics', fn: () => App.actions.tactics(leader(), 'map') };
     if (!o && U.kind === 'building' && typeof BUILDINGS !== 'undefined' && BUILDINGS[id]) o = { line: `A blueprint: build it on an empty plot at camp. ${U.line || ''}`.trim(), ...BUILD(id) };
     if (!o && U.kind === 'relic') o = { line: 'A Relic: unique, and it can’t be sold. It went into the Bag.', label: 'See it', fn: () => { const x = st().inventory.items.find(p => p.id === U.relic) || st().roster.map(c => c.gear.weapon || c.gear.armor || c.gear.accessory).find(p => p && p.id === U.relic); App.go('bag'); if (x) GearUI.card(x.uid, { after: () => App.refresh() }); } };
-    if (!o && U.kind === 'region') { const r = +id.split(':')[1]; o = { line: `${REGIONS[r] ? REGIONS[r].name : 'A new region'} opens: the road goes on.`, label: 'The map', fn: () => RoadMap.show(r) }; }
+    if (!o && U.kind === 'region') { const r = +id.split(':')[1]; o = { line: `Region ${['I', 'II', 'III', 'IV', 'V'][r] || r + 1} is open. The road goes on past the boss.`, label: 'The map', fn: () => RoadMap.show(r) }; }
     if (!o) o = { line: U.line || '' };
     const name = U.kind === 'condition' ? `New condition: ${U.name}` : U.name;
     return h('div', { class: 'newrow' },

@@ -169,7 +169,9 @@ const Battle = (() => {
     const now = performance.now();
     if (!u.popAt || now - u.popAt > 260) u.popN = 0;
     u.popAt = now;
-    const [x, y0] = css(u.x, headY(u) - 1), y = y0 - (u.popN++ % 4) * 13;
+    // In battle, a pop rises about 34px: keep it clear of the turn flags along the top (about 52px).
+    const k = u.popN++ % 4, [x, y0] = css(u.x, headY(u) - 1), top = S.land && B ? 88 : 0;
+    const y = y0 - k * 13 >= top ? y0 - k * 13 : top + k * 13; // near the top, stack downward instead
     const el = h('div', { class: 'num ' + cls, text });
     el.style.left = x + 'px'; el.style.top = y + 'px';
     el.style.animationDuration = Math.max(450, 1300 / P.speed) + 'ms';

@@ -28,11 +28,12 @@ CLOCK = """
   window.__pass = ms => { skew += ms; };
   // what the first hour shows, as it appears
   window.__seen = { coach: [], tips: [], news: [] };
-  new MutationObserver(list => { for (const m of list) for (const n of m.addedNodes) {
+  const watch = () => new MutationObserver(list => { for (const m of list) for (const n of m.addedNodes) {
     if (!(n instanceof HTMLElement)) continue;
     if (n.classList.contains('coach-tip')) window.__seen.coach.push(n.textContent);
     if (n.classList.contains('toast') && n.classList.contains('tip')) window.__seen.tips.push(n.textContent);
-  } }).observe(document.documentElement, { childList: true, subtree: true });
+  } }).observe(document.body, { childList: true, subtree: true });
+  if (document.body) watch(); else document.addEventListener('DOMContentLoaded', watch);
 })();
 """
 
@@ -185,6 +186,12 @@ def main():
                 problems.append('a trip did not end')
                 js("() => { Campaign.end({ k: 'called', text: 'test' }); App.go('map'); }")
 
+        # home from the last trip: the summary's new things
+        tap('#tabbar .tab', 'Road', 900)
+        news = js("() => [...document.querySelectorAll('.tripcard .newrow b')].map(b => b.textContent)")
+        if news:
+            js('n => __seen.news.push(...n)', news)
+            shot('news')
         st = state()
         seen = js('() => window.__seen')
         shot('end')

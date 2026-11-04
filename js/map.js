@@ -289,25 +289,27 @@ const RoadMap = (() => {
     { rule: HOME_RULE, label: 'Fatigue 75+', icon: 'fatigue', need: 'keepgoing', at: '1-6' },
     { rule: { if: 'bb_fell', do: 'home' }, label: 'An ally fell', icon: 'skull', need: 'tactician', at: '1-11' },
     { rule: { if: 'bb_next_boss', do: 'home' }, label: 'Before a boss or elite', icon: 'boss', need: 'cond:bb_next_boss', at: '1-15' },
+    { rule: { if: 'bb_out', s: 'draught', do: 'home' }, label: 'Out of draughts', icon: 'flask', need: 'tactician', at: '1-11' },
   ];
   function roadSettings(i) {
     const s = Save.state, road = s.campaign.road, kg = Campaign.has('keepgoing');
     // Nothing before it's useful (campaign spec §8.1): the trip settings appear with Keep going, at 1-6.
     if (!kg) return null;
     const prules = Tactics.owner('party').rules;
-    const idxOf = r => prules.findIndex(x => x.if === r.if && x.do === r.do && (r.n == null || x.n === r.n));
+    const idxOf = r => prules.findIndex(x => x.if === r.if && x.do === r.do && (r.n == null || x.n === r.n) && (r.s == null || x.s === r.s));
     const chip = c => {
       const open = Campaign.has(c.need), k = idxOf(c.rule), on = open && k >= 0 && prules[k].on;
       return h('button', { class: 'chip' + (on ? ' on' : '') + (open ? '' : ' locked'), 'aria-pressed': on ? 'true' : 'false', disabled: !open, title: open ? `Party rule: ${ruleText(c.rule)}` : `Opens at ${c.at}`,
         onclick: () => {
           click();
           if (k >= 0) Tactics.toggle('party', k);
-          else if (!Tactics.grantPartyRule(c.rule)) { toast('The party rules are full. Make room on the Tactics screen.'); return; }
+          else if (!Tactics.add('party', c.rule)) { toast(prules.length >= Tactics.owner('party').slots ? 'The party rules are full. Make room on the Tactics screen, or the Tactician adds slots.' : 'That rule isn’t taught yet.'); return; }
           Save.commit(); stageSheet(i);
         } }, ico(open ? (UI_ICONS[c.icon] ? c.icon : 'lantern') : 'lock'), c.label);
     };
     const sets = Tactics.sets(), cur = Campaign.setFor(i);
-    const setRow = !Campaign.taught() ? null : sets.length
+    // Rule sets come with Tactician I (1-11); until then the row isn't shown (nothing before it's useful).
+    const setRow = !Campaign.has('tactician') ? null : sets.length
       ? h('select', { class: 'setpick', 'aria-label': 'Rule set for this stage', onchange: e => { const v = e.target.value; if (v) { Campaign.chooseSet(i, v); toast(`“${v}” loaded`); } else Campaign.chooseSet(i, null); Save.commit(); } },
         h('option', { value: '' }, 'As they are'), sets.map(x => h('option', { value: x.name, selected: cur === x.name ? 'selected' : null }, x.name)))
       : h('span', { class: 'chip locked' }, ico('book'), 'Save a set on Tactics');
@@ -318,20 +320,34 @@ const RoadMap = (() => {
       h('div', { class: 'row wrap' }, h('span', { class: 'k', text: 'Come home when' }), h('span', { class: 'sp' }), h('div', { class: 'chips' }, CHIPS.map(chip))),
       setRow ? h('div', { class: 'row' }, h('span', { class: 'k', text: 'Rule set' }), h('span', { class: 'sp' }), setRow) : null);
   }
-  // The party: each hero's sprite, level and fatigue sliver, tired heroes flagged. Edit opens the Party board.
+  // The party: each hero's sprite, level and fatigue sliver, tired heroes flagged. A Spent hero rests at camp until
+  // fit again (below 50): the strip says when, and leads to the beds. Edit opens the Party board.
+  const timeStr = ms => (typeof Camp !== 'undefined' ? Camp.timeStr(ms) : `${Math.max(1, Math.ceil(ms / 60000))}m`);
+  const fitIn = (c, s) => (typeof Fatigue !== 'undefined' ? Fatigue.timeTo(c, REST.FIT - 0.01, s) : null);
   function partyStrip(st) {
     const s = Save.state, list = s.party.map(id => Save.char(id)).filter(Boolean);
-    const tired = list.some(c => (c.fatigue || 0) > 0);
+    const out = list.filter(c => Campaign.spent(c));
     return h('div', { class: 'pstrip' },
       h('div', { class: 'ps-list' }, list.map(c => {
         const f = c.fatigue || 0, cls = Campaign.spent(c) ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
         const low = c.level < st.level;
-        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? ' · Spent: can’t set out' : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
+        const t = Campaign.spent(c) ? fitIn(c, s) : null;
+        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? (t != null ? ` · Spent: fit in ${timeStr(t)}` : ' · Spent: can’t set out') : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
           h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
       })),
       h('div', { class: 'ps-acts' },
-        tired ? h('button', { class: 'textbtn proto proto-only', title: 'Prototype: everyone rests at once. At camp, rest takes time: the fire, and the Infirmary’s beds', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : h('span'),
+        out.length ? restNote(out, s) : h('span'),
         h('button', { class: 'small', onclick: () => { click(); closeSheet(); App.go('party'); } }, 'Edit party')));
+  }
+  // Spent heroes rest at camp: when the last of them is fit again. It opens the Infirmary, whose beds rest faster, or
+  // the camp's fire before the Infirmary stands.
+  function restNote(list, s) {
+    const times = list.map(c => fitIn(c, s)), t = times.every(x => x != null) ? Math.max(...times) : null;
+    const beds = typeof Base !== 'undefined' && Base.built('infirmary', s);
+    const each = list.map((c, k) => `${c.name}: ${times[k] != null ? 'fit in ' + timeStr(times[k]) : 'Spent'}`).join(' · ');
+    return h('button', { class: 'textbtn rest', title: `${each}. Spent heroes rest at camp, ${beds ? 'by the fire or faster in the Infirmary’s beds' : 'by the fire'}.`,
+      onclick: () => { click(); closeSheet(); if (beds && App.actions.building) App.actions.building('infirmary'); else App.go('home'); } },
+      ico('fatigue'), t != null ? `${list.length > 1 ? 'All fit' : 'Fit'} in ${timeStr(t)}` : 'Spent: resting');
   }
   // Set out (or farm): the party walks the lit road and the battle starts where they stop.
   function setOut(i) {

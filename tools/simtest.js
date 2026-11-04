@@ -892,6 +892,20 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     ok(Base.renown(st).level === 25 && Base.plotsCleared(st) === 14, 'every plot by Renown 25: 14 in all');
   }
 
+  // ── Tactician I belongs to the 1-11 clear. A save that recorded the clear without it (made while the building taught
+  // it, or before “out of an item” joined it) learns it when it loads.
+  {
+    const keep = Tactics.dump(), st = fresh();
+    Tactics.reset();
+    ok(!Tactics.isKnown({ if: 'bb_fell' }) && !Tactics.isKnown({ if: 'bb_out', s: 'draught' }) && !Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }), 'new rules know nothing of Tactician I');
+    Base.prepare(st);
+    ok(!Tactics.isKnown({ if: 'bb_fell' }), 'without the 1-11 clear, loading teaches nothing');
+    st.unlocks.tactician = 1;
+    Base.prepare(st);
+    ok(Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'bb_out', s: 'lampoil' }) && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }), 'with it, loading catches up Tactician I');
+    ok(!Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && !Tactics.isKnown({ if: 'battle_start' }), 'Lesson II still waits for the Tactician’s level 3');
+    Tactics.load(keep);
+  }
   // ── the Masters' Hall, the Shrine, the Tactician, the Shop and dismissing
   {
     const st = fresh();
@@ -913,10 +927,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     Hero.learn(c, 'lunge');
     const g1 = st.currencies.gold;
     ok(Base.respec(c.id, st) && !c.skills.lunge && st.currencies.gold === g1 - Base.respecPrice(c, st), 'the Shrine respecs for gold');
-    ok(Base.build('tactician', 2, st) && Base.partySlots(st) === 2 && Base.loadoutSlots(st) === 2, 'the Tactician starts at 2 and 2');
-    ok(Tactics.isKnown({ if: 'foe_hp_lt', n: 30 }) && Tactics.isKnown({ if: 'one_foe' }), 'its first lesson teaches thresholds and conditions');
+    ok(Base.build('tactician', 2, st) && Base.partySlots(st) === 3 && Base.loadoutSlots(st) === 2 && Tactics.owner('party').slots === 3, 'the Tactician builds on Tactician I: level 1 is a 3rd party rule slot');
     Base.upgrade('tactician', null, st);
-    ok(Base.partySlots(st) === 3 && Base.loadoutSlots(st) === 3 && Tactics.loadout().slots === 3 && Tactics.owner('party').slots === 3, 'level 2: a 3rd party rule slot and a 3rd loadout slot');
+    ok(Base.partySlots(st) === 3 && Base.loadoutSlots(st) === 3 && Tactics.loadout().slots === 3 && Tactics.owner('party').slots === 3, 'level 2: a 3rd loadout slot');
     ok(Base.build('shop', 3, st) && Base.itemPrice('draught', st) === Math.round(25 * 2.5) && (st.unlocks['region:3'] = 1, Base.itemPrice('draught', st) === 25 * 7), 'a Healing Draught costs 25 in Region I, ×2.5 in Region II and ×7 in Region IV');
     ok(Base.buyItem('draught', 2, st) && st.inventory.potions.draught === 2 && Base.sellItem('draught', st) === Math.round(25 * 7 * 0.3), 'buying, and selling for 30%');
     ok(st.shop.stall.length === 2 && Base.stallPrice(st.shop.stall[0], st) === 4 * Items.sellPrice(st.shop.stall[0]), 'the gear stall: 2 pieces at 4 times their sell price');
@@ -1080,11 +1093,25 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   Campaign.setOut(17, S);
   out = Campaign.afterBattle(rb, S);
   ok(out.why.k === 'boss' && S.unlocks['region:1'] && S.unlocks['relic:gravediggersspade'] && Items.owns(S, 'gravediggersspade') && Tactics.isKnown({ if: 'boss_present' }), 'the boss: home, the Relic, Boss present and Region II opens');
-  // With the home base, 1-11 brings the Tactician's blueprint, and building it teaches Lesson I.
-  ok(!Tactics.isKnown({ if: 'bb_fell' }) && S.unlocks.tactician, '1-11 brings the Tactician’s blueprint');
+  // 1-11 teaches Tactician I and brings the Tactician's blueprint. The building builds on it: a 3rd party rule slot.
+  ok(S.unlocks.tactician && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }) && Tactics.isKnown({ if: 'bb_out', s: 'draught' }), '1-11 teaches Tactician I (the thresholds, its conditions and “out of an item”) and brings the Tactician’s blueprint');
   Base.ensure(S); S.currencies.gold += 1000; S.currencies.mats.bone_dust += 50;
-  ok(Base.build('tactician', S.base.plots.indexOf(null), S), 'the Tactician stands');
-  ok(Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }), 'Tactician I teaches the thresholds and its conditions');
+  const slots0 = Tactics.owner('party').slots;
+  ok(Base.build('tactician', S.base.plots.indexOf(null), S) && Tactics.owner('party').slots === Math.min(5, slots0 + 1), `the Tactician stands, with a 3rd party rule slot (${slots0} → ${Tactics.owner('party').slots})`);
+  // “Out of [item]” (Tactician I): a between-battle rule that sends the party home once the Bag has none left
+  const outRule = { if: 'bb_out', s: 'draught', do: 'home' };
+  ok(CONDITIONS.bb_out.bb(outRule, { bag: { draught: 0, salts: 3 } }) && !CONDITIONS.bb_out.bb(outRule, { bag: { draught: 2 } }) && ruleCond(outRule) === 'Between battles: out of Healing Draughts', 'out of Healing Draughts holds only when the Bag has none');
+  ok(Tactics.add('party', outRule) && Tactics.owner('party').rules.length <= Tactics.owner('party').slots, 'the new slot takes the rule');
+  Campaign.restAll(S); S.campaign.road.keepGoing = true; S.inventory.potions.draught = 20;
+  Campaign.setOut(st('1-8').index, S);
+  out = Campaign.afterBattle(won(st('1-8'), 8), S);
+  ok(out.next != null && S.campaign.trip && S.inventory.potions.draught > 0, 'with draughts in the Bag, the trip goes on');
+  S.inventory.potions.draught = 0;
+  out = Campaign.afterBattle(won(st('1-8'), 8, 7), S);
+  const dry = !(S.inventory.potions.draught > 0);
+  ok(dry && out.why && out.why.k === 'rule' && /out of Healing Draughts/.test(out.why.text) && !S.campaign.trip, `with none left, the party comes home (${out.why ? out.why.text : 'no reason'})`);
+  if (S.campaign.trip) Campaign.end(null, S);
+  Tactics.remove('party', Tactics.owner('party').rules.findIndex(r => r.if === 'bb_out'));
   const hooked = [];
   Campaign.onUnlock(id => hooked.push(id));
   Campaign.unlock('cond:ally_fallen', S);

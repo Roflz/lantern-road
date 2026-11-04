@@ -97,7 +97,7 @@ for (const id in BUILDINGS) BUILDINGS[id].id = id;
 const BLV = {
   bedsN: [0, 2, 3, 3, 4, 5], bedRate: [0, 20, 22, 26, 30, 35],
   roster: [8, 11, 14, 17, 20, 24],
-  partySlots: [2, 2, 3, 4, 4, 5], loadoutSlots: [2, 2, 3, 3, 4, 4],
+  partySlots: [2, 3, 3, 4, 4, 5], loadoutSlots: [2, 2, 3, 3, 4, 4],
   toll: [0, 50, 65, 65, 80, 80], kind: [0, 1, 1.3, 1.3, 1.6, 1.6],
   scav: [0, 1.5, 2, 2, 2.5, 2.5],
   yard: [0, 1, 2, 2, 3, 3],
@@ -122,11 +122,11 @@ const LESSONS = {
   skill2: { name: 'Skill slot II', kind: 'skill', n: 2, level: 100, hours: 24, gold: 15000, hall: 4 },
 };
 for (const id in LESSONS) LESSONS[id].id = id;
-// What the Tactician teaches at its levels 1, 3 and 4 (home-base spec §3). Conditions are taught with every number or
-// status they offer.
+// Tactician I comes with the 1-11 clear (js/campaign.js teaches it, from TACTICIAN_I in js/data.js), the same clear that
+// brings the building's blueprint. The building builds on it: party rule and loadout slots, and Lessons II and III at its
+// levels 3 and 4 (home-base spec §3). Conditions are taught with every number or status they offer.
+const TACTICIAN_I_LINE = 'Thresholds from 25% to 90%, mana, rows and statuses, Foe: health below, the leader’s target, One foe left, and the “an ally fell” and “out of an item” rules. Also Focus fire and saved rule sets.';
 const TACTICIAN_LESSONS = {
-  1: { name: 'Lesson I', conds: ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell', 'bb_out', 'bb_item'],
-    thresholds: true, line: 'Thresholds from 25% to 90%, mana, rows and statuses, Foe: health below, the leader’s target, One foe left, and the “an ally fell” and “out of an item” rules. Also Focus fire.' },
   3: { name: 'Lesson II', conds: ['self_hp_gt', 'ally_mp_lt', 'foe_highest', 'foe_has', 'battle_start', 'allies_hurt'], line: 'Self: health above, Ally: mana below, Foe: highest health, Foe: has, Battle start and N or more allies hurt.' },
   4: { name: 'Lesson III', conds: [], line: 'Switch rule set: party rules can change everyone’s tactics on their own.' },
 };
@@ -236,8 +236,8 @@ const Base = (() => {
   const built = (id, s = store()) => level(id, s) > 0;
   const choice = (id, lv, s = store()) => { const x = rec(id, s); return x && x.choices ? x.choices[lv] || null : null; };
   const hasChoice = (id, key, s = store()) => { const x = rec(id, s); return !!x && (x.choices[3] === key || x.choices[5] === key); };
-  // Is it a blueprint you can build: unlocked by the road, and not standing yet?
-  const blueprint = (id, s = store()) => BUILDINGS[id].plot !== false && unlocked(BUILDINGS[id].unlock, s);
+  // Is it a blueprint you can build: unlocked by the road (its unlock, or its own id if the campaign records one).
+  const blueprint = (id, s = store()) => BUILDINGS[id].plot !== false && (unlocked(BUILDINGS[id].unlock, s) || !!(s && s.unlocks && s.unlocks[id]));
   const available = (s = store()) => BUILDING_ORDER.filter(id => blueprint(id, s) && !built(id, s));
   // The cost of raising a building to a level: { gold, mat, n }.
   function cost(id, lv) {
@@ -371,17 +371,14 @@ const Base = (() => {
     const floor = (s.base.legacySlots || {});
     Tactics.setSlots(Math.max(partySlots(s), floor.party || 0), Math.max(loadoutSlots(s), floor.loadout || 0));
   }
-  // The Tactician's lessons: every condition of each lesson its level has reached.
+  // The Tactician's lessons: every condition of each lesson its level has reached. Tactician I is the 1-11 clear's; it is
+  // taught here too for a save that recorded the clear without it (made while the building taught it, or before “out of
+  // an item” joined it), and for the prototype's blueprints.
   function teach(s = store()) {
-    if (typeof Tactics === 'undefined') return;
-    const keys = [];
-    for (const lv in TACTICIAN_LESSONS) {
-      if (level('tactician', s) < +lv) continue;
-      const L = TACTICIAN_LESSONS[lv];
-      const conds = +lv === 1 && typeof TACTICIAN_I !== 'undefined' ? TACTICIAN_I : L.conds; // the campaign's list, when it has one
-      for (const id of conds) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
-      if (L.thresholds) for (const id of ['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt', 'bb_fatigue']) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
-    }
+    if (typeof Tactics === 'undefined' || !s) return;
+    const keys = [], add = id => { if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v)); };
+    if (unlocked('tactician', s) && typeof TACTICIAN_I !== 'undefined') for (const id of TACTICIAN_I.concat(['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt', 'bb_fatigue'])) add(id);
+    for (const lv in TACTICIAN_LESSONS) if (level('tactician', s) >= +lv) TACTICIAN_LESSONS[lv].conds.forEach(add);
     if (Tactics.learnMany) Tactics.learnMany(keys); else keys.forEach(k => Tactics.learn(k));
   }
 
@@ -1022,7 +1019,7 @@ const Base = (() => {
   // ── boot: wrap the battle setup, catch up on time away, and report it
   let report = null;
   // Before anything else at boot: the battle setup draws from the Bag, and the campaign's hooks reach the camp.
-  function prepare(s = store()) { if (s) ensure(s); wrapSetup(); hookCampaign(); }
+  function prepare(s = store()) { if (s) { ensure(s); teach(s); } wrapSetup(); hookCampaign(); }
   function start(s = store(), o = {}) {
     if (!s) return null;
     prepare(s);
@@ -1097,7 +1094,7 @@ const Base = (() => {
   const proto = {
     gold: (n = 1000, s = store()) => { s.currencies.gold += n; changed(s); },
     mats: (n = 50, s = store()) => { for (const m of MATERIALS) s.currencies.mats[m.id] = (s.currencies.mats[m.id] || 0) + n; changed(s); },
-    blueprints: (s = store()) => { const t = Date.now(); for (const id of ['recruitboard', 'items', 'tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit', 'gravecaller', 'region:1', 'region:2', 'region:3', 'region:4']) if (!s.unlocks[id]) s.unlocks[id] = t; ensure(s); tick(s); changed(s); },
+    blueprints: (s = store()) => { const t = Date.now(); for (const id of ['recruitboard', 'items', 'tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit', 'gravecaller', 'region:1', 'region:2', 'region:3', 'region:4']) if (!s.unlocks[id]) s.unlocks[id] = t; ensure(s); teach(s); tick(s); changed(s); },
     renown: (s = store()) => { const R = renown(s); award(null, R.need - R.into, s); ensure(s); changed(s); },
     // Time travel: the clock jumps on, as if you had been away (the party counts as home), and the away sheet reports it.
     skip: (hours = 1, s = store()) => { const before = snapshot(s); s.base.skew += hours * HOUR; tickTo(now(s), s, { offline: true }); report = makeReport(s, before, hours * HOUR); changed(s); },

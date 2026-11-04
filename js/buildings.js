@@ -32,7 +32,7 @@ const Buildings = (() => {
       case 'infirmary': return [null, '2 beds, 20 fatigue an hour', '3 beds at 22 an hour', 'Beds at 26 an hour, and a still-room that brews a Healing Draught every 6 hours', '4 beds at 30 an hour', '5 beds at 35 an hour; the fire rests 14 an hour; the still-room also brews Smelling Salts'][lv];
       case 'trainingyard': return [null, '1 trainee, 10% of a level an hour', '2 trainees', null, '3 trainees', null][lv];
       case 'shop': return [null, 'Healing Draughts and Lamp Oil, and 2 pieces of gear', 'Adds Smelling Salts', 'Adds Bitter Tinctures, and a third piece of gear', 'Party items cost 15% less', '4 pieces of gear, at least one Fine or better'][lv];
-      case 'tactician': return [null, 'Lesson I, Focus fire, and 2 party rule slots', '3 party rule slots and 3 loadout slots', 'Lesson II, and 4 party rule slots', 'Lesson III: Switch rule set, and 4 loadout slots', '5 party rule slots'][lv];
+      case 'tactician': return [null, '3 party rule slots', '3 loadout slots', 'Lesson II, and 4 party rule slots', 'Lesson III: Switch rule set, and 4 loadout slots', '5 party rule slots'][lv];
       case 'scavengercamp': return [null, '1.5 an hour', '2 an hour', null, '2.5 an hour', null][lv];
       case 'barracks': return `Roster cap ${BLV.roster[lv]}`;
       case 'salvagepit': return [null, 'A gear roll every 3 hours', 'Every 2.5 hours', null, 'Every 2 hours', null][lv];
@@ -287,9 +287,15 @@ const Buildings = (() => {
     return [ey('Now'), panel(h('div', { class: 'stats2' },
       h('div', { class: 'stt' }, h('span', { class: 'k', text: 'Party rule slots' }), h('span', { class: 'v', text: String(Base.partySlots(st)) })),
       h('div', { class: 'stt' }, h('span', { class: 'k', text: 'Loadout slots' }), h('span', { class: 'v', text: String(Base.loadoutSlots(st)) })))),
-      ey('Lessons'), h('div', { class: 'pickl' }, Object.entries(TACTICIAN_LESSONS).map(([lv, T]) => h('div', { class: 'rost' + (L >= +lv ? '' : ' no') }, ico(L >= +lv ? 'check' : 'lock', 'l'),
-        h('div', {}, h('span', { class: 'nm', text: T.name }), h('span', { class: 'k', text: T.line })), h('span', { class: 'tag ' + (L >= +lv ? 'g' : ''), text: L >= +lv ? 'Taught' : `Level ${lv}` })))),
-      h('p', { class: 'hint', text: 'What the Tactician taught stays, even if it comes down. Its slots go with it.' })];
+      ey('Lessons'), h('div', { class: 'pickl' },
+        // Lesson I is the road's (the 1-11 clear); the building's levels 3 and 4 teach the next two.
+        lessonRow('Lesson I', TACTICIAN_I_LINE, Base.unlocked('tactician', st), 'Clear 1-11'),
+        Object.entries(TACTICIAN_LESSONS).map(([lv, T]) => lessonRow(T.name, T.line, L >= +lv, `Level ${lv}`))),
+      h('p', { class: 'hint', text: 'Lesson I came with the 1-11 clear, on the road. What the Tactician teaches stays if it comes down, but its slots go with it.' })];
+  }
+  function lessonRow(name, line, got, when) {
+    return h('div', { class: 'rost' + (got ? '' : ' no') }, ico(got ? 'check' : 'lock', 'l'),
+      h('div', {}, h('span', { class: 'nm', text: name }), h('span', { class: 'k', text: line })), h('span', { class: 'tag ' + (got ? 'g' : ''), text: got ? 'Taught' : when }));
   }
   function barracksPanel(st) {
     const L = Base.level('barracks', st);

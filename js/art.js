@@ -620,7 +620,8 @@ const UI_ICONS = {
   dazzle: { map: ["w..y..w", ".w.y.w.", "..yyy..", "yyywyyy", "..yyy..", ".w.y.w.", "w..y..w"], pal: { y: '#fff3c8', w: '#c9e8ff' } },
   kindle: { map: ["...o...", "..oo...", "..ooo.o", ".ooyoo.", ".oyyyo.", "oyywyyo", ".oyyyo."], pal: { o: '#e2582e', y: '#f7b34a', w: '#fff0c0' } },
   mark: { map: ["r.....r", ".r...r.", "..r.r..", "...r...", "..r.r..", ".r...r.", "r.....r"], pal: { r: '#ff5a4a' } },
-  lantern: { map: ["..bbb..", "..b.b..", ".bbbbb.", ".byyyb.", ".bywyb.", ".byyyb.", ".bbbbb."], pal: { b: '#9a8a6a', y: '#f7c24a', w: '#fff2c0' } },
+  // A hooded lantern on its hook, with a lit window (build step 7b: the old hollow-ring top read as a padlock).
+  lantern: { map: ["...d...", "..ddd..", ".bbbbb.", ".byyyb.", ".bywyb.", ".byyyb.", "..bbb.."], pal: { d: '#7a6848', b: '#b09a70', y: '#f7c24a', w: '#fff6d0' } },
   skull: { map: [".bbbbb.", "bbbbbbb", "bkbbbkb", "bbbbbbb", ".bbkbb.", ".b.b.b.", "......."], pal: { b: '#d8d0bc', k: '#2a2233' } },
   cross: { map: ["..ggg..", "..ggg..", "ggggggg", "ggwgggg", "ggggggg", "..ggg..", "..ggg.."], pal: { g: '#8ac46a', w: '#e0ffd0' } },
   gear: { map: ["..g.g..", ".ggggg.", "gg...gg", ".g...g.", "gg...gg", ".ggggg.", "..g.g.."], pal: { g: '#b4a8b6' } },

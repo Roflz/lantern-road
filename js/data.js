@@ -234,10 +234,11 @@ const CONDITIONS = {
   allies_lt: { group: 'battle', n: [2, 3, 4, 5], from: 'a battle reward', when: (r, c) => c.allies.length < r.n, label: r => `Fewer than ${r.n} allies standing` },
   // Between battles: only party rules use these, with the Return to base action. They are checked after each win on a
   // trip (js/campaign.js), never in battle. x: { chars (the heroes on the trip), fell (someone fell in that battle),
-  // next (the stage the party would walk on to) }.
+  // next (the stage the party would walk on to), bag (the party items left in the Bag) }.
   bb_fatigue: { group: 'between', between: true, n: [50, 75, 90], start: [75], when: () => false, bb: (r, x) => x.chars.some(c => c.fatigue >= r.n), label: r => `Between battles: any character at ${r.n}+ fatigue`, tip: 'Checked after each win on the road.' },
   bb_fell: { group: 'between', between: true, when: () => false, bb: (r, x) => !!x.fell, label: () => 'Between battles: an ally fell', tip: 'Someone was knocked out in the battle just won.' },
   bb_next_boss: { group: 'between', between: true, from: 'a battle reward', when: () => false, bb: (r, x) => !!(x.next && (x.next.boss || x.next.elite)), label: () => 'Between battles: next stage has a boss or elite' },
+  bb_out: { group: 'between', between: true, s: ['draught', 'salts', 'lampoil', 'tincture'], when: () => false, bb: (r, x) => !!x.bag && !(x.bag[r.s] > 0), label: r => `Between battles: out of ${ITEMS_MANY[r.s] || r.s}`, tip: 'The Bag has none left, so its loadout slots go into the next battle empty.' },
 };
 for (const id in CONDITIONS) CONDITIONS[id].id = id;
 
@@ -252,6 +253,8 @@ const ITEMS = {
   lampoil: { name: 'Lamp Oil', icon: 'oil', skill: 'lampoil', tip: 'Every ally gains 20 mana.' },
   tincture: { name: 'Bitter Tincture', icon: 'tincture', skill: 'tincture', tip: 'Removes all harmful statuses from one ally.' },
 };
+// Party items by the many, for “out of Healing Draughts”.
+const ITEMS_MANY = { draught: 'Healing Draughts', salts: 'Smelling Salts', lampoil: 'Lamp Oil', tincture: 'Bitter Tinctures' };
 // Loadout slots: how many a party starts with and the most it can open (from a home base building later), and the
 // starting loadout (tune).
 const LOADOUT = { slots: [2, 4], items: ['draught', 'salts'] };
@@ -374,7 +377,7 @@ const UNLOCKS = {
   'cond:foe_boss': { kind: 'condition', name: 'Foe: boss or elite', icon: 'scroll', cond: ['foe_boss'] },
   'cond:ally_hurt': { kind: 'condition', name: 'Ally: most hurt', icon: 'scroll', cond: ['ally_hurt'] },
   shop: { kind: 'building', name: 'Shop blueprint', icon: 'coin', line: 'Party items and a small gear stall.', step: 5 },
-  tactician: { kind: 'feature', name: 'Tactician I', icon: 'book', line: 'Thresholds, Focus fire, saved rule sets and a dozen conditions. The building itself comes with the home base.' },
+  tactician: { kind: 'feature', name: 'Tactician I', icon: 'book', line: 'Thresholds, Focus fire, saved rule sets and a dozen conditions, and the Tactician’s blueprint.' },
   'cond:foe_charging': { kind: 'condition', name: 'Foe: charging a big attack', icon: 'scroll', cond: ['foe_charging'] },
   scavengercamp: { kind: 'building', name: 'Scavenger Camp blueprint', icon: 'bag', line: 'Gear and materials while you are away.', step: 5 },
   'cond:bb_next_boss': { kind: 'condition', name: 'Between battles: next stage has a boss or elite', icon: 'scroll', cond: ['bb_next_boss'] },
@@ -388,7 +391,7 @@ const UNLOCKS = {
 };
 for (const id in UNLOCKS) UNLOCKS[id].id = id;
 // The conditions Tactician I teaches (content spec §5), besides every threshold.
-const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell'];
+const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell', 'bb_out'];
 
 // ── Stages (campaign spec §5.2–5.3)
 // foes: the foe in each slot (null for an empty one): front F1 F2, then back B1–B4, as the party's slots. A slot is a
