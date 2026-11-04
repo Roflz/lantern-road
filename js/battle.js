@@ -1347,7 +1347,7 @@ const Battle = (() => {
     B = null; queue = []; S.fx = []; S.active = null; stepping = false; clearFlags(); hideBanner();
     S.region = region; S.mode = 'camp'; S.land = false; resize(); setMusicKey(HEARTH_SCALE); platesEl.classList.remove('away');
     const form = typeof Save !== 'undefined' && Save.state ? Save.state.party.map(id => Save.char(id)) : PARTY.map(k => ({ cls: k, name: CLASSES[k].name }));
-    setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
+    setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, look: c.gear && typeof Items !== 'undefined' ? Items.look(c) : null, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
     for (const u of S.list) u.plate.hidden = true;
     hudEl.hidden = true; $('#controls').hidden = true;
     endAim(true);

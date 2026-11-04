@@ -457,7 +457,7 @@ classOnly('fingerbone', 'pilgrim', 'Saint’s Finger-bone', {
   flavor: 'It points the way to heaven. It points at you.',
 });
 classOnly('oathboundgorget', 'warden', 'Oathbound Gorget', {
-  lines: [B('Guard and Cover cost 5 less', 'mana'), X('The Warden can’t leave the front row', 'anchor')],
+  lines: [B('Guard and Cover cost 5 less', 'mana'), X('The Warden can’t leave the front row', 'anchor', { later: 'formation' })],
   fx: {
     cost: (E, u, sk, p, c) => { if (sk.id === 'guard' || sk.id === 'cover') { c.add -= 5; return true; } },
     stat: u => { u.fixedFront = true; },
@@ -653,6 +653,8 @@ const Items = (() => {
   const look = c => SLOTS.map(k => (c.gear && c.gear[k] && GEAR[c.gear[k].id] ? c.gear[k].id : null));
   // Fatigue gained × this, from what is worn (build step 5).
   const fatigueMul = c => worn(c).reduce((m, x) => m * (def(x).fatigue || 1), 1);
+  // The Oathbound Gorget keeps its wearer in the front row (the formation and the Move action, build step 5).
+  const fixedFront = c => worn(c).some(x => x.id === 'oathboundgorget');
 
   // ── loot
   // The rarity odds for a region (0–4) and a stage's rank: { common, fine, rare } in percent.
@@ -792,7 +794,7 @@ const Items = (() => {
     return n + { common: 0, fine: 1, rare: 2, relic: 4 }[D.rarity];
   }
   return {
-    make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, odds, roll, starter,
+    make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, fixedFront, odds, roll, starter,
     room, everything, owns, sellPrice, add, grantRelic, relicOf, sell, find, equip, unequip, bands, score, uid,
   };
 })();
