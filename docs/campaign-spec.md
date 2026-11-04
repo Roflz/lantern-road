@@ -1,6 +1,15 @@
 # Lantern Road: Campaign Spec
 
-Draft 3 for review. It follows `docs/design.md` (the 2026-11-04 update), which stays the source of truth, `docs/content-spec.md` for classes, skills, statuses, resistances, conditions and the Defense formula, and `docs/home-base-spec.md` (draft 2) for rewards, buildings, fatigue and XP. It covers build step 6: the campaign map and a fully built Region I, plus outlines for Regions II–V. Nothing here is built yet.
+Draft 4. It follows `docs/design.md` (the 2026-11-04 update), which stays the source of truth, `docs/content-spec.md` for classes, skills, statuses, resistances, conditions and the Defense formula, and `docs/home-base-spec.md` (draft 2) for rewards, buildings, fatigue and XP. It covers the campaign map and the five regions. Build step 6 built the map and Region I; build step 7a built Regions II–V (section 6).
+
+**What changed in build step 7a (Regions II–V), for your review:**
+- **Every region is built:** 70 more stages (17, 17, 18 and 18), the 28 later foes with their sprites, and for each region a battle backdrop, weather, map, music key and material icon. Section 6 lists every stage.
+- **Foe Health steps up from level 50** (section 3.1): ×1.5 from 50 to 75, rising to ×2 at 100. At 50 heroes get their second skill slot and tier 3, and they keep pulling ahead through tier 4 at 80. Power keeps its pace.
+- **The reference party from Region II** is what a sensible player brings: skill points spent, tiers opened at each threshold, the second skill and a rule for it from 50, a Fine weapon and Fine armour, and a Move rule (`tools/reference.js`).
+- **The softened cliff:** past level 10 a hero level adds only about 2% to a hero's power, so most later walls move about 5–15 points a level, more where a skill point or a threshold lands (multiples of 5, and 30, 50, 80, 100). Section 5.6 has the numbers. The lever is steeper hero growth per level (build step 3), not the foes, so this build reports it and leaves it to you.
+- **Numbers moved from section 4.3's sketch** to hit the targets. The built level-1 stats are in section 6, and the skills that changed are listed in section 9.
+- **The Mourner's Dirge never fired in build step 6:** its id clashed with the Bellringer's Dirge passive, which replaced it. It works now, at +15% damage instead of +30%, so Region I keeps step 6's balance.
+- **The Move action** (Tactician I, from 1-11) and **the Gather action** (Lesson II, at the home base's Tactician level 3) are built, so a hero Lured out of their row can walk back.
 
 **What changed in draft 3:** every open question is now settled (section 9). The coordinator decided them overnight, and they're marked for your review.
 - Closing the app brings the party home after the current battle. Offline gains come only from home-base buildings.
@@ -54,20 +63,21 @@ Draft 3 for review. It follows `docs/design.md` (the 2026-11-04 update), which s
 
 | Factor | Levels 1–10 | From level 10 |
 |---|---|---|
-| Health | 1 + 0.064 × (L − 1) + 0.024 × (L − 1)² | 3.52 × (1 + 0.065 × (L − 10)) |
+| Health | 1 + 0.064 × (L − 1) + 0.024 × (L − 1)² | 3.52 × (1 + 0.065 × (L − 10)), × 1.5 from level 50, and × (1.5 + 0.02 × (L − 75)) from 75 |
 | Power | 1 + 0.42 × (L − 1) | 4.78 × (1 + 0.06 × (L − 10)) |
 | Defense | 1 + 0.06 × (L − 1) | the same |
 
 | Level | 1 | 3 | 5 | 8 | 10 | 20 | 30 | 50 | 75 | 100 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Health × | 1.00 | 1.22 | 1.64 | 2.62 | 3.52 | 5.81 | 8.10 | 12.67 | 18.39 | 24.11 |
+| Health × | 1.00 | 1.22 | 1.64 | 2.62 | 3.52 | 5.81 | 8.10 | 19.01 | 27.59 | 48.22 |
 | Power × | 1.00 | 1.84 | 2.68 | 3.94 | 4.78 | 7.65 | 10.52 | 16.25 | 23.42 | 30.59 |
 | Defense × | 1.00 | 1.12 | 1.24 | 1.42 | 1.54 | 2.14 | 2.74 | 3.94 | 5.44 | 6.94 |
 
 - **Speed** rises 0.02 per level. **Mana, mana gain, Crit and Dodge** don't grow, so a foe uses its skills at the same rhythm at every level.
 - **Resistances** rise 0.1% per level, as heroes' do.
 - **Why foes grow fast in Region I:** the party grows from 1 hero to 6 in this region, and the foe side can't grow past 6 foes, so each foe must become a bigger share of a hero. In the scratch check, foes with step-1 stats and hero-like growth (Health +10%, Power +8.5% per level) lost every Region I stage to a level-matched party, the boss included, by a wide margin.
-- **From level 10** the party is full, so foes grow at about the heroes' own pace from their level-10 values. Re-check this once steps 3 and 4 settle the heroes' full power curve: skill levels, passives, rarer gear and the second skill slot.
+- **From level 10** the party is full, so foes grow at about the heroes' own pace from their level-10 values.
+- **From level 50 Health steps up** (build step 7a, with the heroes' full power curve built): ×1.5 from 50 to 75, rising to ×2 at 100. A fixed probe formation then takes the reference party about 8–9 rounds at every level from 10 to 100.
 - **Power grows faster than Health** on purpose. It makes foes dangerous without making battles long.
 - **Health starts gentle and steepens** up to level 10, so early foes fall quickly and early stages cost little fatigue (section 5.8). By level 10 it reaches the same value a straight line would.
 - **Elites and bosses** use the same factors with bigger bases.
@@ -261,6 +271,8 @@ Skills read as in the content spec: shape, range, then mana cost after the dot.
 
 ### 4.3 Regions II–V, in brief
 Stats are level-1 values on the same scale, written Health / Power / Defense / Speed *(tune)*. Mana is 20–30 for normal foes and 40–50 for elites and bosses. Resistances follow section 3.2.
+
+These are the sketch build step 7a started from. The numbers as built are in section 6, and the skills that changed in section 9.
 
 #### Region II: the Drowned Chapel
 | Foe | Family | Rank, row | Stats | What it does | Rules |
@@ -461,6 +473,26 @@ Front: The Sexton · Gravedigger. Back: — · Mourner · Restless Bones · —.
 
 Waiting foes hold back while their front row is full, as section 3.3 describes. The Rat King's summons and the Sexton's Two Graves aren't in the step-1 engine.
 
+**Regions II–V as built (build step 7a):** the walls against the reference party (`node tools/simtest.js --ref 90`: 30 battles per recruit order at the recommended level, 15 at the others).
+
+| Wall | Level | Target | Level −1 / rec / +1 | Rounds at rec |
+|---|---|---|---|---|
+| 2-8 The Choir of Silt | 18 | 55–75% | 56% / 70% / 87% | 16.0 |
+| 2-14 The Font Leech | 25 | 55–75% | 60% / 69% / 91% | 16.1 |
+| 2-17 The Black Font (boss) | 30 | 40–55% | 20% / 44% / 56% | 16.6 |
+| 3-8 Mother Bramble's Hollow | 38 | 55–75% | 47% / 68% / 80% | 16.7 |
+| 3-14 The Thornback | 45 | 55–75% | 56% / 70% / 73% | 15.8 |
+| 3-17 The Heart of the Wood (boss) | 50 | 40–55% | 0% / 54% / 53% | 16.8 |
+| 4-8 The Kiln | 60 | 55–75% | 38% / 62% / 60% | 15.3 |
+| 4-15 The Pyre | 69 | 55–75% | 60% / 67% / 69% | 17.7 |
+| 4-18 The Burning Keep (boss) | 75 | 40–55% | 33% / 50% / 64% | 17.4 |
+| 5-8 The Kingsguard | 85 | 55–75% | 58% / 69% / 87% | 16.6 |
+| 5-15 The Lord Chamberlain | 95 | 55–75% | 56% / 67% / 73% | 15.5 |
+| 5-18 The Hollow Throne (boss) | 100 | 40–55% | 29% / 50% / 60% | 17.4 |
+
+- Every later road stage wins 89–100% at its recommended level, in 7–11 rounds.
+- **The cliff past Region I:** most later walls move 0–24 points a level, and the 3-17 boss 54 points, at level 50, where heroes take their second skill slot and tier 3. A hero level after 10 adds only about 2% to a hero's power, so one level matters less than in Region I, except where a skill point (every 5 levels) or a threshold lands.
+
 ### 5.7 Changes to the content spec's placeholders
 The content spec says its reward stage numbers are placeholders until this spec. These are the changes:
 
@@ -536,6 +568,27 @@ A flooded chapel where the drowned still hold their services, and bells toll und
 - **Boss, 2-17, the Drowned Bishop:** raises fallen foes, baptises a Marked hero with a charged Drown, and floods everyone with Font of Brine. Below half health the font overflows, and Font of Brine also pushes your turns back. It tests silencing or killing the healer, kill order when the dead get up, and the answers to a charge. Relic: the Bishop's Crozier.
 - **Condition:** "Foe: spirit" from the first Bell Wraith stage, 2-2.
 
+#### Region II stages *(tune)*
+| Stage | Name | Kind | Level | Front: F1 · F2 | Back: B1 · B2 · B3 · B4 | Tier | First clear |
+|---|---|---|---|---|---|---|---|
+| 2-1 | The Chapel Steps | Road | 11 | Ghoul · Ghoul | Restless Bones · Drowned Acolyte · — · Restless Bones | Standard | Tactician II |
+| 2-2 | The Bell-Drowned Nave | Road, new threat | 12 | Ghoul · Grave Glutton | Bell Wraith · Drowned Acolyte · — · Bell Wraith | Standard | Foe: spirit |
+| 2-3 | The Swollen Pews | Road, new threat | 13 | Bloated Corpse · Bloated Corpse | — · Drowned Acolyte · Restless Bones · — | Standard | — |
+| 2-4 | The Silent Cloister | Road, new threat | 14 | Bloated Corpse · Ghoul | Silent Sister · Drowned Acolyte · — · Restless Bones | Standard | The Barber-Surgeon joins the recruit board |
+| 2-5 | The Belfry Stair | Road | 15 | Bloated Corpse · Bell Wraith | Bell Wraith · Drowned Acolyte · — · Bell Wraith | Standard | The Bellringer joins the recruit board |
+| 2-6 | The Choir Stalls | Road | 16 | Bloated Corpse · Ghoul | Drowned Acolyte · Silent Sister · Drowned Acolyte · — | Standard | — |
+| 2-7 | The Sunken Ossuary | Road | 17 | Bloated Corpse · Ghoul | Drowned Acolyte · Bell Wraith · — · Silent Sister | Rich | — |
+| 2-8 | The Choir of Silt | Elite | 18 | Choir of Silt · Bloated Corpse | Drowned Acolyte · — · — · Drowned Acolyte | Elite | Foe: healer |
+| 2-9 | The Drowned Library | Road | 18 | Bloated Corpse · Ghoul | Silent Sister · Drowned Acolyte · Bell Wraith · — | Standard | — |
+| 2-10 | The Bell Tower | Road | 19 | Bell Wraith · Bell Wraith | Bell Wraith · — · Drowned Acolyte · Bell Wraith | Standard | — |
+| 2-11 | The Font Cellars | Road | 20 | Bloated Corpse · Bloated Corpse | Drowned Acolyte · Silent Sister · — · Restless Bones | Standard | — |
+| 2-12 | The Vestry | Road | 22 | Ghoul · Bloated Corpse | Silent Sister · Bell Wraith · Silent Sister · — | Standard | — |
+| 2-13 | The Font Steps | Road | 23 | Bloated Corpse · Bloated Corpse | Drowned Acolyte · Bell Wraith · — · Silent Sister | Rich | — |
+| 2-14 | The Font Leech | Elite | 25 | Font Leech · Bloated Corpse | — · Drowned Acolyte · Silent Sister · — | Elite | Foes enraged |
+| 2-15 | The Drowned Choir | Road | 25 | Bloated Corpse · Ghoul | Drowned Acolyte · Bell Wraith · — · Bell Wraith | Standard | — |
+| 2-16 | The Bishop’s Antechamber | Road | 27 | Bloated Corpse · Ghoul | Drowned Acolyte · Silent Sister · Bell Wraith · — | Rich | — |
+| 2-17 | The Black Font | Boss | 30 | Drowned Bishop · Bloated Corpse | — · Drowned Acolyte · Silent Sister · — | Boss | Relic: the Bishop’s Crozier · The Duellist joins the recruit board · Thornwood opens · Whetstone · Ossuary |
+
 ### Region III: Thornwood
 An old wood where the road narrows, wolves run in packs, and an old god waits. Levels 31–50, 17 stages, Heartwood. Mostly beasts.
 
@@ -552,6 +605,27 @@ An old wood where the road narrows, wolves run in packs, and an old god waits. L
 - **Boss, 3-17, the Antlered One:** a charged Rut that stuns for 2 turns, Old Growth healing every turn, and the Wild Hunt calling two wolves below 60% health. It tests Festering against healing, answers to stuns, and pack control. Relic: Bark of the Old God.
 - **Condition:** "Foe: beast" from the first wolf stage, 3-2.
 
+#### Region III stages *(tune)*
+| Stage | Name | Kind | Level | Front: F1 · F2 | Back: B1 · B2 · B3 · B4 | Tier | First clear |
+|---|---|---|---|---|---|---|---|
+| 3-1 | The Wood’s Edge | Road | 31 | Thorn Witch · Briar Wolf | Carrion Crows · — · Thorn Witch · Carrion Crows | Standard | — |
+| 3-2 | The Wolf Run | Road, new threat | 32 | Briar Wolf · Briar Wolf | — · Thorn Witch · Briar Wolf (waits) · — | Standard | Foe: beast |
+| 3-3 | The Hanging Wood | Road, new threat | 33 | Briar Wolf · Briar Wolf | Hanged Man · — · Thorn Witch · — | Standard | — |
+| 3-4 | The Wisp Fen | Road, new threat | 34 | Briar Wolf · Briar Wolf | Marsh Lantern · — · — · Thorn Witch | Standard | — |
+| 3-5 | The Briar Crossing | Road | 35 | Briar Wolf · Briar Wolf | Thorn Witch · Briar Wolf (waits) · Briar Wolf (waits) · — | Standard | — |
+| 3-6 | The Gallows Glade | Road | 36 | Briar Wolf · Thorn Witch | Hanged Man · Thorn Witch · Hanged Man · — | Standard | — |
+| 3-7 | The Old Wood’s Heart | Road | 37 | Briar Wolf · Thorn Witch | Marsh Lantern · Hanged Man · — · Thorn Witch | Rich | — |
+| 3-8 | Mother Bramble’s Hollow | Elite | 38 | Mother Bramble · Briar Wolf | Thorn Witch · — · — · Thorn Witch | Elite | Ally: highest Power |
+| 3-9 | The Thorn Path | Road | 38 | Briar Wolf · Briar Wolf | Thorn Witch · Marsh Lantern · — · — | Standard | The Cutpurse joins the recruit board |
+| 3-10 | The Rotting Bower | Road | 39 | Briar Wolf · Thorn Witch | Thorn Witch · Hanged Man · — · Thorn Witch | Standard | — |
+| 3-11 | The Hollow Oak | Road | 40 | Briar Wolf · Briar Wolf | Hanged Man · Marsh Lantern · Thorn Witch · — | Standard | — |
+| 3-12 | The Moonlit Clearing | Road | 42 | Briar Wolf · Briar Wolf | Briar Wolf (waits) · Marsh Lantern · Thorn Witch · — | Standard | — |
+| 3-13 | The Boar Wallow | Road | 43 | Briar Wolf · Briar Wolf | Thorn Witch · Hanged Man · Marsh Lantern · — | Rich | — |
+| 3-14 | The Thornback | Elite | 45 | Thornback · Briar Wolf | — · Thorn Witch · Briar Wolf (waits) · — | Elite | Foe: acts next |
+| 3-15 | The Antler Grove | Road | 45 | Briar Wolf · Briar Wolf | Hanged Man · Thorn Witch · Marsh Lantern · — | Standard | — |
+| 3-16 | The Old God’s Threshold | Road | 47 | Briar Wolf · Briar Wolf | Thorn Witch · Hanged Man · Marsh Lantern · — | Rich | — |
+| 3-17 | The Heart of the Wood | Boss | 50 | Antlered One · Briar Wolf | — · Thorn Witch · — · — | Boss | Relic: the Bark of the Old God · The Alchemist joins the recruit board · The Ashen Keep opens · Hexing Stone · Bell Tower |
+
 ### Region IV: the Ashen Keep
 A burnt fortress where scorched knights still guard the gate, and the marshal who burned it still commands. Levels 51–75, 18 stages, Cinder Iron. Undead knights, beasts of coal and fire-priests.
 
@@ -565,6 +639,28 @@ A burnt fortress where scorched knights still guard the gate, and the marshal wh
   - 4-8, the Kiln Warden. Reward: "Fewer than N allies standing".
   - 4-15, the Pyre Priest: a healer that also kindles, standing behind armour.
 - **Boss, 4-18, the Burnt Marshal:** a blade that splashes onto your other front-row hero, a Rally that kindles and fortifies every knight, and a charged front-row Charge of the Burnt. Below half health the keep burns, and every hero takes Burning each turn, so burst and speed decide it. Relic: the Marshal's Ashen Blade.
+
+#### Region IV stages *(tune)*
+| Stage | Name | Kind | Level | Front: F1 · F2 | Back: B1 · B2 · B3 · B4 | Tier | First clear |
+|---|---|---|---|---|---|---|---|
+| 4-1 | The Cinder Gate | Road | 51 | Ash Knight · Ash Knight | — · Ash Knight (waits) · — · — | Standard | — |
+| 4-2 | The Ember Kennels | Road, new threat | 52 | Cinder Hound · Cinder Hound | — · Cinder Hound · Ash Knight (waits) · — | Standard | — |
+| 4-3 | The Squires’ Yard | Road, new threat | 53 | Ash Knight · Ash Knight | Flayed Squire · — · — · Flayed Squire | Standard | — |
+| 4-4 | The Arrow Slits | Road, new threat | 54 | Ash Knight · Cinder Hound | Ashen Arbalist · — · Flayed Squire · Ashen Arbalist | Standard | — |
+| 4-5 | The Burnt Barracks | Road | 56 | Ash Knight · Ash Knight | Flayed Squire · Ashen Arbalist · Cinder Hound · — | Standard | — |
+| 4-6 | The Kennel Yard | Road | 57 | Cinder Hound · Cinder Hound | Cinder Hound · Flayed Squire · Cinder Hound · — | Standard | — |
+| 4-7 | The Forge Stair | Road | 58 | Ash Knight · Ash Knight | Flayed Squire · Ashen Arbalist · Ashen Arbalist · Flayed Squire | Rich | — |
+| 4-8 | The Kiln | Elite | 60 | Kiln Warden · Ash Knight | Flayed Squire · — · — · Ashen Arbalist | Elite | Fewer than N allies standing |
+| 4-9 | The Smoking Hall | Road | 60 | Ash Knight · Cinder Hound | Flayed Squire · — · Ashen Arbalist · — | Standard | — |
+| 4-10 | The Chapel of Cinders | Road | 61 | Ash Knight · Ash Knight | Flayed Squire · Cinder Hound · Flayed Squire · — | Standard | — |
+| 4-11 | The Gatehouse | Road | 63 | Ash Knight · Ash Knight | Ashen Arbalist · Flayed Squire · Ashen Arbalist · — | Standard | — |
+| 4-12 | The Burning Walk | Road | 64 | Cinder Hound · Ash Knight | Cinder Hound · Ashen Arbalist · Flayed Squire · — | Standard | — |
+| 4-13 | The Armoury | Road | 66 | Ash Knight · Ash Knight | Flayed Squire · Ash Knight (waits) · Flayed Squire · — | Standard | — |
+| 4-14 | The Pyre Steps | Road | 67 | Ash Knight · Cinder Hound | Flayed Squire · Ashen Arbalist · Ashen Arbalist · Flayed Squire | Rich | — |
+| 4-15 | The Pyre | Elite | 69 | Ash Knight · Ash Knight | Flayed Squire · Pyre Priest · — · Flayed Squire | Elite | — |
+| 4-16 | The Marshal’s Gallery | Road | 69 | Ash Knight · Cinder Hound | Ashen Arbalist · Flayed Squire · Cinder Hound · Ashen Arbalist | Standard | — |
+| 4-17 | The War Room | Road | 72 | Ash Knight · Ash Knight | Flayed Squire · Ashen Arbalist · Flayed Squire · Ashen Arbalist | Rich | — |
+| 4-18 | The Burning Keep | Boss | 75 | Burnt Marshal · Ash Knight | — · Flayed Squire · Ashen Arbalist · — | Boss | Relic: the Marshal’s Ashen Blade · The Hollow Throne opens |
 
 ### Region V: the Hollow Throne
 A court of the dead under a throne of tallow and bone, where would-be kings wait for a crown. Levels 76–100, 18 stages, Throne Tallow. Spirits and undead.
@@ -584,6 +680,63 @@ A court of the dead under a throne of tallow and bone, where would-be kings wait
   3. Long Live the King, below 33%: every hero is Doomed, and his Sceptre hits a whole row.
 
   It tests cleansing, Wards, kill order, curses and enrage all at once. Relic: the Hollow Crown.
+
+#### Region V stages *(tune)*
+| Stage | Name | Kind | Level | Front: F1 · F2 | Back: B1 · B2 · B3 · B4 | Tier | First clear |
+|---|---|---|---|---|---|---|---|
+| 5-1 | The Tallow Road | Road | 76 | Crowned Shade · Crowned Shade | — · Bell Wraith · Bell Wraith · — | Standard | — |
+| 5-2 | The Hall of Bows | Road, new threat | 77 | Crowned Shade · Crowned Shade | Hollow Courtier · — · — · Hollow Courtier | Standard | — |
+| 5-3 | The Heralds’ Gallery | Road, new threat | 78 | Crowned Shade · Crowned Shade | Bone Herald · Hollow Courtier · — · Bone Herald | Standard | — |
+| 5-4 | The Candle Gallery | Road, new threat | 80 | Crowned Shade · Crowned Shade | Wick Wraith · Bone Herald · — · Wick Wraith | Standard | — |
+| 5-5 | The Mirror Hall | Road | 81 | Crowned Shade · Ash Knight | Hollow Courtier · Wick Wraith · Bone Herald · — | Standard | — |
+| 5-6 | The Waxworks | Road | 82 | Crowned Shade · Crowned Shade | Wick Wraith · Wick Wraith · Hollow Courtier · — | Standard | — |
+| 5-7 | The Guard Room | Road | 84 | Crowned Shade · Crowned Shade | Bone Herald · Hollow Courtier · Wick Wraith · Bone Herald | Rich | — |
+| 5-8 | The Kingsguard | Elite | 85 | Kingsguard Revenant · Crowned Shade | Bone Herald · — · — · Wick Wraith | Elite | — |
+| 5-9 | The Hall of Petitions | Road | 85 | Crowned Shade · Crowned Shade | Hollow Courtier · Bone Herald · Hollow Courtier · — | Standard | — |
+| 5-10 | The Long Gallery | Road | 87 | Crowned Shade · Ash Knight | Wick Wraith · Hollow Courtier · Bone Herald · — | Standard | — |
+| 5-11 | The Tallow Chapel | Road | 88 | Crowned Shade · Crowned Shade | Drowned Acolyte · Wick Wraith · — · Bone Herald | Standard | — |
+| 5-12 | The Bone Cloisters | Road | 90 | Crowned Shade · Crowned Shade | Bone Herald · Bone Herald · Wick Wraith · — | Standard | — |
+| 5-13 | The Ashen Guard | Road | 91 | Ash Knight · Crowned Shade | Flayed Squire · Hollow Courtier · Bone Herald · — | Standard | — |
+| 5-14 | The Chamberlain’s Door | Road | 93 | Crowned Shade · Crowned Shade | Hollow Courtier · Bone Herald · Wick Wraith · Hollow Courtier | Rich | — |
+| 5-15 | The Lord Chamberlain | Elite | 95 | Crowned Shade · Crowned Shade | Hollow Courtier · Lord Chamberlain · — · Bone Herald | Elite | — |
+| 5-16 | The Throne Stair | Road | 95 | Crowned Shade · Crowned Shade | Wick Wraith · Bone Herald · Hollow Courtier · — | Standard | — |
+| 5-17 | The Last Antechamber | Road | 97 | Crowned Shade · Crowned Shade | Bone Herald · Hollow Courtier · Wick Wraith · — | Rich | — |
+| 5-18 | The Hollow Throne | Boss | 100 | Hollow King · — | — · Wick Wraith · Bone Herald · — | Boss | Relic: the Hollow Crown · Every lantern on the road burns |
+
+### The later foes as built
+"Waits" marks a melee foe placed behind, as in Region I. Foe resistances use section 3.2's defaults by rank and family, except the Kiln Warden's and the Pyre Priest's, which resist Blight and Burning more.
+
+#### Level-1 stats as built *(tune)*
+| Foe | Region | Rank | Health | Mana | Power | Defense | Speed | Dodge | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| Drowned Acolyte | II | Normal | 66 | 30 | 17 | 4 | 10 | 5% | healer |
+| Bell Wraith | II | Normal | 60 | 30 | 17 | 3 | 11 | 20% |  |
+| Bloated Corpse | II | Normal | 150 | 0 | 20 | 5 | 6 | 0% |  |
+| Silent Sister | II | Normal | 70 | 30 | 16 | 4 | 10 | 5% |  |
+| Choir of Silt | II | Elite | 440 | 40 | 30 | 6 | 10 | 5% | healer |
+| The Font Leech | II | Elite | 460 | 40 | 30 | 6 | 7 | 0% |  |
+| The Drowned Bishop | II | Boss | 470 | 50 | 50 | 8 | 9 | 0% |  |
+| Thorn Witch | III | Normal | 95 | 30 | 20 | 4 | 10 | 5% |  |
+| Briar Wolf | III | Normal | 120 | 20 | 20 | 4 | 12 | 10% |  |
+| The Hanged Man | III | Normal | 115 | 50 | 22 | 5 | 9 | 5% | starts Hidden |
+| Marsh Lantern | III | Normal | 90 | 40 | 18 | 3 | 11 | 20% |  |
+| Mother Bramble | III | Elite | 470 | 40 | 44 | 8 | 7 | 0% |  |
+| The Thornback | III | Elite | 640 | 50 | 50 | 10 | 8 | 0% |  |
+| The Antlered One | III | Boss | 220 | 50 | 54 | 9 | 10 | 0% | Old Growth 1.5% |
+| Ash Knight | IV | Normal | 80 | 30 | 26 | 12 | 8 | 0% |  |
+| Cinder Hound | IV | Normal | 90 | 20 | 22 | 4 | 13 | 10% |  |
+| Flayed Squire | IV | Normal | 95 | 30 | 18 | 6 | 10 | 5% |  |
+| Ashen Arbalist | IV | Normal | 85 | 30 | 21 | 5 | 8 | 0% |  |
+| The Kiln Warden | IV | Elite | 320 | 50 | 26 | 12 | 6 | 0% |  |
+| The Pyre Priest | IV | Elite | 215 | 50 | 44 | 6 | 9 | 5% | healer |
+| The Burnt Marshal | IV | Boss | 360 | 50 | 50 | 10 | 9 | 0% |  |
+| Crowned Shade | V | Normal | 100 | 30 | 24 | 5 | 11 | 20% |  |
+| Hollow Courtier | V | Normal | 90 | 30 | 22 | 5 | 11 | 10% |  |
+| Bone Herald | V | Normal | 95 | 40 | 22 | 8 | 9 | 0% |  |
+| Wick Wraith | V | Normal | 80 | 30 | 20 | 4 | 12 | 15% |  |
+| Kingsguard Revenant | V | Elite | 360 | 40 | 82 | 16 | 8 | 0% |  |
+| The Lord Chamberlain | V | Elite | 320 | 50 | 44 | 6 | 10 | 10% |  |
+| The Hollow King | V | Boss | 210 | 60 | 36 | 10 | 10 | 0% |  |
 
 ## 7. The map screen
 
@@ -730,6 +883,16 @@ Times assume about 1–2 minutes per stage, including the rewards and the walk *
 8. **A Spent hero** walks home alone, and the rest carry on.
 9. **The content-spec changes** in section 5.7 are accepted. The home-base session folds them into the content spec.
 10. **The new foes and their names** are accepted.
+
+**Decided in build step 7a, for your review:**
+1. **Foe Health from level 50** steps up ×1.5, rising to ×2 at 100 (section 3.1).
+2. **The cliff past Region I** is reported, not forced: most later walls move 5–15 points a level (section 5.6 and the PR's report). Making levels matter more there needs steeper hero growth per level.
+3. **The Mourner's Dirge** gives +15% damage, not +30%, now that it works.
+4. **Who joins the recruit board, and when:** as the home base built it, each class joins when its region opens: the Barber-Surgeon and the Bellringer when the Sexton falls, the Duellist and the Cutpurse when the Drowned Bishop falls, and the Alchemist when the Antlered One falls. The boss's first clear lists them.
+5. **Tactician II** is the home base's Tactician at level 3 (Lesson II), and it now brings the Gather action too. The Move action comes with Tactician I at 1-11.
+6. **The region's buildings** come with the boss before it: the Masters' Hall and Shrine with the Sexton, the Whetstone and Ossuary with the Drowned Bishop, and the Hexing Stone and Bell Tower with the Antlered One. A save past the Sexton gets the first two when it loads.
+7. **Skills tuned from section 4.3:** Toll 0.25× (from 0.5×) and 30 mana, and it pushes each turn back 20%; the Drowned Hymn heals 0.8×; Burst 0.8×; Pack Tear 0.8×, +15% per other wolf; Gallows Drop 1.2×; Siege Shot 2.4×; Kiln Blast 1.3×; Rite of Ash heals 0.5×; the Herald's Doom ticks 0.45×; the Kingsguard's Halberd 1.3×; the Old Growth heals 1.5% a turn; Drain the Font heals 1.2% of its health per 10 mana; the Court of Shades calls one shade at a time, in the Hollow King's first phase only (his second swaps it for Snuff the Light); Long Live the King Dooms at 0.2× a tick.
+8. **Formations:** some rich and late stages field 5 foes, not 6, and Region I's undead lead the Drowned Chapel's front row at first.
 
 ## Appendix A: notes for the build
 

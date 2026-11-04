@@ -87,6 +87,7 @@ function simulate(setup) {
   let thrallN = 0, corpses = 0, actions = 0, clock = 0, round = 1, enrage = 0, actor = null;
   const loot = { gold: 0, xpLv: 0 };
   const later = [];
+  const auras = [];             // { src, k, p, t }: a status that lands on each unit of the other side as its turn starts
 
   // ── units
   function heroBase(spec) {
@@ -127,6 +128,9 @@ function simulate(setup) {
         mpGain: fs.mpGain, basic: src.basic, skills: src.skills.slice(), tags: (src.tags || []).slice(), sl: {}, awk: new Set(), pas: [],
         rules: (spec.rules || src.rules || []).map(r => Object.assign({ on: true }, r)),
         phases: src.phases ? src.phases.map(x => Object.assign({}, x)) : null, flee: src.flee || 0, summoned: !!o.summoned,
+        // regen: a share of max health it heals at the start of each turn (the Antlered One's Old Growth).
+        // hidden: it starts the battle Hidden, until it first attacks (the Hanged Man).
+        regen: src.regen || 0, lurks: !!src.hidden && !o.summoned,
       });
       // A foe whose every attack is melee without reach can't attack from the back row: it waits there, Defending,
       // and steps up when a front slot opens (campaign spec §3.3).
@@ -160,6 +164,8 @@ function simulate(setup) {
     u.maxHp = Math.max(1, Math.round(u.maxHp));
     u.base = { maxHp: u.maxHp };
     u.hp = u.maxHp; u.mp = Math.floor(u.maxMp / 2);
+    // A foe that lurks starts Hidden, so the start snapshot already shows it (campaign spec Appendix A).
+    if (u.lurks) u.st.hidden = { key: 'hidden', src: u.id, turns: 99, full: 99 };
   }
   for (const u of units) ready(u);
   const partyRules = (setup.partyRules || []).map(r => Object.assign({ on: true }, r));
@@ -317,10 +323,11 @@ function simulate(setup) {
     return keys.length;
   }
   const HELP_STRIP = ['kindled', 'hasted', 'warded', 'blessed', 'braced', 'fortified', 'veiled', 'hidden', 'parrying', 'riposte', 'retaliating', 'unbroken', 'hexward', 'bloodlust', 'steadfast', 'guarding', 'resup', 'laudanum'];
-  function strip(src, t, n, to) {
+  // Strips up to n helpful statuses from t (only those listed in `only`, when given), and gives them to `to`.
+  function strip(src, t, n, to, only) {
     const out = [];
     for (const k of HELP_STRIP) {
-      if (out.length >= n || !t.st[k]) continue;
+      if (out.length >= n || !t.st[k] || (only && !only.includes(k))) continue;
       const s = t.st[k];
       out.push({ key: k, s });
       dropStatus(t, k);
@@ -343,7 +350,8 @@ function simulate(setup) {
       case 'front': pool = front.length ? front : back; break;
       case 'back': pool = back.length ? back : front; break;
       case 'random3': case 'foes': pool = melee && front.length ? front : foes; break;
-      case 'ally': pool = sk.revive ? fallen(u.side) : heroesOf(u.side); if (sk.notSelf) pool = pool.filter(x => x !== u); break;
+      // A revive only reaches the fallen whose place is still free (a foe that stepped up may stand in it).
+      case 'ally': pool = sk.revive ? fallen(u.side).filter(x => !units.some(y => y.alive && y.side === x.side && y.slot === x.slot)) : heroesOf(u.side); if (sk.notSelf) pool = pool.filter(x => x !== u); break;
       case 'allies': pool = heroesOf(u.side); break;
       case 'fallen': pool = fallen(u.side); break;
       case 'self': pool = [u]; break;
@@ -448,6 +456,10 @@ function simulate(setup) {
       return backMelee(u, b.sk) ? { sk: SKILLS.defend, p: skillLevel(1) } : b;
     }
     if (r.do === 'defend' && u.hero) return { sk: SKILLS.defend, p: skillLevel(1) };
+    // Move and Gather: rule actions every hero has, once the Tactician teaches them (content spec §5). Move fires only
+    // when there is somewhere to go, and Gather only while mana is short.
+    if (r.do === 'move' && u.hero) return moveSpot(u) ? { sk: SKILLS.move, p: skillLevel(1) } : null;
+    if (r.do === 'gather' && u.hero) return u.maxMp && u.mp < u.maxMp ? { sk: SKILLS.gather, p: skillLevel(1) } : null;
     if (!u.skills.includes(r.do) || u.st.silenced) return null;
     const got = skillFor(u, r.do), sk = got.sk;
     if (backMelee(u, sk)) return null;
@@ -661,7 +673,7 @@ function simulate(setup) {
     if (!src.alive || src.side === t.side || c.dot) return;
     const hit = how === 'hit', dodge = how === 'dodge' || how === 'parry';
     if (hit && t.alive) {
-      if (t.st.retaliating) { counter(t, src, t.st.retaliating.v || 0.6, { sure: true }); if (t.st.retaliating.more && src.alive) addStatus(t, src, 'weak', { turns: 1 }); }
+      if (t.st.retaliating) { counter(t, src, t.st.retaliating.v || 0.6, { sure: true, why: 'thorns' }); if (t.st.retaliating.more && src.alive) addStatus(t, src, 'weak', { turns: 1 }); }
       if (t.thorns) counter(t, src, t.thorns, { sure: true });
       if (t.st.hexward) { const hx = byId[t.st.hexward.src]; if (hx && src.alive) { addStatus(hx, src, 'doom', { turns: 2, p: 0.5 }); if (t.st.hexward.more) addStatus(hx, src, 'weak', { turns: 1 }); } }
     }
@@ -676,9 +688,12 @@ function simulate(setup) {
     for (const u of units) if (u.alive && u.side === t.side && u.st.counterstorm) add(u, u.st.counterstorm.v || 0.6);
     for (const [u, [m, o]] of best) if (src.alive) counter(u, src, m, o);
   }
+  // why: 'thorns' when it is Retaliating (Mother Bramble's Bramble Hide), so the battle screen shows thorns, not a lunge.
   function counter(u, t, mult, o = {}) {
     if (!u.alive || !t.alive) return null;
-    emit({ t: 'counter', who: u.id, tgt: t.id });
+    const ev = { t: 'counter', who: u.id, tgt: t.id };
+    if (o && o.why) ev.why = o.why;
+    emit(ev);
     return attack(u, t, mult, Object.assign({ counter: true, single: true, sk: SKILLS[u.basic] }, o));
   }
   // Damage that skips the attack roll: detonations, traps and a share of max health. o: { key, def, hit }.
@@ -689,7 +704,7 @@ function simulate(setup) {
     const c = { dot: !o.hit, key: o.key, sk: E.cur.sk };
     a *= inMul(t, src, c);
     const { d, absorbed } = takeDamage(t, Math.max(1, a), src, c);
-    if (o.hit) emit({ t: 'hit', src: src ? src.id : t.id, tgt: t.id, dmg: d, crit: false, hp: t.hp, absorbed: absorbed || undefined });
+    if (o.hit) emit({ t: 'hit', src: src ? src.id : t.id, tgt: t.id, dmg: d, crit: false, hp: t.hp, absorbed: absorbed || undefined, splash: o.splash || undefined });
     else emit({ t: 'tick', who: t.id, key: o.key || 'doom', dmg: d, hp: t.hp, burst: true });
     const killed = checkDeath(t, src);
     return { d, killed };
@@ -740,19 +755,24 @@ function simulate(setup) {
     t.hp += got;
     if (src) stats[src.id].healed += got;
     stats[t.id].healedIn += got;
-    emit({ t: 'heal', src: src ? src.id : null, tgt: t.id, amt: got, hp: t.hp });
+    const ev = { t: 'heal', src: src ? src.id : null, tgt: t.id, amt: got, hp: t.hp };
+    if (o.how) ev.how = o.how; // regen (Old Growth) or drain (Drain the Font), for the battle screen
+    emit(ev);
     const over = a - got;
     if (over > 0 && o.over === 'ally') { const x = hurtest(heroesOf(t.side).filter(y => y !== t)); if (x) heal(src, x, over, { raw: true }); }
     if (over > 0 && o.over === 'ward') addStatus(src, t, 'warded', { turns: 3, v: over });
     if (!o.raw && src) fire(src, 'healed', t);
     return got;
   }
-  function mana(t, amt) {
+  // by: who drained it, when mana is taken (the Font Leech).
+  function mana(t, amt, by) {
     if (!t || !t.alive || !t.maxMp || !amt) return 0;
     const got = clamp(Math.round(amt), -t.mp, t.maxMp - t.mp);
     if (!got) return 0;
     t.mp += got;
-    emit({ t: 'mana', tgt: t.id, amt: got, mp: t.mp });
+    const e = { t: 'mana', tgt: t.id, amt: got, mp: t.mp };
+    if (by) e.by = by.id;
+    emit(e);
     return got;
   }
   // A health cost: Bloodlust, Blood Price, Eternal Flame. It never knocks the payer out.
@@ -799,15 +819,40 @@ function simulate(setup) {
     emit({ t: 'broke', who: t.id, by: src.id });
     return true;
   }
-  function swap(a, b) {
+  // why: what moved them, for the battle screen: drag (Drag Out), lure (Lure, Reorder the Court) or move (the Move action).
+  function swap(a, b, why = 'drag') {
     if (a.row !== b.row && [a, b].some(x => x.fixedFront && x.row === 'front')) return false; // the Oathbound Gorget
     [a.slot, b.slot] = [b.slot, a.slot];
     for (const x of [a, b]) { x.row = ROWS[x.slot]; x.lane = LANE[x.slot]; x.order = x.side * 6 + x.slot; }
-    emit({ t: 'swap', a: a.id, b: b.id, slots: [a.slot, b.slot] });
+    emit({ t: 'swap', a: a.id, b: b.id, slots: [a.slot, b.slot], why });
+    return true;
   }
-  function moveTo(t, slot) {
+  function moveTo(t, slot, why = 'drag') {
     t.slot = slot; t.row = ROWS[slot]; t.lane = LANE[slot]; t.order = t.side * 6 + slot;
-    emit({ t: 'swap', a: t.id, b: null, slots: [slot] });
+    emit({ t: 'swap', a: t.id, b: null, slots: [slot], why });
+  }
+  // Lure and Reorder the Court: a back-row unit is pulled into the front row, trading places with the nearest one there
+  // or stepping into an empty front slot. Move resistance resists it, and Holding the line stops it (campaign spec §6).
+  function pull(src, t) {
+    if (!t.alive || t.row !== 'back') return false;
+    if (t.st.steadfast) { resisted(t, 'swap'); return false; }
+    if (src && src.side !== t.side && !lands(src, t, SIM.MOVE_RES, 100)) { resisted(t, 'swap'); return false; }
+    const free = emptySlots(t.side, true);
+    if (free.length) { moveTo(t, free.reduce((b, s) => (Math.abs(LANE[s] - t.lane) < Math.abs(LANE[b] - t.lane) ? s : b)), 'lure'); return true; }
+    const front = units.filter(x => x.alive && x.side === t.side && x.row === 'front' && !(x.fixedFront));
+    const f = near(t, front);
+    return f ? swap(t, f, 'lure') : false;
+  }
+  // Where a hero's Move takes them: a swap with the nearest ally in the other row, or an empty slot there (content spec
+  // §5). The Oathbound Gorget keeps its wearer in the front row.
+  function moveSpot(u) {
+    if (u.fixedFront && u.row === 'front') return null;
+    const other = u.row === 'front' ? 'back' : 'front';
+    const mates = units.filter(x => x.alive && x.side === u.side && x !== u && !x.thrall && x.row === other && !(x.fixedFront && x.row === 'front'));
+    const m = near(u, mates);
+    if (m) return { swap: m };
+    const free = emptySlots(u.side).filter(s => ROWS[s] === other);
+    return free.length ? { slot: free.reduce((b, s) => (Math.abs(LANE[s] - u.lane) < Math.abs(LANE[b] - u.lane) ? s : b)) } : null;
   }
   // Drag Out: a back-row foe trades places with the nearest front-row foe, or steps into an empty front slot.
   function drag(src, t) {
@@ -878,18 +923,30 @@ function simulate(setup) {
     emit({ t: 'step', who: u.id, from, slot });
     return true;
   }
-  // A boss's phases: once, below a share of its health, its skills change (campaign spec §3.3).
+  // A boss's phases: once, below a share of its health, it changes (campaign spec §3.3). A phase may have
+  //   swap: { old skill: new }   in its skills, its rules and its basic attack
+  //   call: { key, n }           foes rising in empty slots (the Wild Hunt)
+  //   self: [{ k, t, v }]        statuses on itself (Last Stand)
+  //   foes: [{ k, t, p, v, n }]  statuses on every unit of the other side (Snuff the Lanterns, Long Live the King)
+  //   strip: true                every helpful status stripped from the other side (Snuff the Lanterns)
+  //   aura: { k, p, t }          a status landing on each unit of the other side as its turn starts (The Keep Burns)
   function phaseCheck(u) {
     if (!u.phases || !u.alive) return;
     u.phases.forEach((ph, n) => {
-      if (ph.done || u.hp / u.maxHp >= ph.below) return;
+      if (ph.done || !u.alive || u.hp / u.maxHp >= ph.below) return;
       ph.done = true;
       for (const from in ph.swap || {}) {
         const to = ph.swap[from];
         u.skills = u.skills.map(id => (id === from ? to : id));
         u.rules.forEach(r => { if (r.do === from) r.do = to; });
+        if (u.basic === from) u.basic = to;
       }
       emit({ t: 'phase', who: u.id, n: n + 2, name: ph.name, line: ph.line || '' });
+      if (ph.strip) for (const t of living(1 - u.side)) strip(u, t, 99);
+      for (const s of ph.self || []) addStatus(u, u, s.k, { turns: s.t || 1, v: s.v, sure: true });
+      for (const s of ph.foes || []) for (const t of living(1 - u.side)) addStatus(u, t, s.k, { turns: s.t || 1, p: s.p, v: s.v, n: s.n });
+      if (ph.call) callFoes(u, ph.call);
+      if (ph.aura) auras.push(Object.assign({ src: u }, ph.aura));
     });
   }
   // Fleeing: at the start of its round, a foe with somewhere to be leaves the field. It drops nothing.
@@ -916,7 +973,7 @@ function simulate(setup) {
     status: (src, t, k, o) => addStatus(src, t, k, o), drop: dropStatus, cleanse, strip,
     bad: harmful, stacks: (t, k) => (t.st[k] && t.st[k].list ? t.st[k].list.length : t.st[k] ? 1 : 0),
     heal, mana, pure, selfCost, push, sooner, now, again: u => { u.extra = true; }, first: u => { u.next = 0; },
-    revive: reviveUnit, summon, destroy, room, swap, drag, breakCharge, counter: (u, t, m, o) => counter(u, t, m, o),
+    revive: reviveUnit, summon, destroy, room, swap, drag, pull, breakCharge, counter: (u, t, m, o) => counter(u, t, m, o),
     maxHp: (t, add) => { t.maxHp += add; emit({ t: 'maxhp', who: t.id, maxHp: t.maxHp, hp: t.hp }); },
     once: (u, k, max = 1) => { u.once[k] = (u.once[k] || 0) + 1; return u.once[k] <= max; },
     saved: (o, t, label) => emit({ t: 'saved', who: t.id, by: o.id, label }),
@@ -968,31 +1025,43 @@ function simulate(setup) {
     if (!aimed || !aimed.alive || !u.alive) return out;
     const power = o.power != null ? o.power : p.v(sk.power || 0);
     if (!power) {
-      // a skill with no damage: its statuses and push land with no attack roll
+      // a skill with no damage: its statuses, push and pull land with no attack roll
       for (const s of sk.st || []) addStatus(u, aimed, s.k, statusOpts(s, p));
       const pu = o.push != null ? o.push : sk.push ? p.v(sk.push) : 0;
       if (pu) push(u, aimed, pu);
+      if (sk.pull && aimed.side !== u.side) pull(u, aimed);
       out.landed = true;
       return out;
     }
     const hits = o.hits || (sk.hitsOf ? sk.hitsOf(E, u) : sk.hits || 1);
     const mult = (o.mult || 1) * (sk.mult ? sk.mult(E, u, aimed, p) : 1) * (o.vmul || 1);
     const c = ctxOf(u, sk, p, o);
+    let drained = 0;
     for (let i = 0; i < hits; i++) {
       if (!aimed.alive || !u.alive) break;
       const r = attack(u, aimed, power * mult, c);
       out.t = r.t;
       if (r.miss) continue;
       out.landed = true; out.d += r.d;
+      // Splash: a share of the blow lands on the other front-row unit beside it (the Burnt Marshal's blade).
+      if (sk.splash && r.d > 0 && r.t.row === 'front') {
+        const o2 = near(r.t, living(r.t.side).filter(x => x !== r.t && x.row === 'front'));
+        if (o2) pure(u, o2, r.d * sk.splash, { hit: true, splash: true });
+      }
       if (r.killed) {
         out.killed = true;
         if (sk.kill) sk.kill(E, u, r.t, p);
         break;
       }
       if (r.t.alive) for (const s of sk.st || []) addStatus(u, r.t, s.k, statusOpts(s, p));
+      // Mana drain: each hit takes mana from the one it lands on (the Font Leech).
+      if (sk.drain && r.t.alive) drained -= mana(r.t, -sk.drain, u);
     }
+    // Drain the Font heals its user a share of its max health for every 10 mana it drained.
+    if (drained > 0 && sk.drainHeal && u.alive) heal(u, u, u.maxHp * sk.drainHeal * drained / 10, { raw: true, how: 'drain' });
     const pu = o.push != null ? o.push : sk.push ? p.v(sk.push) : 0;
     if (out.landed && pu && out.t.alive) push(u, out.t, pu);
+    if (out.landed && sk.pull && out.t.alive && out.t.side !== u.side) pull(u, out.t);
     return out;
   }
   function statusOpts(s, p) {
@@ -1026,7 +1095,10 @@ function simulate(setup) {
         res.push(r);
       }
     }
-    if (sk.strip) for (const t of targets) if (t.alive && t.side !== u.side) strip(u, t, sk.strip === true ? 99 : sk.strip);
+    // strip: true (everything helpful), a number, or a list of the statuses it strips (Snuff the Light).
+    // steal: the user takes that many helpful statuses for itself (the Crowned Shade's Usurp).
+    if (sk.strip) for (const t of targets) if (t.alive && t.side !== u.side) strip(u, t, typeof sk.strip === 'number' ? sk.strip : 99, null, Array.isArray(sk.strip) ? sk.strip : null);
+    if (sk.steal) for (const t of targets) if (t.alive && t.side !== u.side && u.alive) strip(u, t, sk.steal, u);
     return res;
   }
 
@@ -1115,6 +1187,8 @@ function simulate(setup) {
       if (price.hp) { p.paidHp = selfCost(u, price.hp); if (price.blood && price.blood.p.A) addStatus(u, u, 'kindled', { turns: 1 }); }
     }
     if (basic) u.mp = Math.min(u.maxMp, u.mp + u.mpGain + sumHooks(u, 'mpGain', sk));
+    // Gather: no attack, and twice the basic attack's mana (content spec §5, Tactician II).
+    if (sk.gather) u.mp = Math.min(u.maxMp, u.mp + 2 * (u.mpGain + sumHooks(u, 'mpGain', SKILLS[u.basic])));
     // rule: the rule that chose this (-1 none, -2 a charged attack landing). focus: the party rule that aimed it.
     const ev = { t: 'act', who: u.id, skill: sk.id, rule, targets: targets.map(x => x.id), mp: u.mp };
     if (plan.focus != null) ev.focus = plan.focus;
@@ -1132,6 +1206,11 @@ function simulate(setup) {
       return;
     }
     if (sk.call) { callFoes(u, sk.call); fire(u, 'used', sk, { targets }); return; }
+    if (sk.move) {
+      const sp = moveSpot(u);
+      if (sp && sp.swap) swap(u, sp.swap, 'move'); else if (sp) moveTo(u, sp.slot, 'move');
+      return;
+    }
     const wasHidden = !!u.st.hidden;
     let res;
     if (sk.run) { sk.run(E, u, targets, p); res = []; }
@@ -1188,9 +1267,14 @@ function simulate(setup) {
       const s = u.st[k];
       if ((STATUSES[k].time === 'start' || s.time === 'start') && !s.until) { if ((s.left || 1) <= 1) dropStatus(u, k); else s.left--; }
     }
+    // An aura from a boss's phase: at the start of each turn on the other side, its status lands (The Keep Burns).
+    for (const a of auras) if (a.src.alive && a.src.side !== u.side) addStatus(a.src, u, a.k, { turns: a.t || 1, p: a.p });
     // Curses, fire, poison and bleeding bite at the start of the turn; blessings heal.
     for (const k of ['bleed', 'doom', 'burn', 'poison']) if (tick(u, k) || !u.alive) return endTurn(u);
     if (u.st.blessed) { const b = u.st.blessed; heal(byId[b.src] || null, u, b.dmg || 1, { raw: true }); if (--b.turns <= 0) dropStatus(u, 'blessed'); }
+    // Regeneration: a share of max health back at the start of each turn (the Antlered One's Old Growth). Festering
+    // halves it, as it halves all healing.
+    if (u.regen && u.alive && u.hp < u.maxHp) heal(u, u, u.maxHp * u.regen, { raw: true, how: 'regen' });
     if (u.st.kindled && u.st.kindled.burnHp) selfCost(u, u.maxHp * u.st.kindled.burnHp);
     const trap = u.st.trap;
     if (trap) {
@@ -1220,7 +1304,11 @@ function simulate(setup) {
       const marked = (c.targets || [c.target]).map(id => byId[id]).filter(Boolean);
       for (const t of marked) dropStatus(t, 'marked');
       let tgts = marked.filter(t => t.alive);
-      if (!tgts.length) { const d = defaultTarget(u, sk, poolFor(u, sk, c.p || skillLevel(1))); tgts = d ? [d] : []; }
+      // With every marked victim down, a charged blast on a row or on everyone still lands on whoever stands there.
+      if (!tgts.length) {
+        const pool = poolFor(u, sk, c.p || skillLevel(1));
+        if (AREA_SHAPES.includes(sk.shape)) tgts = pool; else { const d = defaultTarget(u, sk, pool); tgts = d ? [d] : []; }
+      }
       const tgt = tgts[0];
       if (tgts.length === 1 && tgt.st.hidden && tgt.side !== u.side) { emit({ t: 'act', who: u.id, skill: sk.id, rule: -2, targets: [tgt.id], mp: u.mp }); emit({ t: 'miss', src: u.id, tgt: tgt.id, why: 'hidden' }); stats[u.id].charged++; return endTurn(u); }
       plan = tgts.length ? { sk, p: c.p || skillLevel(1), targets: tgts, rule: -2 } : { sk: SKILLS.wait, p: skillLevel(1), targets: [u], rule: -1 };
