@@ -398,6 +398,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
   ok(s.tactics.heroes.c1 && s.tactics.heroes.c1.rules[0].do === 'guard' && !s.tactics.heroes.warden, 'rules moved from the class to the character');
   ok(s.tactics.sets[0].heroes.c1, 'saved sets moved too');
+  ok(s.roster[0].lessons.rule === 1 && Hero.ruleSlots(s.roster[0]) === 4, 'a rule slot bought in step 2 becomes a lesson');
   const v0 = upgrade({ cleared: ['1-1'], best: { '1-1': 4 }, speed: 2 });
   ok(v0.v === 2 && v0.campaign.cleared[0] === '1-1' && v0.roster.length === 6, 'a step 1 save still upgrades');
   console.log('Save migration checked: version 1 → 2 (characters and their rules), and version 0 → 2.');

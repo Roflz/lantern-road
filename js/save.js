@@ -109,6 +109,8 @@ const MIGRATIONS = {
     old.roster = roster.map(c => (isObj(c) && CLASSES[c.cls] && typeof c.id === 'string' ? (c.base ? Hero.sanitize(c) : Hero.upgrade(c)) : null)).filter(Boolean);
     const T = old.tactics;
     if (isObj(T)) {
+      // Rule slots bought in step 2 become Masters' Hall lessons, so nobody loses one.
+      if (isObj(T.heroes)) for (const c of old.roster) { const b = T.heroes[c.cls]; if (isObj(b) && Number.isInteger(b.slots)) c.lessons.rule = Math.max(c.lessons.rule, b.slots - HERO.RULE_SLOTS); }
       const rekey = h => { const out = {}; if (!isObj(h)) return out; for (const c of old.roster) if (h[c.cls] && !out[c.id]) out[c.id] = h[c.cls]; return out; };
       T.heroes = rekey(T.heroes);
       if (Array.isArray(T.sets)) T.sets.forEach(x => { if (isObj(x)) x.heroes = rekey(x.heroes); });

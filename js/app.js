@@ -5,6 +5,7 @@
 //
 // A screen is registered with App.screen(name, def):
 //   def.tab     true to show the top bar and tab bar (and to slide between tabs)
+//   def.parent  the tab to light while it shows (the hero sheet lights Party)
 //   def.render  (params) => element: builds the screen's page, every time it is shown
 //   def.enter   (params) => void: called after it is shown (the battle starts its fight here)
 //   def.leave   () => void: called before another screen replaces it
@@ -57,8 +58,9 @@ const App = (() => {
     else { shell.classList.add('gone'); views.replaceChildren(); shell.hidden = true; }
   }
   function syncTabs() {
+    const lit = cur && screens[cur] && screens[cur].parent ? screens[cur].parent : cur;
     for (const b of tabbar.children) {
-      const on = b.dataset.tab === cur;
+      const on = b.dataset.tab === lit;
       b.classList.toggle('on', on);
       b.setAttribute('aria-current', on ? 'page' : 'false');
     }
@@ -148,12 +150,19 @@ const App = (() => {
     tab: true,
     render() {
       const s = Save.state;
+      // What a character has waiting: points to spend, or a threshold to choose.
+      const flags = c => {
+        const P = Hero.points(c), t = Hero.pending(c).length;
+        return t ? h('span', { class: 'pflag t', title: 'A threshold to choose' }, ico('star')) : P.stat + P.skill > 0 ? h('span', { class: 'pflag', title: `${P.stat} stat and ${P.skill} skill points to spend`, text: String(P.stat + P.skill) }) : null;
+      };
+      const xpPct = c => (c.level >= HERO.CAP ? 100 : Math.min(100, 100 * c.xp / Hero.xpToNext(c.level)));
       const slot = i => {
         const c = Save.char(s.party[i]);
         if (!c) return h('div', { class: 'pslot empty' }, h('span', { text: 'Empty' }));
         return h('button', { class: 'pslot', onclick: () => { sfx('click'); showCharacter(c.id); } },
           h('img', { src: portraitURL(c.cls, true), alt: '' }),
-          h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }));
+          h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }), flags(c),
+          h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })));
       };
       return h('div', { class: 'party' },
         h('div', { class: 'kicker', text: `${s.roster.length} in the roster` }), h('h1', { text: 'The Party' }),
@@ -162,27 +171,19 @@ const App = (() => {
         h('h3', { class: 'sect', text: 'Roster' }),
         h('div', { class: 'roster' }, s.roster.map(c => h('button', { class: 'rrow', onclick: () => { sfx('click'); showCharacter(c.id); } },
           h('img', { src: portraitURL(c.cls, true), alt: '' }),
-          h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: CLASSES[c.cls].role })),
-          h('span', { class: 'lv', text: 'Lv ' + c.level }),
-          h('span', { class: 'xp' }, h('i', { style: `width:${Math.min(100, c.xp % 100)}%` })),
+          h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: c.classes.length > 1 ? c.classes.map(k => CLASSES[k].name).join(' + ') : CLASSES[c.cls].role })),
+          h('span', { class: 'lv' }, flags(c), 'Lv ' + c.level),
+          h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })),
           h('span', { class: 'chev', 'aria-hidden': 'true' })))),
-        placeholder('Levels, gear and skill trees arrive in steps 3 and 4.'));
+        placeholder('Gear arrives in step 4, and recruiting in step 5.'));
     },
     enter: restScene,
   });
 
-  const STAT_LABELS = { hp: 'Health', mp: 'Mana', pow: 'Power', def: 'Defense', spd: 'Speed', crit: 'Crit %', dodge: 'Dodge %' };
-  function showCharacter(id) {
-    const c = Save.char(id);
-    if (!c) return;
-    openSheet(sheetBox([
-      h('div', { class: 'chead' }, h('div', { class: 'pennant hero' }, h('img', { src: portraitURL(c.cls, true), alt: '' })),
-        h('div', {}, h('div', { class: 'kicker', text: `${CLASSES[c.cls].role} · Lv ${c.level}` }), h('h2', { text: c.name }))),
-      h('div', { class: 'statgrid' }, STAT_KEYS.map(k => h('div', { class: 'stat' }, h('span', { text: STAT_LABELS[k] }), h('b', { text: c.stats[k] })))),
-      h('div', { class: 'gearrow' }, ['weapon', 'armor', 'accessory'].map(g => h('div', { class: 'gslot' }, h('span', { text: g === 'armor' ? 'Armour' : g[0].toUpperCase() + g.slice(1) }), h('b', { text: c.gear[g] || 'None' })))),
-      actions.tactics ? btn('Tactics', () => { closeSheet(); actions.tactics(c.id); }, 'primary', 'The rules this character follows') : null,
-      placeholder('The full character sheet comes with the mockups.'),
-    ], 'charbox'), 'sheet-bottom');
+  // The hero sheet (js/sheet.js).
+  function showCharacter(id, tab) {
+    if (!Save.char(id)) return;
+    if (actions.hero) actions.hero(id, tab);
   }
 
   // ── time away
@@ -275,7 +276,7 @@ const App = (() => {
   }
 
   return {
-    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings,
+    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene,
     get current() { return cur; },
   };
 })();

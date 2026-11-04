@@ -65,8 +65,9 @@ const Battle = (() => {
     if (S.mode === 'camp' && u.hero) u.by = u.slot < 2 ? Math.round(S.H * 0.868) : Math.round(S.H * 0.967);
   }
   const css = (x, y) => [S.ox + x * S.scale, S.oy + y * S.scale];
-  const sprOf = u => (u.hero ? (S.land ? heroSide(u.key, u.step || 0) : heroSprite(u.key, u.step || 0)) : foeSprite(u.key));
-  const lampOf = u => (S.land ? HERO_SIDE[u.key].lamp : HERO_ART[u.key].lamp);
+  const sprOf = u => (u.thrall ? foeSprite(u.art || 'bones') : u.hero ? (S.land ? heroSide(u.key, u.step || 0) : heroSprite(u.key, u.step || 0)) : foeSprite(u.key));
+  const lampOf = u => (u.thrall ? null : S.land ? (HERO_SIDE[u.key] || {}).lamp : (HERO_ART[u.key] || {}).lamp);
+  const faceOf = u => (u.thrall ? portraitURL(u.art || 'bones', false) : portraitURL(u.key, u.side === 0));
   const sizeOf = u => { const s = sprOf(u), k = u.boss ? 2 : 1; return [s.width * k, s.height * k]; };
   const headY = u => u.y - sizeOf(u)[1];
   const midOf = u => [u.x, u.y - sizeOf(u)[1] * 0.55];
@@ -75,7 +76,7 @@ const Battle = (() => {
   function makeView(s) {
     const u = Object.assign({}, s, { hero: s.side === 0, st: Object.assign({}, s.st), alpha: 1, anim: null, flashUntil: 0, fade: null, gone: false, step: 0, phase: s.slot * 0.37 + s.side * 1.1 });
     place(u); u.x = u.bx; u.y = u.by;
-    u.plate = h('div', { class: 'plate ' + (u.hero ? 'hero' : 'foe') + (u.boss ? ' boss' : '') + (u.elite ? ' elite' : '') },
+    u.plate = h('div', { class: 'plate ' + (u.hero ? 'hero' : 'foe') + (u.boss ? ' boss' : '') + (u.elite ? ' elite' : '') + (u.thrall ? ' thrall' : '') },
       h('div', { class: 'bar hp' }, u.lagEl = h('i', { class: 'lag' }), u.hpEl = h('i', { class: 'fill' })),
       u.maxMp ? h('div', { class: 'bar mp' }, u.mpEl = h('i', { class: 'fill' })) : null,
       u.stEl = h('div', { class: 'sts' }));
@@ -107,18 +108,19 @@ const Battle = (() => {
     u.plate.classList.toggle('low', u.alive && p < 0.3);
     u.plate.classList.toggle('ko', !u.alive);
     const icons = [];
-    for (const k of ['guarding', 'charging', 'marked', 'kindled', 'dazzled', 'doom', 'bleed']) {
-      const s = u.st[k];
-      if (!s) continue;
-      const D = STATUSES[k];
-      icons.push(h('span', { class: 'st ' + k + (D.bad ? ' bad' : '') }, ico(D.icon), s.turns > 1 && k !== 'guarding' ? h('b', { text: s.turns }) : null));
+    // Every status it has, helpful ones first; stacks show their count, the rest their turns left.
+    const keys = Object.keys(u.st).filter(k => STATUSES[k]).sort((a, b) => (STATUSES[a].bad ? 1 : 0) - (STATUSES[b].bad ? 1 : 0) || STATUS_KEYS.indexOf(a) - STATUS_KEYS.indexOf(b));
+    for (const k of keys.slice(0, 8)) {
+      const s = u.st[k], D = STATUSES[k];
+      const n = s.n != null && (k === 'bleed' || k === 'burn' || k === 'parrying') ? s.n : (s.turns > 1 && s.turns < 90 && D.time !== 'start' ? s.turns : null);
+      icons.push(h('span', { class: 'st ' + k + (D.bad ? ' bad' : '') }, ico(D.icon), n > 1 ? h('b', { text: n }) : null));
     }
     if (!u.alive) icons.push(h('span', { class: 'st ko' }, ico('skull')));
     u.stEl.replaceChildren(...icons);
   }
   function showUnitTip(u) {
-    const sts = Object.keys(u.st).map(k => `${STATUSES[k].name}: ${STATUSES[k].tip}`).join(' ');
-    const what = u.hero ? CLASSES[u.key].role : (u.boss ? 'Boss' : u.elite ? 'Elite' : 'Foe');
+    const sts = Object.keys(u.st).filter(k => STATUSES[k]).map(k => `${STATUSES[k].name}: ${STATUSES[k].tip}`).join(' ');
+    const what = u.thrall ? 'Thrall' : u.hero ? `${CLASSES[u.key].role} · Lv ${u.lv || 1}` : `${u.boss ? 'Boss' : u.elite ? 'Elite' : 'Foe'} · Lv ${u.lv || 1}`;
     toast(`${u.name} · ${what} · ${u.alive ? `${u.hp}/${u.maxHp} health` : u.hero ? 'knocked out' : 'fallen'}${sts ? ' · ' + sts : ''}`);
   }
 
@@ -212,6 +214,33 @@ const Battle = (() => {
     kindle: { kind: 'buff', color: '#ffb04a', sfx: 'kindle', light: 60 },
     guard: { kind: 'buff', color: '#8cc4e6', sfx: 'guard', dome: true },
     charge: { kind: 'charge', color: '#ff5a4a', sfx: 'charge' },
+    // the classes' skills (js/classes.js)
+    cleanse: { kind: 'heal', color: '#e8f4ff', sfx: 'heal' },
+    rage: { kind: 'buff', color: '#e5574a', sfx: 'kindle', light: 30 },
+    buffhex: { kind: 'buff', color: '#bb96ee', sfx: 'hex' },
+    drain: { kind: 'cast', proj: 'orb', color: '#e0485a', sfx: 'hex', light: 10 },
+    bless: { kind: 'heal', color: '#f7d36a', sfx: 'heal' },
+    ward: { kind: 'buff', color: '#8cc4e6', sfx: 'guard', dome: true },
+    holyaoe: { kind: 'aoe', color: '#ffe9a0', sfx: 'holy', flash: '#fff6d8', light: 50 },
+    buffshield: { kind: 'buff', color: '#8cc4e6', sfx: 'guard' },
+    toss: { kind: 'shot', proj: 'bone', color: '#8cc4e6', sfx: 'bash', hit: 'thunk', arcH: 6, speed: 1.1 },
+    haste: { kind: 'buff', color: '#f7c24a', sfx: 'kindle' },
+    trap: { kind: 'shot', proj: 'bolt', color: '#a7adb8', sfx: 'bolt', hit: 'thunk', arcH: 6 },
+    taunt: { kind: 'aoe', color: '#e05a4a', sfx: 'toll', ring: true },
+    vial: { kind: 'shot', proj: 'orb', color: '#b4f098', sfx: 'bolt', hit: 'thunk', arcH: 10 },
+    firebomb: { kind: 'aoe', color: '#ff8a3a', sfx: 'burst', flash: '#ffb04a', boom: true, light: 40 },
+    fire: { kind: 'shot', proj: 'orb', color: '#ff8a3a', sfx: 'magic', hit: 'thunk', arcH: 10, light: 12 },
+    acid: { kind: 'shot', proj: 'orb', color: '#9ad040', sfx: 'magic', hit: 'thunk', arcH: 10, light: 6 },
+    acidcloud: { kind: 'aoe', color: '#9ad040', sfx: 'water', ring: true },
+    smoke: { kind: 'buff', color: '#9a8ea4', sfx: 'guard' },
+    knife: { kind: 'shot', proj: 'bolt', color: '#d8dce4', sfx: 'bolt', hit: 'thunk', speed: 1.5 },
+    knell: { kind: 'cast', proj: 'ring', color: '#e8c24a', sfx: 'toll', light: 8 },
+    chime: { kind: 'heal', color: '#e8c24a', sfx: 'toll' },
+    gravebolt: { kind: 'cast', proj: 'orb', color: '#d8d0bc', sfx: 'hex', light: 8 },
+    raisebone: { kind: 'buff', color: '#d8d0bc', sfx: 'bone', light: 20 },
+    corpse: { kind: 'aoe', color: '#a8c85a', sfx: 'burst', boom: true },
+    shadow: { kind: 'dash', color: '#bb96ee', arc: 'slash', sfx: 'slash' },
+    fan: { kind: 'shot', proj: 'bolt', color: '#d8dce4', sfx: 'bolt', hit: 'thunk', stagger: 60, speed: 1.4 },
     none: { kind: 'none' },
   };
 
@@ -226,7 +255,7 @@ const Battle = (() => {
     for (; i < group.length && group[i].t !== 'act'; i++) {
       const e = group[i];
       at(T + t, () => apply(e));
-      if (e.t === 'tick') t += 280; else if (e.t === 'die') t += 520;
+      if (e.t === 'tick' || e.t === 'sprung' || (e.t === 'hit' && !e.counter)) t += 280; else if (e.t === 'die') t += 520; else if (e.t === 'skip') t += 520; else if (e.t === 'heal') t += 120;
     }
     if (i >= group.length) return t + 160;
     const act = group[i++], sk = SKILLS[act.skill], F = FX[sk.fx] || FX.none;
@@ -237,16 +266,22 @@ const Battle = (() => {
     const targets = act.targets.map(id => S.units[real[id] || id]);
     const impacts = schedule(actor, act, sk, F, targets, T + tA + 60);
     let lastT = tA + 60 + (F.dur || 0), cur = null;
+    const seen = {};
     for (; i < group.length; i++) {
       const e = group[i];
       let et;
-      if (e.t === 'hit' || e.t === 'miss' || e.t === 'heal' || e.t === 'revive') {
+      if ((e.t === 'hit' || e.t === 'miss') && e.counter) et = (cur != null ? cur - T : tA + 400) + 160;
+      else if (e.t === 'hit' || e.t === 'miss' || e.t === 'heal' || e.t === 'revive') {
         const key = e.t === 'hit' || e.t === 'miss' ? (e.guard || e.tgt) : e.tgt;
-        et = (impacts[key] != null ? impacts[key] : (cur != null ? cur + 60 : tA + 400)) - T;
+        const n = seen[key] = (seen[key] || 0) + 1;
+        et = (impacts[key] != null ? impacts[key] + (n - 1) * 130 : (cur != null ? cur + 60 : tA + 400)) - T;
+        if (n > 1 && (e.t === 'hit' || e.t === 'miss')) { const tg = S.units[key], F2 = F; at(T + et - 20, () => { if (tg) { if (F2.kind === 'melee' || F2.kind === 'dash') slashFx(tg, F2); else impactFx(tg, F2); } }); }
         cur = et + T;
       } else if (e.t === 'status') et = (cur != null ? cur - T : tA + 420) + 50;
       else if (e.t === 'die') et = (cur != null ? cur - T : tA + 400) + 150;
+      else if (e.t === 'counter') et = (cur != null ? cur - T : tA + 400) + 90;
       else et = (cur != null ? cur - T : tA + 400) + 80;
+      if (e.t === 'counter' || ((e.t === 'hit' || e.t === 'miss') && e.counter)) cur = T + et;
       at(T + et, () => apply(e));
       lastT = Math.max(lastT, et);
     }
@@ -373,21 +408,22 @@ const Battle = (() => {
         const t = U[e.tgt], src = U[e.src];
         t.hp = e.hp;
         const share = e.dmg / t.maxHp;
-        pop(t, String(e.dmg), (e.crit ? 'crit ' : '') + (share >= .25 ? 'big ' : '') + (t.hero ? 'hurt' : 'dmg'));
+        if (e.absorbed) pop(t, (e.dmg ? '' : '−') + e.absorbed + ' warded', 'tag guard');
+        if (e.dmg || !e.absorbed) pop(t, String(e.dmg), (e.crit ? 'crit ' : '') + (share >= .25 ? 'big ' : '') + (t.hero ? 'hurt' : 'dmg'));
         if (e.crit) pop(t, 'Critical', 'tag crit');
         if (e.guard) { pop(t, 'Guarded', 'tag guard'); const g = U[e.guard]; addFx({ type: 'link', a: g, b: t, dur: 380, color: '#8cc4e6' }); sfx('guard', .7); }
         flash(t); recoil(t, t.hero ? 1 : -1);
         const [x, y] = midOf(t);
         burst(x, y, e.crit ? '#ffd06a' : '#fff0d0', e.crit ? 12 : 6, e.crit ? 46 : 32, 360, true);
         if (e.crit) { sfx('crit'); shake(2); } else if (share >= .2) shake(1);
-        if (t.hero && share >= .15) frame.classList.add('hurt'), setTimeout(() => frame.classList.remove('hurt'), 110);
+        if (t.hero && !t.thrall && share >= .15) frame.classList.add('hurt'), setTimeout(() => frame.classList.remove('hurt'), 110);
         syncPlate(t);
         if (B) B.dealt[src.side] += e.dmg;
         break;
       }
       case 'miss': {
         const t = U[e.tgt];
-        pop(t, e.why === 'dazzled' ? 'Miss' : 'Dodge', 'tag miss');
+        pop(t, { dazzled: 'Miss', parry: 'Parried', hidden: 'Hidden' }[e.why] || 'Dodge', 'tag miss');
         if (e.guard) { pop(t, 'Guarded', 'tag guard'); addFx({ type: 'link', a: U[e.guard], b: t, dur: 380, color: '#8cc4e6' }); }
         if (e.why === 'dodge') { t.anim = { t0: P.t, dodge: t.hero ? -1 : 1, dur: 260 }; }
         sfx('miss');
@@ -402,12 +438,15 @@ const Battle = (() => {
       }
       case 'tick': {
         const t = U[e.who];
+        if (!t) break;
         t.hp = e.hp;
-        pop(t, String(e.dmg), e.key === 'doom' ? 'doom' : 'bleed');
+        const col = { doom: '#bb96ee', burn: '#ff8a3a', poison: '#7ac46a', cost: '#d83a46' }[e.key] || '#d83a46';
+        if (e.dmg > 0 || e.key !== 'cost') pop(t, String(e.dmg), { doom: 'doom', burn: 'burn', poison: 'poison' }[e.key] || 'bleed');
+        if (e.absorbed) pop(t, 'Warded', 'tag guard');
         const [x, y] = midOf(t);
-        burst(x, y, e.key === 'doom' ? '#bb96ee' : '#d83a46', 6, 20, 420, e.key === 'doom');
+        burst(x, y, col, e.burst ? 14 : 6, e.burst ? 34 : 20, 420, e.key !== 'bleed');
         flash(t, 70);
-        sfx('tick');
+        sfx(e.burst ? 'burst' : 'tick');
         syncPlate(t);
         break;
       }
@@ -416,10 +455,11 @@ const Battle = (() => {
         if (e.on) {
           const prev = t.st[e.key];
           t.st[e.key] = { turns: e.turns, dmg: e.dmg };
-          if (!prev) {
-            // Kindled shows as its flame icon and the motes; words would crowd six heroes at once.
-            const label = { doom: 'Doom', bleed: 'Bleed', dazzled: 'Dazzled', marked: 'Marked', charging: 'Charging' }[e.key];
-            if (label) pop(t, label, 'tag st-' + e.key);
+          t.st[e.key].n = e.n;
+          if (!prev || (e.key === 'bleed' && e.n > (prev.n || 1))) {
+            // Most helpful statuses show as their icon and the motes; words would crowd six heroes at once.
+            const label = STATUSES[e.key] && STATUSES[e.key].tag;
+            if (label) pop(t, label, 'tag st-' + e.key + (STATUSES[e.key].bad ? ' bad' : ''));
           }
         } else delete t.st[e.key];
         syncPlate(t);
@@ -438,7 +478,7 @@ const Battle = (() => {
       }
       case 'revive': {
         const t = U[e.tgt];
-        t.alive = true; t.hp = e.hp; t.st = {}; t.fade = { t0: P.t, dur: 500, rise: true }; t.gone = false;
+        t.alive = true; t.hp = e.hp; t.st = {}; t.fade = { t0: P.t, dur: 500, rise: true }; t.gone = false; t.alpha = 1;
         pop(t, 'Raised', 'tag raise');
         motes(t.x, t.y - 4, '#fff3c8', 12);
         syncPlate(t);
@@ -453,9 +493,88 @@ const Battle = (() => {
       }
       case 'delay': {
         const t = U[e.who];
-        pop(t, 'Staggered', 'tag stagger');
+        pop(t, 'Pushed back', 'tag stagger');
+        if (t) addFx({ type: 'ring', x: t.x, y: t.y - 4, r0: 2, r1: 10, dur: 300, color: '#b8d0e0' });
+        if (B && e.queue) renderFlags(Math.max(0, B.curK), true);
         break;
       }
+      case 'quick': {
+        const t = U[e.who];
+        if (t) { pop(t, e.now ? 'Acts next' : 'Sooner', 'tag quick'); motes(t.x, t.y - 6, '#f7c24a', 6); }
+        break;
+      }
+      case 'resist': {
+        const t = U[e.who];
+        if (t) pop(t, 'Resist', 'tag resist');
+        break;
+      }
+      case 'skip': {
+        const t = U[e.who];
+        if (t) { pop(t, 'Stunned', 'tag st-stunned bad'); t.anim = { t0: P.t, dodge: t.hero ? -1 : 1, dur: 360 }; sfx('miss'); }
+        break;
+      }
+      case 'counter': {
+        const t = U[e.who], v = U[e.tgt];
+        if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (S.land ? (t.hero ? -10 : 10) : 0), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
+        break;
+      }
+      case 'saved': {
+        const t = U[e.who];
+        if (t) { pop(t, e.label || 'Saved', 'tag raise'); motes(t.x, t.y - 4, '#fff3c8', 14); addFx({ type: 'pillar', x: t.x, y: t.y, dur: 600, color: '#fff3c8', w: 6 }); sfx('revive'); }
+        break;
+      }
+      case 'broke': {
+        const t = U[e.who];
+        if (t) { pop(t, 'Charge broken', 'tag resist'); delete t.st.charging; syncPlate(t); }
+        break;
+      }
+      case 'cleanse': {
+        const t = U[e.who];
+        if (t) { pop(t, 'Cleansed', 'tag heal'); motes(t.x, t.y - 4, '#e8f4ff', 8); }
+        break;
+      }
+      case 'strip': {
+        const t = U[e.who];
+        if (t) pop(t, 'Stripped', 'tag resist');
+        break;
+      }
+      case 'steal': {
+        const t = U[e.who];
+        if (t) pop(t, '+' + e.gold + ' gold', 'tag gold');
+        break;
+      }
+      case 'sprung': {
+        const t = U[e.who];
+        if (t) { pop(t, 'Trap!', 'tag st-trap bad'); burst(t.x, t.y, '#a7adb8', 10, 30, 420); sfx('bash'); }
+        break;
+      }
+      case 'maxhp': {
+        const t = U[e.who];
+        if (t) { t.maxHp = e.maxHp; t.hp = e.hp; syncPlate(t); }
+        break;
+      }
+      case 'summon': {
+        // A thrall rises into an empty slot.
+        const s = Object.assign({}, e.unit, { hero: true });
+        const u = makeView(s);
+        S.units[u.id] = u; S.list.push(u);
+        u.alpha = 0; u.fade = { t0: P.t, dur: 520, rise: true };
+        burst(u.x, u.y, '#d8d0bc', 12, 26, 600, false, -20);
+        addFx({ type: 'pillar', x: u.x, y: u.y, dur: 600, color: '#d8d0bc', w: 5 });
+        pop(u, 'Rises', 'tag raise');
+        layoutPlates();
+        sfx('bone');
+        break;
+      }
+      case 'swap': {
+        const a = U[e.a], b = e.b && U[e.b];
+        if (a) { a.slot = e.slots[0]; place(a); }
+        if (b) { b.slot = e.slots[1]; place(b); }
+        for (const u of [a, b]) if (u) { u.march = { t0: P.t, dur: 420, fx: u.x, fy: u.y }; pop(u, 'Dragged', 'tag stagger'); }
+        layoutPlates();
+        break;
+      }
+      case 'refill': case 'corpse': break;
       case 'act': {
         const a = U[e.who];
         a.mp = e.mp;
@@ -478,30 +597,37 @@ const Battle = (() => {
         const x = log[j];
         if (x.t === 'act') { t.skill = x.skill; t.rule = x.rule; t.focus = x.focus; break; }
         if (x.t === 'tick') t.tick = x.key;
+        if (x.t === 'skip') t.skip = true;
       }
       out.push(t);
     }
     return out;
   }
   function ruleLine(u, t) {
+    if (t.skip) return [h('b', { text: 'Stunned' }), 'loses the turn'];
     if (!t.skill) return [h('b', { text: t.tick ? STATUSES[t.tick].name : 'Fallen' }), 'falls before acting'];
     const focus = t.focus != null ? ' · focus fire' : '';
-    if (t.rule >= 0) return [h('b', { text: `Rule ${t.rule + 1}` }), ruleCond(u.rules[t.rule]) + focus];
+    if (u.thrall) return [h('b', { text: 'Thrall' }), 'no rules'];
+    if (t.rule >= 0 && u.rules[t.rule]) return [h('b', { text: `Rule ${t.rule + 1}` }), ruleCond(u.rules[t.rule]) + focus];
     if (t.rule === -2) return [h('b', { text: 'Charged' }), 'the big attack lands'];
     if (t.skill === 'wait') return [h('b', { text: 'No target' }), 'it waits'];
     return [h('b', { text: 'No rule fit' }), 'basic attack' + focus];
   }
+  // A unit for a flag: one on screen, or a thrall that hasn't risen yet.
+  const flagUnit = id => S.units[id] || (B && (B.res.log.find(e => e.t === 'summon' && e.unit.id === id) || {}).unit) || null;
   function makeFlag(t) {
-    const u = S.units[t.who], sk = t.skill && SKILLS[t.skill];
-    const icon = sk ? sk.icon : (t.tick ? STATUSES[t.tick].icon : 'skull');
-    const el = h('div', { class: 'flag ' + (u.hero ? 'hero' : 'foe') + (u.boss ? ' boss' : '') + (u.elite ? ' elite' : '') },
+    const u = flagUnit(t.who), sk = t.skill && SKILLS[t.skill];
+    if (!u) return h('div', { class: 'flag' });
+    const icon = sk ? sk.icon : t.skip ? 'stun' : (t.tick && STATUSES[t.tick] ? STATUSES[t.tick].icon : 'skull');
+    const hero = u.side === 0;
+    const el = h('div', { class: 'flag ' + (hero ? 'hero' : 'foe') + (u.boss ? ' boss' : '') + (u.elite ? ' elite' : '') },
       h('div', { class: 'cloth' },
-        h('div', { class: 'pic' }, h('img', { class: 'face', src: portraitURL(u.key, u.hero), alt: '' }), h('img', { class: 'sk', src: iconURL(icon), alt: '' })),
+        h('div', { class: 'pic' }, h('img', { class: 'face', src: faceOf(u), alt: '' }), h('img', { class: 'sk', src: iconURL(icon), alt: '' })),
         h('div', { class: 'txt' },
           h('div', { class: 'who', text: u.name }),
-          h('div', { class: 'skn', text: sk ? sk.name : 'Succumbs' }),
+          h('div', { class: 'skn', text: sk ? sk.name : t.skip ? 'Stunned' : 'Succumbs' }),
           h('div', { class: 'why' + (t.rule === -1 ? ' dim' : '') }, ruleLine(u, t)))));
-    el.addEventListener('click', () => toast(`${u.name}: ${sk ? sk.name + (sk.tip ? '. ' + sk.tip : '') : 'falls before acting'}`));
+    el.addEventListener('click', () => toast(`${u.name}: ${sk ? sk.name + (sk.tip ? '. ' + sk.tip : sk.d ? '. ' + skillText(sk, 1) : '') : t.skip ? 'stunned' : 'falls before acting'}`));
     return el;
   }
   // The turn being played sits on top; the coming turns hang below it.
@@ -583,6 +709,12 @@ const Battle = (() => {
     banner(stage.name, 'intro', `${R.name} · Stage ${stage.id}`);
     if (regionChange || opts.first) sfx('region');
     at(P.t + 900, () => { hideBanner(); B.started = true; platesEl.classList.remove('away'); });
+    // What happens before the first turn: battle-start passives and summons.
+    let j = 1;
+    while (j < res.log.length && !BEATS.includes(res.log[j].t)) j++;
+    const pre = res.log.slice(1, j);
+    if (pre.length) at(P.t + 940, () => { pre.forEach(apply); if (pre.some(e => e.t === 'status' && e.key === 'kindled')) sfx('kindle'); });
+    B.i = j;
     return res;
   }
   // Step mode: play one turn, then pause.
@@ -800,8 +932,11 @@ const Battle = (() => {
     S.fx = []; numsEl.replaceChildren();
     const fin = {};
     for (const f of B.res.final) fin[f.id] = f;
+    for (const f of B.res.final) if (!S.units[f.id]) { const u = makeView(Object.assign({}, f, { hero: true })); S.units[u.id] = u; S.list.push(u); }
+    layoutPlates();
     for (const u of S.list) {
       const f = fin[u.id];
+      if (!f) continue;
       u.hp = f.hp; u.mp = f.mp; u.st = Object.assign({}, f.st);
       if (u.alive !== f.alive) { u.alive = f.alive; u.fade = f.alive ? null : { t0: P.t - 2000, dur: 1 }; }
       u.alpha = 1; u.anim = null; if (f.alive) u.fade = null;
@@ -1204,7 +1339,8 @@ const Battle = (() => {
   function idle(region = 0) {
     B = null; queue = []; S.fx = []; S.active = null; stepping = false; clearFlags(); hideBanner();
     S.region = region; S.mode = 'camp'; S.land = false; resize(); setMusicKey(HEARTH_SCALE); platesEl.classList.remove('away');
-    setUnits(PARTY.map((k, i) => ({ id: 'p' + i, side: 0, slot: i, key: k, name: CLASSES[k].name, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] })));
+    const form = typeof Save !== 'undefined' && Save.state ? Save.state.party.map(id => Save.char(id)) : PARTY.map(k => ({ cls: k, name: CLASSES[k].name }));
+    setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
     for (const u of S.list) u.plate.hidden = true;
     hudEl.hidden = true; $('#controls').hidden = true;
     endAim(true);
@@ -1218,7 +1354,7 @@ const Battle = (() => {
     requestAnimationFrame(loop);
   }
   return {
-    init, run, skip, idle, walk, setSpeed, setPaused, play, stepOnce, resize,
+    init, run, skip, idle, walk, setSpeed, setPaused, play, stepOnce, resize, FX,
     // items: use the item in a loadout slot (on a hero's id, for an item that needs one), as the player does
     useItem, tapItem,
     set onPause(fn) { onPause = fn; },

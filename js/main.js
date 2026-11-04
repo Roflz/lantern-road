@@ -93,7 +93,8 @@ const REPORT_STATS = [
 ];
 const RULE_COLORS = ['#f1d36a', '#8cc4e6', '#c9a6ff', '#b4de98', '#f08c76', '#e8c88a'];
 const ruleColor = r => (r >= 0 ? RULE_COLORS[r % RULE_COLORS.length] : r === -2 ? '#e05a4a' : '#8a7e92');
-const roleOf = u => (u.side === 0 ? CLASSES[u.key].role : u.boss ? 'Boss' : u.elite ? 'Elite foe' : 'Foe');
+const roleOf = u => (u.thrall ? 'Thrall' : u.side === 0 ? `${CLASSES[u.key].role} · Lv ${u.lv || 1}` : `${u.boss ? 'Boss' : u.elite ? 'Elite foe' : 'Foe'} · Lv ${u.lv || 1}`);
+const faceURL = u => (u.thrall ? portraitURL(u.art || 'bones', false) : portraitURL(u.key, u.side === 0));
 const aName = n => (/^The /.test(n) ? n.replace(/^The /, 'the ') : (/^[AEIOU]/.test(n) ? 'an ' : 'a ') + n);
 let reportView = null; // { res, side, stat, sel }
 
@@ -134,7 +135,7 @@ function characterCard(u, res) {
   const chip = id => h('span', { class: 'chip' }, ico(SKILLS[id].icon), SKILLS[id].name);
   const slot = (mark, color, cond, skill, n, cls = '') => h('div', { class: 'slot ' + cls + (n ? '' : ' idle'), style: `--c:${color}` },
     h('span', { class: 'mark', text: mark }), h('span', { class: 'cond', text: cond }), h('span', { class: 'arrow', text: '→' }), chip(skill), pips(n));
-  const tactics = u.rules.map((r, k) => slot(k + 1, ruleColor(k), ruleCond(r), r.do, s.rules[k]));
+  const tactics = u.rules.map((r, k) => slot(k + 1, ruleColor(k), ruleCond(r), SKILLS[r.do] ? r.do : u.basic, s.rules[k]));
   tactics.push(slot('Default', ruleColor(-1), 'When no tactic fits', u.basic, s.basic, 'default'));
   if (s.charged) tactics.push(slot('!', ruleColor(-2), 'Charged the turn before', u.skills.map(k => SKILLS[k].charge).find(Boolean) || u.basic, s.charged, 'default'));
   const moments = [];
@@ -148,7 +149,7 @@ function characterCard(u, res) {
   if (s.raised) m('holy', `Raised ${s.raised === 1 ? 'once' : s.raised + ' times'}`, 'brought back to fight');
   return h('div', { class: 'card' },
     h('div', { class: 'chead' },
-      h('div', { class: 'pennant ' + (hero ? 'hero' : 'foe') }, h('img', { src: portraitURL(u.key, hero), alt: '' })),
+      h('div', { class: 'pennant ' + (hero ? 'hero' : 'foe') }, h('img', { src: faceURL(u), alt: '' })),
       h('div', { class: 'ctitle' }, h('div', { class: 'nm', text: u.name }), h('div', { class: 'k', text: roleOf(u) })),
       status),
     strip,
@@ -158,6 +159,18 @@ function characterCard(u, res) {
     h('div', { class: 'slots' }, tactics),
     moments.length ? [h('h4', { text: 'Moments' }), h('div', { class: 'moments' }, moments)] : null);
 }
+// XP from the foes the party felled goes to every character who fought (design §5). Returns what changed for each.
+function awardXp(res) {
+  const out = [];
+  for (const u of res.start) {
+    const c = u.side === 0 && u.char && Save.char(u.char);
+    if (!c) continue;
+    const before = { level: c.level, xp: c.xp };
+    out.push({ c, before, g: Hero.gainXp(c, res.xp) });
+  }
+  if (res.loot && res.loot.gold) Save.state.currencies.gold += res.loot.gold;
+  return out;
+}
 function showReport(res, opts = {}) {
   const stage = current.stage, won = res.winner === 0;
   if (!res.saved) {
@@ -166,7 +179,10 @@ function showReport(res, opts = {}) {
     if (won && !save.cleared.includes(stage.id)) save.cleared.push(stage.id);
     if (won) { const b = save.best[stage.id]; if (!b || res.rounds < b) save.best[stage.id] = res.rounds; }
     save.current = null; // the fight is over: a reload now returns to the road, not into this battle
+    res.gains = awardXp(res);
     Save.commit();
+    // Level-ups are celebrated after the battle, before the report.
+    if (res.xp > 0 && res.gains.length && !opts.report) { LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }); return; }
   }
   const again = reportView && reportView.res === res && !sheet.hidden;
   const v = reportView = Object.assign(again ? reportView : { res, side: 0, stat: 'dealt', sel: null }, opts);
@@ -180,7 +196,7 @@ function showReport(res, opts = {}) {
   const rows = units.map(u => {
     const val = S[u.id][st.k], sel = v.sel === u.id;
     return h('button', { class: 'line' + (sel ? ' sel' : '') + (alive[u.id] ? '' : ' down'), 'aria-pressed': sel ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { sel: u.id }); } },
-      h('img', { src: portraitURL(u.key, u.side === 0), alt: '' }),
+      h('img', { src: faceURL(u), alt: '' }),
       h('span', { class: 'nm' }, h('span', { class: 't', text: u.name }), alive[u.id] ? null : h('span', { class: 'ko', text: u.side === 0 ? 'KO' : 'Fell' })),
       h('span', { class: 'bar ' + (st.heal ? 'heal' : 'dmg') + (val && val === top ? ' top' : '') }, h('i', { style: `width:${Math.round(100 * val / top)}%` })),
       h('b', { class: val ? '' : 'zero', text: val ? fmt(val) : '–' }),
@@ -198,7 +214,7 @@ function showReport(res, opts = {}) {
         h('div', { class: 'kicker ' + (won ? 'won' : 'lost'), text: `${won ? 'Victory' : 'Defeat'} · ${REGION_NAMES[stage.region].name} ${stage.id}` }),
         h('h2', { text: won ? `${stage.name} is clear` : `Driven back at ${stage.name}` }),
         h('p', { class: 'flavor', text: flavorLine(res, won) }),
-        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`),
+        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }); } }, ico('star'), `+${fmt(res.xp)} XP`, (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null, res.loot && res.loot.gold ? badge(`+${res.loot.gold} gold`, 'good', 'coin') : null,
           badge(kos ? plural(kos, 'knockout') : 'No knockouts', kos ? 'bad' : 'good'), res.rounds >= SIM.ENRAGE_ROUND ? badge('Enraged', 'bad', 'rage') : null,
           h('div', { class: 'sides', role: 'tablist', 'aria-label': 'Whose fight to show' }, [[0, 'Your party'], [1, 'Foes']].map(([id, label]) => h('button', { class: v.side === id ? 'on' : '', role: 'tab', 'aria-selected': v.side === id ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { side: id, sel: null }); } }, label))))),
       h('div', { class: 'actions' }, actions)),

@@ -229,6 +229,7 @@ const HERO_ART = {
 };
 // Walking frames: step 1 lifts the left boot, step 2 the right.
 function heroSprite(key, step = 0) {
+  if (!HERO_ART[key]) key = 'sellsword';
   const A = HERO_ART[key], ck = 'hero:' + key + ':' + step;
   if (spriteCache.has(ck)) return spriteCache.get(ck);
   let map = A.map;
@@ -356,6 +357,7 @@ const HERO_SIDE = {
     "....kk..kk......"] },
 };
 function heroSide(key, step = 0) {
+  if (!HERO_SIDE[key]) key = 'sellsword';
   const A = HERO_SIDE[key], ck = 'side:' + key + ':' + step;
   if (spriteCache.has(ck)) return spriteCache.get(ck);
   let map = A.map;
@@ -420,6 +422,46 @@ const UI_ICONS = {
   check: { map: [".......", "......g", ".....g.", "g...g..", ".g.g...", "..g....", "......."], pal: { g: '#b4de98' } },
   lock: { map: ["..bbb..", ".b...b.", ".b...b.", "bbbbbbb", "bbbybbb", "bbbybbb", "bbbbbbb"], pal: { b: '#7d7186', y: '#2a2233' } },
   boss: { map: ["x...x...x", "xx.xxx.xx", "xxxxxxxxx", "xyxxyxxyx", "xxxxxxxxx", "xxxxxxxxx"], pal: { x: '#e8c24a', y: '#c43b3b' } },
+  // stats and the hero sheet (from the screen mockups)
+  coin: { map: ["..yyy..", ".yYyyy.", "yYyyyyy", "yyyddyy", "yyyyyyy", ".yyyyd.", "..ddd.."], pal: { y: '#e8c24a', Y: '#fff0a8', d: '#a8822a' } },
+  star: { map: ["...y...", "...y...", "yyywyyy", ".yyyyy.", "..yyy..", ".y...y.", "y.....y"], pal: { y: '#f7d36a', w: '#fff3c8' } },
+  boot: { map: ["...bb..", "...bb..", "...bb..", "...bbb.", "w..bbbb", ".w.bbbb", "......."], pal: { b: '#a8784a', w: '#b4a8b6' } },
+  feather: { map: ["......w", "....wwW", "...wwW.", "..wwW..", ".wwW...", "wW.....", "w......"], pal: { w: '#c9e8ff', W: '#7aa6c8' } },
+  hourglass: { map: ["wwwwwww", ".yyyyy.", "..yyy..", "...y...", "..y.y..", ".yyyyy.", "wwwwwww"], pal: { w: '#8a5a3a', y: '#e8c24a' } },
+  fatigue: { map: ["..ppp..", ".pp....", "pp.....", "pp...w.", "pp.....", ".pp....", "..ppp.."], pal: { p: '#bb96ee', w: '#e8d8ff' } },
+  bless: { map: [".yyyyy.", "y..g..y", "y.ggg.y", "y..g..y", "y..g..y", "y.....y", ".yyyyy."], pal: { g: '#8ac46a', y: '#f7d36a' } },
+  fire: { map: ["...f...", "..fyf..", ".fyWyf.", ".fyyyf.", "..fff..", "wwwwwww", ".w...w."], pal: { f: '#e2582e', y: '#f7b34a', W: '#fff0c0', w: '#6b4a2e' } },
+  bag: { map: ["..bbb..", "...b...", ".bbbbb.", "bbbybbb", "bbbbbbb", "bbbbbbb", ".bbbbb."], pal: { b: '#8a5a3a', y: '#e8c24a' } },
+  plate: { map: ["MM...MM", "mMMMMMm", "mmmymmm", ".mmmmm.", ".mmymm.", ".mmmmm.", "mm...mm"], pal: { m: '#8a8f99', M: '#dfe4ea', y: '#e8c24a' } },
+  scroll: { map: ["wwwwww.", "WwwwwwW", ".wkkkw.", ".wwwww.", ".wkkw..", ".wwwww.", "WwwwwwW"], pal: { w: '#ece4d2', W: '#a89c84', k: '#7d7186' } },
+  helm: { map: ["..mmm..", ".mMmmm.", "mMmmmmm", "mmkkkmm", "mmmmmmm", "m.mmm.m", "..m.m.."], pal: { m: '#a7adb8', M: '#dfe4ea', k: '#1a1214' } },
+  // statuses and skills
+  tincture: { map: ["..kkk..", "...g...", "..ggg..", ".gpppg.", "gpwpppg", "gpppppg", ".ggggg."], pal: { k: '#6b4a2e', g: '#b4a8b6', p: '#7ac46a', w: '#d8f8c0' } },
+  brace: { map: ["bbbbbbb", "bwwwwwb", "bbbbbbb", "bwwwwwb", ".bbbbb.", "..bbb..", "...b..."], pal: { b: '#9a8a70', w: '#d8c8a8' } },
+  anchor: { map: ["..www..", "..w.w..", "..www..", "...w...", "w..w..w", "ww.w.ww", ".wwwww."], pal: { w: '#c9ccd4' } },
+  weak: { map: ["......w", ".....w.", "....w..", ".......", "..w....", ".bh....", "b..h..."], pal: { w: '#a8a4b0', h: '#c08a46', b: '#6b4a2e' } },
+  silence: { map: [".wwwww.", "wkwwwkw", "wwkwkww", "wwwkwww", "wwkwkww", ".wwwww.", ".w....."], pal: { w: '#b4a8b6', k: '#d4484a' } },
+  eye: { map: [".......", "..www..", ".wwkww.", "wwkykww", ".wwkww.", "..www..", "......."], pal: { w: '#e8e0cc', k: '#2a1040', y: '#bb96ee' } },
+  ward: { map: ["..bbb..", ".b...b.", "b..w..b", "b.w...b", "b.....b", ".b...b.", "..bbb.."], pal: { b: '#8cc4e6', w: '#dcf2ff' } },
+  stun: { map: ["y..y..y", ".......", "..bbb..", ".bbbbb.", ".bkbkb.", ".bbbbb.", "..bbb.."], pal: { y: '#f7d36a', b: '#d8d0bc', k: '#2a2233' } },
+  cover: { map: ["bbbb...", "bwwbcc.", "bwbbccc", "bbbbccc", ".bb.ccc", "..b.c.c", "......."], pal: { b: '#6aa8d8', w: '#dcf2ff', c: '#b4a8b6' } },
+  fort: { map: ["s.s.s.s", "sssssss", ".sssss.", ".ssdss.", ".sssss.", ".ssdss.", "sssssss"], pal: { s: '#9aa0aa', d: '#2a2233' } },
+  thorns: { map: ["g..g..g", ".g.g.g.", "..ggg..", "gggwggg", "..ggg..", ".g.g.g.", "g..g..g"], pal: { g: '#a07a4a', w: '#e8d8b8' } },
+  haste: { map: ["y..y...", ".y..y..", "..y..y.", "...y..y", "..y..y.", ".y..y..", "y..y..."], pal: { y: '#f7c24a' } },
+  exposed: { map: ["bbbbbbb", "bbbkbbb", "bbkbbbb", "bbbkbbb", ".bbbkb.", "..bkb..", "...b..."], pal: { b: '#d08a6a', k: '#2a1414' } },
+  quarry: { map: ["..rrr..", ".r...r.", "r..r..r", "r.rrr.r", "r..r..r", ".r...r.", "..rrr.."], pal: { r: '#ff6a4a' } },
+  slow: { map: ["bbbbbbb", ".b...b.", "..bwb..", "...b...", "..b.b..", ".bwwwb.", "bbbbbbb"], pal: { b: '#6a94e8', w: '#cfe0ff' } },
+  trap: { map: [".......", "w.w.w.w", "wwwwwww", "..w.w..", "wwwwwww", "w.w.w.w", "......."], pal: { w: '#a7adb8' } },
+  taunt: { map: ["r.....r", "rr...rr", ".rrrrr.", ".rkrkr.", ".rrrrr.", "..rrr..", "...r..."], pal: { r: '#e05a4a', k: '#2a1414' } },
+  parry: { map: ["w.....w", ".w...w.", "..w.w..", "...w...", "..w.w..", ".h...h.", "h.....h"], pal: { w: '#eceaf2', h: '#c08a46' } },
+  smoke: { map: ["...ss..", "..ssSs.", ".ssssss", "sSsssss", "sssssSs", ".sssss.", "......."], pal: { s: '#7d7186', S: '#b4a8b6' } },
+  riposte: { map: ["..www..", ".w...w.", "w.....w", "w...w.w", ".w..ww.", "....www", "......."], pal: { w: '#eceaf2' } },
+  acid: { map: ["...g...", "..ggg..", ".ggwgg.", ".gwggg.", "ggggggg", ".ggggg.", "..ggg.."], pal: { g: '#9ad040', w: '#e8ffb0' } },
+  knife: { map: ["......w", ".....ww", "....ww.", "...ww..", "h.ww...", ".hh....", "h.h...."], pal: { w: '#d8dce4', h: '#5a3a20' } },
+  confuse: { map: [".ppppp.", "p.....p", "p.ppp.p", "p.p.p.p", "p.pp..p", "p.....p", ".ppppp."], pal: { p: '#c9a6ff' } },
+  poison: { map: ["...g...", "..ggg..", ".ggggg.", "gkgggkg", "ggggggg", ".gkkkg.", "..ggg.."], pal: { g: '#7ac46a', k: '#1a2a10' } },
+  hidden: { map: ["..ddd..", ".ddddd.", "ddkkkdd", "dkekekd", "dkkkkkd", ".ddddd.", "ddddddd"], pal: { d: '#4a3f55', k: '#1a1220', e: '#bb96ee' } },
+  fester: { map: [".g...g.", "..g.g..", ".bbbbb.", "bbgbbbb", "bbbbgbb", "bgbbbbb", ".bbbbb."], pal: { b: '#7a6a3a', g: '#a8c85a' } },
 };
 const iconURLs = new Map();
 function iconURL(name) {
