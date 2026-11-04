@@ -50,6 +50,17 @@ const TEMPLATES = {
   swarm: ["..bb......bb....", ".beb.....beb....", "..bb..bb..bb....", "......beb.......", "..bb...bb...bb..", ".beb.......beb..", "..bb..bb....bb..", "......beb.......", "...bb..bb..bb...", "..beb.....beb...", "...bb......bb..."],
   knight: [".....hhhhhh.....", ".....hhhhhh.....", ".....heeeeh.....", ".....hhhhhh.....", "...aabbbbbbaa...", "..aabbbbbbbbaa..", "..a.bbbrrbbb.a..", "..a.bbbbbbbb.a.s", "..c.bbbbbbbb.cs.", "....bbbbbbbb.s..", "....aaaaaaaa....", ".....bb..bb.....", ".....bb..bb.....", ".....aa..aa.....", "....aaa..aaa...."],
   bloat: ["......hhhh......", ".....hehheh.....", ".....hhmmhh.....", "...bbbbbbbbbb...", "..bbbbbbbbbbbb..", ".bbbbbpbbbbbbbb.", ".bbbbbbbbbpbbbb.", ".bbbpbbbbbbbbbb.", ".bbbbbbbbbbbbbb.", "..bbbbbbbbbbbb..", "...bbbbbbbbbb...", "....bb....bb....", "....dd....dd...."],
+  // Regions II–V (build step 7): a wolf (Briar Wolves, Cinder Hounds), the Hanged Man, the Marsh Lantern's wisp,
+  // Mother Bramble, the Thornback, the Kiln Warden, a candle (Wick Wraiths), the Font Leech, and robes for the court.
+  wolf: ["..t..........t..", ".kk..........kk.", ".kbk........kbk.", "..kbbbbbbbbbbk..", "..bbbbbbbbbbbb..", "..bebbbbbbbbeb..", "...bbbbbbbbbb...", "....bbbssbbb....", "...tbbsmmsbbt...", "..tbbbbbbbbbbt..", ".tbbbbbbbbbbbbt.", "..bbb.bbbb.bbb..", "..bb..bbbb..bb..", "..dd..d..d..dd.."],
+  hanged: [".......r........", ".......r........", "......rrr.......", ".....hhhhh......", "....hhhhhhh.....", "....hehhheh.....", "....hhhmhhh.....", "......rr........", "....bbbbbbb.....", "...bbbbbbbbb....", "...b.bbbbb.b....", "...b.bbdbb.b....", "...c.bbbbb.c....", ".....bb.bb......", ".....bb.bb......", ".....d...d......"],
+  wisp: [".......kk.......", "......k..k......", ".....kkkkkk.....", "....kyyyyyyk....", "....kyfwwfyk....", "....kyweewyk....", "....kyfwwfyk....", "....kyyyyyyk....", ".....kkkkkk.....", "......yffy......", ".......ff.......", "......f..f......", ".......f........", "........f......."],
+  bramble: [".....t...t...t....", "...t.vvvvvvvv.t...", "..tvvvvvvvvvvvvt..", ".tvvgvvvvvvvvgvvt.", ".vvvvvvvvvvvvvvvv.", "tvvvvveevvveevvvvt", ".vvvvvvvvvvvvvvvv.", "tvvgvvvmmmmvvvgvvt", ".vvvvvmwmmwmvvvvv.", "tvvvvvvmmmmvvvvvvt", ".vvgvvvvvvvvvvgvv.", "..vvvvvvvvvvvvvv..", ".t.vvvvvvvvvvvv.t.", "..ddvvddvvddvvdd.."],
+  boar: ["t...t..tt..t...t..", ".t..ttttttttt..t..", "..ttbbbbbbbbbtt...", ".tbbbbbbbbbbbbbt..", ".bbebbbbbbbbbebb..", ".bbbbbbbbbbbbbbb..", "..bbbbsssssbbbb...", "..wbbsmssmsbbbw...", ".w.bbsssssssbb.w..", "...bbbbbbbbbbb....", "..bbbbbbbbbbbbb...", "..bb.bbbbbbb.bb...", "..bb..bb.bb..bb...", "..dd..dd.dd..dd..."],
+  kiln: ["......kk........", "......kk........", "......kk........", "...aaaaaaaaaa...", "..abbbbbbbbbba..", "..abbebbbbebba..", "..abbbbbbbbbba..", "..abkkkkkkkkba..", "c.abkfofofokba.c", "cc.bkoyyyyokb.cc", "...bkfofofokb...", "...bkkkkkkkkb...", "...abbbbbbbba...", "...aa.aaaa.aa...", "...aa.a..a.aa...", "..ddd.d..d.ddd.."],
+  candle: [".......f........", "......fyf.......", "......fwf.......", ".......k........", ".....wwwwww.....", "....wwwwwwww....", "....wewwwwew....", "....wwwwwwww....", "...wwwwmmwwww...", "..w.wwwwwwww.w..", "..w.wwwwwwww.w..", "..d.wwwwwwww.d..", "....wwwwwwww....", "....wdwwwwdw....", "...wwwwwwwwww...", "..dddddddddddd.."],
+  leech: [".....kkkkk......", "....kmmmmmk.....", "....kmwmwmk.....", "....kmmmmmk.....", ".....bbbbb......", "....bbrbbbb.....", "...bbbbbrbbb....", "..bbbrbbbbbbb...", "..bbbbbbbbrbbb..", ".bbrbbbbbbbbbb..", ".bbbbbbbrbbbbbb.", "..bbbbbbbbbbbb..", "...ddbbbbbbdd...", ".....dddddd....."],
+  robed: ["......hhhh......", ".....hkkkkh.....", ".....kekkek.....", ".....hkkkkh.....", "....rrhhhhrr....", "...rrrrrrrrrr...", "..rrrrrrrrrrrr..", "..rr.rrrrrr.rr..", "..r..rrryrr..r..", "..c..rrrrrr..c..", ".....rrrrrr.....", "....rrrrrrrr....", "...rrrrrrrrrr...", "..rrrrrrrrrrrr..", "..dddddddddddd.."],
 };
 const ACCESSORIES = {
   crown: { x: 5, y: -2, map: ["y.yy.y", "yryyry"] },
@@ -58,6 +69,20 @@ const ACCESSORIES = {
   shovel: { x: 14, y: 2, map: [".w", ".w", ".w", ".w", ".w", ".w", ".w", "ss", "ss", "s."] },
   // the Mourner's veil, draped over the head and shoulders
   veil: { x: 4, y: -1, map: ["..vvvv..", ".vvvvvv.", "vv....vv", "v......v", "v......v", "v......v", ".v....v."] },
+  // Regions II–V
+  bell: { x: 12, y: 7, map: [".k", "yy", "yy", "y."] },
+  wimple: { x: 4, y: -1, map: ["..wwww..", ".wwwwww.", "ww....ww", "w......w", "w......w", "ww....ww", ".w....w."] },
+  witchhat: { x: 4, y: -5, map: ["....HH..", "...HHH..", "..HHHH..", ".HHHHHH.", "HHHHHHHH"] },
+  antlers: { x: 1, y: -5, map: ["a..a......a..a", ".a.a......a.a.", "..aa.a..a.aa..", "...aaa..aaa...", ".....aaaa....."] },
+  spear: { x: 13, y: -3, map: [".s.", "sss", ".w.", ".w.", ".w.", ".w.", ".w.", ".w.", ".w.", ".w.", ".w.", ".w.", ".w."] },
+  crossbow: { x: 2, y: 8, map: ["k..........k", "kwwwwwwwwwwk", "k....ww....k"] },
+  flame: { x: 5, y: -4, map: ["..f...", ".fof..", "foyof.", "oyyyo."] },
+  plume: { x: 7, y: -4, map: ["..ff", ".fof", "foo.", "oo.."] },
+  ruff: { x: 3, y: 4, map: ["wwwwwwwwww", ".wwwwwwww."] },
+  rod: { x: 13, y: 0, map: ["y.", "yy", "y.", "w.", "w.", "w.", "w.", "w.", "w.", "w.", "w."] },
+  trumpet: { x: 9, y: 3, map: ["....yy", "yyyyyy", "....yy", "..rr..", "..rr.."] },
+  bigcrown: { x: 4, y: -3, map: ["y..y..y.", "yyyyyyyy", "yRyyyyRy"] },
+  wick: { x: 6, y: -3, map: ["..f.", ".fyf", "..k."] },
 };
 const FOE_ART = {
   ghoul: { tpl: 'hunched', pal: { h: '#7d8a6a', e: '#e8f07a', m: '#1e1612', b: '#4d5640', c: '#c9c2a4', d: '#343a2c' }, eye: '#e8f07a' },
@@ -74,11 +99,38 @@ const FOE_ART = {
   ratking: { tpl: 'swarm', acc: ['crown'], pal: { b: '#7e6456', e: '#ff6a4a', y: '#c8a040', r: '#a83a2e' }, eye: '#ff6a4a' },
   moths: { tpl: 'swarm', pal: { b: '#cfc6a8', e: '#4a3a24' }, eye: '#fff2c0' },
   mimic: { tpl: 'knight', pal: { h: '#5a4a3e', e: '#ffd36a', b: '#3e3028', a: '#6e5a48', r: '#8a3a2a', c: '#6e5a48', s: '#a89880' }, eye: '#ffd36a' },
+  // Region II, the Drowned Chapel: drowned teal and pallor
   acolyte: { tpl: 'humanoid', pal: { h: '#7aa6a0', e: '#d8fff4', m: '#142221', b: '#2e4a4c', d: '#1b2e30', c: '#7aa6a0' }, eye: '#d8fff4' },
   bloat: { tpl: 'bloat', pal: { h: '#8aa58a', e: '#f4fff0', m: '#1e1612', b: '#6b8a72', p: '#c9d47a', d: '#34453a' }, eye: '#f4fff0' },
-  bellwraith: { tpl: 'wraith', pal: { w: '#9ab8c8', e: '#141020', m: '#141020' }, eye: '#9ab8c8' },
+  bellwraith: { tpl: 'wraith', acc: ['bell'], pal: { w: '#9ab8c8', e: '#141020', m: '#141020', y: '#b8a070', k: '#4a5a66' }, eye: '#9ab8c8' },
+  sister: { tpl: 'humanoid', acc: ['wimple'], pal: { h: '#a8b8bc', e: '#1a2428', m: '#2a3438', b: '#26323a', d: '#162026', c: '#a8b8bc', w: '#d8e0dc' }, eye: '#1a2428' },
   choir: { tpl: 'swarm', pal: { b: '#4a6a6c', e: '#d8fff4' }, eye: '#d8fff4' },
+  leech: { tpl: 'leech', pal: { k: '#3a4a52', m: '#7a2e3e', w: '#f0e4ec', b: '#bab2aa', r: '#8a807c', d: '#5e5854' }, eye: '#f0e4ec' },
   bishop: { tpl: 'humanoid', acc: ['mitre'], pal: { h: '#9ab8b0', e: '#5af0d0', m: '#142221', b: '#cfc8b0', d: '#8a846e', c: '#9ab8b0', y: '#d8b44a', r: '#3a7a6a' }, eye: '#5af0d0' },
+  // Region III, Thornwood: bark, moss and thorn
+  briarwolf: { tpl: 'wolf', pal: { t: '#8aa04a', k: '#2a1e18', b: '#5e4e3e', e: '#f0d060', s: '#8c7c6a', m: '#3a1612', d: '#3a2e24' }, eye: '#f0d060' },
+  thornwitch: { tpl: 'humanoid', acc: ['witchhat'], pal: { h: '#7e8a5a', e: '#d8f070', m: '#1a1a10', b: '#4e3c2a', d: '#2e2418', c: '#7e8a5a', H: '#2e3a1e' }, eye: '#d8f070' },
+  hanged: { tpl: 'hanged', pal: { r: '#8a7a5a', h: '#6e5e4c', e: '#e8d8a0', m: '#1a1410', b: '#4a4038', c: '#8a8070', d: '#3a3028' }, eye: '#e8d8a0' },
+  marshlantern: { tpl: 'wisp', pal: { k: '#3a3a2a', y: '#b8e890', f: '#e8ffb0', w: '#ffffff', e: '#2a3a10' }, eye: '#e8ffb0' },
+  bramble: { tpl: 'bramble', pal: { t: '#c8a070', v: '#3e5a2a', g: '#6e8e3a', e: '#ff6a4a', m: '#1a1008', w: '#e8d8b0', d: '#2a2014' }, eye: '#ff6a4a' },
+  thornback: { tpl: 'boar', pal: { t: '#a8824a', b: '#4a3a2e', e: '#ff8a3a', s: '#6e5e4e', m: '#2a1a14', w: '#ece4d0', d: '#2e241c' }, eye: '#ff8a3a' },
+  antlered: { tpl: 'humanoid', acc: ['antlers'], pal: { h: '#5e4c3a', e: '#a0f06a', m: '#1a1410', b: '#3a4a26', d: '#262a18', c: '#5e4c3a', a: '#dccca4' }, eye: '#a0f06a' },
+  // Region IV, the Ashen Keep: charcoal, ash and ember
+  ashknight: { tpl: 'knight', pal: { h: '#3c3836', e: '#ff8a3a', b: '#2a2624', a: '#4c4642', r: '#8a3a1a', c: '#4c4642', s: '#aca49c' }, eye: '#ff8a3a' },
+  cinderhound: { tpl: 'wolf', pal: { t: '#ff8a3a', k: '#1a1210', b: '#2e2622', e: '#ffc04a', s: '#4e3e34', m: '#ff5a2a', d: '#1a1410' }, eye: '#ffc04a' },
+  squire: { tpl: 'humanoid', acc: ['spear'], pal: { h: '#b85a4a', e: '#f0e0c0', m: '#3a1010', b: '#6a3a2a', d: '#3a2018', c: '#b85a4a', s: '#a8a8b0', w: '#6b4a2e' }, eye: '#f0e0c0' },
+  arbalist: { tpl: 'skeleton', acc: ['crossbow'], pal: { x: '#aca494', e: '#ff7a2a', c: '#6e645c', k: '#4a3a2a', w: '#7a5232' }, eye: '#ff7a2a' },
+  kilnwarden: { tpl: 'kiln', pal: { k: '#1e1a18', a: '#4c4642', b: '#5e5650', e: '#ffb04a', f: '#ff7a2a', o: '#ffb04a', y: '#fff0a0', c: '#3a3634', d: '#2a2624' }, eye: '#ffb04a' },
+  pyrepriest: { tpl: 'humanoid', acc: ['flame'], pal: { h: '#8a5a3a', e: '#fff0a0', m: '#2a1008', b: '#6e2a1a', d: '#3a1a10', c: '#8a5a3a', f: '#ff7a2a', o: '#ffb04a', y: '#fff0c0' }, eye: '#fff0a0' },
+  marshal: { tpl: 'knight', acc: ['plume'], pal: { h: '#2e2a28', e: '#ffb04a', b: '#3a2a22', a: '#5a4a40', r: '#c8402a', c: '#5a4a40', s: '#ff9a4a', f: '#ff7a2a', o: '#ffc04a' }, eye: '#ffb04a' },
+  // Region V, the Hollow Throne: tallow, violet and gold
+  courtier: { tpl: 'robed', acc: ['ruff'], pal: { h: '#c8c0d8', k: '#1a1420', e: '#e8e0ff', r: '#5a4a6e', y: '#d8b44a', c: '#c8c0d8', d: '#3a3048', w: '#ece8f4' }, eye: '#e8e0ff' },
+  shade: { tpl: 'wraith', acc: ['crown'], pal: { w: '#7a6a9a', e: '#fff0a0', m: '#140f20', y: '#d8b44a', r: '#a83a5a' }, eye: '#fff0a0' },
+  herald: { tpl: 'skeleton', acc: ['trumpet'], pal: { x: '#e0d8c4', e: '#e8c24a', c: '#a89e88', y: '#d8b44a', r: '#a83a3a' }, eye: '#e8c24a' },
+  wickwraith: { tpl: 'candle', pal: { f: '#ffb04a', y: '#fff0a0', w: '#e8dcc0', k: '#3a2a1a', e: '#2a2016', m: '#4a3a2a', d: '#b8a888' }, eye: '#fff0a0' },
+  kingsguard: { tpl: 'knight', acc: ['crown'], pal: { h: '#b8b4a8', e: '#a8e0ff', b: '#5e5c66', a: '#86848e', r: '#5a4a8a', c: '#86848e', s: '#d8dce4', y: '#d8b44a' }, eye: '#a8e0ff' },
+  chamberlain: { tpl: 'robed', acc: ['rod'], pal: { h: '#a8a0b8', k: '#100c18', e: '#e8c24a', r: '#2e2440', y: '#e8c24a', c: '#a8a0b8', d: '#1e1828', w: '#d8d0b8' }, eye: '#e8c24a' },
+  hollowking: { tpl: 'robed', acc: ['bigcrown'], pal: { h: '#6a4a7a', k: '#06040a', e: '#fff3c8', r: '#4a2a5a', y: '#e8c24a', c: '#d8d0b8', d: '#2a1a34', R: '#c83a5a' }, eye: '#fff3c8' },
 };
 // One foe as a single canvas, accessories included.
 function foeSprite(key) {
@@ -598,11 +650,37 @@ const PROPS = {
   // Warm pockets along the road: wayside lanterns and grave candles.
   post: { map: [".ddd.", ".dfd.", ".dyd.", ".dfd.", ".ddd.", "..d..", "..d..", "..d..", "..d..", "..d..", "..d..", ".ddd."], glow: [2, 2, 15], warm: true },
   candle: { map: ["..y..", "..f..", ".sss.", "sssss", "ss.ss", "sssss", "sssss", "ddddd"], glow: [2, 0, 10], warm: true },
+  // Region II: a drowned bell in the shallows
+  bellprop: { map: ["..d..", ".sss.", ".sss.", "sssss", "pqppq"] },
+  // Region III, Thornwood: living trees, pines, thorn bushes, stumps, ferns and a cold glowing toadstool
+  tree: { map: ["...lll...", ".lllllll.", "lllglllll", "llllllgll", ".lllllll.", "..lltll..", "....t....", "....t....", "...ttt..."] },
+  pine: { map: ["...l...", "..lll..", ".lllll.", "..lll..", ".lllll.", "lllllll", "...t...", "..ttt.."] },
+  thornbush: { map: [".v.v.v.", "vvvvvvv", "vrvvvrv", "vvvvvvv", ".ddddd."] },
+  toadstool: { map: [".mmm.", "mmwmm", "..s..", "..s..", ".ddd."], glow: [2, 1, 9], warm: false },
+  stump: { map: [".ttt.", "tdddt", "ttttt", ".t.t."] },
+  fern: { map: ["g...g", ".g.g.", "g.g.g", ".ggg.", "..g.."] },
+  // Region IV, the Ashen Keep: braziers, torn banners, rubble, broken walls, embers and stakes
+  brazier: { map: [".f.f.", "fyfyf", "kkkkk", ".k.k.", ".k.k.", "kk.kk"], glow: [2, 1, 14], warm: true },
+  banner: { map: ["k....", "kccc.", "kcrc.", "kccc.", "kc.c.", "k....", "k....", "k....", "kk..."] },
+  rubble: { map: ["..s..", ".ssd.", "sdsss"] },
+  wall: { map: ["s.s..", "sssss", "sdsss", "sssds", "sssss", "ddddd"] },
+  embers: { map: [".e.e.", "eaeae", ".aaa."], glow: [2, 1, 8], warm: true },
+  stakes: { map: ["t.t.t", "t.t.t", "ttttt", "t.t.t"] },
+  // Region V, the Hollow Throne: candelabra, melted tallow, statues and empty thrones
+  candelabra: { map: ["f.f.f", "y.y.y", "yyyyy", "..y..", "..y..", ".yyy."], glow: [2, 0, 14], warm: true },
+  tallow: { map: [".f..", ".w.f", "ww.w", "wwww", "wwww"], glow: [1, 0, 9], warm: true },
+  statue: { map: [".sss.", ".sds.", ".sss.", "sssss", "sssss", ".sss.", ".sss.", "sssss", "ddddd"] },
+  throne: { map: ["y...y", "ysssy", "ysrsy", "ysrsy", "sssss", "s...s", "d...d"] },
 };
-const PC = o => Object.assign({ s: '#5f6266', d: '#3a3c41', t: '#3b3026', b: '#bfb8a6', g: '#2c3a24', r: '#6b2b22', p: '#1d3136', q: '#3d5a63', f: '#f29a3a', a: '#4a4542', y: '#d8b44a' }, o);
+const PC = o => Object.assign({ s: '#5f6266', d: '#3a3c41', t: '#3b3026', b: '#bfb8a6', g: '#2c3a24', r: '#6b2b22', p: '#1d3136', q: '#3d5a63', f: '#f29a3a', a: '#4a4542', y: '#d8b44a', l: '#24402a', v: '#2e3e1e', m: '#5a9aaa', w: '#e8dcc0', k: '#1e1a18', c: '#5a2a1e', e: '#ff7a2a' }, o);
+// Each region's ground, road, scenery and weather: in battle (js/battle.js) and on its map (js/map.js). sky: the map's
+// colour at the top. particle: mist, rain, leaves, embers or motes.
 const REGION_ART = [
-  { ground: '#1a1e17', speck: '#252b21', speck2: '#2c3326', road: '#38322a', roadSpeck: '#463e34', edge: '#26211b', seam: '#2e2922', tiles: false, night: '#140f2a', dark: .78, density: .62, props: ['grave', 'grave', 'cross', 'deadtree', 'skulls', 'stone', 'candle', 'post'], pc: PC({}), particle: 'mist' },
-  { ground: '#121d1d', speck: '#1a2a29', speck2: '#1f3332', road: '#2c3534', roadSpeck: '#384342', edge: '#1b2423', seam: '#222b2a', tiles: true, night: '#0a1426', dark: .78, density: .56, props: ['pillar', 'broken', 'puddle', 'puddle', 'grave', 'stone', 'candle', 'post'], pc: PC({ s: '#56605e', d: '#353e3d', p: '#173038', q: '#4a7480' }), particle: 'rain' },
+  { ground: '#1a1e17', speck: '#252b21', speck2: '#2c3326', road: '#38322a', roadSpeck: '#463e34', edge: '#26211b', seam: '#2e2922', tiles: false, night: '#140f2a', dark: .78, density: .62, props: ['grave', 'grave', 'cross', 'deadtree', 'skulls', 'stone', 'candle', 'post'], pc: PC({}), particle: 'mist', sky: '#07050b' },
+  { ground: '#121d1d', speck: '#1a2a29', speck2: '#1f3332', road: '#2c3534', roadSpeck: '#384342', edge: '#1b2423', seam: '#222b2a', tiles: true, night: '#0a1426', dark: .78, density: .56, props: ['pillar', 'broken', 'puddle', 'puddle', 'bellprop', 'stone', 'candle', 'post'], pc: PC({ s: '#56605e', d: '#353e3d', p: '#173038', q: '#4a7480' }), particle: 'rain', sky: '#040a10' },
+  { ground: '#0f1a10', speck: '#16251a', speck2: '#1c2e1e', road: '#2e2a1e', roadSpeck: '#3a3424', edge: '#1a2014', seam: '#26221a', tiles: false, night: '#06120a', dark: .8, density: .82, props: ['tree', 'tree', 'pine', 'thornbush', 'thornbush', 'toadstool', 'stump', 'fern', 'post'], pc: PC({ l: '#1e3a1e', g: '#2e5a26', t: '#3a2c1e', v: '#2a3a1a', r: '#8a2a1e', s: '#c8c0b0', d: '#2a2218' }), particle: 'leaves', sky: '#030805' },
+  { ground: '#1a1210', speck: '#241a16', speck2: '#2c201a', road: '#3a3330', roadSpeck: '#4a403a', edge: '#221a16', seam: '#2c2420', tiles: true, night: '#1a0806', dark: .72, density: .62, props: ['brazier', 'banner', 'rubble', 'wall', 'embers', 'stakes', 'pillar', 'broken'], pc: PC({ s: '#4c4642', d: '#2a2624', c: '#5a2a1e', r: '#a83a1a', a: '#3a3230', f: '#ff9a3a', y: '#ffd06a', t: '#3a2a1e' }), particle: 'embers', sky: '#1c0604' },
+  { ground: '#120e18', speck: '#1a1424', speck2: '#221a2c', road: '#2e2838', roadSpeck: '#3a3446', edge: '#1a1424', seam: '#26202e', tiles: true, night: '#0e0818', dark: .8, density: .56, props: ['candelabra', 'tallow', 'statue', 'throne', 'skulls', 'pillar', 'broken', 'tallow'], pc: PC({ s: '#6a6478', d: '#3a3446', y: '#c8a040', f: '#ffd06a', b: '#d8d0bc', r: '#5a2a4a' }), particle: 'motes', sky: '#08040e' },
 ];
 
 // ── interface icons: small pixel glyphs that stand in for words wherever a number is enough
@@ -678,7 +756,14 @@ const UI_ICONS = {
   poison: { map: ["...g...", "..ggg..", ".ggggg.", "gkgggkg", "ggggggg", ".gkkkg.", "..ggg.."], pal: { g: '#7ac46a', k: '#1a2a10' } },
   hidden: { map: ["..ddd..", ".ddddd.", "ddkkkdd", "dkekekd", "dkkkkkd", ".ddddd.", "ddddddd"], pal: { d: '#4a3f55', k: '#1a1220', e: '#bb96ee' } },
   fester: { map: [".g...g.", "..g.g..", ".bbbbb.", "bbgbbbb", "bbbbgbb", "bgbbbbb", ".bbbbb."], pal: { b: '#7a6a3a', g: '#a8c85a' } },
+  // each region's material (MATERIALS in js/save.js): Bone Dust, Chapel Wax, Heartwood, Cinder Iron and Throne Tallow
+  wax: { map: ["...w...", "..wWw..", ".wwWww.", ".wwwww.", "wwwwwww", ".wwwwd.", "..ddd.."], pal: { w: '#6ab8b0', W: '#c8f0e8', d: '#3a7a74' } },
+  heartwood: { map: ["..ttt..", ".tbbbt.", "tbrrrbt", "tbrbrbt", "tbrrrbt", ".tbbbt.", "..ttt.."], pal: { t: '#5a3a22', b: '#a8784a', r: '#7a4a2a' } },
+  ingot: { map: [".......", "..ooooo", ".oyyyyo", "oyyyyo.", "ooooo..", ".......", "......."], pal: { o: '#7a3a1a', y: '#ff8a3a' } },
+  tallow: { map: ["...f...", "...y...", "..www..", "..wWw..", "..www..", ".wwwww.", "ddddddd"], pal: { f: '#ff9a3a', y: '#fff0a0', w: '#e8dcc0', W: '#fffbe8', d: '#8a7a5a' } },
 };
+// A material's icon, by its id.
+const MAT_ICON = { bone_dust: 'bone', chapel_wax: 'wax', heartwood: 'heartwood', cinder_iron: 'ingot', throne_tallow: 'tallow' };
 const iconURLs = new Map();
 function iconURL(name) {
   if (iconURLs.has(name)) return iconURLs.get(name);

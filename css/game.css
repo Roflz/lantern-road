@@ -79,6 +79,7 @@ button{font:inherit;color:inherit}
 .num.tag.ko{color:#ff9a8a}
 .num.tag.raise{color:#fff3c8}
 .num.tag.stagger{color:var(--ward)}
+.num.tag.splash{color:#ffb070}.num.tag.regen{color:#b4f098}.num.tag.drain{color:#8cb4ff}.num.tag.thorns{color:#d8b070}
 .num.tag.st-doom{color:var(--doom)}.num.tag.st-bleed{color:#ff7a80}.num.tag.st-dazzled{color:#fff3c8}.num.tag.st-kindled{color:var(--ember)}.num.tag.st-marked,.num.tag.st-charging{color:#ff7a6a}
 @keyframes numup{0%{transform:translate(-50%,6px) scale(.5);opacity:0}14%{transform:translate(-50%,-6px) scale(1.18);opacity:1}30%{transform:translate(-50%,-8px) scale(1)}100%{transform:translate(-50%,-34px);opacity:0}}
 @keyframes tagup{0%{transform:translate(-50%,4px);opacity:0}15%{transform:translate(-50%,-2px);opacity:1}80%{opacity:1}100%{transform:translate(-50%,-20px);opacity:0}}
@@ -130,6 +131,8 @@ button{font:inherit;color:inherit}
 #banner .t{font:52px/1 var(--f-display);text-shadow:0 0 26px rgba(244,166,70,.45),0 3px 0 #000}
 #banner .s{margin-top:6px;font:10px var(--f-pixel);letter-spacing:.2em;text-transform:uppercase;color:var(--ember);text-shadow:1px 1px 0 #000}
 #banner.intro .t{font-size:40px}
+#banner.region .t{font-size:30px;color:#ffe2a0}
+#banner.region .s{max-width:80%;margin:8px auto 0;line-height:1.5;letter-spacing:.12em}
 #banner.lose .t{color:#ffb0a0;text-shadow:0 0 26px rgba(212,72,74,.6),0 3px 0 #000}
 #banner.rage .t{font-size:34px;color:#ff9a8a;text-shadow:0 0 26px rgba(212,72,74,.7),0 3px 0 #000}
 #banner.rage .s{color:#ff9a8a}

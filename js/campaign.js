@@ -32,18 +32,22 @@ const Campaign = (() => {
     if (c.trip === undefined) c.trip = null;
     if (c.lastTrip === undefined) c.lastTrip = null;
     if (!s.unlocks || typeof s.unlocks !== 'object') s.unlocks = {};
+    // A region opened before its buildings were recorded (a save from build step 6 that beat the Sexton) gets them now,
+    // and Tactician I's Move action, which step 6 hadn't built.
+    for (const id in REGION_OPENS) if (s.unlocks[id]) for (const k of REGION_OPENS[id]) if (!s.unlocks[k]) unlock(k, s);
+    if (s.unlocks.tactician && typeof Tactics !== 'undefined' && s === store()) try { Tactics.learn('act:move'); } catch (e) { }
     return s;
   }
 
   // ── where the road stands
   const has = (id, s = store()) => !s || !!(s.unlocks && s.unlocks[id]);
   const isLit = (id, s = store()) => !!s && s.campaign.cleared.includes(id);
-  // The next stage to light: the first one not yet cleared, or past the end when Region I is all lit.
+  // The next stage to light: the first one not yet cleared, or past the end when the whole road is lit.
   const frontier = (s = store()) => { const i = STAGES.findIndex(st => !isLit(st.id, s)); return i < 0 ? STAGES.length : i; };
   // lit, frontier or dark
   const stateOf = (i, s = store()) => (isLit(STAGES[i].id, s) ? 'lit' : i === frontier(s) ? 'frontier' : 'dark');
   const litIn = (r, s = store()) => STAGES.filter(st => st.region === r && isLit(st.id, s)).length;
-  // A region is reached once the boss before it falls (only Region I has stages in this build).
+  // A region is reached once the boss before it falls.
   const reached = (r, s = store()) => r === 0 || has('region:' + r, s);
   const regionBuilt = r => STAGES.some(st => st.region === r);
 
@@ -158,7 +162,7 @@ const Campaign = (() => {
     return CONDITIONS[id] ? Tactics.variants(id).map(Tactics.condKey) : [];
   }
   const HP_MP = ['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt', 'bb_fatigue'];
-  // What an unlock does now. Buildings, classes and regions are only recorded; step 5 and step 7 act on them.
+  // What an unlock does now. Buildings and classes are only recorded: the home base (build step 5) acts on them.
   const EFFECTS = {
     items: s => {
       s.inventory.potions.draught = (s.inventory.potions.draught || 0) + 2;
@@ -169,6 +173,12 @@ const Campaign = (() => {
     keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE); },
     tactician: () => {
       for (const id of TACTICIAN_I.concat(HP_MP)) for (const k of variantKeys(id)) Tactics.learn(k);
+      Tactics.learn('act:move');
+    },
+    // Lesson II arrives in Region II (content spec §5), and the Gather action with it.
+    tactician2: () => {
+      for (const id of TACTICIAN_II) for (const k of variantKeys(id)) Tactics.learn(k);
+      Tactics.learn('act:gather');
     },
   };
   // Records an unlock (once), applies what it does now, and tells step 5. Returns true if it was new.
@@ -254,7 +264,7 @@ const Campaign = (() => {
     const nm = c => c.name;
     if (o.closed) why = { k: 'closed', text: 'The app closed, so the party came home after that battle.' };
     else if (!r.won) why = { k: 'lost', text: `Lost at ${stage.id}: ${stage.name}.`, hint: stage.hint };
-    else if (stage.boss) why = { k: 'boss', text: `${REGIONS[stage.region].boss} has fallen. The ${REGIONS[stage.region].name} are lit.` };
+    else if (stage.boss) why = { k: 'boss', text: `${REGIONS[stage.region].boss} has fallen. ${REGIONS[stage.region].lit}` };
     else if (!on.length) why = { k: 'spent', text: 'Every hero was Spent.' };
     else if (T.home) why = { k: 'called', text: 'You called the party home.' };
     else if (!T.keep) why = { k: 'once', text: has('keepgoing', s) ? 'Keep going was off, so the party fought once and came home.' : 'The party fought once and came home. “Keep going after a win” opens at 1-6.' };

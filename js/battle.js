@@ -251,6 +251,50 @@ const Battle = (() => {
     dirge: { kind: 'buff', color: '#9a86c8', sfx: 'toll', light: 40 },
     call: { kind: 'buff', color: '#c9a08a', sfx: 'bite', light: 20 },
     dust: { kind: 'aoe', color: '#e8e0c0', sfx: 'dazzle', flash: '#fff6d8', light: 40 },
+    // Regions II–V (build step 7)
+    psalter: { kind: 'cast', proj: 'orb', color: '#c8d4e0', sfx: 'magic', light: 6 },
+    vow: { kind: 'cast', proj: 'ring', color: '#b4a8b6', sfx: 'hex', light: 6, rune: true },
+    latch: { kind: 'melee', color: '#e8d8f0', arc: 'claw', sfx: 'bite', drain: true },
+    drainfont: { kind: 'aoe', color: '#5a8ae0', sfx: 'water', ring: true, light: 30, drain: true },
+    packtear: { kind: 'dash', color: '#d86a4a', arc: 'claw', sfx: 'bite' },
+    thornlash: { kind: 'cast', proj: 'orb', color: '#9ad06a', sfx: 'magic', light: 6 },
+    entangle: { kind: 'aoe', color: '#6a9a4a', sfx: 'dirt', vines: true },
+    rotbloom: { kind: 'cast', proj: 'orb', color: '#7ac46a', sfx: 'hex', light: 8 },
+    rotcloud: { kind: 'aoe', color: '#7ac46a', sfx: 'water', ring: true },
+    noose: { kind: 'dash', color: '#c8b48a', arc: 'claw', sfx: 'claw', drop: true },
+    gallows: { kind: 'dash', color: '#e8d8a8', arc: 'smash', sfx: 'smash', big: true, drop: true },
+    willlight: { kind: 'cast', proj: 'orb', color: '#c8f0a0', sfx: 'magic', light: 12 },
+    lure: { kind: 'cast', proj: 'orb', color: '#e8f8b0', sfx: 'magic', light: 18, speed: 0.6 },
+    bramble: { kind: 'buff', color: '#a07a4a', sfx: 'guard', dome: true },
+    gore: { kind: 'melee', color: '#e8dcc0', arc: 'smash', sfx: 'smash' },
+    thunder: { kind: 'dash', color: '#c9a07a', arc: 'wide', sfx: 'smash', big: true, dirt: true },
+    rake: { kind: 'melee', color: '#dccca4', arc: 'claw', sfx: 'claw' },
+    rut: { kind: 'dash', color: '#dccca4', arc: 'smash', sfx: 'smash', big: true, dirt: true },
+    ashblade: { kind: 'melee', color: '#ffb04a', arc: 'slash', sfx: 'slash' },
+    emberbite: { kind: 'melee', color: '#ff8a3a', arc: 'claw', sfx: 'bite', embers: true },
+    firebreath: { kind: 'aoe', color: '#ff8a3a', sfx: 'burst', flash: '#ffb04a', light: 40, embers: true },
+    spear: { kind: 'shot', proj: 'bolt', color: '#c8b48a', sfx: 'bolt', hit: 'thunk', speed: 1.1 },
+    serve: { kind: 'buff', color: '#8cc4e6', sfx: 'guard', dome: true },
+    siege: { kind: 'shot', proj: 'bolt', color: '#ffd27a', sfx: 'bolt', hit: 'crit', speed: 1.8, reticle: true, light: 10 },
+    kilnblast: { kind: 'aoe', color: '#ff7a2a', sfx: 'burst', flash: '#ffb04a', boom: true, light: 70, embers: true },
+    brand: { kind: 'cast', proj: 'orb', color: '#ff9a3a', sfx: 'magic', light: 12 },
+    riteofash: { kind: 'heal', color: '#ffb04a', sfx: 'kindle', light: 40 },
+    marshal: { kind: 'melee', color: '#ffb04a', arc: 'wide', sfx: 'slash', big: true, embers: true },
+    rally: { kind: 'buff', color: '#ffb04a', sfx: 'kindle', light: 50 },
+    burnt: { kind: 'dash', color: '#ff8a3a', arc: 'wide', sfx: 'slash', big: true, embers: true },
+    compliment: { kind: 'cast', proj: 'orb', color: '#e8d8ff', sfx: 'hex', light: 6 },
+    flattery: { kind: 'cast', proj: 'ring', color: '#c9a6ff', sfx: 'hex', light: 8 },
+    shadetouch: { kind: 'melee', color: '#b8a8e0', arc: 'claw', sfx: 'claw' },
+    usurp: { kind: 'cast', proj: 'orb', color: '#e8c24a', sfx: 'hex', light: 10 },
+    proclaim: { kind: 'cast', proj: 'ring', color: '#e8c24a', sfx: 'toll', light: 6 },
+    gutter: { kind: 'cast', proj: 'orb', color: '#fff3c8', sfx: 'magic', light: 8 },
+    snufflight: { kind: 'aoe', color: '#8a7aa8', sfx: 'hex', ring: true, flash: '#05030a', dim: true },
+    rod: { kind: 'cast', proj: 'orb', color: '#e8c24a', sfx: 'magic', light: 8 },
+    reorder: { kind: 'cast', proj: 'ring', color: '#e8c24a', sfx: 'toll', light: 10 },
+    court: { kind: 'buff', color: '#b8a8e0', sfx: 'toll', light: 30 },
+    sceptre: { kind: 'cast', proj: 'orb', color: '#e8d8ff', sfx: 'hex', light: 12 },
+    sceptrerow: { kind: 'aoe', color: '#e8d8ff', sfx: 'hex', ring: true, light: 30 },
+    gather: { kind: 'buff', color: '#5a8ae0', sfx: 'kindle' },
     none: { kind: 'none' },
   };
 
@@ -399,11 +443,17 @@ const Battle = (() => {
     addFx({ type: 'slash', x, y, dur: 220, color: F.color, arc: F.arc, flip: Math.random() < .5 });
     addFx({ type: 'light', x, y, r: F.big ? 26 : 14, dur: 240, warm: true });
     if (F.dirt) burst(tg.x, tg.y, '#8a6a4a', 14, 30, 600, false, 60);
+    if (F.embers) burst(x, y, '#ff9a3a', 8, 30, 520, true, -30);
+    // the Hanged Man drops from the branches: a rope's shadow falls onto the one he hits
+    if (F.drop) addFx({ type: 'pillar', x: tg.x, y: tg.y - sizeOf(tg)[1], dur: 340, color: '#8a7a5a', w: 1 });
   }
   function impactFx(tg, F) {
     const [x, y] = midOf(tg);
     if (F.ring || F.kind === 'aoe') addFx({ type: 'ring', x, y, r0: 1, r1: F.boom ? 14 : 9, dur: 260, color: F.color });
     if (F.dirt) burst(x, y + 4, '#7a5a3a', 8, 24, 520, false, 60);
+    // vines that grip, embers that scatter
+    if (F.vines) { burst(tg.x, tg.y, '#6a9a4a', 10, 14, 620, false, -10); addFx({ type: 'ring', x: tg.x, y: tg.y - 1, r0: 6, r1: 2, dur: 420, color: '#4a7a3a' }); }
+    if (F.embers) burst(x, y, '#ff9a3a', 8, 30, 520, true, -30);
     if (F.boom) burst(x, y, F.color, 10, 40, 500, true);
     if (F.rune) addFx({ type: 'rune', x, y: headY(tg) - 3, dur: 700, color: F.color });
     if (F.kind === 'pillar') burst(x, y, F.color, 14, 36, 600, true, 40);
@@ -424,6 +474,8 @@ const Battle = (() => {
         if (e.dmg || !e.absorbed) pop(t, String(e.dmg), (e.crit ? 'crit ' : '') + (share >= .25 ? 'big ' : '') + (t.hero ? 'hurt' : 'dmg'));
         if (e.crit) pop(t, 'Critical', 'tag crit');
         if (e.guard) { pop(t, 'Guarded', 'tag guard'); const g = U[e.guard]; addFx({ type: 'link', a: g, b: t, dur: 380, color: '#8cc4e6' }); sfx('guard', .7); }
+        // A splash from the blow beside: the Burnt Marshal's blade
+        if (e.splash) { pop(t, 'Splash', 'tag splash'); const [sx, sy] = midOf(t); burst(sx, sy, '#ff9a3a', 6, 26, 380, true); }
         flash(t); recoil(t, t.hero ? 1 : -1);
         const [x, y] = midOf(t);
         burst(x, y, e.crit ? '#ffd06a' : '#fff0d0', e.crit ? 12 : 6, e.crit ? 46 : 32, 360, true);
@@ -445,6 +497,9 @@ const Battle = (() => {
         const t = U[e.tgt];
         t.hp = e.hp;
         if (e.amt > 0) pop(t, '+' + e.amt, 'heal'); else pop(t, 'Full', 'tag');
+        // Old Growth's green, a drain's blue
+        if (e.how === 'regen' && e.amt > 0) { pop(t, 'Old Growth', 'tag regen'); motes(t.x, t.y - 4, '#9ae06a', 10, 8); }
+        if (e.how === 'drain' && e.amt > 0) motes(t.x, t.y - 4, '#7aa8ff', 10, 8);
         syncPlate(t);
         break;
       }
@@ -473,7 +528,11 @@ const Battle = (() => {
             const label = STATUSES[e.key] && STATUSES[e.key].tag;
             if (label) pop(t, label, 'tag st-' + e.key + (STATUSES[e.key].bad ? ' bad' : ''));
           }
-        } else delete t.st[e.key];
+        } else {
+          // Hidden no more: the Hanged Man drops out of the branches
+          if (e.key === 'hidden' && t.alive) { pop(t, 'Revealed', 'tag crit'); motes(t.x, t.y - 10, '#c8b48a', 8, 6); }
+          delete t.st[e.key];
+        }
         syncPlate(t);
         break;
       }
@@ -500,6 +559,12 @@ const Battle = (() => {
         const t = U[e.tgt];
         t.mp = e.mp;
         if (e.amt > 0) pop(t, '+' + e.amt, 'mana');
+        // Drained: the mana streams off to the one drinking it (the Font Leech)
+        else if (e.amt < 0) {
+          pop(t, e.amt + ' mana', 'tag drain');
+          const by = e.by && U[e.by];
+          if (by) { const [x0, y0] = midOf(t), [x1, y1] = midOf(by); addFx({ type: 'proj', x0, y0, x1, y1, dur: 420, style: 'orb', color: '#5a8ae0', arcH: 6, light: 6 }); addFx({ type: 'link', a: t, b: by, dur: 360, color: '#5a8ae0' }); }
+        }
         syncPlate(t);
         break;
       }
@@ -527,6 +592,8 @@ const Battle = (() => {
       }
       case 'counter': {
         const t = U[e.who], v = U[e.tgt];
+        // Thorns: Mother Bramble doesn't lunge; her thorns bite whoever hit her
+        if (t && e.why === 'thorns') { if (v) { pop(v, 'Thorns', 'tag thorns'); const [x, y] = midOf(v); burst(x, y, '#c8a070', 9, 26, 420); addFx({ type: 'link', a: t, b: v, dur: 260, color: '#a07a4a' }); } sfx('claw', .6); break; }
         if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (S.land ? (t.hero ? -10 : 10) : 0), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
         break;
       }
@@ -618,7 +685,10 @@ const Battle = (() => {
         const a = U[e.a], b = e.b && U[e.b];
         if (a) { a.slot = e.slots[0]; place(a); }
         if (b) { b.slot = e.slots[1]; place(b); }
-        for (const u of [a, b]) if (u) { u.march = { t0: P.t, dur: 420, fx: u.x, fy: u.y }; pop(u, 'Dragged', 'tag stagger'); }
+        // Dragged (Drag Out), Lured (Lure, Reorder the Court) or Moved (the Move action)
+        const word = { lure: 'Lured', move: 'Moved' }[e.why] || 'Dragged';
+        for (const u of [a, b]) if (u) { u.march = { t0: P.t, dur: e.why === 'lure' ? 620 : 420, fx: u.x, fy: u.y }; if (u === a || e.why !== 'move') pop(u, u === b && e.why === 'lure' ? 'Swapped' : word, 'tag ' + (e.why === 'move' ? 'quick' : 'stagger')); }
+        if (e.why === 'lure' && a) { motes(a.x, a.y - 6, '#e8f8b0', 10, 6); sfx('magic', .6); }
         layoutPlates();
         break;
       }
@@ -745,23 +815,26 @@ const Battle = (() => {
     if (!wasLand) for (const u of S.list) if (u.hero) u.march = { t0: P.t, dur: 900, fx: u.bx - S.W * 0.4, fy: u.by };
     platesEl.classList.add('away');
     for (const u of S.list) if (!u.hero) { u.alpha = 0; u.fade = { t0: P.t + 380, dur: 480, rise: true, enter: true }; }
-    B = { res, stage, i: 1, busyUntil: P.t + 950, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0, setup, curK: -1 };
+    // The first time the party walks into a region, its name comes up before the stage's (campaign spec §7).
+    const R = REGION_NAMES[stage.region], entering = !!opts.first && stage.region > 0 && STAGES.find(x => x.region === stage.region) === stage && (typeof Campaign === 'undefined' || !Campaign.isLit(stage.id));
+    const lead = entering ? 1700 : 0;
+    B = { res, stage, i: 1, busyUntil: P.t + 950 + lead, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0, setup, curK: -1 };
     B.turns.forEach((t, k) => B.turnAt.set(t.i, k));
     setHud(stage, 1, 0);
     hudEl.hidden = false; $('#controls').hidden = false;
     renderFlags(0, false);
     buildTray();
     // walk up the road
-    S.walkUntil = P.t + 850;
-    const R = REGION_NAMES[stage.region];
-    banner(stage.name, 'intro', `${R.name} · Stage ${stage.id}`);
+    S.walkUntil = P.t + 850 + lead;
+    if (entering) { banner(`${R.num} · ${R.name}`, 'intro region', R.line); at(P.t + lead, () => banner(stage.name, 'intro', `${R.name} · Stage ${stage.id}`)); }
+    else banner(stage.name, 'intro', `${R.name} · Stage ${stage.id}`);
     if (regionChange || opts.first) sfx('region');
-    at(P.t + 900, () => { hideBanner(); B.started = true; platesEl.classList.remove('away'); });
+    at(P.t + 900 + lead, () => { hideBanner(); B.started = true; platesEl.classList.remove('away'); });
     // What happens before the first turn: battle-start passives and summons.
     let j = 1;
     while (j < res.log.length && !BEATS.includes(res.log[j].t)) j++;
     const pre = res.log.slice(1, j);
-    if (pre.length) at(P.t + 940, () => { pre.forEach(apply); if (pre.some(e => e.t === 'status' && e.key === 'kindled')) sfx('kindle'); });
+    if (pre.length) at(P.t + 940 + lead, () => { pre.forEach(apply); if (pre.some(e => e.t === 'status' && e.key === 'kindled')) sfx('kindle'); });
     B.i = j;
     return res;
   }
@@ -1126,6 +1199,8 @@ const Battle = (() => {
       else if (u.hero) { alpha = 1 - q * 0.45; dark = q > 0.3; }
       else { alpha = 1 - q; dy = Math.round(q * 3); if (q >= 1) u.gone = true; }
     } else if (!u.alive) { if (u.hero) { alpha = .7; dark = true; } else { u.gone = true; return; } }
+    // Hidden: only a faint shimmer shows where it waits
+    if (u.alive && u.st.hidden) alpha *= noMotion() ? 0.35 : 0.28 + 0.1 * Math.sin(realT / 260 + u.slot);
     if (alpha <= 0) return;
     // a slow breathing bob, and a walk while the party travels
     const walking = u.hero && P.t < S.walkUntil && u.alive;
@@ -1249,17 +1324,22 @@ const Battle = (() => {
   function updParts(dt) {
     const A = REGION_ART[S.region];
     // weather
-    const rate = { mist: 6, rain: 60 }[A.particle] || 0;
+    // mist (Gravefields), rain (Drowned Chapel), falling leaves (Thornwood), rising embers (Ashen Keep) and drifting
+    // tallow motes (Hollow Throne)
+    const rate = { mist: 6, rain: 60, leaves: 9, embers: 16, motes: 7 }[A.particle] || 0;
     let n = rate * dt / 1000 * (noMotion() ? .3 : 1);
     while (n > 0) {
       if (Math.random() < n) {
         if (A.particle === 'rain') S.amb.push({ x: vrand(0, S.W + 30), y: -4, vx: -16, vy: 130, life: 3000, c: 'rgba(140,180,210,.3)', w: 1, h: 3 });
+        else if (A.particle === 'leaves') S.amb.push({ x: vrand(0, S.W + 20), y: -3, vx: vrand(-9, -2), vy: vrand(10, 20), life: 9000, c: Math.random() < .6 ? 'rgba(120,150,70,.55)' : 'rgba(160,110,60,.5)', w: Math.random() < .3 ? 2 : 1, h: 1, sway: vrand(0, 6) });
+        else if (A.particle === 'embers') S.amb.push({ x: vrand(0, S.W), y: S.H + 2, vx: vrand(-4, 4), vy: vrand(-28, -12), life: vrand(2500, 5000), c: Math.random() < .5 ? 'rgba(255,150,60,.75)' : 'rgba(255,200,110,.6)', w: 1, h: 1, sway: vrand(0, 6) });
+        else if (A.particle === 'motes') S.amb.push({ x: vrand(0, S.W), y: vrand(0, S.H), vx: vrand(-2, 2), vy: vrand(-6, -2), life: vrand(3000, 6000), c: Math.random() < .7 ? 'rgba(255,232,180,.28)' : 'rgba(200,180,255,.22)', w: 1, h: 1 });
         else S.amb.push({ x: vrand(-4, S.W), y: vrand(0, S.H), vx: vrand(-3, 3), vy: vrand(-1, 1), life: vrand(3000, 6000), c: 'rgba(170,180,190,.14)', w: 3, h: 1 });
       }
       n -= 1;
     }
     const scroll = P.t < S.walkUntil ? 14 : 0;
-    for (const p of S.amb) { p.x += (p.vx - (S.land ? scroll : 0)) * dt / 1000; p.y += (p.vy + (S.land ? 0 : scroll)) * dt / 1000; p.life -= dt; }
+    for (const p of S.amb) { p.x += (p.vx - (S.land ? scroll : 0) + (p.sway != null ? Math.sin(realT / 700 + p.sway) * 6 : 0)) * dt / 1000; p.y += (p.vy + (S.land ? 0 : scroll)) * dt / 1000; p.life -= dt; }
     S.amb = S.amb.filter(p => p.life > 0 && p.y < S.H + 6 && p.x > -6 && p.x < S.W + 34);
     // sparks, motes and ash run on the play clock
     const pdt = P.paused ? 0 : dt * P.speed * TEMPO;

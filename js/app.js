@@ -70,7 +70,7 @@ const App = (() => {
     const s = Save.state, reached = Math.max(0, ...s.campaign.cleared.map(id => (STAGES.find(x => x.id === id) || { region: 0 }).region));
     purse.replaceChildren(
       h('span', { class: 'coin', title: 'Gold' }, h('i', { class: 'goldpip' }), h('b', { text: fmt(s.currencies.gold) })),
-      ...MATERIALS.filter(m => m.region <= reached).map(m => h('span', { class: 'coin mat', title: m.name }, ico('bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
+      ...MATERIALS.filter(m => m.region <= reached).map(m => h('span', { class: 'coin mat', title: m.name }, ico(MAT_ICON[m.id] || 'bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
   }
 
   TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));
@@ -111,7 +111,7 @@ const App = (() => {
         h('div', { class: 'kicker', text: `${R.num} · ${R.name}` }),
         h('h1', { class: 'title', text: 'Lantern Road' }),
         h('p', { class: 'tagline', text: 'The party rests by the lantern. Build here, then take the road.' }),
-        h('button', { class: 'btn play', onclick: () => { sfx('click'); go('map'); } }, 'Take the road', h('span', { class: 'sub', text: Campaign.frontier() >= STAGES.length ? 'Every lantern in the Gravefields burns' : `Next: ${next.id} · ${next.name}` })),
+        h('button', { class: 'btn play', onclick: () => { sfx('click'); go('map'); } }, 'Take the road', h('span', { class: 'sub', text: Campaign.frontier() >= STAGES.length ? 'Every lantern on the road burns' : `Next: ${next.id} · ${next.name}` })),
         a.last >= AWAY_MIN ? h('button', { class: 'away-chip', onclick: () => { sfx('click'); showAway(a.last); } }, ico('lantern'), `Away ${duration(a.last)} · see what came in`) : null,
         h('h3', { class: 'sect', text: 'Buildings' }),
         h('div', { class: 'blds' }, BUILDINGS.map(([n, d, i]) => h('div', { class: 'bld locked' }, ico(i), h('b', { text: n }), h('span', { text: d }), h('em', {}, ico('lock'), 'Soon')))),

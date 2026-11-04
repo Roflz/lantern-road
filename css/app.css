@@ -13,6 +13,8 @@
 /* Top bar: what you own on the left, settings on the right */
 #topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;background:linear-gradient(180deg,rgba(11,9,19,.97),rgba(11,9,19,.86));border-bottom:1px solid rgba(63,52,75,.7)}
 #purse{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+/* five regions' materials: the chips tighten so the purse stays on one line */
+#purse:has(.coin.mat:nth-child(5)){gap:4px}#purse:has(.coin.mat:nth-child(5)) .coin{padding:0 6px 0 5px;gap:4px}
 .coin{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px 0 8px;background:rgba(7,5,11,.7);border:1px solid var(--rule);font:700 11px var(--f-pixel);color:var(--gold)}
 .coin.mat{color:var(--bone)}
 .coin .ico{width:14px;height:14px}
