@@ -4,8 +4,10 @@
 //   coach marks   a one-line pointer at something on screen, with a soft ring around it, the first time it matters
 //                 (the turn flags in the first battle, the rule each flag names, the draughts, the Tactics screen…).
 //                 It fades by itself or at the next tap, and never takes the tap.
-//   new things    the trip summary on the Road tab lists what the trip unlocked, each with one line and a button that
-//                 goes straight to it: open Tactics, the Recruit Board, build the blueprint, see the Relic.
+//   new things    what a trip unlocked, each with one line and a button that goes straight to it: open Tactics, the
+//                 Recruit Board, build the blueprint, see the Relic. The results popup's New chips do the same
+//                 (js/results.js), and the trip summary on the Road tab lists them for a trip that ended while the app
+//                 was closed.
 //   tab dots      a dot on Base, Party, Bag or Road when something there waits for you.
 // The title card over a new game's first pick is now the title screen, on every boot (js/title.js).
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
@@ -117,7 +119,9 @@ const Guide = (() => {
     tactician: () => ({ line: 'Thresholds, Focus fire, the Move action, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     gravecaller: () => ({ line: 'A new class joins the Recruit Board: the Gravecaller, who raises thralls from the fallen.', label: 'Recruit', fn: goBoard }),
   };
-  function newRow(id) {
+  // What a new thing is and the way to it: { id, name, icon, line, label, fn }, fn and label only where there is a way.
+  // The trip summary's rows show it, and the results popup's New chips do what a row's button does (js/results.js).
+  function newThing(id) {
     const U = UNLOCKS[id];
     if (!U) return null;
     let o = NEW[id] ? NEW[id]() : null;
@@ -129,11 +133,15 @@ const Guide = (() => {
     if (!o && U.kind === 'class') o = { line: `${U.line ? U.line + ' ' : ''}A new class on the Recruit Board.`, label: 'Recruit', fn: goBoard };
     if (!o && U.kind === 'region') { const r = +id.split(':')[1]; o = { line: U.line || `Region ${['I', 'II', 'III', 'IV', 'V'][r] || r + 1} is open.`, label: 'The map', fn: () => RoadMap.show(r) }; }
     if (!o) o = { line: U.line || '' };
-    const name = U.kind === 'condition' ? `New condition: ${U.name}` : U.name;
+    return { id, name: U.kind === 'condition' ? `New condition: ${U.name}` : U.name, icon: U.icon || 'star', line: o.line || '', label: o.label || null, fn: o.fn || null };
+  }
+  function newRow(id) {
+    const n = newThing(id);
+    if (!n) return null;
     return h('div', { class: 'newrow' },
-      h('span', { class: 'nw-ic' }, ico(U.icon || 'star')),
-      h('div', { class: 'nw-t' }, h('b', { text: name }), o.line ? h('span', { text: o.line }) : null),
-      o.fn ? h('button', { class: 'small on', onclick: () => { sfx('click'); o.fn(); } }, o.label) : null);
+      h('span', { class: 'nw-ic' }, ico(n.icon)),
+      h('div', { class: 'nw-t' }, h('b', { text: n.name }), n.line ? h('span', { text: n.line }) : null),
+      n.fn ? h('button', { class: 'small on', onclick: () => { sfx('click'); n.fn(); } }, n.label) : null);
   }
   function newRows(ids) { return [...new Set(ids)].map(newRow).filter(Boolean); }
 
@@ -162,5 +170,5 @@ const Guide = (() => {
   }
 
   if (typeof App !== 'undefined') App.actions.dots = dots;
-  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, dots, visit };
+  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, newThing, dots, visit };
 })();

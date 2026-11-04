@@ -1,0 +1,122 @@
+/* The results popup (js/results.js), after docs/mockups/results.html. It lays out in the landscape frame's design
+   pixels, W × 390, over the dimmed battlefield: 640 wide with two columns of heroes past three, as wide as its buttons
+   with one. Three rows of heroes close up to fit the height. After a loss Wick (css/wick.css) stands at the left and
+   the popup moves over; on a 16:9 frame (694 wide) he is smaller. */
+#sheet.results{padding:0;background:radial-gradient(ellipse at 50% 45%,rgba(5,3,9,.55),rgba(5,3,9,.85))}
+#frame:has(#sheet.results:not([hidden])) #toasts{top:auto;bottom:4px}
+/* the battle is over: its controls, HUD and flags go, and the battlefield stays behind the veil */
+#frame:has(#sheet.results:not([hidden])) :is(#controls,#hud,#flags,#plates){visibility:hidden}
+/* the guide's coach marks point at the popup (its data-tut hooks), so they sit above it */
+#frame:has(#sheet.results:not([hidden])) :is(.coach-ring,.coach-tip){z-index:10}
+.rs-root{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:26px 8px 0}
+.rs-root.hint{padding-left:150px}
+@keyframes rs-pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes rs-in{from{transform:translateY(14px) scale(.97);opacity:0}}
+
+.rs-box{position:relative;width:640px;max-width:100%;padding:30px 18px 14px;background:linear-gradient(#1d1626,#120d18);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;gap:10px;animation:rs-in .3s cubic-bezier(.2,.9,.3,1.1)}
+.rs-box.one{width:max-content;min-width:470px}
+.rs-banner{position:absolute;left:50%;top:-30px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:6px 30px 8px;background:linear-gradient(#4a2e14,#22160c);border:1px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 26px rgba(244,166,70,.45);white-space:nowrap}
+.rs-banner b{font:400 36px/1 var(--f-display);color:#fff4dc;text-shadow:0 0 14px rgba(255,200,120,.6),0 2px 0 #000}
+.rs-banner .ico{width:22px;height:22px;filter:drop-shadow(0 0 6px rgba(244,166,70,.8))}
+.rs-banner.lost{background:linear-gradient(#3a1a1c,#1c0e10);border-color:#a8484a;box-shadow:0 0 0 1px #000,0 0 22px rgba(212,72,74,.35)}
+.rs-banner.lost b{color:#f2d0c8;text-shadow:0 2px 0 #000}
+.rs-sub{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:2px;min-width:0}
+.rs-sub .id{font:700 11px/1 var(--f-pixel);color:var(--ember);white-space:nowrap}
+.rs-sub .nm{font:400 19px/1 var(--f-display);color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rs-sub .first{flex:none;display:flex;align-items:center;gap:5px;height:20px;padding:0 8px 0 6px;font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);background:#2a1d0c;border:1px solid var(--gold)}
+.rs-sub .first .ico{width:11px;height:11px}
+
+/* a hero: face and level, name, Level up, +XP; the XP bar; the fatigue bar */
+.rs-heroes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 14px}
+.rs-box.one .rs-heroes{grid-template-columns:minmax(0,1fr)}
+.rs-hr{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 10px;align-items:center;padding:5px 8px 6px 5px;background:#150f1b;border:1px solid #2e2636;min-width:0}
+.rs-hr .face{grid-row:1/4;position:relative;width:44px;height:44px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
+.rs-hr .face img{width:38px;height:38px;image-rendering:pixelated}
+.rs-hr .face em{position:absolute;right:-6px;bottom:-6px;min-width:18px;height:17px;padding:0 3px;display:grid;place-items:center;font:700 9px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
+.rs-hr .face em.up{animation:rs-pop .45s ease-out}
+.rs-hr .top{display:flex;align-items:center;gap:8px;min-width:0}
+.rs-hr .nm{font:400 17px/1 var(--f-display);color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rs-hr .lvup{flex:none;display:none;align-items:center;height:16px;padding:0 6px;font:700 8px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:#1a1008;background:var(--ember);box-shadow:0 0 10px rgba(244,166,70,.6)}
+.rs-hr .lvup.on{display:flex;animation:rs-pop .45s ease-out}
+.rs-hr .xpn{flex:none;margin-left:auto;font:700 9px/1 var(--f-pixel);color:var(--gold);white-space:nowrap}
+.rs-bar{position:relative;height:8px;background:#0c0910;border:1px solid #3a2e22;overflow:hidden}
+.rs-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#b8622a,#f4a646);box-shadow:inset 0 1px 0 rgba(255,230,180,.35)}
+.rs-bar i::after{content:"";position:absolute;right:0;top:0;bottom:0;width:3px;background:#ffe2a0}
+.rs-bar.flash{box-shadow:0 0 10px rgba(255,214,140,.9)}
+/* the fatigue bar is a button: a tap says what its state means. Its hit area reaches past the thin bar. */
+.rs-fat{display:flex;align-items:center;gap:6px;margin:-4px 0;padding:4px 0;background:none;border:0;cursor:pointer;color:inherit;min-width:0}
+.rs-fat .ico{width:12px;height:12px;opacity:.85}
+.rs-fbar{position:relative;flex:1;height:4px;background:#0c0910;border:1px solid #2e2636}
+.rs-fbar i{position:absolute;left:0;top:0;bottom:0;width:0}
+.rs-fbar s{position:absolute;top:-2px;bottom:-2px;width:1px;background:#6a5a7a}
+.rs-fat .fv{min-width:42px;text-align:right;font:700 8px/1 var(--f-pixel);color:var(--ash)}
+.rs-fat .fv.weary{color:var(--gold)}
+.rs-fat .fv.exh{color:var(--bad)}
+
+/* the loot, then New */
+.rs-loot{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0f0b14;border:1px solid #2a2232;min-height:48px;min-width:0}
+.rs-loot .k{flex:none;font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:4px}
+.rs-loot .its{display:flex;align-items:center;gap:6px;flex:none}
+.rs-loot .sp{flex:1}
+.rs-loot .none{font:700 9px/1 var(--f-pixel);color:var(--dim)}
+.rs-it{position:relative;flex:none;width:34px;height:34px;padding:0;display:grid;place-items:center;background:#17111d;border:1px solid #3a3044;opacity:0;cursor:pointer;color:var(--bone)}
+.rs-it.in{opacity:1;animation:rs-pop .35s ease-out}
+.rs-it .ico{width:22px;height:22px}
+.rs-it em{position:absolute;right:1px;bottom:0;font:700 8px/1 var(--f-pixel);font-style:normal;color:var(--bone);text-shadow:0 1px 0 #000}
+.rs-it.gear{border-color:var(--rc)}
+.rs-it.r-fine{box-shadow:inset 0 0 8px rgba(180,222,152,.25)}
+.rs-it.r-rare{box-shadow:inset 0 0 8px rgba(140,196,230,.3)}
+.rs-it.r-relic{box-shadow:inset 0 0 10px rgba(241,211,106,.35)}
+.rs-it.sold .ico{opacity:.4}
+.rs-it.sold em{color:var(--gold)}
+.rs-it.fold b{font:700 9px/1 var(--f-pixel);color:var(--ash)}
+.rs-loot.dense,.rs-loot.dense .its{gap:4px}
+.rs-loot.dense .rs-it{width:29px;height:29px}
+.rs-loot.dense .rs-it .ico{width:19px;height:19px}
+.rs-new{flex:none;display:flex;align-items:center;gap:6px;height:30px;max-width:190px;padding:0 9px 0 6px;background:linear-gradient(#2a1d14,#160f0c);border:1px solid var(--ember);opacity:0;cursor:pointer;color:var(--bone)}
+.rs-new.in{opacity:1;animation:rs-pop .4s ease-out}
+.rs-new b{flex:none;font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ember)}
+.rs-new span{font:400 15px/1 var(--f-display);color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rs-new .ico{width:16px;height:16px}
+.rs-new.more{padding:0 9px}
+.rs-new.more b{font-size:9px}
+
+/* the buttons: the last one leads */
+.rs-acts{display:flex;gap:8px;justify-content:center}
+.rs-b{display:inline-grid;place-items:center;align-content:center;height:42px;padding:0 16px;font:700 10px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);background:#1a1320;border:1px solid var(--rule);white-space:nowrap;cursor:pointer}
+.rs-b:hover{border-color:#6a5a72}
+.rs-b small{display:block;margin-top:4px;font:italic 400 12px/1 var(--f-body);letter-spacing:0;text-transform:none;color:#e6c79a}
+.rs-b.pri{min-width:150px;border-color:var(--ember);background:linear-gradient(#4a2e14,#22160c);box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.35)}
+.rs-b.pri .bl::after{content:" ›";color:var(--ember)}
+
+/* three rows of heroes (five or six, or three in one column) close up to fit the frame's height */
+.rs-box.rows3{padding-top:27px;padding-bottom:12px;gap:7px}
+.rs-box.rows3 .rs-heroes{gap:5px 14px}
+.rs-box.rows3 .rs-hr{grid-template-columns:40px minmax(0,1fr);gap:3px 9px;padding:3px 7px 4px 4px}
+.rs-box.rows3 .face{width:40px;height:40px}
+.rs-box.rows3 .face img{width:34px;height:34px}
+.rs-box.rows3 .rs-loot{min-height:42px;padding:4px 8px}
+.rs-box.rows3 .rs-it{width:31px;height:31px}
+.rs-box.rows3 .rs-it .ico{width:20px;height:20px}
+
+/* Wick, after a loss, with the stage's hint */
+.rs-wick .wick-bubble{left:10px;top:24px;max-width:168px;padding:10px 13px 11px;font-size:14px;line-height:1.25}
+
+/* a 16:9 frame (694 wide): a little tighter, and a smaller Wick */
+@container (max-width:779px){
+  .rs-box{padding-left:14px;padding-right:14px}
+  .rs-heroes{column-gap:10px}
+  .rs-root.hint{padding-left:120px}
+  .rs-wick .wick-pt{width:112px;height:151px}
+  .rs-wick .wick-bubble{left:6px;top:18px;max-width:108px;padding:8px 10px 9px;font-size:13px}
+  .rs-b{padding:0 13px}
+  .rs-b.pri{min-width:136px}
+}
+
+/* every new thing at once, when the loot row can't hold them */
+#frame:not(.column) #sheet .rs-list{max-width:460px}
+.rs-list .newrow{margin:0}
+
+/* the end at once: reduced motion, or the popup shown again */
+.rs-root.still *,.calm .rs-root *{animation:none!important}
+@media (prefers-reduced-motion:reduce){.rs-root *{animation:none!important}}
