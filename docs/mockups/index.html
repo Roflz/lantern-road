@@ -1,0 +1,1723 @@
+<title>Lantern Road Screen Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Silkscreen:wght@400;700&family=Spectral:ital,wght@0,400;1,400&display=swap">
+<style>
+/* Layout: a long night road of phone frames, one band per screen. Each band is a sideways strip of 390x844 states with the flow notes beneath. Single dark theme on purpose, matching the game: violet night, amber lantern light, bone text. */
+:root{
+  --void:#0b0913; --night:#120e1c; --stone:#18121f; --stone-2:#231b2c; --rule:#3f344b;
+  --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --ember-soft:rgba(244,166,70,.14);
+  --blood:#d4484a; --gold:#f1d36a; --doom:#bb96ee; --ward:#8cc4e6; --good:#b4de98; --bad:#f08c76; --mana:#6a94e8;
+  --r-common:#b4a8b6; --r-fine:#b4de98; --r-rare:#8cc4e6; --r-relic:#f1d36a;
+  --f-display:"Pirata One","Luminari","Palatino Linotype",Georgia,serif;
+  --f-body:"Spectral",Georgia,"Times New Roman",serif;
+  --f-pixel:"Silkscreen","Lucida Console","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body);
+  background-image:radial-gradient(ellipse 70% 40% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+.page{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+h1,h2,h3,h4,h5{margin:0;font-weight:400;text-wrap:balance}
+:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+
+/* ===== the three voices, as the game uses them ===== */
+.ey{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.k{font:400 9px/1.3 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.kv{font:400 10px/1.35 var(--f-pixel);letter-spacing:.06em;text-transform:uppercase;color:var(--ash)}
+.nm{font:400 22px/1 var(--f-display);color:var(--bone)}
+.sk{display:inline-flex;align-items:center;gap:7px;font:700 11px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--bone);white-space:nowrap}
+.mana{font:400 10px/1 var(--f-pixel);letter-spacing:.06em;color:var(--mana);white-space:nowrap}
+.txt{font:400 15px/1.4 var(--f-body);color:var(--ash)}
+.txt.b{color:var(--bone)}
+.hint{font:italic 400 14px/1.35 var(--f-body);color:var(--dim)}
+.g{color:var(--good)}.b{color:var(--bad)}.e{color:var(--ember)}.y{color:var(--gold)}.w{color:var(--ward)}
+
+/* page header */
+.intro{display:grid;gap:14px;max-width:820px;margin-bottom:30px}
+.intro h1{font:400 clamp(40px,7vw,64px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.intro h1 span{color:var(--ember)}
+.intro p{margin:0;color:var(--ash);max-width:68ch}
+.voices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.voices{grid-template-columns:1fr}}
+.voices>div{background:var(--stone);border:2px solid var(--rule);padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+.voices .demo{min-height:30px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.toc{display:flex;flex-wrap:wrap;gap:8px}
+.toc a{font:10px var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--bone);text-decoration:none;padding:9px 11px;border:2px solid var(--rule);background:var(--stone-2)}
+.toc a:hover{border-color:var(--ember)}
+.toc a.new{border-color:var(--ember)}
+
+/* sections */
+.scr{padding-top:44px;margin-top:20px;border-top:2px solid var(--rule)}
+.scr>header{display:grid;gap:8px;max-width:780px;margin-bottom:18px}
+.scr>header h2{font:400 42px/1 var(--f-display)}
+.scr>header p{margin:0;color:var(--ash);max-width:68ch}
+.changed{display:inline-flex;gap:6px;align-items:center;font:9px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--void);background:var(--ember);padding:3px 6px;width:max-content}
+.strip{display:flex;gap:30px;overflow-x:auto;padding:16px 14px 26px;margin:0 -14px;scroll-snap-type:x proximity}
+.strip::-webkit-scrollbar{height:10px}.strip::-webkit-scrollbar-thumb{background:var(--rule)}
+.shot{margin:0;flex:none;scroll-snap-align:start;display:grid;gap:12px;align-content:start}
+.shot figcaption{font:11px var(--f-pixel);letter-spacing:.06em;text-transform:uppercase;color:var(--ash);display:flex;gap:8px;align-items:baseline;max-width:390px}
+.shot figcaption b{color:var(--ember);font-weight:400}
+.shot figcaption em{font-style:normal;color:var(--good);margin-left:auto}
+.notes{display:grid;grid-template-columns:1.4fr 1fr;gap:28px;margin-top:6px}
+@media (max-width:820px){.notes{grid-template-columns:1fr}}
+.notes>div{min-width:0}
+.notes h4{font:11px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--ember);margin-bottom:8px}
+.notes ul,.notes ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.notes li{max-width:68ch}
+.notes li::marker{color:var(--dim)}
+.notes .q{background:var(--stone);border:2px solid var(--rule);padding:14px 16px}
+
+/* ===== phone frame ===== */
+.phone{width:390px;height:844px;border-radius:42px;background:var(--night);position:relative;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 0 2px #2c2336,0 0 0 9px #07050b,0 0 0 10px #2c2336,0 30px 70px rgba(0,0,0,.65)}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:30;background:radial-gradient(ellipse 90% 70% at 50% 50%,transparent 62%,rgba(8,5,14,.4) 100%)}
+.sb{height:44px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:6px 30px 0;font:11px var(--f-pixel);color:var(--ash)}
+.tb{height:54px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:2px solid var(--rule);background:linear-gradient(180deg,var(--stone),var(--night))}
+.tb h3{font:400 27px/1 var(--f-display);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq{width:38px;height:38px;flex:none;border:2px solid var(--rule);background:var(--stone-2);display:grid;place-items:center;font:13px var(--f-pixel);color:var(--bone)}
+.res{display:flex;gap:5px;align-items:center}
+.res span{display:flex;align-items:center;gap:5px;padding:5px 6px;background:#0d0a12;border:1px solid var(--rule);font:10px var(--f-pixel);color:var(--bone)}
+.body{flex:1;min-height:0;position:relative;padding:12px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.nav{height:78px;flex:none;padding-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--rule);background:var(--stone);position:relative;z-index:9}
+.nav::after{content:"";position:absolute;left:50%;bottom:7px;width:120px;height:4px;margin-left:-60px;background:var(--ash);opacity:.5}
+.nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font:9px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.nav a.on{color:var(--ember)}
+.nav a.on .ic{filter:drop-shadow(0 0 5px rgba(244,166,70,.8))}
+.nav .ic{width:21px;height:21px}
+
+.ic{display:inline-block;width:14px;height:14px;flex:none;background-size:contain;background-repeat:no-repeat;background-position:center;image-rendering:pixelated;vertical-align:middle}
+.ic.m{width:21px;height:21px}.ic.l{width:28px;height:28px}.ic.xl{width:42px;height:42px}
+.spr{display:inline-block;flex:none;background-repeat:no-repeat;background-size:100% 100%;image-rendering:pixelated}
+.sbox{display:grid;place-items:end center;flex:none;background:radial-gradient(circle at 50% 85%,rgba(244,166,70,.2),transparent 70%),#140f1b;box-shadow:0 0 0 2px var(--rule);overflow:hidden}
+
+/* hero header + tabs */
+.hh{display:flex;gap:10px;align-items:center;flex:1;min-width:0}
+.hh .sbox{width:38px;height:38px;padding-bottom:1px}
+.sw{display:flex;gap:4px}
+.seg{flex:none;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:2px solid var(--rule);background:var(--stone)}
+.seg a{text-align:center;padding:12px 0 9px;font:10px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border-bottom:3px solid transparent;margin-bottom:-2px}
+.seg a.on{color:var(--ember);border-color:var(--ember)}
+
+/* generic bits */
+.row{display:flex;gap:8px;align-items:center;min-width:0}
+.sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;font:10px var(--f-pixel);letter-spacing:.07em;text-transform:uppercase;padding:6px 8px;border:2px solid var(--rule);background:var(--stone-2);color:var(--bone);white-space:nowrap}
+.chip.on{border-color:var(--ember);background:var(--ember-soft)}
+.chip.dim{color:var(--dim)}
+.tag{display:inline-flex;align-items:center;gap:4px;font:9px/1 var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;padding:4px 5px;background:#0d0a12;border:1px solid var(--rule);color:var(--ash);white-space:nowrap}
+.tag.e{color:var(--ember);border-color:#6b4520}.tag.g{color:var(--good);border-color:#3d5a33}.tag.b{color:var(--bad);border-color:#6a3030}
+.tag.d{color:var(--doom);border-color:#4f3d6c}.tag.w{color:var(--ward);border-color:#30506a}.tag.y{color:var(--gold);border-color:#6a5a26}
+.btn{font:400 11px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;background:var(--stone-2);border:2px solid var(--rule);color:var(--bone);padding:10px 12px;min-height:46px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn.pri{border-color:var(--ember);background:linear-gradient(180deg,#3d2816,#2a1a0e);box-shadow:0 0 18px rgba(244,166,70,.22)}
+.btn.sm{min-height:34px;padding:6px 10px;font-size:10px}
+.panel{background:var(--stone);border:2px solid var(--rule);padding:10px 12px}
+.meter{position:relative;height:8px;background:#07050b;box-shadow:0 0 0 1px #000,0 0 0 2px var(--rule)}
+.meter i{position:absolute;left:0;top:0;bottom:0;display:block}
+.banner{padding:9px 11px;border:2px solid #6a3030;background:#251217;display:flex;gap:9px;align-items:flex-start}
+.banner .txt{font-size:14.5px;color:var(--bone)}
+.banner.ok{border-color:#3d5a33;background:#152014}
+.banner.warm{border-color:var(--ember);background:#2a1a0e}
+.toast{position:absolute;left:12px;right:12px;padding:10px 12px;background:#2a1a0e;border:2px solid var(--ember);box-shadow:0 12px 30px rgba(0,0,0,.6);display:flex;gap:10px;align-items:flex-start;z-index:5}
+.scrim{position:absolute;inset:0;background:rgba(6,4,10,.7);z-index:6}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:7;background:var(--stone);border-top:2px solid var(--ember);box-shadow:0 -24px 60px rgba(0,0,0,.75),0 -2px 24px rgba(244,166,70,.12);padding:20px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.sheet::before{content:"";position:absolute;top:7px;left:50%;width:44px;height:4px;margin-left:-22px;background:var(--rule)}
+.sheet h4{font:400 26px/1 var(--f-display)}
+.tg{width:44px;height:26px;flex:none;border:2px solid var(--rule);background:#0d0a12;position:relative}
+.tg::after{content:"OFF";position:absolute;inset:0;display:grid;place-items:center;font:8px var(--f-pixel);letter-spacing:.08em;color:var(--dim)}
+.tg.on{border-color:var(--good);background:#152014}
+.tg.on::after{content:"ON";color:var(--good)}
+
+/* ===== sprite stage ===== */
+.stage{position:relative;overflow:hidden;background:#0c0912;flex:none;cursor:pointer}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.stage .ov{position:absolute;z-index:2;pointer-events:none}
+.fnum{position:absolute;z-index:3;transform:translate(-50%,0);font:700 15px/1 var(--f-pixel);color:#fff;text-shadow:2px 2px 0 #000,-1px -1px 0 #000;white-space:nowrap;pointer-events:none;animation:numup 1.1s ease-out forwards}
+.fnum.heal{color:#c6f0a0}.fnum.gold{color:#ffd06a}
+@keyframes numup{0%{transform:translate(-50%,6px) scale(.6);opacity:0}15%{transform:translate(-50%,-4px) scale(1.15);opacity:1}30%{transform:translate(-50%,-8px) scale(1)}100%{transform:translate(-50%,-30px);opacity:0}}
+.watch{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:6px;align-items:stretch}
+.watch .k{align-self:center;writing-mode:vertical-rl;transform:rotate(180deg);font-size:8px}
+.play{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 4px;border:2px solid var(--rule);background:var(--stone-2);font:700 10px var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--bone);min-height:40px}
+.play:hover,.play.on{border-color:var(--ember);background:#2a1a0e}
+.play .tri{width:0;height:0;border-left:6px solid var(--ember);border-top:4px solid transparent;border-bottom:4px solid transparent}
+
+/* ===== rules (mirrors the game's rule cards) ===== */
+.setbar{display:flex;align-items:center;gap:8px}
+.rules{display:flex;flex-direction:column;gap:8px}
+.rule{display:grid;grid-template-columns:24px 1fr auto;gap:8px;padding:8px 8px 8px 4px;background:var(--stone-2);border:2px solid var(--rule);position:relative;align-items:start}
+.grip{display:grid;justify-items:center;gap:6px;padding-top:12px;border-right:1px solid var(--rule);align-self:stretch;align-content:start}
+.grip .n{font:11px var(--f-pixel);color:var(--ember)}
+.grip i{width:12px;height:10px;background:linear-gradient(var(--dim) 0 2px,transparent 2px 4px,var(--dim) 4px 6px,transparent 6px 8px,var(--dim) 8px 10px)}
+.rb{min-width:0;display:grid;gap:5px}
+.cond{font:400 16px/1.2 var(--f-body);color:var(--bone);padding:6px 9px;background:#120d18;border:2px solid var(--rule)}
+.actn{display:flex;align-items:center;gap:8px;padding:6px 9px;background:#120d18;border:2px solid var(--rule)}
+.actn .arr{font:11px var(--f-pixel);color:var(--ember)}
+.rm{display:flex;gap:10px;align-items:baseline;padding-left:2px}
+.rm .hint{font-size:13.5px}
+.rule.off{background:var(--stone)}
+.rule.off .rb{opacity:.45}
+.rule.warn{border-color:#6a3030}
+.rule.lift{transform:translate(6px,-4px) rotate(-1.2deg) scale(1.03);border-color:var(--ember);box-shadow:0 18px 30px rgba(0,0,0,.75),0 0 22px rgba(244,166,70,.3);z-index:3}
+.ghost{border:2px dashed var(--ember);height:96px;background:var(--ember-soft);display:grid;place-items:center;font:10px var(--f-pixel);color:var(--ember);letter-spacing:.08em;text-transform:uppercase}
+.slot0{border:2px dashed var(--rule);padding:12px 10px;display:flex;gap:10px;align-items:center;font:10px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--ash)}
+.lockslot{border:2px dashed var(--rule);padding:8px 10px;display:flex;gap:10px;align-items:center;background:repeating-linear-gradient(135deg,transparent 0 8px,rgba(63,52,75,.25) 8px 10px)}
+.lockslot .btn{margin-left:auto}
+.fallback{display:flex;align-items:center;gap:9px;padding:9px 4px 0;border-top:2px solid var(--rule)}
+.cg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.co{padding:7px 8px;border:2px solid var(--rule);background:var(--stone-2);font:400 14.5px/1.2 var(--f-body);color:var(--bone);display:flex;gap:6px;align-items:center;min-width:0}
+.co.sel{border-color:var(--ember);background:#2a1a0e;box-shadow:0 0 12px rgba(244,166,70,.25)}
+.co.lk{color:var(--dim);background:var(--stone);border-style:dashed;flex-wrap:wrap}
+.co.lk .k{width:100%;padding-left:20px;font-size:8px}
+.co .new{width:6px;height:6px;background:var(--ember);flex:none;box-shadow:0 0 6px var(--ember)}
+.opt{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:2px solid var(--rule);background:var(--stone-2)}
+.opt.sel{border-color:var(--ember);background:#2a1a0e}
+.opt.no{opacity:.45}
+.opt>div{display:grid;gap:5px;min-width:0}
+.well{width:34px;height:34px;display:grid;place-items:center;background:#0d0a12;border:2px solid var(--rule);flex:none}
+.setcard{padding:10px 12px;background:var(--stone-2);border:2px solid var(--rule);display:grid;gap:5px}
+.setcard.on{border-color:var(--ember);box-shadow:0 0 16px rgba(244,166,70,.18)}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+
+/* ===== character ===== */
+.stage .who{left:12px;top:10px;display:grid;gap:4px}
+.stage .fat{right:10px;top:10px;display:grid;justify-items:end;gap:4px}
+.stage .xpbar{left:0;right:0;bottom:0;height:16px;display:flex;align-items:center;gap:8px;padding:0 10px;background:linear-gradient(0deg,rgba(7,5,11,.9),rgba(7,5,11,0))}
+.stage .xpbar .meter{flex:1;height:5px}
+.fatm{width:96px;position:relative}
+.fatm .meter{height:6px}
+.fatm .mk{position:absolute;top:-3px;width:2px;height:12px;background:var(--bone);opacity:.55}
+.points{display:flex;gap:10px;align-items:center;padding:8px 10px;border:2px solid var(--ember);background:linear-gradient(180deg,#2c1c10,#1d130b);box-shadow:0 0 18px rgba(244,166,70,.18)}
+.points .big{font:400 30px/1 var(--f-display);color:var(--ember);text-shadow:0 0 12px rgba(244,166,70,.6)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.stt{position:relative;padding:7px 7px 6px;background:var(--stone);border:2px solid var(--rule);display:grid;gap:5px}
+.stt .k{display:flex;gap:4px;align-items:center}
+.stt .v{font:400 15px/1 var(--f-pixel);font-variant-numeric:tabular-nums;color:var(--bone)}
+.stt .v small{font-size:9px;color:var(--dim)}
+.stt .pl{position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border:2px solid var(--ember);background:#2a1a0e;color:var(--ember);font:11px/16px var(--f-pixel);text-align:center}
+.stt.p{border-color:var(--ember);background:#20160f}
+.stt.p .v{color:var(--ember)}
+.stt.slot{border-style:dashed;background:transparent}
+.eqs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.eqs>div{padding:7px 8px;background:var(--stone-2);border:2px solid var(--rule);display:grid;gap:6px}
+.eqs>div.on{border-color:var(--ember)}
+.eqs>div.lk{border-style:dashed;background:var(--stone)}
+.confirm{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+
+.tree{position:relative;display:grid;grid-template-columns:40px repeat(3,minmax(0,1fr));row-gap:16px;padding:2px 0}
+.tree .lv{align-self:center}
+.tree .colh{text-align:center;font:400 19px/1 var(--f-display);color:var(--ash)}
+.node{justify-self:center;width:48px;height:48px;display:grid;place-items:center;position:relative;border:3px solid var(--rule);background:var(--stone);z-index:1}
+.node.pas{border-radius:50%}
+.node.rk{width:32px;height:32px;transform:rotate(45deg);margin:8px}
+.node.rk>*{transform:rotate(-45deg)}
+.node.have{border-color:var(--ember);background:#3a2410;box-shadow:0 0 14px rgba(244,166,70,.45)}
+.node.can{border-color:var(--ember);border-style:dashed;background:var(--stone-2);animation:breathe 2.4s ease-in-out infinite}
+.node.lock{opacity:.38}
+.node.sel{outline:2px solid var(--bone);outline-offset:4px}
+.node .pips{position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);display:flex;gap:2px}
+.node .pips i{width:6px;height:6px;background:var(--rule)}.node .pips i.f{background:var(--ember)}
+@keyframes breathe{50%{box-shadow:0 0 16px rgba(244,166,70,.5)}}
+.tree svg{position:absolute;inset:0;width:100%;height:100%;z-index:0;overflow:visible}
+.or{justify-self:center;align-self:center;font:10px var(--f-pixel);color:var(--bad);letter-spacing:.1em}
+.legend{display:flex;gap:12px;justify-content:center}
+
+/* ===== equipment ===== */
+.slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.slot{padding:7px 6px;display:grid;justify-items:center;gap:4px;text-align:center;background:var(--stone-2);border:2px solid var(--rule)}
+.slot .nm{font-size:16px;line-height:1.05}
+.slot .well{width:40px;height:40px;border-color:var(--rc,var(--rule))}
+.slot.try{border-color:var(--ember);box-shadow:0 0 14px rgba(244,166,70,.3)}
+.r-common{--rc:var(--r-common)}.r-fine{--rc:var(--r-fine)}.r-rare{--rc:var(--r-rare)}.r-relic{--rc:var(--r-relic)}
+.rar{font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--rc)}
+.filters{display:flex;gap:5px;overflow:hidden}
+.inv{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.it{aspect-ratio:1;max-width:100%;display:grid;place-items:center;background:#0d0a12;border:2px solid var(--rc,var(--rule));position:relative}
+.it[data-try]{cursor:pointer}
+.it .up,.it .dn{position:absolute;right:2px;top:1px;font:9px var(--f-pixel)}
+.it .up{color:var(--good)}.it .dn{color:var(--bad)}
+.it .nw{position:absolute;left:3px;top:3px;width:6px;height:6px;background:var(--ember);box-shadow:0 0 6px var(--ember)}
+.it .worn{position:absolute;left:2px;bottom:1px;font:7px var(--f-pixel);color:var(--ember);letter-spacing:.05em}
+.it.no{opacity:.3}
+.it.r-relic{box-shadow:0 0 12px rgba(241,211,106,.3)}
+.it.sel{outline:2px solid var(--bone);outline-offset:2px}
+.card{background:linear-gradient(180deg,#1f1828,#16111d);border:2px solid var(--rc);box-shadow:0 0 22px color-mix(in srgb,var(--rc) 25%,transparent);padding:11px 12px;display:grid;gap:8px}
+.card .nm{font-size:26px}
+.eff{display:grid;gap:5px}
+.eff p{margin:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.eff .off{opacity:.5}
+.ln{font:400 10px/1.4 var(--f-pixel);letter-spacing:.06em;text-transform:uppercase}
+.cmp{width:100%;border-collapse:collapse;font:10px var(--f-pixel);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.cmp th{font-weight:400;font-size:8px;color:var(--dim);text-align:right;padding:3px 4px;letter-spacing:.1em}
+.cmp th:first-child,.cmp td:first-child{text-align:left;color:var(--ash)}
+.cmp td{padding:5px 4px;text-align:right;border-top:1px solid var(--rule)}
+.cmp td:first-child{display:flex;gap:6px;align-items:center}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.duo .stage{border:2px solid var(--rule)}
+.duo .stage.with{border-color:var(--r-rare)}
+.duo .ov{left:7px;top:6px}
+
+/* ===== formation ===== */
+.field{position:relative;padding:10px 10px 12px;background:
+  radial-gradient(ellipse 60% 50% at 50% 100%,rgba(244,166,70,.16),transparent 70%),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0 2px,transparent 2px 6px),
+  linear-gradient(180deg,#0e0a14,#1a1320);border:2px solid var(--rule);display:grid;gap:9px}
+.foeline{text-align:center;padding:4px;border-bottom:1px dashed #5a2a32}
+.foeline .k{color:var(--blood)}
+.rowlbl{display:flex;justify-content:space-between}
+.frow{display:grid;gap:7px}
+.frow.front{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 36px}
+.frow.back{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tok{display:grid;justify-items:center;gap:4px;padding:6px 3px 6px;background:rgba(35,27,44,.92);border:2px solid var(--rule);position:relative;min-width:0}
+.tok .nm{font-size:17px}
+.tok .fb{width:80%;height:4px;background:#07050b;position:relative}.tok .fb i{position:absolute;left:0;top:0;bottom:0;background:var(--doom)}
+.tok.weary .fb i{background:var(--bad)}
+.tok.hot{border-color:var(--ember);box-shadow:0 0 16px rgba(244,166,70,.45);background:#2a1a0e}
+.tok.warnslot{border-color:var(--blood);border-style:dashed;background:#2a1217}
+.tray{display:flex;gap:7px;overflow:hidden}
+.tray .tok{width:76px;flex:none}
+.tok.rest{opacity:.55}
+.floater{position:absolute;z-index:6;width:80px;transform:rotate(-4deg) scale(1.08);border-color:var(--ember);box-shadow:0 20px 34px rgba(0,0,0,.8),0 0 20px rgba(244,166,70,.45);background:#2a1a0e}
+.finger{position:absolute;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(242,231,208,.18);border:2px solid rgba(242,231,208,.45);pointer-events:none}
+
+/* ===== the hearth (campfire ring) ===== */
+.camp{position:relative;flex:1;min-height:0;overflow:hidden;background:#07050b;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.camp:active{cursor:grabbing}
+.camp canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.renown{position:absolute;left:10px;top:10px;z-index:3;display:flex;align-items:center;gap:8px;padding:6px 9px 6px 7px;background:rgba(13,10,18,.9);border:2px solid var(--ember);box-shadow:0 0 14px rgba(244,166,70,.25);cursor:pointer}
+.renown>div{display:grid;gap:4px}
+.renown .meter{width:64px;height:4px}
+.bubble{position:absolute;z-index:4;max-width:180px;padding:6px 9px;background:rgba(18,13,24,.96);border:2px solid var(--rule);font:italic 400 14px/1.3 var(--f-body);color:var(--bone);pointer-events:none;transform:translate(-50%,-100%);animation:bub 2.8s ease forwards;white-space:nowrap}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--rule)}
+@keyframes bub{0%{opacity:0;transform:translate(-50%,-85%)}10%{opacity:1;transform:translate(-50%,-100%)}80%{opacity:1}100%{opacity:0}}
+.well.bld{width:62px;height:46px;place-items:end center;padding-bottom:3px;background:radial-gradient(circle at 50% 90%,rgba(244,166,70,.18),transparent 70%),#0d0a12}
+.rtrack{display:grid;gap:6px;position:relative;padding-left:24px}
+.rtrack::before{content:"";position:absolute;left:9px;top:16px;bottom:16px;width:4px;background:linear-gradient(0deg,var(--ember) 0 38%,#3a2a20 38% 100%)}
+.rstep{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;background:var(--stone-2);border:2px solid var(--rule)}
+.rstep>div{display:grid;gap:4px}
+.rstep::before{content:"";position:absolute;left:-21px;top:50%;width:10px;height:10px;margin-top:-5px;background:#3a2a20;border:2px solid var(--night)}
+.rstep.done{background:var(--stone)}
+.rstep.done::before{background:var(--ember);box-shadow:0 0 8px var(--ember)}
+.rstep.now{border-color:var(--ember);background:linear-gradient(90deg,#2c1c10,var(--stone-2));box-shadow:0 0 16px rgba(244,166,70,.2)}
+.rstep.now::before{background:var(--ember);box-shadow:0 0 10px var(--ember)}
+.rlv{font:400 20px/1 var(--f-display);color:var(--ember);width:34px;text-align:center}
+.rstep.later .rlv{color:var(--dim)}
+.notes .dec{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+.notes .dec h4{color:var(--good)}
+.notes .dec ul{list-style:none;padding-left:0}
+.notes .dec li::before{content:"✓ ";color:var(--good);font:11px var(--f-pixel)}
+.camp .hintbar{position:absolute;left:0;right:0;top:60px;z-index:2;display:flex;justify-content:center;pointer-events:none;transition:opacity .6s}
+.camp .hintbar span{font:9px var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);padding:5px 9px;background:rgba(7,5,11,.72);border:1px solid var(--rule)}
+.bcard{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;display:grid;grid-template-columns:38px 1fr 38px;gap:8px;align-items:center}
+.bcard .mid{background:linear-gradient(180deg,rgba(35,27,44,.96),rgba(24,18,31,.96));border:2px solid var(--ember);box-shadow:0 0 22px rgba(244,166,70,.25),0 14px 30px rgba(0,0,0,.6);padding:10px 12px;display:grid;gap:7px;min-width:0}
+.bcard .sq{width:38px;height:54px;background:rgba(35,27,44,.92)}
+.bcard .nm{font-size:25px}
+.bcard .meter{height:6px}
+.bcard.flash .mid{animation:cardflash .5s}
+@keyframes cardflash{40%{box-shadow:0 0 34px rgba(244,166,70,.7),0 14px 30px rgba(0,0,0,.6)}}
+.recruit{display:grid;gap:7px;padding:9px 10px;background:var(--stone-2);border:2px solid var(--rule)}
+.recruit.sel{border-color:var(--ember);box-shadow:0 0 16px rgba(244,166,70,.2)}
+.rng{display:grid;grid-template-columns:18px 50px 1fr 30px;gap:6px;align-items:center}
+.rng .tr{position:relative;height:8px;background:#0d0a12;box-shadow:0 0 0 1px var(--rule)}
+.rng .tr i{position:absolute;top:-3px;width:4px;height:14px;background:var(--bone)}
+.rng .tr i.hi{background:var(--good);box-shadow:0 0 6px var(--good)}
+.rng .tr i.lo{background:var(--bad)}
+.rng .tr::before{content:"";position:absolute;left:0;right:0;top:3px;height:2px;background:linear-gradient(90deg,#4a2a32,#2c2336 50%,#2f4a2c)}
+.rng .v{font:10px var(--f-pixel);text-align:right}
+.rost{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:5px 9px 5px 5px;background:var(--stone-2);border:2px solid var(--rule)}
+.rost .sbox{width:40px;height:40px}
+.rost>div{display:grid;gap:4px;min-width:0}
+.rost .nm{font-size:20px}
+.rost.spent{background:#1c1219;border-color:#4a2a32}
+.focus{display:grid;gap:6px}
+.fo{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border:2px solid var(--rule);background:var(--stone-2)}
+.fo>div{display:grid;gap:4px}
+.fo.sel{border-color:var(--ember);background:#2a1a0e}
+.fo.lk{border-style:dashed;background:var(--stone)}
+.fo.lk .nm{color:var(--dim)}
+.radio{width:16px;height:16px;border:2px solid var(--dim);display:grid;place-items:center}
+.fo.sel .radio{border-color:var(--ember)}.fo.sel .radio::after{content:"";width:6px;height:6px;background:var(--ember);box-shadow:0 0 6px var(--ember)}
+.fork{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fork>div{padding:9px;border:2px solid var(--rule);background:var(--stone-2);display:grid;gap:6px;align-content:start}
+.fork .nm{font-size:19px}
+.away{position:absolute;left:14px;right:14px;top:100px;z-index:8;background:linear-gradient(180deg,#221828,#16111d);border:2px solid var(--ember);box-shadow:0 0 0 6px rgba(11,9,19,.6),0 30px 80px rgba(0,0,0,.8),0 0 40px rgba(244,166,70,.2);padding:18px 14px 14px;display:grid;gap:10px}
+.away h4{font:400 33px/1 var(--f-display);text-align:center;text-shadow:0 0 16px rgba(244,166,70,.4)}
+.gain{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--rule)}
+.gain>div{display:grid;gap:3px}
+.gain .nm{font-size:19px}
+.gain .v{font:12px var(--f-pixel);color:var(--gold);text-align:right;display:grid;gap:3px;justify-items:end}
+.lvup{display:inline-block;font:9px var(--f-pixel);letter-spacing:.06em;color:var(--void);background:var(--ember);padding:3px 5px;box-shadow:0 0 8px var(--ember)}
+
+/* ===== map ===== */
+.maphead{height:58px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:2px solid var(--rule);background:linear-gradient(180deg,var(--stone),var(--night))}
+.maphead .rn{flex:1;text-align:center;display:grid;gap:3px}
+.maphead .nm{font-size:26px}
+.mapwrap{flex:1;position:relative;overflow:hidden;min-height:0}
+.mapwrap canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
+.mlabel{position:absolute;z-index:2;transform:translate(-50%,-50%);font:9px var(--f-pixel);letter-spacing:.06em;color:var(--bone);text-shadow:1px 1px 0 #000,0 0 6px #000;white-space:nowrap;pointer-events:none}
+.mlabel.cur{padding:4px 6px;background:#2a1a0e;border:2px solid var(--ember);box-shadow:0 0 14px rgba(244,166,70,.5);color:var(--ember)}
+.mlabel.boss{font:400 18px/1 var(--f-display);color:var(--bad)}
+.ring{position:absolute;z-index:1;width:38px;height:38px;margin:-19px 0 0 -19px;border:2px solid var(--ember);border-radius:50%;animation:ring 1.8s ease-out infinite}
+@keyframes ring{from{transform:scale(.5);opacity:1}to{transform:scale(1.5);opacity:0}}
+.mapcta{position:absolute;z-index:3;left:12px;right:12px;bottom:12px}
+.foes{display:flex;gap:6px}
+.foes>div{display:grid;justify-items:center;gap:4px;width:66px;text-align:center}
+.foes .sbox{width:52px;height:52px;background:radial-gradient(circle at 50% 85%,rgba(212,72,74,.18),transparent 70%),#140f1b}
+.party6{display:flex;gap:4px}
+.party6 .sbox{width:34px;height:34px}
+.regions{display:grid;position:relative;padding-left:26px}
+.regions::before{content:"";position:absolute;left:10px;top:20px;bottom:20px;width:4px;background:linear-gradient(0deg,var(--ember) 0 22%,#3a2a20 22% 100%)}
+.reg{position:relative;padding:12px;margin:5px 0;border:2px solid var(--rule);background:var(--stone-2);display:grid;gap:6px}
+.reg::before{content:"";position:absolute;left:-22px;top:50%;width:12px;height:12px;margin-top:-6px;background:var(--rule);border:2px solid var(--night)}
+.reg.lit{border-color:var(--ember);background:linear-gradient(90deg,#2c1c10,var(--stone-2));box-shadow:0 0 20px rgba(244,166,70,.18)}
+.reg.lit::before{background:var(--ember);box-shadow:0 0 10px var(--ember)}
+.reg.dark{background:#0e0b13;border-color:#241d2b}
+.reg .nm{font-size:25px}
+.reg.dark .nm{color:#4a4052}
+.pips{display:flex;gap:3px;flex-wrap:wrap}
+.pips i{width:8px;height:8px;background:#2a2230}
+.pips i.f{background:var(--ember);box-shadow:0 0 4px rgba(244,166,70,.6)}
+.pips i.el{background:var(--blood)}
+.pips i.bs{width:12px;background:#4a2a32}
+
+@media (prefers-reduced-motion:reduce){.node.can,.ring{animation:none}}
+</style>
+
+<div class="page">
+<header class="intro">
+  <span class="ey">Lantern Road · design mockups · revision 3</span>
+  <h1>Screens for <span>steps 2–6</span></h1>
+  <p>Phone mockups at 390 × 844 for build steps 2 to 6. Revision 2 uses the game's own battle sprites and icons. It puts each hero's full sprite at the top of their sheet, where you can watch their skills, and shows gear changing how they look. The Hearth is a camp around a fire that you can drag to turn, with building plots that Renown, your account level, unlocks. Your answers to earlier questions are recorded under each screen as Decided. Names, numbers and items are placeholders until the content spec lands.</p>
+  <div class="voices" aria-label="Type voices">
+    <div><span class="k">Names · Pirata One</span><div class="demo"><span class="nm">Maud</span><span class="nm" style="font-size:18px;color:var(--ash)">Cracked Reliquary</span></div><span class="hint">Heroes, places, items, buildings and screen titles.</span></div>
+    <div><span class="k">Game terms · Silkscreen</span><div class="demo"><span class="sk"><i class="ic" data-i="cross"></i>Mend</span><span class="mana">15 MANA</span><span class="kv">LV 7</span></div><span class="hint">Skills with their icon, stats, numbers, labels, buttons and statuses.</span></div>
+    <div><span class="k">Sentences · Spectral</span><div class="demo"><span class="txt b">Ally: health below 50%</span></div><span class="hint">Rule conditions and plain sentences only. Regular weight, never bold. Italic for asides.</span></div>
+  </div>
+  <nav class="toc" aria-label="Screens">
+    <a href="#rules">1 · Rules</a><a href="#hero" class="new">2 · Character ✦</a><a href="#gear" class="new">3 · Equipment ✦</a><a href="#formation">4 · Formation</a><a href="#hearth" class="new">5 · Hearth ✦</a><a href="#road">6 · Campaign map</a>
+  </nav>
+</header>
+
+<!-- ===================================================== 1 RULES -->
+<section class="scr" id="rules">
+<header><span class="ey">Build step 2 · Rules</span><h2>Rules editor</h2>
+<p>Each hero's list of conditions and actions, plus the party rules and saved rule sets. The rule cards follow the game's own: the condition is written as a sentence, and the action is shown as a skill with its icon and mana cost.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> Maud's rules</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><div class="hh"><span class="sbox"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="2"></i></span><div style="display:grid;gap:3px"><span class="nm">Maud</span><span class="k">Pilgrim · Lv 7</span></div></div><div class="sw"><span class="sq">‹</span><span class="sq">›</span></div></div>
+  <div class="seg"><a>Stats</a><a>Skills</a><a>Gear</a><a class="on">Rules</a></div>
+  <div class="body">
+    <div class="setbar"><span class="k">Rule set</span><span class="chip on">Black Font ▾</span><span class="sp"></span><span class="kv"><span class="e">3</span>/4 slots</span></div>
+    <div class="rules">
+      <div class="rule"><div class="grip"><span class="n">1</span><i></i></div><div class="rb"><div class="cond">Ally: health below 50%</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="cross"></i>Mend</span><span class="sp"></span><span class="mana">15 MANA</span></div><div class="rm"><span class="hint">Aims at that ally</span><span class="sp"></span><span class="k">Fired 14×</span></div></div><span class="tg on"></span></div>
+      <div class="rule warn"><div class="grip"><span class="n">2</span><i></i></div><div class="rb"><div class="cond">Ally: fallen</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="holy"></i>Last Rites</span><span class="sp"></span><span class="mana">35 MANA</span></div><div class="rm"><span class="k b">Skipped · not equipped</span></div></div><span class="tg on"></span></div>
+      <div class="rule"><div class="grip"><span class="n">3</span><i></i></div><div class="rb"><div class="cond">Foe: lowest health</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="holy"></i>Smite</span><span class="sp"></span><span class="k">Basic</span></div><div class="rm"><span class="hint">Aims at that foe</span><span class="sp"></span><span class="k">Fired 9×</span></div></div><span class="tg on"></span></div>
+      <div class="slot0"><span class="e">4</span>+ Add a rule</div>
+      <div class="lockslot"><i class="ic m" data-i="lock"></i><div style="display:grid;gap:3px"><span class="k">Locked slot</span><span class="kv">2 level-up points</span></div><span class="btn sm">Unlock</span></div>
+      <div class="fallback"><span class="k">Otherwise</span><span class="sk"><i class="ic" data-i="holy"></i>Smite</span><span class="hint">on the front foe</span></div>
+    </div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Dragging Smite to the top</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><div class="hh"><span class="sbox"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="2"></i></span><div style="display:grid;gap:3px"><span class="nm">Maud</span><span class="k">Pilgrim · Lv 7</span></div></div><div class="sw"><span class="sq">‹</span><span class="sq">›</span></div></div>
+  <div class="seg"><a>Stats</a><a>Skills</a><a>Gear</a><a class="on">Rules</a></div>
+  <div class="body">
+    <div class="setbar"><span class="k">Rule set</span><span class="chip on">Black Font ▾</span><span class="sp"></span><span class="kv"><span class="e">3</span>/4 slots</span></div>
+    <div class="rules">
+      <div class="ghost">Drop · becomes rule 1</div>
+      <div class="rule lift" style="margin-top:-104px;margin-bottom:6px"><div class="grip"><span class="n">1</span><i></i></div><div class="rb"><div class="cond">Foe: lowest health</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="holy"></i>Smite</span><span class="sp"></span><span class="k">Basic</span></div><div class="rm"><span class="hint">Aims at that foe</span></div></div><span class="tg on"></span></div>
+      <div class="rule warn"><div class="grip"><span class="n">2</span><i></i></div><div class="rb"><div class="cond">Ally: health below 50%</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="cross"></i>Mend</span><span class="sp"></span><span class="mana">15 MANA</span></div><div class="rm"><span class="k b">Never reached</span></div></div><span class="tg on"></span></div>
+      <div class="rule warn"><div class="grip"><span class="n">3</span><i></i></div><div class="rb"><div class="cond">Ally: fallen</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="holy"></i>Last Rites</span><span class="sp"></span><span class="mana">35 MANA</span></div><div class="rm"><span class="k b">Never reached</span></div></div><span class="tg on"></span></div>
+    </div>
+    <span class="finger" style="left:18px;top:140px"></span>
+    <div class="toast" style="bottom:14px"><i class="ic m" data-i="scroll"></i><span class="txt b" style="font-size:14.5px">While any foe stands, “Foe: lowest health” is always true. Rules below it will never fire.</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>C</b> Adding a rule: if, then</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><div class="hh"><span class="sbox"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="2"></i></span><div style="display:grid;gap:3px"><span class="nm">Maud</span><span class="k">Pilgrim · Lv 7</span></div></div></div>
+  <div class="seg"><a>Stats</a><a>Skills</a><a>Gear</a><a class="on">Rules</a></div>
+  <div class="body"></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:110px">
+    <div class="row"><h4>New rule</h4><span class="sp"></span><span class="k">Slot 4</span></div>
+    <div class="row"><span class="chip on">1 · If</span><span class="chip">2 · Then</span></div>
+    <span class="k">Foes</span>
+    <div class="cg">
+      <div class="co">Foe: front</div>
+      <div class="co">Foe: lowest health</div>
+      <div class="co sel"><span class="new"></span>Foe: highest attack</div>
+      <div class="co lk"><i class="ic" data-i="lock"></i>Foe: charging<span class="k">Tactician II</span></div>
+      <div class="co lk"><i class="ic" data-i="lock"></i>Foe: undead<span class="k">Clear 1-14</span></div>
+      <div class="co">Foes: 3 or more</div>
+    </div>
+    <span class="k">Allies · self</span>
+    <div class="cg">
+      <div class="co">Ally: health below 50%</div>
+      <div class="co">Self: health below 50%</div>
+      <div class="co lk"><i class="ic" data-i="lock"></i>Self: mana below 25%<span class="k">Drowned Chapel drop</span></div>
+      <div class="co lk"><i class="ic" data-i="lock"></i>A boss is here<span class="k">Tactician II</span></div>
+    </div>
+    <span class="k">Then use · aims at that foe</span>
+    <div class="opt sel"><span class="well"><i class="ic m" data-i="holy"></i></span><div><span class="sk">Smite</span><span class="k">Basic · 1 foe · free</span></div><span class="tag e">Chosen</span></div>
+    <div class="opt no"><span class="well"><i class="ic m" data-i="cross"></i></span><div><span class="sk">Mend</span><span class="k">Heals an ally · can't aim at a foe</span></div><span></span></div>
+    <div class="btn pri">Add rule</div>
+  </div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>D</b> Party rules and saved sets</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Party tactics</h3><span class="kv">6 heroes</span></div>
+  <div class="body">
+    <div class="sechead"><span class="ey">Party rules</span><span class="kv"><span class="e">2</span>/3 slots</span></div>
+    <div class="rules">
+      <div class="rule"><div class="grip"><span class="n">1</span><i></i></div><div class="rb"><div class="cond">Any ally: health below 30%</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="draught"></i>Draught</span><span class="sp"></span><span class="k">3 in pack</span></div></div><span class="tg on"></span></div>
+      <div class="rule"><div class="grip"><span class="n">2</span><i></i></div><div class="rb"><div class="cond">Any hero: fatigue 75 or more</div><div class="actn"><span class="arr">→</span><span class="sk"><i class="ic" data-i="fire"></i>Return to camp</span></div></div><span class="tg on"></span></div>
+      <div class="lockslot"><i class="ic m" data-i="lock"></i><div style="display:grid;gap:3px"><span class="k">Locked slot</span><span class="kv">Tactician II · <span class="y">400</span> <i class="ic" data-i="coin"></i> 6 <i class="ic" data-i="bone"></i></span></div></div>
+    </div>
+    <div class="sechead" style="margin-top:6px"><span class="ey">Rule sets</span><span class="kv">3/5</span></div>
+    <div class="setcard on"><div class="row"><span class="nm">Black Font</span><span class="sp"></span><span class="tag e">In use</span></div><span class="kv">16 rules · last used on 2-3</span></div>
+    <div class="setcard"><div class="row"><span class="nm">Sexton's Grave</span><span class="sp"></span><span class="btn sm">Load</span></div><span class="kv">Ottilie guards first</span></div>
+    <div class="setcard"><div class="row"><span class="nm">Fast farm</span><span class="sp"></span><span class="btn sm">Load</span></div><span class="kv">No draughts · all on lowest health</span></div>
+    <div class="sp"></div>
+    <div class="btn pri">Save these rules as a set</div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>Rules are the fourth tab of each hero's sheet, so you tune one hero's gear, skills and rules in one place. The ‹ › arrows (or a swipe) step to the next hero and stay on the Rules tab.</li>
+    <li>Press and hold the grip to lift a row, then drag it. A plain swipe still scrolls. The numbers recount as the row moves.</li>
+    <li>The ON/OFF box turns a rule off without deleting it, the same as in the step 2 editor.</li>
+    <li>A rule that can't fire says why in red, for example when its skill isn't equipped.</li>
+    <li>“Fired 14×” comes from the last battle report, which ties the editor to what you watched.</li>
+    <li>Adding a rule is one sheet in two parts: pick the condition, then the action. Actions that can't follow the condition are greyed with the reason. Locked conditions say where to earn them, and new ones carry an ember dot.</li>
+    <li>A hint warns when the order makes a rule unreachable. It never blocks you.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4><ol>
+    <li>Should Tactics also get its own bottom-bar tab that lists all six heroes' rules on one scroll?</li>
+    <li>Do saved sets hold only rules, or full loadouts with formation and equipped skills too?</li>
+    <li>Should “Fired ×” count the last battle or the whole push?</li>
+    <li>Can you edit rules between battles mid-push, or only at the Hearth?</li>
+  </ol></div>
+</div>
+</section>
+
+<!-- ===================================================== 2 CHARACTER -->
+<section class="scr" id="hero">
+<header><span class="changed">✦ Revised</span><span class="ey">Build step 3 · Characters</span><h2>Character sheet</h2>
+<p>The hero now stands in full at the top of the sheet, as they look in battle. Tap a skill under the stage, or tap the hero, to watch it play out on a training dummy. The stats fit in one compact grid. XP and fatigue sit on the stage itself.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> Stats · watching a skill <em>Tap to play</em></figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Maud</h3><div class="sw"><span class="sq">‹</span><span class="sq">›</span></div></div>
+  <div class="seg"><a class="on">Stats</a><a>Skills</a><a>Gear</a><a>Rules</a></div>
+  <div class="stage" id="stage-hero" style="height:262px" data-hero="pilgrim" data-gear="censer,habit,rosary" data-dummy="1" data-scale="7" data-auto="smite,mend,bless" tabindex="0" aria-label="Maud's battle sprite. Tap to play a skill.">
+    <div class="ov who"><span class="ey">Pilgrim · healer</span><span class="kv"><span class="e">LV 7</span> · back row</span></div>
+    <div class="ov fat"><span class="tag b"><i class="ic" data-i="fatigue"></i>Weary 58</span><div class="fatm"><div class="meter"><i style="width:58%;background:linear-gradient(90deg,#7a5aa8,var(--bad))"></i></div><span class="mk" style="left:50%"></span><span class="mk" style="left:75%"></span></div><span class="k">−5% stats · rest −12/h</span></div>
+    <div class="ov xpbar"><span class="k" style="color:var(--ash)">XP</span><div class="meter"><i style="width:69%;background:linear-gradient(90deg,#a8722c,var(--ember))"></i></div><span class="k" style="color:var(--ash)">1,240/1,800</span></div>
+  </div>
+  <div class="body" style="gap:8px;padding-top:10px">
+    <div class="watch" data-for="stage-hero"><span class="k">Watch</span>
+      <button class="play" data-play="smite"><span class="tri"></span><i class="ic" data-i="holy"></i>Smite</button>
+      <button class="play" data-play="mend"><span class="tri"></span><i class="ic" data-i="cross"></i>Mend</button>
+      <button class="play" data-play="bless"><span class="tri"></span><i class="ic" data-i="bless"></i>Bless</button>
+    </div>
+    <div class="points"><span class="big">3</span><div style="display:grid;gap:3px;flex:1"><span class="ey">Points to spend</span><span class="kv">Stats · rule slot · or the skill tree</span></div><span class="tag e">Spending</span></div>
+    <div class="stats">
+      <div class="stt"><span class="k"><i class="ic" data-i="heart"></i>Health</span><span class="v">182 <small>+30</small></span><span class="pl">+</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="mana"></i>Mana</span><span class="v">64</span><span class="pl">+</span></div>
+      <div class="stt p"><span class="k"><i class="ic" data-i="sword"></i>Power</span><span class="v">22 <small>+3</small></span><span class="pl">+</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="shield"></i>Defense</span><span class="v">9</span><span class="pl">+</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="boot"></i>Speed</span><span class="v">11</span><span class="pl">+</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="star"></i>Crit</span><span class="v">6%</span><span class="pl">+</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="feather"></i>Dodge</span><span class="v">8%</span><span class="pl">+</span></div>
+      <div class="stt slot"><span class="k"><i class="ic" data-i="scroll"></i>Rule slot</span><span class="v e" style="font-size:12px">2 pts</span><span class="pl">+</span></div>
+    </div>
+    <div class="eqs">
+      <div><span class="k">Basic</span><span class="sk"><i class="ic" data-i="holy"></i>Smite</span></div>
+      <div class="on"><span class="k">Skill I</span><span class="sk"><i class="ic" data-i="cross"></i>Mend</span></div>
+      <div class="lk"><span class="k">Skill II</span><span class="sk" style="color:var(--dim)"><i class="ic" data-i="lock"></i>Lv 10</span></div>
+    </div>
+    <div class="confirm"><span class="kv">1 of 3 placed</span><span class="btn sm">Reset</span><span class="btn sm pri">Confirm</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Skill tree, node selected <em>Plays on its own</em></figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Maud</h3><span class="tag e">2 pts</span></div>
+  <div class="seg"><a>Stats</a><a class="on">Skills</a><a>Gear</a><a>Rules</a></div>
+  <div class="body">
+    <div class="tree" id="tree">
+      <svg id="treelinks" aria-hidden="true"></svg>
+      <span></span><span class="colh">Mercy</span><span class="colh">Vigil</span><span class="colh">Flame</span>
+      <span class="k lv">Lv 1</span>
+      <div data-col="1" class="node have"><i class="ic l" data-i="cross"></i><span class="pips"><i class="f"></i><i class="f"></i><i></i></span></div>
+      <div data-col="2" class="node pas have"><i class="ic l" data-i="shield"></i></div>
+      <div data-col="3" class="node have"><i class="ic l" data-i="holy"></i><span class="pips"><i class="f"></i><i></i><i></i></span></div>
+      <span class="k lv">Lv 5</span>
+      <div data-col="1" class="node rk have"><i class="ic m" data-i="cross"></i></div>
+      <div data-col="2" class="node pas can"><i class="ic l" data-i="wax"></i></div>
+      <div data-col="3" class="node rk can"><i class="ic m" data-i="holy"></i></div>
+      <span class="k lv">Lv 7</span>
+      <div data-col="1" class="node can sel"><i class="ic l" data-i="bless"></i><span class="pips"><i></i><i></i><i></i></span></div>
+      <span class="or">— Or —</span>
+      <div data-col="3" class="node lock"><i class="ic l" data-i="holy"></i></div>
+      <span class="k lv">Lv 12</span>
+      <div data-col="1" class="node pas lock"><i class="ic l" data-i="heart"></i></div>
+      <div data-col="2" class="node lock"><i class="ic l" data-i="lantern"></i></div>
+      <span></span>
+    </div>
+    <div class="legend"><span class="k">■ skill</span><span class="k">● passive</span><span class="k">◆ rank up</span><span class="k e">Dashed · can learn</span></div>
+  </div>
+  <div class="sheet" style="bottom:78px;padding-bottom:12px">
+    <div class="row" style="align-items:stretch;gap:10px">
+      <div class="stage" id="stage-tree" style="width:112px;height:112px;border:2px solid var(--ember)" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="4" data-hx=".5" data-auto="bless" data-every="2200"></div>
+      <div style="display:grid;gap:6px;align-content:start;min-width:0">
+        <span class="ey">Mercy · skill · rank 0/3</span>
+        <h4>Benediction</h4>
+        <span class="txt">Heals every ally a little.</span>
+        <div class="row" style="flex-wrap:wrap;gap:5px"><span class="tag g"><i class="ic" data-i="cross"></i>1.2× pwr</span><span class="tag w"><i class="ic" data-i="mana"></i>30</span><span class="tag">All allies</span></div>
+      </div>
+    </div>
+    <div class="banner"><span class="sk b" style="font-size:10px">Or</span><span class="txt">Learning this locks <span class="sk"><i class="ic" data-i="holy"></i>Last Rites</span> until you respec at the Shrine.</span></div>
+    <div class="row"><span class="btn sm" style="flex:1">Respec</span><span class="btn pri" style="flex:2">Learn · 1 pt</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>C</b> Swapping the equipped skill</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Maud</h3><div class="sw"><span class="sq">‹</span><span class="sq">›</span></div></div>
+  <div class="seg"><a>Stats</a><a class="on">Skills</a><a>Gear</a><a>Rules</a></div>
+  <div class="stage" style="height:180px" data-hero="pilgrim" data-gear="censer,habit,rosary" data-dummy="1" data-scale="6"></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="top:250px">
+    <div class="row"><h4>Skill I</h4><span class="sp"></span><span class="k">Learned skills</span></div>
+    <div class="opt"><span class="well"><i class="ic m" data-i="cross"></i></span><div><span class="sk">Mend</span><span class="k">1 ally · rank 2</span></div><span class="mana">15</span></div>
+    <div class="opt sel"><span class="well"><i class="ic m" data-i="bless"></i></span><div><span class="sk">Benediction</span><span class="k">All allies · rank 1</span></div><span class="mana">30</span></div>
+    <div class="opt"><span class="well"><i class="ic m" data-i="holy"></i></span><div><span class="sk">Last Rites</span><span class="k">1 fallen ally · rank 1</span></div><span class="mana">35</span></div>
+    <div class="banner"><i class="ic m" data-i="scroll"></i><span class="txt">Equipping Benediction turns off rule 1, which uses <span class="sk"><i class="ic" data-i="cross"></i>Mend</span>.</span></div>
+    <div class="row"><span class="btn" style="flex:1">Cancel</span><span class="btn pri" style="flex:2">Equip</span></div>
+  </div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>The top of the sheet is a small stage. It shows the hero's full battle sprite at 7× scale, lit by a lantern, next to a training dummy.</li>
+    <li>Tap a Watch button, or tap the hero, to play that skill with the same effects as in battle: the projectile, the hit flash, healing motes and floating numbers. This mockup plays each one when you tap it.</li>
+    <li>XP runs along the bottom edge of the stage. Fatigue sits in the top corner with its Weary and Exhausted marks. Both stay visible without taking a row each.</li>
+    <li>The seven stats fit in a 4 × 2 grid with icons. The eighth tile is the next rule slot, so all three ways to spend points sit together. The skill tree lives on the Skills tab.</li>
+    <li>While you have points, each tile shows a +. Points stay pending until Confirm.</li>
+    <li>In the skill tree, the selected node's card plays its skill on a small stage, so you see what you're buying.</li>
+    <li>Swapping the equipped skill names the rules that stop working.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4><ol>
+    <li>Should the dummy be a fixed training dummy, or a foe from the last battle?</li>
+    <li>Does a point give a fixed amount per stat, or follow each class's growth?</li>
+    <li>Can you refund a single skill rank, or only respec the whole tree?</li>
+  </ol>
+  <div class="dec"><h4>Decided</h4><ul><li>The full stage shows on the Stats and Gear tabs, as drawn. Skills and Rules keep the room for their content.</li></ul></div></div>
+</div>
+</section>
+
+<!-- ===================================================== 3 EQUIPMENT -->
+<section class="scr" id="gear">
+<header><span class="changed">✦ Revised</span><span class="ey">Build step 4 · Equipment</span><h2>Equipment</h2>
+<p>Gear shows on the sprite. Each weapon, each armour weight and some accessories draw differently, so you can read a hero's kit at a glance in camp and in battle. Tap the weapon, armour or accessory tiles in frame A to try them on.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> Gear tab · trying on <em>Tap the tiles</em></figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Maud</h3><div class="sw"><span class="sq">‹</span><span class="sq">›</span></div></div>
+  <div class="seg"><a>Stats</a><a>Skills</a><a class="on">Gear</a><a>Rules</a></div>
+  <div class="stage" id="stage-gear" style="height:234px" data-hero="pilgrim" data-gear="censer,habit,rosary" data-dummy="1" data-scale="7" data-hx=".34">
+    <div class="ov who"><span class="ey" id="try-label">Wearing</span><span class="kv" id="try-name">Her own gear</span></div>
+  </div>
+  <div class="body" style="gap:8px;padding-top:10px">
+    <div class="slots" id="gear-slots">
+      <div class="slot r-fine" data-slot="weapon"><span class="k">Weapon</span><span class="well"><i class="ic l" data-i="censer"></i></span><span class="nm">Vesper Censer</span><span class="rar">Fine</span></div>
+      <div class="slot r-common" data-slot="armour"><span class="k">Armour</span><span class="well"><i class="ic l" data-i="robe"></i></span><span class="nm">Pilgrim's Habit</span><span class="rar">Light</span></div>
+      <div class="slot r-common" data-slot="accessory"><span class="k">Accessory</span><span class="well"><i class="ic l" data-i="rosary"></i></span><span class="nm">Bone Rosary</span><span class="rar">Common</span></div>
+    </div>
+    <div class="row"><span class="k">Bag 23/40</span><span class="sp"></span><span class="k">Fits Maud</span><span class="tg on"></span></div>
+    <div class="filters"><span class="chip on">All</span><span class="chip">Weapon</span><span class="chip">Armour</span><span class="chip">Accessory</span></div>
+    <div class="inv" id="gear-inv">
+      <span class="it r-fine" data-try="weapon:censer" data-name="Vesper Censer"><span class="worn">ON</span><i class="ic l" data-i="censer"></i></span>
+      <span class="it r-rare" data-try="weapon:crook" data-name="Bone Crook"><span class="nw"></span><span class="up">▲</span><i class="ic l" data-i="crook"></i></span>
+      <span class="it r-common" data-try="weapon:staff" data-name="Ash Staff"><span class="dn">▼</span><i class="ic l" data-i="staff"></i></span>
+      <span class="it r-common" data-try="armour:habit" data-name="Pilgrim's Habit"><span class="worn">ON</span><i class="ic l" data-i="robe"></i></span>
+      <span class="it r-rare" data-try="armour:chain" data-name="Chain Vestment"><span class="up">▲</span><i class="ic l" data-i="chain"></i></span>
+      <span class="it r-fine" data-try="armour:plate" data-name="Reliquary Plate"><span class="dn">▼</span><i class="ic l" data-i="plate"></i></span>
+      <span class="it r-common" data-try="accessory:rosary" data-name="Bone Rosary"><span class="worn">ON</span><i class="ic l" data-i="rosary"></i></span>
+      <span class="it r-rare" data-try="accessory:reliquary" data-name="Cracked Reliquary"><span class="nw"></span><span class="up">▲</span><i class="ic l" data-i="reliquary"></i></span>
+      <span class="it r-relic"><span class="nw"></span><i class="ic l" data-i="bell"></i></span>
+      <span class="it r-fine"><i class="ic l" data-i="ring"></i></span>
+      <span class="it r-rare no"><i class="ic l" data-i="xbow"></i></span>
+      <span class="it r-common no"><i class="ic l" data-i="sword"></i></span>
+    </div>
+    <div class="row" style="justify-content:center;gap:12px"><span class="k"><span class="g">▲</span><span class="b">▼</span> vs what she wears</span><span class="k">Faded · not for Pilgrims</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Item card with before and after</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Cracked Reliquary</h3></div>
+  <div class="body" style="gap:8px">
+    <div class="duo">
+      <div class="stage" style="height:128px" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="5" data-hx=".5"><div class="ov"><span class="k" style="color:var(--ash)">Now</span></div></div>
+      <div class="stage with" style="height:128px" data-hero="pilgrim" data-gear="censer,habit,reliquary" data-scale="5" data-hx=".5"><div class="ov"><span class="k w">With</span></div></div>
+    </div>
+    <div class="card r-rare">
+      <div class="row"><span class="well" style="width:46px;height:46px;border-color:var(--r-rare)"><i class="ic xl" data-i="reliquary"></i></span><div style="display:grid;gap:4px"><span class="nm">Cracked Reliquary</span><span class="rar">Rare accessory · any class</span></div></div>
+      <div class="eff">
+        <span class="k g">Always</span>
+        <p class="ln g"><i class="ic" data-i="sword"></i>+3 power <i class="ic" data-i="star"></i>+6% crit</p>
+        <span class="k b">Costs</span>
+        <p class="ln b"><i class="ic" data-i="boot"></i>−1 speed <i class="ic" data-i="cross"></i>−10% healing taken</p>
+        <span class="k e">When</span>
+        <p><span class="tag e">Below 30% health</span><span class="ln">+40% healing done</span></p>
+        <p class="off"><span class="tag">Front row</span><span class="ln">+2 defense</span><span class="tag b">Off · back row</span></p>
+      </div>
+      <span class="hint">“The saint inside has not stopped praying.”</span>
+    </div>
+    <table class="cmp" aria-label="Stat comparison">
+      <thead><tr><th>vs Bone Rosary</th><th>Now</th><th>With</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><i class="ic" data-i="sword"></i>Power</td><td>22</td><td>25</td><td class="g">▲ 3</td></tr>
+        <tr><td><i class="ic" data-i="star"></i>Crit</td><td>6%</td><td>12%</td><td class="g">▲ 6</td></tr>
+        <tr><td><i class="ic" data-i="boot"></i>Speed</td><td>11</td><td>10</td><td class="b">▼ 1</td></tr>
+        <tr><td><i class="ic" data-i="shield"></i>Defense</td><td>9</td><td>9</td><td style="color:var(--dim)">+2 front</td></tr>
+      </tbody>
+    </table>
+    <div class="sp"></div>
+    <div class="row"><span class="btn" style="flex:1">Other hero</span><span class="btn pri" style="flex:1.4">Equip on Maud</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>C</b> An item she can't use</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Thornbite</h3></div>
+  <div class="body" style="gap:9px">
+    <div class="card r-rare">
+      <div class="row"><span class="well" style="width:46px;height:46px;border-color:var(--r-rare)"><i class="ic xl" data-i="xbow"></i></span><div style="display:grid;gap:4px"><span class="nm">Thornbite</span><span class="rar">Rare weapon · crossbow</span></div></div>
+      <div class="eff">
+        <span class="k g">Always</span>
+        <p class="ln g"><i class="ic" data-i="sword"></i>+4 power</p>
+        <span class="k b">Costs</span>
+        <p class="ln b"><i class="ic" data-i="feather"></i>−4% dodge</p>
+        <span class="k e">When</span>
+        <p><span class="tag e">First 2 turns</span><span class="ln">+6 speed</span></p>
+      </div>
+    </div>
+    <div class="banner"><i class="ic m" data-i="lock"></i><span class="txt">Pilgrims can't use crossbows. Crossbowmen can.</span></div>
+    <span class="ey">Who can use it</span>
+    <div class="duo">
+      <div class="stage" style="height:118px" data-hero="crossbowman" data-scale="5" data-hx=".5"><div class="ov"><span class="k" style="color:var(--ash)">Fenn now</span></div></div>
+      <div class="stage with" style="height:118px" data-hero="crossbowman" data-gear="thornbite" data-scale="5" data-hx=".5"><div class="ov"><span class="k w">With Thornbite</span></div></div>
+    </div>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="crossbowman" data-scale="2"></i></span><div><span class="nm">Fenn</span><span class="k">Crossbowman · Lv 6 · Ash Longbow</span></div><span class="tag g">▲ Better</span></div>
+    <table class="cmp"><thead><tr><th>Fenn</th><th>Now</th><th>With</th><th>Change</th></tr></thead><tbody>
+      <tr><td><i class="ic" data-i="sword"></i>Power</td><td>18</td><td>22</td><td class="g">▲ 4</td></tr>
+      <tr><td><i class="ic" data-i="feather"></i>Dodge</td><td>12%</td><td>8%</td><td class="b">▼ 4</td></tr>
+    </tbody></table>
+    <div class="sp"></div>
+    <div class="row"><span class="btn" style="flex:1">Salvage · 3 <i class="ic" data-i="ingot"></i></span><span class="btn pri" style="flex:1.3">Equip on Fenn</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>The Gear tab keeps the stage. Tapping an item in the bag puts it on the sprite at once, so you see it before you equip it. The slot it would fill lights up, and the stage says “Trying on”.</li>
+    <li>Gear changes how the sprite is drawn:
+      <ul>
+        <li>Each weapon has its own shape: a staff, a swinging censer that trails smoke, or a crook.</li>
+        <li>Each armour weight draws differently: a robe for light, chain for medium and plate with pauldrons for heavy.</li>
+        <li>Some accessories show, such as the rosary beads or a reliquary that glows.</li>
+      </ul>
+      The battle screen uses the same layered sprite.</li>
+    <li>The item card opens with a Now and With pair of sprites, then three bands in a fixed order: Always, Costs and When. Each condition is checked against where the hero stands now, so a front-row bonus on a back-row hero reads “Off”.</li>
+    <li>An item the hero can't use shows the hero who can, with and without it, and offers to equip it on them.</li>
+    <li>Rarity is shown by both colour and a word. Every stat line carries its icon.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4><ol>
+    <li>Sell for gold, salvage for materials, or both?</li>
+    <li>What's the bag limit, and what happens to loot found mid-push when the bag is full?</li>
+    <li>Do we want an “Equip best” button, or does it undercut the trade-offs?</li>
+    <li>With every item drawn, should items share a few base shapes per weapon type and armour weight, recoloured and trimmed per item, to keep the art manageable?</li>
+  </ol>
+  <div class="dec"><h4>Decided</h4><ul><li>Every item changes the sprite: every weapon, every armour and every accessory.</li></ul></div></div>
+</div>
+</section>
+
+<!-- ===================================================== 4 FORMATION -->
+<section class="scr" id="formation">
+<header><span class="ey">Build steps 3 and 5 · Party</span><h2>Formation and party</h2>
+<p>Six places, 2 in front and 4 behind, filled from the roster tray. The board is drawn top-down with the foes at the top, so the back row sits nearest your thumb. Tokens show each hero's full sprite in their current gear.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> The party board</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><h3 style="padding-left:4px">Party</h3><span class="chip on">Black Font ▾</span></div>
+  <div class="body">
+    <div class="field">
+      <div class="foeline"><span class="k">▲ Foes this way ▲</span></div>
+      <div class="rowlbl"><span class="k">Front row</span><span class="k">Takes melee</span></div>
+      <div class="frow front">
+        <div class="tok"><i class="spr" data-hero="warden" data-scale="3"></i><span class="nm">Ottilie</span><span class="k">Warden 8</span><span class="fb"><i style="width:22%"></i></span></div>
+        <div class="tok"><i class="spr" data-hero="sellsword" data-scale="3"></i><span class="nm">Brannoc</span><span class="k">Sellsword 7</span><span class="fb"><i style="width:35%"></i></span></div>
+      </div>
+      <div class="rowlbl"><span class="k">Back row</span><span class="k">Safe from melee</span></div>
+      <div class="frow back">
+        <div class="tok"><i class="spr" data-hero="hexblade" data-scale="3"></i><span class="nm">Isolde</span><span class="k">Hex 7</span><span class="fb"><i style="width:18%"></i></span></div>
+        <div class="tok weary"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="3"></i><span class="nm">Maud</span><span class="k">Pilg 7</span><span class="fb"><i style="width:58%"></i></span></div>
+        <div class="tok"><i class="spr" data-hero="crossbowman" data-scale="3"></i><span class="nm">Fenn</span><span class="k">Xbow 6</span><span class="fb"><i style="width:12%"></i></span></div>
+        <div class="tok"><i class="spr" data-hero="lamplighter" data-scale="3"></i><span class="nm">Wick</span><span class="k">Lamp 5</span><span class="fb"><i style="width:30%"></i></span></div>
+      </div>
+    </div>
+    <div class="row"><span class="tag b"><i class="ic" data-i="fatigue"></i>Maud is weary</span><span class="sp"></span><span class="k">Roster 8/10 · drag in</span></div>
+    <div class="tray">
+      <div class="tok"><i class="spr" data-hero="sellsword" data-v="2" data-scale="2"></i><span class="nm" style="font-size:15px">Corvin</span><span class="k g">Ready</span></div>
+      <div class="tok rest"><i class="spr" data-hero="pilgrim" data-v="2" data-scale="2"></i><span class="nm" style="font-size:15px">Agathe</span><span class="k w">Bed 1h12</span></div>
+      <div class="tok rest"><i class="spr" data-hero="hexblade" data-v="2" data-scale="2"></i><span class="nm" style="font-size:15px">Edda</span><span class="k b">Spent 5h</span></div>
+      <div class="tok" style="border-style:dashed;align-content:center"><span class="k">+ Hire</span></div>
+    </div>
+    <div class="row"><span class="btn" style="flex:1">Party rules</span><span class="btn pri" style="flex:1.3">To the road ›</span></div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Dragging Corvin into the back row</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><h3 style="padding-left:4px">Party</h3><span class="chip on">Black Font ▾</span></div>
+  <div class="body">
+    <div class="field">
+      <div class="foeline"><span class="k">▲ Foes this way ▲</span></div>
+      <div class="rowlbl"><span class="k">Front row</span><span class="k">Takes melee</span></div>
+      <div class="frow front">
+        <div class="tok hot"><i class="spr" data-hero="warden" data-scale="3"></i><span class="nm">Ottilie</span><span class="k">Warden 8</span><span class="fb"><i style="width:22%"></i></span></div>
+        <div class="tok hot"><i class="spr" data-hero="sellsword" data-scale="3"></i><span class="nm">Brannoc</span><span class="k">Sellsword 7</span><span class="fb"><i style="width:35%"></i></span></div>
+      </div>
+      <div class="rowlbl"><span class="k">Back row</span><span class="k">Safe from melee</span></div>
+      <div class="frow back">
+        <div class="tok"><i class="spr" data-hero="hexblade" data-scale="3"></i><span class="nm">Isolde</span><span class="k">Hex 7</span><span class="fb"><i style="width:18%"></i></span></div>
+        <div class="tok weary"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="3"></i><span class="nm">Maud</span><span class="k">Pilg 7</span><span class="fb"><i style="width:58%"></i></span></div>
+        <div class="tok"><i class="spr" data-hero="crossbowman" data-scale="3"></i><span class="nm">Fenn</span><span class="k">Xbow 6</span><span class="fb"><i style="width:12%"></i></span></div>
+        <div class="tok warnslot"><i class="spr" data-hero="lamplighter" data-scale="3" style="opacity:.35"></i><span class="nm">Wick</span><span class="k b">Swap</span><span class="fb"><i style="width:30%"></i></span></div>
+      </div>
+    </div>
+    <div class="tok floater" style="left:286px;top:250px"><i class="spr" data-hero="sellsword" data-v="2" data-scale="3"></i><span class="nm" style="font-size:15px">Corvin</span></div>
+    <span class="finger" style="left:316px;top:300px"></span>
+    <div class="banner"><i class="ic m" data-i="sword"></i><span class="txt">Corvin fights in melee. From the back row he can't strike while anyone stands in front. The front-row places glow.</span></div>
+    <div class="tray">
+      <div class="tok" style="border-style:dashed;opacity:.5;align-content:center"><span class="k">Lifted</span></div>
+      <div class="tok rest"><i class="spr" data-hero="pilgrim" data-v="2" data-scale="2"></i><span class="nm" style="font-size:15px">Agathe</span><span class="k w">Bed 1h12</span></div>
+      <div class="tok rest"><i class="spr" data-hero="hexblade" data-v="2" data-scale="2"></i><span class="nm" style="font-size:15px">Edda</span><span class="k b">Spent 5h</span></div>
+    </div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a class="on"><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>The Party tab opens on this board. Foes are at the top, so the two front places are nearest the enemy and the four back places sit near your thumb.</li>
+    <li>Drag a hero from the tray onto a place. Dropping on a filled place swaps the two heroes. Tapping a token opens the hero sheet.</li>
+    <li>While you drag, the places that suit that hero glow, and the board warns about placements the battle rules punish. It warns but never blocks.</li>
+    <li>Tokens show the full sprite in its current gear, a fatigue sliver that turns red at Weary, and the level.</li>
+    <li>Resting and Spent heroes stay in the tray, dimmed, with the time until they're ready.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4><ol>
+    <li>If the front row falls, does the back row step forward, or do melee foes then reach the back row?</li>
+    <li>Should formations be saved separately, or as part of a rule set?</li>
+  </ol></div>
+</div>
+</section>
+
+<!-- ===================================================== 5 HEARTH -->
+<section class="scr" id="hearth">
+<header><span class="changed">✦ Revised</span><span class="ey">Build step 5 · Home base</span><h2>The Hearth</h2>
+<p>The home base is a camp. Your party sits around the fire in the middle, with building plots in a ring around them. Drag sideways in frame A to walk around the fire, or tap a hero to hear from them. You choose what to build on each plot. Renown, your account level, clears more plots as you progress through the game. Plots you haven't unlocked yet are simply gaps in the ring.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> Around the fire <em>Drag · tap a hero</em></figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><h3 style="padding-left:4px">The Hearth</h3><div class="res"><span><i class="ic" data-i="coin"></i><span class="y">2,410</span></span><span><i class="ic" data-i="bone"></i>34</span><span><i class="ic" data-i="wax"></i>12</span></div></div>
+  <div class="camp" data-camp="live" tabindex="0" aria-label="The camp. Drag left or right, or use the arrow keys, to turn around the fire.">
+    <canvas></canvas>
+    <div class="renown" role="button" aria-label="Renown 7, open the Renown track"><i class="ic m" data-i="lantern"></i><div><span class="k" style="color:var(--ember)">Renown 7</span><div class="meter"><i style="width:71%;background:linear-gradient(90deg,#a8722c,var(--ember))"></i></div></div></div>
+    <div class="hintbar"><span>◂ Drag to walk around the fire ▸</span></div>
+    <div class="bcard">
+      <button class="sq" data-step="-1" aria-label="Previous building">‹</button>
+      <div class="mid">
+        <div class="row"><i class="ic l" data-role="icon"></i><div style="display:grid;gap:4px;min-width:0;flex:1"><span class="nm" data-role="name"></span><span class="kv" data-role="status"></span></div><span class="tag" data-role="tag"></span></div>
+        <div class="meter" data-role="meter"><i></i></div>
+        <div class="row" data-role="btns"></div>
+      </div>
+      <button class="sq" data-step="1" aria-label="Next building">›</button>
+    </div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Building on an empty plot</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><h3 style="padding-left:4px">The Hearth</h3><div class="res"><span><i class="ic" data-i="coin"></i><span class="y">2,410</span></span><span><i class="ic" data-i="bone"></i>34</span><span><i class="ic" data-i="wax"></i>12</span></div></div>
+  <div class="camp" data-camp="still" data-face="7" data-cy=".08" data-outline><canvas></canvas></div>
+  <div class="scrim" style="background:rgba(6,4,10,.45)"></div>
+  <div class="sheet" style="bottom:78px">
+    <div class="row"><div style="display:grid;gap:4px"><span class="ey">Plot 7 · Renown 7</span><h4>Build here</h4></div><span class="sp"></span><span class="kv"><span class="e">6</span>/7 built</span></div>
+    <div class="opt sel"><span class="well bld"><i class="spr" data-build="barracks" data-scale="2.5"></i></span><div><span class="nm" style="font-size:20px">Barracks</span><span class="k">Roster cap 10 → 14</span><span class="kv"><span class="y">700</span> <i class="ic" data-i="coin"></i> 12 <i class="ic" data-i="bone"></i></span></div><span class="tag e">Pick</span></div>
+    <div class="opt"><span class="well bld"><i class="spr" data-build="shrine" data-scale="2"></i></span><div><span class="nm" style="font-size:20px">Shrine</span><span class="k">Respec skill trees for gold</span><span class="kv"><span class="y">500</span> <i class="ic" data-i="coin"></i> 8 <i class="ic" data-i="bone"></i></span></div><span></span></div>
+    <div class="opt"><span class="well bld"><i class="spr" data-build="pit" data-scale="2.5"></i></span><div><span class="nm" style="font-size:20px">Salvage Pit</span><span class="k">Idle · gear while you're away</span><span class="kv"><span class="y">800</span> <i class="ic" data-i="coin"></i> 10 <i class="ic" data-i="bone"></i></span></div><span></span></div>
+    <div class="row"><span class="hint" style="flex:1">Every plot you fill is a choice.</span><span class="k">Next plot · Renown 9</span></div>
+    <div class="btn pri">Build Barracks</div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>C</b> Renown, the account level</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Renown</h3><span class="kv">Account</span></div>
+  <div class="body" style="gap:9px">
+    <div class="points" style="padding:10px 12px"><i class="ic xl" data-i="lantern"></i><div style="display:grid;gap:6px;flex:1"><div class="row"><span class="nm" style="font-size:26px">Renown 7</span><span class="sp"></span><span class="kv">640/900</span></div><div class="meter" style="height:7px"><i style="width:71%;background:linear-gradient(90deg,#a8722c,var(--ember))"></i></div></div></div>
+    <span class="txt">Renown grows with everything you do on the road. It belongs to your whole company, not to one hero. You start with three plots, and Renown clears the rest.</span>
+    <span class="ey">Earned from</span>
+    <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="stt"><span class="k"><i class="ic" data-i="lantern"></i>New stage lit</span><span class="v">+40</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="skull"></i>Boss beaten</span><span class="v">+250</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="star"></i>Hero level up</span><span class="v">+15</span></div>
+      <div class="stt"><span class="k"><i class="ic" data-i="plus"></i>Building built</span><span class="v">+60</span></div>
+    </div>
+    <span class="ey">Plots it clears</span>
+    <div class="rtrack">
+      <div class="rstep later"><span class="rlv">…</span><div><span class="kv">Plots 9–11</span><span class="k">One plot for every building</span></div><i class="ic m" data-i="lock"></i></div>
+      <div class="rstep later"><span class="rlv">9</span><div><span class="kv" style="color:var(--bone)">Plot 8</span><span class="k">1,160 renown to go</span></div><i class="ic m" data-i="lock"></i></div>
+      <div class="rstep now"><span class="rlv">7</span><div><span class="kv" style="color:var(--bone)">Plot 7</span><span class="k e">Cleared · build on it</span></div><span class="btn sm pri">Go</span></div>
+      <div class="rstep done"><span class="rlv">5</span><div><span class="kv">Plot 6</span><span class="k">Scavenger Camp</span></div><i class="ic" data-i="bone"></i></div>
+      <div class="rstep done"><span class="rlv">3</span><div><span class="kv">Plot 5</span><span class="k">Training Yard</span></div><i class="ic" data-i="dummy"></i></div>
+    </div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>D</b> Recruit board: two Hexblades to compare</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Recruit board</h3><div class="res"><span><i class="ic" data-i="coin"></i><span class="y">2,410</span></span></div></div>
+  <div class="body">
+    <div class="row"><span class="tag e">1 pick left</span><span class="tag"><i class="ic" data-i="hourglass"></i>New board 3h 20m</span><span class="sp"></span><span class="k">Roster 8/10</span></div>
+    <div class="recruit sel">
+      <div class="row"><span class="sbox" style="width:52px;height:52px"><i class="spr" data-hero="hexblade" data-v="3" data-scale="2.5"></i></span><div style="flex:1;display:grid;gap:4px"><span class="nm">Morwen</span><span class="k">Hexblade · Lv 1</span></div><span class="kv y"><i class="ic" data-i="coin"></i> 250</span></div>
+      <div class="rng"><i class="ic" data-i="sword"></i><span class="k">Power</span><span class="tr"><i class="hi" style="left:86%"></i></span><span class="v g">15</span></div>
+      <div class="rng"><i class="ic" data-i="boot"></i><span class="k">Speed</span><span class="tr"><i style="left:52%"></i></span><span class="v">10</span></div>
+      <div class="rng"><i class="ic" data-i="heart"></i><span class="k">Health</span><span class="tr"><i class="lo" style="left:14%"></i></span><span class="v b">94</span></div>
+      <span class="hint">Hits hard, breaks easily.</span>
+    </div>
+    <div class="recruit">
+      <div class="row"><span class="sbox" style="width:52px;height:52px"><i class="spr" data-hero="hexblade" data-v="4" data-scale="2.5"></i></span><div style="flex:1;display:grid;gap:4px"><span class="nm">Gisla</span><span class="k">Hexblade · Lv 1</span></div><span class="kv y"><i class="ic" data-i="coin"></i> 220</span></div>
+      <div class="rng"><i class="ic" data-i="sword"></i><span class="k">Power</span><span class="tr"><i style="left:40%"></i></span><span class="v">12</span></div>
+      <div class="rng"><i class="ic" data-i="boot"></i><span class="k">Speed</span><span class="tr"><i class="hi" style="left:90%"></i></span><span class="v g">13</span></div>
+      <div class="rng"><i class="ic" data-i="heart"></i><span class="k">Health</span><span class="tr"><i style="left:60%"></i></span><span class="v">112</span></div>
+      <span class="hint">Quick, and sturdier than most.</span>
+    </div>
+    <div class="recruit" style="padding:7px 10px">
+      <div class="row"><span class="sbox" style="width:40px;height:40px"><i class="spr" data-hero="warden" data-v="2" data-scale="2"></i></span><div style="flex:1;display:grid;gap:4px"><span class="nm" style="font-size:19px">Hugh</span><span class="k">Warden · Lv 2</span></div><span class="kv y"><i class="ic" data-i="coin"></i> 340</span><span class="sq" style="width:30px;height:30px">▾</span></div>
+    </div>
+    <div class="row" style="justify-content:center;gap:12px"><span class="k">Bar = class range</span><span class="k g">Top</span><span class="k b">Bottom</span></div>
+    <div class="sp"></div>
+    <div class="btn pri">Hire Morwen · 250</div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>E</b> Roster, sorted by status</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Roster</h3><span class="kv">8 / 10</span></div>
+  <div class="body" style="gap:6px">
+    <div class="filters"><span class="chip on">Status</span><span class="chip">Level</span><span class="chip">Class</span><span class="chip">Fatigue</span></div>
+    <span class="k">In the party · 6</span>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="warden" data-scale="2"></i></span><div><span class="nm">Ottilie</span><span class="k">Warden · Lv 8 · <i class="ic" data-i="fatigue"></i> 22</span></div><span class="tag e">Front</span></div>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="sellsword" data-scale="2"></i></span><div><span class="nm">Brannoc</span><span class="k">Sellsword · Lv 7 · <i class="ic" data-i="fatigue"></i> 35</span></div><span class="tag e">Front</span></div>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="2"></i></span><div><span class="nm">Maud</span><span class="k">Pilgrim · Lv 7 · <span class="b"><i class="ic" data-i="fatigue"></i> 58 weary</span></span></div><span class="tag">Back</span></div>
+    <div class="rost" style="opacity:.85"><span class="sbox"><i class="spr" data-hero="hexblade" data-scale="2"></i></span><div><span class="nm">Isolde · Fenn · Wick</span><span class="k">3 more in the back row</span></div><span class="tag">Back</span></div>
+    <span class="k" style="margin-top:4px">At the Hearth · 2</span>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="sellsword" data-v="2" data-scale="2"></i></span><div><span class="nm">Corvin</span><span class="k">Sellsword · Lv 5 · <span class="g">+120 XP/h</span></span></div><span class="tag g">Training</span></div>
+    <div class="rost"><span class="sbox"><i class="spr" data-hero="pilgrim" data-v="2" data-scale="2"></i></span><div><span class="nm">Agathe</span><span class="k">Pilgrim · Lv 4 · ready in 1h 12m</span><div class="meter" style="height:5px"><i style="width:64%;background:var(--doom)"></i></div></div><span class="tag w">Resting</span></div>
+    <span class="k" style="margin-top:4px">Can't fight</span>
+    <div class="rost spent"><span class="sbox"><i class="spr" data-hero="hexblade" data-v="2" data-scale="2" style="filter:grayscale(.7) brightness(.7)"></i></span><div><span class="nm">Edda</span><span class="k">Hexblade · Lv 3 · <span class="b">fit in 5h 40m</span></span></div><span class="tag b">Spent</span></div>
+    <span class="hint" style="text-align:center">Swipe a row left to dismiss.</span>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>F</b> Idle building: focus and upgrade fork</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>Scavenger camp</h3><span class="kv">Lv 2</span></div>
+  <div class="body">
+    <div class="panel" style="display:grid;gap:7px">
+      <div class="row"><span class="k">Stored</span><span class="sp"></span><span class="kv">4h 52m / 8h</span></div>
+      <div class="meter" style="height:10px"><i style="width:61%;background:linear-gradient(90deg,#8a7c66,var(--bone))"></i></div>
+      <div class="row"><i class="ic m" data-i="bone"></i><span class="kv" style="color:var(--bone)">9 bone dust</span><span class="k">· 1.9/h</span><span class="sp"></span><span class="btn sm pri">Collect</span></div>
+    </div>
+    <span class="ey">Focus · where they scavenge</span>
+    <div class="focus">
+      <div class="fo sel"><span class="radio"></span><div><span class="nm" style="font-size:19px">Gravefields</span><span class="k">Mostly bone dust · 1.9/h</span></div><i class="ic m" data-i="bone"></i></div>
+      <div class="fo"><span class="radio"></span><div><span class="nm" style="font-size:19px">Drowned Chapel</span><span class="k">Mostly chapel wax · 1.2/h</span></div><i class="ic m" data-i="wax"></i></div>
+      <div class="fo lk"><i class="ic" data-i="lock"></i><div><span class="nm" style="font-size:19px">Thornwood</span><span class="k">Reach it on the road first</span></div><span></span></div>
+    </div>
+    <span class="ey">Next upgrade · choose one</span>
+    <div class="fork">
+      <div><span class="nm">Deep Packs</span><span class="kv g">Stores 12h</span><span class="kv">instead of 8h</span></div>
+      <div style="border-color:var(--ember)"><span class="nm">Keen Eye</span><span class="kv g">2× rare finds</span><span class="kv b">−20% output</span></div>
+    </div>
+    <div class="sp"></div>
+    <div class="btn pri">Build Keen Eye · 600 <i class="ic" data-i="coin"></i> 14 <i class="ic" data-i="bone"></i></div>
+    <div class="row"><span class="hint" style="flex:1">Frees the plot. Nothing comes back.</span><span class="btn sm" style="border-color:#6a3030;color:var(--bad)">Tear down</span></div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>G</b> While you were away</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><h3 style="padding-left:4px">The Hearth</h3></div>
+  <div class="camp" data-camp="still"><canvas></canvas></div>
+  <div class="scrim" style="background:rgba(6,4,10,.55)"></div>
+  <div class="away">
+    <span class="ey" style="text-align:center">7h 42m by lantern-light</span>
+    <h4>While you were away</h4>
+    <div style="display:grid">
+      <div class="gain"><i class="ic l" data-i="coin"></i><div><span class="nm">Toll House</span><span class="k b">Full for the last 1h 10m</span></div><span class="v">+1,240</span></div>
+      <div class="gain"><i class="ic l" data-i="bone"></i><div><span class="nm">Scavenger Camp</span><span class="k">Gravefields</span></div><span class="v" style="color:var(--bone)"><span>+14 <i class="ic" data-i="bone"></i></span><span>+1 <i class="ic" data-i="wax"></i></span></span></div>
+      <div class="gain"><span class="sbox" style="width:30px;height:30px"><i class="spr" data-hero="sellsword" data-v="2" data-scale="1.5"></i></span><div><span class="nm">Corvin</span><span class="k">Trained · +920 XP</span></div><span class="lvup">Lv 6</span></div>
+      <div class="gain"><span class="sbox" style="width:30px;height:30px"><i class="spr" data-hero="pilgrim" data-v="2" data-scale="1.5"></i></span><div><span class="nm">Agathe</span><span class="k">Rested · <i class="ic" data-i="fatigue"></i> 88 → 12</span></div><span class="v g">Ready</span></div>
+      <div class="gain" style="border:0"><i class="ic l" data-i="scroll"></i><div><span class="nm">Recruit Board</span><span class="k">3 new faces</span></div><span class="v e">New</span></div>
+    </div>
+    <div class="banner warm"><i class="ic m" data-i="coin"></i><span class="txt">The Toll House filled up. A bigger strongbox stores 12 hours.</span></div>
+    <div class="btn pri">Gather it all</div>
+  </div>
+  <div class="nav"><a class="on"><i class="ic" data-i="fire"></i>Hearth</a><a><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>The six heroes in the current party sit on logs around the fire, drawn with the same sprites and gear as in battle. Each has a small habit: Brannoc hones his blade, Isolde's hands give off motes, Maud's censer smokes, Wick's lamp breathes and Ottilie's shield catches the light. Tap one and they look up, say a line, and their card offers their sheet.</li>
+    <li>Drag sideways anywhere to turn the camp around the fire. On release it eases to the nearest building, which faces you and gets an ember outline. The ‹ › buttons and the arrow keys step one building at a time, so it works one-handed and without dragging.</li>
+    <li>The ring is made of building plots, plus the road out of camp, and it's the only way into buildings. You start with 3 plots and choose what to build on each. The ring holds one plot per building type, which is the most you can have. Until then, every plot is a choice. Plots you haven't unlocked are gaps in the ring, and stepping skips them.</li>
+    <li>A newly cleared plot shows as a staked-out patch with a sign and a + badge. Its card offers Build, which opens a sheet of the buildings you can build there, with what each does and its cost. Barracks and Shrine are on offer in frame B because this save hasn't built them.</li>
+    <li>Any building can be torn down from its own screen (frame F) to free its plot. Nothing comes back, so a building you raise again starts from scratch.</li>
+    <li><b class="e">Renown</b> is the account level, separate from hero levels. It grows from overall progress: new stages lit, bosses beaten, hero levels and buildings built. For now it only clears plots. More recruit picks and a bigger roster still come from the Recruit Board and Barracks. Renown sits as a lantern badge in the corner of the camp and opens its own track.</li>
+    <li>The front building's card at the bottom shows its status and main action (Open, Collect, Build or Set out). Buildings that want you show a badge from anywhere in the ring.</li>
+    <li>“While you were away” opens once over the camp when you return. It lists gains per building, celebrates level-ups and flags storage that filled up.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4>
+  <p class="hint" style="margin:0">None left for the Hearth.</p>
+  <div class="dec"><h4>Decided</h4><ul>
+    <li>The account level is called Renown. It rises with overall progress, and for now it only unlocks plots.</li>
+    <li>You start with 3 plots, to be tuned after play-testing. The most you can have is one per building type.</li>
+    <li>Locked plots are gaps in the ring until they unlock.</li>
+    <li>You can tear a building down to free its plot, and you get nothing back.</li>
+    <li>Recruit picks and roster size come from buildings.</li>
+    <li>The ring is the only way into buildings. There is no list view.</li>
+    <li>The recruit board shows its refresh timer (frame D).</li>
+    <li>Heroes at the fire have idle animations and react when tapped.</li>
+  </ul></div></div>
+</div>
+</section>
+
+<!-- ===================================================== 6 MAP -->
+<section class="scr" id="road">
+<header><span class="ey">Build step 6 · Campaign</span><h2>The Lantern Road</h2>
+<p>Each region is one tall map read from the bottom up. Cleared stages are lit lanterns and the road ahead is dark. Tapping a stage opens the sheet that sends the party out.</p></header>
+<div class="strip">
+
+<figure class="shot"><figcaption><b>A</b> Region I, 13 of 18 lit</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="maphead"><span class="sq">‹</span><div class="rn"><span class="k">Region I · 13/18 lit</span><span class="nm">Gravefields</span></div><span class="sq">›</span></div>
+  <div class="mapwrap" data-map="1"><canvas width="195" height="335"></canvas></div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a class="on"><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>B</b> Stage sheet: setting out</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="maphead"><span class="sq">‹</span><div class="rn"><span class="k">Region I · 13/18 lit</span><span class="nm">Gravefields</span></div><span class="sq">›</span></div>
+  <div class="mapwrap" data-map="1"><canvas width="195" height="335"></canvas></div>
+  <div class="scrim" style="background:rgba(6,4,10,.5)"></div>
+  <div class="sheet" style="bottom:78px">
+    <div class="row"><div style="display:grid;gap:4px"><span class="ey">Stage 1-14 · next on the road</span><h4>The Lych-gate</h4></div><span class="sp"></span><span class="tag">Rec. lv 7</span></div>
+    <div class="foes">
+      <div><span class="sbox"><i class="spr" data-foe="bones" data-scale="3"></i></span><span class="k">Bones ×2</span></div>
+      <div><span class="sbox"><i class="spr" data-foe="ghoul" data-scale="3"></i></span><span class="k">Ghoul</span></div>
+      <div><span class="sbox"><i class="spr" data-foe="gravewarden" data-scale="3"></i></span><span class="k">Grave warden</span></div>
+    </div>
+    <div class="row" style="flex-wrap:wrap;gap:5px"><span class="k">Rewards</span><span class="tag y"><i class="ic" data-i="coin"></i>~140</span><span class="tag"><i class="ic" data-i="bone"></i>Bone dust</span><span class="tag w">Gear to rare</span><span class="tag e"><i class="ic" data-i="scroll"></i>New condition</span></div>
+    <div class="panel" style="display:grid;gap:8px;padding:9px 10px">
+      <div class="row"><span class="k" style="color:var(--ash)">Keep going after a win</span><span class="sp"></span><span class="tg on"></span></div>
+      <div class="row"><span class="k" style="color:var(--ash)">Come home when</span><span class="sp"></span><span class="chip on"><i class="ic" data-i="fatigue"></i>Fatigue 75+</span></div>
+      <div class="row"><span class="k" style="color:var(--ash)">Rule set</span><span class="sp"></span><span class="chip on">Black Font ▾</span></div>
+    </div>
+    <div class="row"><div class="party6">
+      <span class="sbox"><i class="spr" data-hero="warden" data-scale="1.5"></i></span><span class="sbox"><i class="spr" data-hero="sellsword" data-scale="1.5"></i></span><span class="sbox"><i class="spr" data-hero="hexblade" data-scale="1.5"></i></span><span class="sbox" style="box-shadow:0 0 0 2px var(--bad)"><i class="spr" data-hero="pilgrim" data-gear="censer,habit,rosary" data-scale="1.5"></i></span><span class="sbox"><i class="spr" data-hero="crossbowman" data-scale="1.5"></i></span><span class="sbox"><i class="spr" data-hero="lamplighter" data-scale="1.5"></i></span>
+    </div><span class="sp"></span><span class="btn sm">Edit</span></div>
+    <div class="btn pri">Set out</div>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a class="on"><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+
+<figure class="shot"><figcaption><b>C</b> The whole road, five regions</figcaption>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span>▮▮▮ 82%</span></div>
+  <div class="tb"><span class="sq">‹</span><h3>The Lantern Road</h3><span class="kv">13/88</span></div>
+  <div class="body">
+    <div class="regions">
+      <div class="reg dark"><div class="row"><span class="nm">Hollow Throne</span><span class="sp"></span><span class="k">V</span></div><span class="k">Throne tallow · beyond the dark</span></div>
+      <div class="reg dark"><div class="row"><span class="nm">Ashen Keep</span><span class="sp"></span><span class="k">IV</span></div><span class="k">Cinder iron</span></div>
+      <div class="reg dark"><div class="row"><span class="nm">Thornwood</span><span class="sp"></span><span class="k">III</span></div><span class="k">Heartwood</span></div>
+      <div class="reg dark" style="border-color:#3a2d33"><div class="row"><span class="nm">Drowned Chapel</span><span class="sp"></span><span class="k">II</span></div><span class="k">Chapel wax · beat the Sexton to enter</span></div>
+      <div class="reg lit"><div class="row"><span class="nm">Gravefields</span><span class="sp"></span><span class="tag e">You are here</span></div>
+        <div class="pips"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f el"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f el"></i><i class="f"></i><i></i><i></i><i class="el" style="opacity:.5"></i><i></i><i class="bs"></i></div>
+        <span class="kv">13/18 lit · 2 elites · boss: the Sexton</span>
+        <span class="kv"><i class="ic" data-i="bone"></i> Drops bone dust most</span>
+      </div>
+    </div>
+    <div class="sp"></div>
+    <span class="hint" style="text-align:center">Tap a lit region to open its map.</span>
+  </div>
+  <div class="nav"><a><i class="ic" data-i="fire"></i>Hearth</a><a class="on"><i class="ic" data-i="lantern"></i>Road</a><a><i class="ic" data-i="helm"></i>Party</a><a><i class="ic" data-i="bag"></i>Bag</a></div>
+</div></figure>
+</div>
+<div class="notes">
+  <div><h4>Flow and interaction</h4><ul>
+    <li>Each region map reads from the bottom up, so the frontier stage sits near your thumb and the dark lies above. Lit stages throw pools of light, so the map shows how far your light reaches.</li>
+    <li>Red diamonds are elite stages and the skull at the top is the region's boss. The party's marker pulses on the frontier stage.</li>
+    <li>Tapping a stage opens its sheet, which shows the foes as their battle sprites, the rewards and the push settings. Set out is the last button, at thumb height.</li>
+    <li>A cleared stage shows the same sheet with Farm instead of Set out. The party strip flags tired heroes, and Edit jumps to the Party board.</li>
+    <li>The region title opens the whole road. Regions you haven't reached stay in darkness.</li>
+  </ul></div>
+  <div class="q"><h4>Open questions</h4><ol>
+    <li>Should a push carry on into the next region by itself after the boss falls?</li>
+    <li>Are elite stages on the main road, as drawn, or on side branches you can skip?</li>
+    <li>Do “Come home when” settings belong on the stage sheet, in party rules, or both?</li>
+  </ol></div>
+</div>
+</section>
+</div>
+
+<script>
+(() => {
+'use strict';
+/* =========================================================================
+   Pixel art. The hero sprites, foe templates and interface icons are copied
+   from the game (js/art.js on main), so the mockups match what ships.
+   ========================================================================= */
+const cache = new Map();
+function sprite(map, pal, key) {
+  if (key && cache.has(key)) return cache.get(key);
+  const w = Math.max(...map.map(r => r.length)), h = map.length;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  map.forEach((row, y) => { for (let i = 0; i < row.length; i++) { const col = pal[row[i]]; if (col) { x.fillStyle = col; x.fillRect(i, y, 1, 1); } } });
+  if (key) cache.set(key, c);
+  return c;
+}
+function tinted(src, color) {
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const x = c.getContext('2d'); x.drawImage(src, 0, 0); x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+const tintCache = new WeakMap();
+function tint(src, color) { let m = tintCache.get(src); if (!m) tintCache.set(src, m = {}); return m[color] || (m[color] = tinted(src, color)); }
+const urlOf = c => { if (!c._url) c._url = c.toDataURL(); return c._url; };
+
+// ── interface icons: the game's set (UI_ICONS), plus a few new ones drawn the same way
+const ICONS = {
+  heart: { map: [".rr.rr.", "rrrrrrr", "rwrrrrr", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."], pal: { r: '#e0484a', w: '#ffb8ae' } },
+  mana: { map: ["...b...", "..bbb..", ".bbwbb.", ".bwbbb.", "bbbbbbb", ".bbbbb.", "..bbb.."], pal: { b: '#5a8ae0', w: '#cfe0ff' } },
+  sword: { map: ["......w", ".....ww", "....ww.", "h..ww..", ".hww...", ".bh....", "b..h..."], pal: { w: '#eceaf2', h: '#c08a46', b: '#6b4a2e' } },
+  shield: { map: ["bbbbbbb", "bwwbbbb", "bwbbbbb", "bbbbbbb", ".bbbbb.", "..bbb..", "...b..."], pal: { b: '#6aa8d8', w: '#dcf2ff' } },
+  holy: { map: ["y..y..y", ".y.y.y.", "..www..", "yywwwyy", "..www..", ".y.y.y.", "y..y..y"], pal: { y: '#f7d36a', w: '#fffbe0' } },
+  cross: { map: ["..ggg..", "..ggg..", "ggggggg", "ggwgggg", "ggggggg", "..ggg..", "..ggg.."], pal: { g: '#8ac46a', w: '#e0ffd0' } },
+  lantern: { map: ["..bbb..", "..b.b..", ".bbbbb.", ".byyyb.", ".bywyb.", ".byyyb.", ".bbbbb."], pal: { b: '#9a8a6a', y: '#f7c24a', w: '#fff2c0' } },
+  skull: { map: [".bbbbb.", "bbbbbbb", "bkbbbkb", "bbbbbbb", ".bbkbb.", ".b.b.b.", "......."], pal: { b: '#d8d0bc', k: '#2a2233' } },
+  bell: { map: ["...k...", "..bbb..", ".bbwbb.", ".bbbbb.", ".bbbbb.", "bbbbbbb", "...k..."], pal: { b: '#e8c24a', w: '#fff3c8', k: '#8a6a2a' } },
+  bone: { map: ["bb.....", "bbb....", ".bb....", "..bb...", "...bb..", "....bbb", ".....bb"], pal: { b: '#e0d8c4' } },
+  book: { map: ["bbbbbbb", "bwwbwwb", "bwwbwwb", "bwwbwwb", "bwwbwwb", "bbbbbbb", "......."], pal: { b: '#8a5a3a', w: '#ece4d2' } },
+  lock: { map: ["..bbb..", ".b...b.", ".b...b.", "bbbbbbb", "bbbybbb", "bbbybbb", "bbbbbbb"], pal: { b: '#7d7186', y: '#2a2233' } },
+  // new, in the same style
+  coin: { map: ["..yyy..", ".yYyyy.", "yYyyyyy", "yyyddyy", "yyyyyyy", ".yyyyd.", "..ddd.."], pal: { y: '#e8c24a', Y: '#fff0a8', d: '#a8822a' } },
+  wax: { map: ["...f...", "...F...", "..www..", "..wwW..", "..wwW..", "..wwW..", ".WWWWW."], pal: { f: '#f29a3a', F: '#fff0c0', w: '#ece4d2', W: '#a89c84' } },
+  ingot: { map: [".......", ".......", "..aaaa.", ".aAAAaa", "aAAAAaa", "aaaaaaa", "eeeeee."], pal: { a: '#7d8088', A: '#c3c8d0', e: '#f29a3a' } },
+  boot: { map: ["...bb..", "...bb..", "...bb..", "...bbb.", "w..bbbb", ".w.bbbb", "......."], pal: { b: '#a8784a', w: '#b4a8b6' } },
+  feather: { map: ["......w", "....wwW", "...wwW.", "..wwW..", ".wwW...", "wW.....", "w......"], pal: { w: '#c9e8ff', W: '#7aa6c8' } },
+  star: { map: ["...y...", "...y...", "yyywyyy", ".yyyyy.", "..yyy..", ".y...y.", "y.....y"], pal: { y: '#f7d36a', w: '#fff3c8' } },
+  fatigue: { map: ["..ppp..", ".pp....", "pp.....", "pp...w.", "pp.....", ".pp....", "..ppp.."], pal: { p: '#bb96ee', w: '#e8d8ff' } },
+  bag: { map: ["..bbb..", "...b...", ".bbbbb.", "bbbybbb", "bbbbbbb", "bbbbbbb", ".bbbbb."], pal: { b: '#8a5a3a', y: '#e8c24a' } },
+  helm: { map: ["..mmm..", ".mMmmm.", "mMmmmmm", "mmkkkmm", "mmmmmmm", "m.mmm.m", "..m.m.."], pal: { m: '#a7adb8', M: '#dfe4ea', k: '#1a1214' } },
+  fire: { map: ["...f...", "..fyf..", ".fyWyf.", ".fyyyf.", "..fff..", "wwwwwww", ".w...w."], pal: { f: '#e2582e', y: '#f7b34a', W: '#fff0c0', w: '#6b4a2e' } },
+  scroll: { map: ["wwwwww.", "WwwwwwW", ".wkkkw.", ".wwwww.", ".wkkw..", ".wwwww.", "WwwwwwW"], pal: { w: '#ece4d2', W: '#a89c84', k: '#7d7186' } },
+  draught: { map: ["...k...", "..www..", "...w...", "..rrr..", ".rwrrr.", ".rrrrr.", "..rrr.."], pal: { k: '#6b4a2e', w: '#b4a8b6', r: '#d83a46' } },
+  bless: { map: [".yyyyy.", "y..g..y", "y.ggg.y", "y..g..y", "y..g..y", "y.....y", ".yyyyy."], pal: { g: '#8ac46a', y: '#f7d36a' } },
+  hourglass: { map: ["wwwwwww", ".yyyyy.", "..yyy..", "...y...", "..y.y..", ".yyyyy.", "wwwwwww"], pal: { w: '#8a5a3a', y: '#e8c24a' } },
+  censer: { map: ["...l...", "...l...", "..yyy..", ".yfFfy.", ".yfffy.", "..yyy..", "...y..."], pal: { l: '#9a8ea4', y: '#d8b44a', f: '#f29a3a', F: '#fff0c0' } },
+  staff: { map: ["....y..", "...yyy.", "....y..", "...w...", "..w....", ".w.....", "w......"], pal: { y: '#f7d36a', w: '#7a5a3a' } },
+  crook: { map: ["..bbb..", ".b...b.", ".....b.", "....b..", "...b...", "..b....", ".b....."], pal: { b: '#e0d8c4' } },
+  robe: { map: ["..s.s..", ".csssc.", "ccccccc", ".ccccc.", ".cCcCc.", ".ccccc.", "cc...cc"], pal: { c: '#d6ccb6', C: '#a89c84', s: '#e8e0cc' } },
+  chain: { map: [".m...m.", "mmMmMmm", "mMmMmMm", ".mMmMm.", ".mmMmm.", ".mMmMm.", "mm...mm"], pal: { m: '#6b7280', M: '#b4b8c4' } },
+  plate: { map: ["MM...MM", "mMMMMMm", "mmmymmm", ".mmmmm.", ".mmymm.", ".mmmmm.", "mm...mm"], pal: { m: '#8a8f99', M: '#dfe4ea', y: '#e8c24a' } },
+  rosary: { map: ["..bbb..", ".b...b.", "b.....b", "b.....b", ".b...b.", "..bxb..", "..xxx.."], pal: { b: '#e0d8c4', x: '#c8a050' } },
+  reliquary: { map: ["...y...", "..yyy..", ".ybbby.", ".ybwby.", ".ybbby.", ".yyyyy.", "..y.y.."], pal: { y: '#e8c24a', b: '#6aa8d8', w: '#dcf2ff' } },
+  ring: { map: [".......", "...w...", "..g.g..", ".g...g.", ".g...g.", "..g.g..", "...g..."], pal: { g: '#e8c24a', w: '#dcf2ff' } },
+  xbow: { map: ["ttttttt", "t..w..t", "...w...", "..wrw..", "...w...", "...w...", "..www.."], pal: { t: '#5a7a3a', w: '#7a5232', r: '#c84a3a' } },
+  tent: { map: ["...w...", "..wrw..", ".wrrrw.", "wwwrwww", "wwwdwww", "ww.d.ww", "w..d..w"], pal: { w: '#d6ccb6', r: '#c43b3b', d: '#2a1f26' } },
+  dummy: { map: ["..nnn..", "..nkn..", "wwwwwww", "...n...", "..nnn..", "...w...", "..www.."], pal: { n: '#c8a050', k: '#5a3a20', w: '#7a5232' } },
+  pit: { map: [".......", ".......", ".wwwww.", "wkkkkkw", "kkkkkkk", ".kkkkk.", "......."], pal: { w: '#5a4030', k: '#07050b' } },
+};
+const iconURL = new Map();
+function icon(name) {
+  if (iconURL.has(name)) return iconURL.get(name);
+  const ic = ICONS[name]; if (!ic) return null;
+  const s = sprite(ic.map, ic.pal, 'i:' + name), n = Math.max(s.width, s.height);
+  const c = document.createElement('canvas'); c.width = n; c.height = n;
+  c.getContext('2d').drawImage(s, Math.floor((n - s.width) / 2), Math.floor((n - s.height) / 2));
+  const u = c.toDataURL(); iconURL.set(name, u); return u;
+}
+document.querySelectorAll('.ic[data-i]').forEach(el => { const u = icon(el.dataset.i); if (u) el.style.backgroundImage = `url(${u})`; });
+
+// ── heroes, side view (the game's HERO_SIDE maps and HERO_ART palettes)
+const HERO_PAL = {
+  warden: { h: '#8a8f99', H: '#c3c8d0', p: '#9e3a32', c: '#2c3b55', C: '#1f2a3e', d: '#16202e', a: '#6b7280', n: '#c9a27a', k: '#2a2622', m: '#a7adb8', M: '#dfe4ea', w: '#6b4a2e', y: '#e8c24a', r: '#3a4f75' },
+  sellsword: { h: '#6e2f22', H: '#a24e34', s: '#b8402e', c: '#5a3a26', C: '#3e2718', d: '#2a1a10', a: '#5a3a26', n: '#d8a878', k: '#2a1c14', w: '#e6e4ec', W: '#ffffff', y: '#d8b44a', t: '#6b4a2e' },
+  crossbowman: { h: '#3e5a32', H: '#5a7a48', c: '#4a6a3a', C: '#324a28', d: '#22341c', a: '#4a6a3a', n: '#d8a878', k: '#2a2418', t: '#7a5232', T: '#a8784a', f: '#e8e0cc', r: '#a83a2a', w: '#c9b48a' },
+  pilgrim: { h: '#8a7a5a', H: '#b8a47a', c: '#d6ccb6', C: '#a89c84', d: '#7a705e', a: '#d6ccb6', n: '#d8a878', k: '#5a4e3e', w: '#7a5a3a', y: '#f7d36a', s: '#e8e0cc', S: '#b8ac94' },
+  lamplighter: { h: '#3a5a5c', H: '#5a8a8c', c: '#b8682a', C: '#8a4a1c', d: '#5a3014', a: '#b8682a', n: '#d8a878', k: '#2a2016', w: '#6b4a2e', y: '#ffc65a', l: '#fff3c8', b: '#6b5236', t: '#3a5a5c' },
+  hexblade: { h: '#4e2c62', H: '#704688', c: '#3e2450', C: '#2a1838', d: '#1c1026', a: '#3e2450', n: '#c9a2b0', k: '#1c1420', m: '#b8b0c8', g: '#bb96ee', G: '#e8d8ff' },
+};
+const HERO_SIDE = {
+  warden: ["....pp..........", "...pmmmm........", "...mMmmmm.......", "...mmmmeee......", "...mmmmmmm......", "....mmmmm..rrr..", "...mmmmmmmrMMr..", "..mMmmmmmmryyr..", "..mmrrrrmmryyr..", "...rCrrrr.ryyr..", "...rCrrrr.rmmr..", "...rCrrrr.ryyr..", "...rrrrrr..rr...", "...CccccC.......", "...dCccCd.......", "....kk.kk.......", "....kk.kk......."],
+  sellsword: ["..............W.", ".............ww.", "......hhhh..ww..", ".....hHhhhhww...", ".....hhhhnnw....", ".....hhhnenyy...", "......hhnntt....", ".....sssssna....", "....ssccccca....", "....cCcccca.....", "....cCcccca.....", "....cCccccc.....", "....cCccccc.....", "....cccccc......", "...cCccccc......", "...dCddcdd......", "....kk..kk......", "....kk..kk......"],
+  crossbowman: ["................", "......hhh.......", ".....hhHhh......", "....hhhhhnn.....", "....hhhhnen.....", "....hhhhhnn.....", "...thhhhhh......", "..ff.cccccc.....", "..tt.ccccnTTTTt.", "..t..cCccc..ww..", ".....cCccc......", ".....cCcccc.....", ".....ccccc......", "....cCcccc......", "....dCddcd......", ".....kk.kk......", ".....kk.kk......"],
+  pilgrim: ["...........y....", "..........yyy...", "......hhhh.y....", "...hhhhhhhhhh...", ".....hHhhh.w....", ".....hnnnn.w....", ".....nnenn.w....", ".....ssss..w....", "....cSccccnw....", "....cCcccc.w....", "....cCcccc.w....", "....cCcccc.w....", "....ccccc..w....", "...cCcccc..w....", "...cCccccc.w....", "...dddddd.......", "....kk.kk.......", "....kk.kk......."],
+  lamplighter: ["..........wwwww.", "......hhh.w...b.", ".....hHhhw....b.", ".....hhhnn...bbb", ".....hhnenw..byb", ".....hhhnw...blb", "......tttw...byb", ".....cccw.....b.", "....cCcnc.......", "....cCccc.......", "....cCccc.......", "....cCcccc......", "....cccccc......", "...cCcccccc.....", "...dtdtdtdt.....", "....kk..kk......", "....kk..kk......"],
+  hexblade: ["....h...........", "....hh..........", "....hhh.........", "...hhHhh........", "...hhhhhh.......", "...hhhhgeg......", "...hhhhhhh......", "..hhhhhhhh......", "..ccccccca.m....", "..cCccgccnm.....", "..cCcgGgcm......", "..cCccgccm......", "..cCcccccc......", "..ccccccccc.....", ".cCcccccccc.....", ".d.dd.dd.dd.....", "....kk..kk......", "....kk..kk......"],
+};
+// Recruits and reserves vary their colours a little, the way randomised recruits would.
+const VARIANT = [{}, {}, { h: '#2a1d1a', H: '#4a3428', n: '#c99572' }, { h: '#5a2c52', H: '#8a4688', g: '#f08c76', n: '#e9c39b' }, { h: '#2c3a62', H: '#4a5a88', n: '#9a6a4c', g: '#8cc4e6' }];
+
+// Gear changes the drawing. Each layer edits the map and the palette; the battle screen would use the same layers.
+const GEAR = {
+  staff: { weapon: true },
+  censer: { weapon: true, edit(m) { [[11, 9, 'l'], [11, 10, 'l'], [11, 11, 'l'], [10, 12, 'g'], [11, 12, 'g'], [12, 12, 'g'], [10, 13, 'g'], [11, 13, 'E'], [12, 13, 'g'], [11, 14, 'g']].forEach(([x, y, c]) => put(m, x, y, c)); }, pal: { l: '#9a8ea4', g: '#d8b44a', E: '#ffb04a' }, smoke: [11, 12], glow: [11, 13, '#ffb04a'] },
+  crook: { weapon: true, edit(m) { for (let y = 4; y <= 14; y++) put(m, 11, y, 'b'); [[11, 2], [11, 1], [12, 0], [13, 0], [14, 1], [14, 2], [14, 3]].forEach(([x, y]) => put(m, x, y, 'b')); }, pal: { b: '#e0d8c4' } },
+  habit: {},
+  chain: { pal: { c: '#6b7280', C: '#4e5460', a: '#6b7280', d: '#3a3c41', s: '#c3c8d0', S: '#8a8f99', M: '#a7adb8' }, edit(m) { for (let y = 8; y <= 14; y++) for (let x = 0; x < 16; x++) if (m[y][x] === 'c' && (x + y) % 2 === 0) m[y][x] = 'M'; } },
+  plate: { pal: { c: '#a7adb8', C: '#6b7280', a: '#a7adb8', d: '#3a3c41', s: '#dfe4ea', S: '#8a8f99', P: '#eef2f6', y: '#e8c24a' }, edit(m) { [[3, 7], [4, 7], [5, 7], [6, 7], [7, 7], [8, 7], [3, 8]].forEach(([x, y]) => put(m, x, y, 'P')); [[5, 11], [6, 11], [7, 11], [8, 11]].forEach(([x, y]) => put(m, x, y, 'y')); } },
+  rosary: { pal: { r: '#efe6d2', R: '#c8a050' }, edit(m) { put(m, 8, 9, 'r'); put(m, 9, 10, 'r'); put(m, 9, 11, 'r'); put(m, 9, 12, 'R'); } },
+  reliquary: { pal: { q: '#6aa8d8', Q: '#dcf2ff', u: '#e8c24a' }, edit(m) { [7, 8, 9].forEach(x => { put(m, x, 10, 'u'); put(m, x, 12, 'u'); }); put(m, 7, 11, 'q'); put(m, 8, 11, 'Q'); put(m, 9, 11, 'q'); }, glow: [8, 11, '#8cc4e6'] },
+  thornbite: { pal: { t: '#2e4a24', T: '#5a8a3a', r: '#d4484a', x: '#8ac46a' }, edit(m) { put(m, 15, 8, 'r'); put(m, 12, 7, 'x'); put(m, 13, 9, 'x'); } },
+};
+function put(m, x, y, c) { if (m[y] && x >= 0 && x < 16) m[y][x] = c; }
+function heroCanvas(cls, gearList = [], v = 0) {
+  const key = 'h:' + cls + ':' + gearList.join(',') + ':' + v;
+  if (cache.has(key)) return cache.get(key);
+  const m = HERO_SIDE[cls].map(r => r.padEnd(16, '.').split(''));
+  const pal = Object.assign({ e: '#1a1214' }, HERO_PAL[cls], VARIANT[v] || {});
+  const gear = gearList.map(g => GEAR[g]).filter(Boolean);
+  if (cls === 'pilgrim' && gear.some(g => g.weapon && g !== GEAR.staff)) {
+    for (let y = 0; y < m.length; y++) for (let x = 9; x < 16; x++) if ('wy'.includes(m[y][x])) m[y][x] = '.';
+  }
+  gear.forEach(g => { if (g.edit) g.edit(m); if (g.pal) Object.assign(pal, g.pal); });
+  const c = sprite(m.map(r => r.join('')), pal);
+  cache.set(key, c); return c;
+}
+function gearFx(gearList) { return gearList.map(g => GEAR[g]).filter(g => g && (g.glow || g.smoke)); }
+
+// ── foes (the game's front-view templates)
+const TEMPLATES = {
+  hunched: ["......hhhh......", ".....hhhhhh.....", ".....hehheh.....", "...bbhhmmhhbb...", "..bbbbbbbbbbbb..", ".bbbbbbbbbbbbbb.", ".b.bbbbbbbbbb.b.", "c..bbbbbbbbbb..c", "c...bbbbbbbb...c", ".....bbbbbb.....", "....bb....bb....", "....bb....bb....", "...dd......dd...", "..ddd......ddd.."],
+  skeleton: ["......xxxx......", ".....xxxxxx.....", ".....xeexeex....", ".....xxxxxx.....", "......x.x.x.....", "......xxxx......", "....x.xxxx.x....", "...x..x..x..x...", "...x..xxxx..x...", "...c..x..x..c...", "......xxxx......", "......x..x......", "......x..x......", "......x..x......", ".....xx..xx....."],
+  knight: [".....hhhhhh.....", ".....hhhhhh.....", ".....heeeeh.....", ".....hhhhhh.....", "...aabbbbbbaa...", "..aabbbbbbbbaa..", "..a.bbbrrbbb.a..", "..a.bbbbbbbb.a.s", "..c.bbbbbbbb.cs.", "....bbbbbbbb.s..", "....aaaaaaaa....", ".....bb..bb.....", ".....bb..bb.....", ".....aa..aa.....", "....aaa..aaa...."],
+};
+const FOES = {
+  ghoul: ['hunched', { h: '#7d8a6a', e: '#e8f07a', m: '#1e1612', b: '#4d5640', c: '#c9c2a4', d: '#343a2c' }],
+  bones: ['skeleton', { x: '#d8d0bc', e: '#7ad0ff', c: '#a89e88' }],
+  gravewarden: ['knight', { h: '#55575e', e: '#ff7a3a', b: '#3e4047', a: '#6b6d75', r: '#6b2b22', c: '#6b6d75', s: '#c9ccd4' }],
+};
+const foeCanvas = k => sprite(TEMPLATES[FOES[k][0]], FOES[k][1], 'f:' + k);
+
+document.querySelectorAll('.spr[data-hero], .spr[data-foe]').forEach(el => {
+  const s = el.dataset.foe ? foeCanvas(el.dataset.foe) : heroCanvas(el.dataset.hero, (el.dataset.gear || '').split(',').filter(Boolean), +(el.dataset.v || 0));
+  const k = +(el.dataset.scale || 3);
+  el.style.width = s.width * k + 'px'; el.style.height = s.height * k + 'px';
+  el.style.backgroundImage = `url(${urlOf(s)})`;
+  el.setAttribute('role', 'img'); el.setAttribute('aria-label', (el.dataset.hero || el.dataset.foe) + ' sprite');
+});
+
+// ── props from the game's scenery
+const PROPS = {
+  post: [".ddd.", ".dfd.", ".dyd.", ".dfd.", ".ddd.", "..d..", "..d..", "..d..", "..d..", "..d..", "..d..", ".ddd."],
+  grave: [".sss.", "sssss", "sdsss", "sssss", "sssds", "sssss", "ddddd"],
+  cross: ["..s..", "..s..", "sssss", "..s..", "..s..", "..s..", "..s..", ".ddd."],
+  deadtree: ["t.......t", ".t..t..t.", "..t.t.t..", "...ttt.t.", "t...t.t..", ".t..tt...", "..t.t....", "...tt....", "....t....", "....t....", "...ttt...", "..t.t.t.."],
+};
+const PROP_PAL = { s: '#5f6266', d: '#3a3c41', t: '#3b3026', f: '#f29a3a', y: '#d8b44a' };
+const prop = k => sprite(PROPS[k], PROP_PAL, 'p:' + k);
+const DUMMY = sprite(["..nnnn..", ".nnnnnn.", ".nkknkn.", ".nnnnnn.", "..nnnn..", "wwwwwwww", "w..ww..w", "...ww...", "..nnnn..", ".nnnnnn.", "..nnnn..", "...ww...", "...ww...", "...ww...", "..wwww.."], { n: '#c8a050', k: '#5a3a20', w: '#6b4a2e' }, 'dummy');
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const visible = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* =========================================================================
+   The sprite stage: a hero, a lantern and a training dummy. Skills play
+   with the battle's effects: cast hop, projectile, hit flash, motes, numbers.
+   ========================================================================= */
+const stages = [];
+class Stage {
+  constructor(el) {
+    this.el = el; this.k = +(el.dataset.scale || 6);
+    this.cv = document.createElement('canvas'); el.prepend(this.cv);
+    this.W = Math.max(8, Math.floor(el.clientWidth / this.k)); this.H = Math.max(8, Math.floor(el.clientHeight / this.k));
+    this.cv.width = this.W; this.cv.height = this.H;
+    this.x = this.cv.getContext('2d'); this.x.imageSmoothingEnabled = false;
+    this.cls = el.dataset.hero; this.gear = (el.dataset.gear || '').split(',').filter(Boolean); this.v = +(el.dataset.v || 0);
+    this.hx = Math.round(this.W * +(el.dataset.hx || .3)); this.gy = this.H - (this.H > 30 ? 6 : 3);
+    this.dummy = el.dataset.dummy ? { x: Math.round(this.W * .76), flash: 0, rec: -1e9 } : null;
+    this.parts = []; this.events = []; this.anim = null; this.phase = Math.random() * 6;
+    this.seed = []; const r = mulberry(this.W * 7 + this.H);
+    for (let i = 0; i < Math.ceil(this.W / 9); i++) this.seed.push({ x: Math.floor(r() * this.W), y: Math.floor(this.gy - 4 - r() * 6), k: r() > .5 ? 'grave' : 'cross' });
+    this.auto = (el.dataset.auto || '').split(',').filter(Boolean); this.ai = 0; this.every = +(el.dataset.every || 2600); this.nextAuto = performance.now() + 900 + Math.random() * 600; this.manual = false;
+    el.addEventListener('click', () => { this.manual = true; const list = this.auto.length ? this.auto : ['smite']; this.play(list[this.ai++ % list.length]); });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+    stages.push(this);
+  }
+  setGear(list) { this.gear = list; this.burst(this.hx, this.gy - 9, '#fff3c8', 10, 1.2); }
+  hero() { return heroCanvas(this.cls, this.gear, this.v); }
+  at(dt, fn) { this.events.push({ t: performance.now() + dt, fn }); this.events.sort((a, b) => a.t - b.t); }
+  pop(px, py, text, cls) {
+    const d = document.createElement('div'); d.className = 'fnum ' + (cls || ''); d.textContent = text;
+    d.style.left = px * this.k + 'px'; d.style.top = py * this.k + 'px';
+    d.addEventListener('animationend', () => d.remove()); this.el.append(d);
+  }
+  burst(x, y, color, n, sp = 1) { for (let i = 0; i < n; i++) this.parts.push({ x, y, vx: rnd(-1, 1) * sp * 30, vy: rnd(-1, .4) * sp * 30, t0: performance.now(), life: rnd(300, 600), color, kind: 'dot' }); }
+  play(kind) {
+    const now = performance.now(), s = this.hero(), top = this.gy - s.height, hx = this.hx;
+    const host = this.el.closest('.phone');
+    if (host) host.querySelectorAll('.play').forEach(b => b.classList.toggle('on', b.dataset.play === kind));
+    if (kind === 'smite') {
+      this.anim = { t0: now, dur: 380, lift: 2 };
+      const d = this.dummy, tx = d ? d.x : this.W - 3, ty = this.gy - 10;
+      this.at(150, () => this.parts.push({ kind: 'orb', x0: hx + 4, y0: top + 1, x1: tx, y1: ty, t0: performance.now(), life: 360, color: '#ffe9a0' }));
+      this.at(510, () => { if (d) { d.flash = performance.now() + 90; d.rec = performance.now(); } this.burst(tx, ty, '#ffe9a0', 9, 1.1); this.pop(tx, ty - 8, '16', ''); });
+    } else if (kind === 'mend' || kind === 'bless') {
+      const gold = kind === 'bless', col = gold ? '#f7d36a' : '#b4f098';
+      this.anim = { t0: now, dur: 420, lift: 1 };
+      this.parts.push({ kind: 'ring', x: hx, y: this.gy, t0: now, life: gold ? 800 : 600, r: gold ? 16 : 9, color: col });
+      if (gold) this.parts.push({ kind: 'flash', t0: now, life: 300, color: '#f7d36a' });
+      for (let i = 0; i < (gold ? 12 : 7); i++) this.at(i * 55, () => this.parts.push({ kind: gold ? 'mote' : 'plus', x: hx + rnd(-6, 6), y: this.gy - rnd(0, 6), vy: -rnd(14, 24), t0: performance.now(), life: rnd(600, 900), color: col }));
+      this.at(220, () => this.pop(hx, top - 2, gold ? '+18' : '+31', 'heal'));
+    }
+  }
+  frame(t) {
+    const x = this.x, W = this.W, H = this.H, gy = this.gy;
+    if (this.auto.length && !this.manual && t > this.nextAuto && !reduce) { this.play(this.auto[this.ai++ % this.auto.length]); this.nextAuto = t + this.every; }
+    while (this.events.length && this.events[0].t <= t) this.events.shift().fn();
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0812'); g.addColorStop(1, '#1b1421'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    this.seed.forEach(p => { const s = prop(p.k); x.globalAlpha = .35; x.drawImage(s, p.x, p.y - s.height + 4); x.globalAlpha = 1; });
+    x.fillStyle = '#1f1826'; x.fillRect(0, gy, W, H - gy); x.fillStyle = '#2a2131'; x.fillRect(0, gy, W, 1);
+    for (let i = 0; i < W; i += 3) { x.fillStyle = (i * 7) % 5 ? '#241c2a' : '#18121e'; x.fillRect(i, gy + 2 + (i % 3), 2, 1); }
+    const lx = Math.max(3, this.hx - 9);
+    const flick = .32 + Math.sin(t / 130) * .03 + Math.sin(t / 47) * .02;
+    const lg = x.createRadialGradient(lx, gy - 9, 1, lx, gy - 9, H * .9); lg.addColorStop(0, `rgba(244,166,70,${flick})`); lg.addColorStop(1, 'rgba(244,166,70,0)');
+    x.globalCompositeOperation = 'lighter'; x.fillStyle = lg; x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'source-over';
+    if (H > 24) { const p = prop('post'); x.drawImage(p, lx - 2, gy - p.height + 1); }
+    const d = this.dummy;
+    if (d) {
+      let dx = d.x - 4; const e = t - d.rec; if (e < 220) dx += Math.round(Math.sin(Math.PI * e / 220) * 2);
+      x.drawImage(t < d.flash ? tint(DUMMY, '#ffffff') : DUMMY, dx, gy - DUMMY.height + 1);
+    }
+    const s = this.hero();
+    let hy = gy - s.height + 1, hxo = this.hx - 8;
+    if (!reduce && Math.sin(t / 520 + this.phase) > .55) hy -= 1;
+    if (this.anim) { const q = (t - this.anim.t0) / this.anim.dur; if (q >= 1) this.anim = null; else hy -= Math.round(Math.sin(Math.PI * q) * this.anim.lift); }
+    x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(this.hx - 4, gy + 1, 8, 1);
+    x.drawImage(s, hxo, hy);
+    gearFx(this.gear).forEach(fx => {
+      if (fx.glow) { const [gx, gyy, c] = fx.glow, px = hxo + gx + .5, py = hy + gyy + .5, a = .22 + Math.sin(t / 300) * .1; const rg = x.createRadialGradient(px, py, 0, px, py, 5); rg.addColorStop(0, hexA(c, a)); rg.addColorStop(1, hexA(c, 0)); x.globalCompositeOperation = 'lighter'; x.fillStyle = rg; x.fillRect(px - 5, py - 5, 10, 10); x.globalCompositeOperation = 'source-over'; }
+      if (fx.smoke && !reduce && Math.random() < .05) this.parts.push({ kind: 'smoke', x: hxo + fx.smoke[0], y: hy + fx.smoke[1], vx: rnd(1, 4), vy: -rnd(4, 8), t0: t, life: 1400, color: '#9a8ea4' });
+    });
+    this.parts = this.parts.filter(p => t - p.t0 < p.life);
+    for (const p of this.parts) {
+      const q = (t - p.t0) / p.life, sec = (t - p.t0) / 1000;
+      x.globalCompositeOperation = p.kind === 'smoke' ? 'source-over' : 'lighter';
+      if (p.kind === 'orb') {
+        const px = p.x0 + (p.x1 - p.x0) * q, py = p.y0 + (p.y1 - p.y0) * q - Math.sin(Math.PI * q) * 3;
+        const rg = x.createRadialGradient(px, py, 0, px, py, 6); rg.addColorStop(0, 'rgba(255,233,160,.6)'); rg.addColorStop(1, 'rgba(255,233,160,0)'); x.fillStyle = rg; x.fillRect(px - 6, py - 6, 12, 12);
+        x.fillStyle = p.color; x.fillRect(Math.round(px) - 1, Math.round(py) - 1, 3, 3); x.fillStyle = '#fff'; x.fillRect(Math.round(px), Math.round(py), 1, 1);
+        if (Math.random() < .7) this.parts.push({ kind: 'dot', x: px, y: py, vx: rnd(-6, 6), vy: rnd(-6, 6), t0: t, life: 260, color: p.color });
+      } else if (p.kind === 'dot' || p.kind === 'smoke') {
+        x.globalAlpha = p.kind === 'smoke' ? .35 * (1 - q) : 1 - q; x.fillStyle = p.color; x.fillRect(Math.round(p.x + p.vx * sec), Math.round(p.y + p.vy * sec), 1, 1); x.globalAlpha = 1;
+      } else if (p.kind === 'plus' || p.kind === 'mote') {
+        const px = Math.round(p.x), py = Math.round(p.y + p.vy * sec); x.globalAlpha = 1 - q; x.fillStyle = p.color;
+        if (p.kind === 'plus') { x.fillRect(px - 1, py, 3, 1); x.fillRect(px, py - 1, 1, 3); } else x.fillRect(px, py, 1, 1);
+        x.globalAlpha = 1;
+      } else if (p.kind === 'ring') {
+        const r = 2 + p.r * q; x.globalAlpha = 1 - q; x.fillStyle = p.color;
+        for (let a = 0; a < Math.PI * 2; a += .25) x.fillRect(Math.round(p.x + Math.cos(a) * r), Math.round(p.y + Math.sin(a) * r * .35), 1, 1);
+        x.globalAlpha = 1;
+      } else if (p.kind === 'flash') { x.globalAlpha = .18 * (1 - q); x.fillStyle = p.color; x.fillRect(0, 0, W, H); x.globalAlpha = 1; }
+    }
+    x.globalCompositeOperation = 'source-over';
+  }
+}
+document.querySelectorAll('.stage').forEach(el => new Stage(el));
+document.querySelectorAll('.watch').forEach(w => {
+  const st = stages.find(s => s.el.id === w.dataset.for);
+  w.querySelectorAll('.play').forEach(b => b.addEventListener('click', () => { st.manual = true; st.play(b.dataset.play); }));
+});
+
+// Gear tab: trying items on
+(() => {
+  const st = stages.find(s => s.el.id === 'stage-gear'); if (!st) return;
+  const worn = { weapon: 'censer', armour: 'habit', accessory: 'rosary' }, cur = Object.assign({}, worn);
+  const inv = document.getElementById('gear-inv'), slots = document.getElementById('gear-slots');
+  const label = document.getElementById('try-label'), name = document.getElementById('try-name');
+  inv.querySelectorAll('[data-try]').forEach(t => t.addEventListener('click', () => {
+    const [slot, item] = t.dataset.try.split(':'); cur[slot] = item;
+    inv.querySelectorAll('[data-try]').forEach(o => { const [s2, i2] = o.dataset.try.split(':'); o.classList.toggle('sel', cur[s2] === i2 && worn[s2] !== i2); });
+    slots.querySelectorAll('.slot').forEach(s => s.classList.toggle('try', cur[s.dataset.slot] !== worn[s.dataset.slot]));
+    const changed = Object.keys(cur).filter(k => cur[k] !== worn[k]);
+    label.textContent = changed.length ? 'Trying on' : 'Wearing';
+    name.textContent = changed.length ? t.dataset.name : 'Her own gear';
+    st.setGear([cur.weapon, cur.armour, cur.accessory]);
+  }));
+})();
+
+// Skill tree connectors, measured from the nodes
+(() => {
+  const tree = document.getElementById('tree'); if (!tree) return;
+  const svg = tree.querySelector('#treelinks'), tb = tree.getBoundingClientRect(), by = {};
+  tree.querySelectorAll('.node').forEach(n => (by[n.dataset.col] = by[n.dataset.col] || []).push(n));
+  let out = '';
+  Object.values(by).forEach(list => { for (let i = 1; i < list.length; i++) {
+    const a = list[i - 1], b = list[i], ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const cx = ra.left + ra.width / 2 - tb.left, y1 = ra.bottom - tb.top + 4, y2 = rb.top - tb.top - 4;
+    const on = a.classList.contains('have') && (b.classList.contains('have') || b.classList.contains('can'));
+    out += `<line x1="${cx}" y1="${y1}" x2="${cx}" y2="${y2}" stroke="${on ? '#f4a646' : '#3f344b'}" stroke-width="3" ${on && b.classList.contains('can') ? 'stroke-dasharray="5 4"' : ''}/>`;
+  } });
+  svg.innerHTML = out;
+})();
+
+/* =========================================================================
+   The Hearth: buildings in a ring around the fire, the party on logs in the
+   middle. Drag to turn; it settles on the nearest building.
+   ========================================================================= */
+const BP = { w: '#5a4030', W: '#7a5a3a', d: '#2e2219', r: '#4a2228', R: '#6b3238', s: '#5f6266', S: '#7d8088', t: '#3a3c41', p: '#d8d0bc', y: '#f4a646', Y: '#ffe2a0', c: '#bfb29a', C: '#8a7e6a', x: '#a83a2a', g: '#e8c24a', b: '#2c3b55', B: '#3a4f75', h: '#c8a050', k: '#0d0911', m: '#9a8ea4', n: '#d8a878' };
+const BUILD_ART = {
+  board: ["...rrrrrrrrrrrrrr...", "..rRRRRRRRRRRRRRRr..", ".rrrrrrrrrrrrrrrrrr.", "...d............d...", "...dwwwwwwwwwwwwd...", "...dwppwwpppwwpwd...", "...dwppwwpxpwwpwd...", "...dwppwwpppwwwwd...", "...dwwwwwwwwwppwd...", "...dwwpppwwwwppwd...", "...dwwpppwwwwwwwd...", "...dwwwwwwwwwwwwd...", "...d............d...", "...d......y.....d...", "...d.....yYy....d...", "..ddd.....y....ddd.."],
+  infirmary: ["..........c...........", ".........ccC..........", "........cccCC.........", ".......ccccCCC........", "......cccxcCCCC.......", ".....ccxxxcCCCCC......", "....ccccxccCCCCCC.....", "...ccccccccCCCCCCC....", "..cccckkkkcCCCCCCCC...", ".ccccky..kcCCCCCCCCC..", "cccckyYy.kcCCCCCCCCCC.", "ccckyYYyykcCCCCCCCCCCC", "dddddddddddddddddddddd"],
+  tactician: [".....xx.....", ".....x......", ".....d......", "....bbb.....", "...bbBbb....", "..bbbBbbb...", ".bbbbBbbbb..", "..sSssssS...", "..sSsyysS...", "..sSsYysS...", "..sSssssS...", "..sSssssS...", "..stssssS...", "..sSssstS...", "..sSsyysS...", "..sSsYysS...", "..sSssssS...", "..stsssSS...", "..sSssssS...", "..sSskksS...", "..sSskksS...", ".tttttttttt."],
+  barracks: ["....d.................", "....d..rrrrrrrrrrrrr..", "...rrrRRRRRRRRRRRRRRr.", "..rrrrrrrrrrrrrrrrrrrr", ".rrrrrrrrrrrrrrrrrrrrr", "..wwwwwwwwwwwwwwwwwww.", "..wWwwwwwWwwwwwWwwwww.", "..wyywwwwyywwwwwwyyww.", "..wYywwwwYywwwwwwYyww.", "..wwwwwwwwwwwwwwwwwww.", "..wwwwwwwwwddwwwwwwww.", "..wwwwwwwwwddwwwwwwww.", "..ddddddddddddddddddd."],
+  shrine: [".......g........", "......ggg.......", ".......g........", "......ttt.......", ".....tgYgt......", ".....tsgst......", "....rrrrrrr.....", "...rRRRRRRRr....", "..rrrrrrrrrrr...", "...ssssssssS....", "...sSsssssSS....", "...sSsyyssSS....", "...sSyYYysSS....", "...sSyYYysSS....", "...sSyyyysSS....", "...sSsssssSS....", "..ttttttttttt...", ".y.........y....", ".p.........p...."],
+  toll: ["..rrrrrrrrrrrrrrrrrr..", ".rRRRRRRRRRRRRRRRRRRr.", "..dddddddddddddddddd..", "..sS.....d..d.....sS..", "..sS.....gggg.....sS..", "..sS....gYggg.....sS..", "..sS....ggggg.....sS..", "..sS.....ggg......sS..", "..sS..............sS..", "..sS..............sS..", "..sS..............sS..", "..sS..............sS..", ".tttt............tttt."],
+  scav: ["d....................", "dcc..................", "dcccc................", "dCcccccc.............", "d.CCcccccc...........", "d...CCCccccccc.......", "d......CCCcccccccd...", "d.........CCCCccd....", "d..hhh.........d..mm.", "d.hhhhh..hh....d.m..m", "d.hhhhh.hhhh...dm.mm.", "d.hhhhh.hhhh...d.m..m", "ddddddddddddddddd.mm."],
+  yard: ["...hhh..........hhh...", "...hkh..........hkh...", "..wwwwww......wwwwww..", "....h............h....", "...hhh..........hhh...", "...hhh..........hhh...", "....w............w....", "d..dw.d..d..d..d.wd..d", "ddddwddddddddddddwdddd", "d..dw.d..d..d..d.wd..d", "d...w............w...d"],
+  pit: ["...pp........pp...", "..dwwwwwwwwwwwwwd.", ".dkkkkkkkkkkkkkkkd", "dkkkkkkkkkkkkkkkkd", ".dkkkkkkkkkkkkkkd.", "..ddddddddddddddd."],
+  road: ["......d.........", "....wwdwwwwww...", "....wWdWWWWWWw..", "....wwdwwwwww...", "......d.........", "..wwwwdw........", ".wWWWWdw........", "..wwwwdw........", "......d.........", "......d.........", "......d.........", "......d.........", "......d.........", "....ddddd......."],
+};
+BUILD_ART.plot = [".......wwwww........", ".......wpgpw........", ".......wgggw........", ".......wpgpw........", ".......wwwww........", ".........w..........", "d........w.........d", "dhhhhhhhhwhhhhhhhhhd", "d..................d", "d..................d", "dhhhhhhhhhhhhhhhhhhd"];
+BUILD_ART.watch = ["....y..y....", "...yYyyYy...", "..tttttttt..", "..sSsssssS..", "...sSsssS...", "...sSsysS...", "...sSsssS...", "...sSsssS...", "..tttttttt.."];
+ICONS.plus = { map: ["...e...", "...e...", "...e...", "eeeeeee", "...e...", "...e...", "...e..."], pal: { e: '#f4a646' } };
+document.querySelectorAll('.ic[data-i="plus"]').forEach(el => { el.style.backgroundImage = `url(${icon('plus')})`; });
+// The ring: the road out of camp, then building plots. Plots you haven't unlocked yet are gaps.
+const RING = [
+  { k: 'road', name: 'The Road', icon: 'lantern', status: 'Next · 1-14 Lych-gate', tag: ['Gate', ''], btns: [['Map', ''], ['Set out', 'pri']] },
+  { k: 'board', name: 'Recruit Board', icon: 'scroll', status: '3 new faces · 1 pick', tag: ['New', 'e'], badge: 'star', btns: [['Open', 'pri']] },
+  { k: 'infirmary', name: 'Infirmary', icon: 'tent', status: '2/2 beds · Agathe in 1h 12m', tag: ['Resting', 'w'], btns: [['Open', 'pri']] },
+  { k: 'toll', name: 'Toll House', icon: 'coin', status: '610 gold stored · full in 2h', meter: [74, 'var(--gold)'], tag: ['Idle', 'y'], badge: 'coin', btns: [['Open', ''], ['Collect', 'pri']] },
+  { k: 'tactician', name: 'Tactician', icon: 'book', status: 'Teaches “Foe: charging” · 300', tag: ['Lv I', ''], btns: [['Open', 'pri']] },
+  { k: 'yard', name: 'Training Yard', icon: 'dummy', status: 'Corvin · +120 XP/h', tag: ['Idle', 'g'], btns: [['Open', 'pri']] },
+  { k: 'scav', name: 'Scavenger Camp', icon: 'bone', status: 'Gravefields · 9 bone dust', meter: [61, 'var(--bone)'], tag: ['Idle', ''], badge: 'bone', btns: [['Focus', ''], ['Collect', 'pri']] },
+  { k: 'plot', name: 'Empty Plot', icon: 'plus', status: 'Cleared at Renown 7 · build here', tag: ['Plot 7', 'e'], badge: 'plus', btns: [['Build', 'pri']] },
+  { gap: true }, { gap: true }, { gap: true }, { gap: true },
+];
+RING.forEach(b => {
+  if (b.gap) return;
+  b.img = sprite(BUILD_ART[b.k], BP, 'b:' + b.k);
+  b.lights = []; BUILD_ART[b.k].forEach((r, y) => [...r].forEach((ch, x) => { if (ch === 'Y') b.lights.push([x, y]); }));
+});
+document.querySelectorAll('.spr[data-build]').forEach(el => {
+  const s = sprite(BUILD_ART[el.dataset.build], BP, 'b:' + el.dataset.build), k = +(el.dataset.scale || 2);
+  el.style.width = s.width * k + 'px'; el.style.height = s.height * k + 'px'; el.style.backgroundImage = `url(${urlOf(s)})`;
+});
+// The party at the fire. Each has a small idle habit and a line when tapped.
+const PARTY = [
+  { cls: 'warden', gear: [], name: 'Ottilie', status: 'Warden · Lv 8 · fatigue 22', line: 'The watch is mine tonight.', fx: 'glint', at: [12, 8], every: 3800 },
+  { cls: 'sellsword', gear: [], name: 'Brannoc', status: 'Sellsword · Lv 7 · fatigue 35', line: 'Pay’s late again.', fx: 'sharpen', at: [13, 1], every: 2300 },
+  { cls: 'hexblade', gear: [], name: 'Isolde', status: 'Hexblade · Lv 7 · fatigue 18', line: 'The fire whispers back.', fx: 'motes', at: [9, 10], every: 900 },
+  { cls: 'pilgrim', gear: ['censer', 'habit', 'rosary'], name: 'Maud', status: 'Pilgrim · Lv 7 · weary 58', line: 'Rest your feet a while.', fx: 'smoke', at: [11, 12], every: 700 },
+  { cls: 'crossbowman', gear: [], name: 'Fenn', status: 'Crossbowman · Lv 6 · fatigue 12', line: 'Wind’s turning. Smells of rain.', fx: 'nod', every: 4600 },
+  { cls: 'lamplighter', gear: [], name: 'Wick', status: 'Lamplighter · Lv 5 · fatigue 30', line: 'Keep it burning. Always.', fx: 'lamp', at: [14, 5], every: 1e9 },
+];
+function seated(cls, gear) {
+  const key = 'seat:' + cls; if (cache.has(key)) return cache.get(key);
+  const full = heroCanvas(cls, gear);
+  const c = document.createElement('canvas'); c.width = 16; c.height = full.height - 2;
+  c.getContext('2d').drawImage(full, 0, 0, 16, full.height - 2, 0, 0, 16, full.height - 2);
+  cache.set(key, c); return c;
+}
+const camps = [];
+function initCamp(el) {
+  const S = 2, cv = el.querySelector('canvas'), x = cv.getContext('2d');
+  const W = Math.floor(el.clientWidth / S), H = Math.floor(el.clientHeight / S); cv.width = W; cv.height = H; x.imageSmoothingEnabled = false;
+  const live = el.dataset.camp === 'live', outline = live || 'outline' in el.dataset;
+  const cx = Math.round(W / 2), cy = Math.round(H * +(el.dataset.cy || (live ? .45 : .5))), RX = W * .4, RY = H * .23, N = RING.length, step = Math.PI * 2 / N;
+  const fireCv = document.createElement('canvas'); fireCv.width = 16; fireCv.height = 14; const fx = fireCv.getContext('2d');
+  // Things nearer the viewer are drawn larger, so turning the ring reads as walking round the fire.
+  const scaleAt = a => 1.15 + ((Math.sin(a) + 1) / 2) * 1.35;
+  const blit = (img, X, Y, s) => x.drawImage(img, Math.round(X), Math.round(Y), Math.round(img.width * s), Math.round(img.height * s));
+  const snapRot = i => Math.PI / 2 - i * step;
+  let rot = snapRot(+(el.dataset.face || 3)), vel = 0, target = rot, dragging = false, lastX = 0, lastT = 0, downX = 0, moved = 0, hits = [], shown = '', pick = -1;
+  const R = mulberry(41), stars = Array.from({ length: 50 }, () => [Math.floor(R() * W), Math.floor(R() * H * .2), R()]);
+  const trees = Array.from({ length: 12 }, (_, i) => [Math.floor(i * W / 11 + R() * 6 - 3), R()]);
+  const parts = [], react = PARTY.map(() => -1e9), fired = PARTY.map(() => -1e9), nextFx = PARTY.map((p, j) => performance.now() + 600 + j * 450);
+  const card = el.querySelector('.bcard'), hint = el.querySelector('.hintbar');
+  const angDist = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d < -Math.PI) d += Math.PI * 2; if (d > Math.PI) d -= Math.PI * 2; return Math.abs(d); };
+  function nearest() { let best = 0, bd = Infinity; RING.forEach((b, i) => { if (b.gap) return; const d = angDist(i * step + rot, Math.PI / 2); if (d < bd) { bd = d; best = i; } }); return best; }
+  function stepFrom(i, d) { let j = i; do { j = (j + d + N) % N; } while (RING[j].gap); return j; }
+  function goTo(i) { const base = snapRot(i); let best = base, d = Infinity; for (let k = -3; k <= 3; k++) { const c = base + k * Math.PI * 2; if (Math.abs(c - rot) < d) { d = Math.abs(c - rot); best = c; } } target = best; vel = 0; }
+  function flashCard() { card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+  function setCard() {
+    if (!card) return;
+    const key = pick >= 0 ? 'h' + pick : 'b' + nearest(); if (key === shown) return; shown = key;
+    let name, status, tag, btns, url, meter = null;
+    if (pick >= 0) { const p = PARTY[pick]; name = p.name; status = p.status; tag = ['At the fire', 'e']; btns = [['Sheet', 'pri']]; url = urlOf(heroCanvas(p.cls, p.gear)); }
+    else { const b = RING[nearest()]; ({ name, status, tag, btns, meter } = b); url = icon(b.icon); }
+    card.querySelector('[data-role=icon]').style.backgroundImage = `url(${url})`;
+    card.querySelector('[data-role=name]').textContent = name;
+    card.querySelector('[data-role=status]').textContent = status;
+    const tg = card.querySelector('[data-role=tag]'); tg.textContent = tag[0]; tg.className = 'tag ' + tag[1];
+    const m = card.querySelector('[data-role=meter]'); m.hidden = !meter; if (meter) { m.firstChild.style.width = meter[0] + '%'; m.firstChild.style.background = meter[1]; }
+    card.querySelector('[data-role=btns]').innerHTML = btns.map(([t, c]) => `<span class="btn sm ${c}" style="flex:1">${t}</span>`).join('');
+  }
+  function say(j, px, py) {
+    el.querySelectorAll('.bubble').forEach(b => b.remove());
+    const d = document.createElement('div'); d.className = 'bubble'; d.textContent = PARTY[j].line;
+    d.style.left = Math.max(90, Math.min(el.clientWidth - 90, px)) + 'px'; d.style.top = py + 'px';
+    d.addEventListener('animationend', () => d.remove()); el.append(d);
+  }
+  if (live) {
+    card.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); pick = -1; goTo(stepFrom(nearest(), +b.dataset.step)); if (hint) hint.style.opacity = 0; }));
+    card.querySelector('.mid').addEventListener('click', e => { e.stopPropagation(); flashCard(); });
+    el.querySelectorAll('.bcard,.renown').forEach(n => n.addEventListener('pointerdown', e => e.stopPropagation()));
+    el.addEventListener('pointerdown', e => { dragging = true; downX = lastX = e.clientX; lastT = performance.now(); moved = 0; vel = 0; target = null; el.setPointerCapture(e.pointerId); if (hint) hint.style.opacity = 0; });
+    el.addEventListener('pointermove', e => { if (!dragging) return; const dx = e.clientX - lastX, now = performance.now(); rot -= dx / 150; vel = -dx / 150 / Math.max(8, now - lastT) * 16; lastX = e.clientX; lastT = now; moved = Math.max(moved, Math.abs(e.clientX - downX)); if (moved > 6) pick = -1; });
+    const up = e => {
+      if (!dragging) return; dragging = false;
+      if (moved < 6) {
+        const r = cv.getBoundingClientRect(), px = (e.clientX - r.left) / S, py = (e.clientY - r.top) / S;
+        const hit = hits.slice().reverse().find(h => px >= h[0] && px <= h[2] && py >= h[1] && py <= h[3]);
+        if (hit && hit[4].h != null) { pick = hit[4].h; react[pick] = performance.now(); say(pick, hit[4].x * S, hit[4].y * S - 8); goTo(nearest()); return; }
+        pick = -1;
+        if (hit) { if (hit[4].b === nearest()) flashCard(); goTo(hit[4].b); return; }
+        goTo(nearest()); return;
+      }
+      target = null;
+    };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('keydown', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); pick = -1; goTo(stepFrom(nearest(), e.key === 'ArrowRight' ? 1 : -1)); if (hint) hint.style.opacity = 0; } });
+  }
+  function frame(t) {
+    if (!dragging) {
+      if (target == null) { rot += vel; vel *= .9; if (Math.abs(vel) < .004) goTo(nearest()); }
+      else { rot += (target - rot) * (reduce ? 1 : .14); if (Math.abs(target - rot) < .001) rot = target; }
+    }
+    setCard();
+    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07050b'); g.addColorStop(.25, '#120d1a'); g.addColorStop(1, '#130e19');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    stars.forEach(([sx, sy, b]) => { x.fillStyle = b > .8 ? '#f2e7d0' : '#4a3e58'; x.fillRect(sx, sy, 1, 1); });
+    x.fillStyle = '#e8dcc4'; x.fillRect(W - 22, 8, 5, 5); x.fillRect(W - 23, 9, 7, 3); x.fillStyle = '#120d1a'; x.fillRect(W - 20, 8, 4, 4);
+    const horizon = Math.round(cy - RY - 22);
+    const shift = ((Math.round(-rot * 12) % W) + W) % W;
+    trees.forEach(([tx, b]) => { const p = prop('deadtree'); x.globalAlpha = .55; x.drawImage(p, ((tx + shift) % (W + 10)) - 5, horizon - p.height + 3 + Math.round(b * 3)); x.globalAlpha = 1; });
+    x.fillStyle = '#100c15'; x.fillRect(0, horizon, W, H - horizon);
+    for (let yy = horizon; yy < H; yy++) { const dy = (yy - cy) / (RY + 16); const half = Math.sqrt(Math.max(0, 1 - dy * dy)) * (RX + 18); if (half > 0) { x.fillStyle = '#1a1420'; x.fillRect(Math.round(cx - half), yy, Math.round(half * 2), 1); } }
+    for (let a = 0; a < Math.PI * 2; a += .03) { const px = Math.round(cx + Math.cos(a) * RX), py = Math.round(cy + Math.sin(a) * RY); x.fillStyle = '#2a2026'; x.fillRect(px - 1, py, 3, 1); }
+    const items = [], lamps = [];
+    RING.forEach((b, i) => { if (b.gap) return; const a = i * step + rot; items.push({ t: 'b', b, i, a, x: cx + Math.cos(a) * RX, y: cy + Math.sin(a) * RY }); });
+    PARTY.forEach((p, j) => { const a = j * Math.PI / 3 + rot + Math.PI / 6; items.push({ t: 'h', p, j, a, x: cx + Math.cos(a) * 44, y: cy + Math.sin(a) * 17 }); });
+    for (let j = 0; j < 5; j++) { const a = j * Math.PI * 2 / 5 + rot + step / 2; items.push({ t: 'p', a, x: cx + Math.cos(a) * (RX * .72), y: cy + Math.sin(a) * (RY * .72) }); }
+    items.push({ t: 'f', x: cx, y: cy + .5 });
+    items.sort((p, q) => p.y - q.y);
+    hits = [];
+    const fi = nearest();
+    for (const it of items) {
+      const ix = Math.round(it.x), iy = Math.round(it.y);
+      if (it.t === 'b') {
+        const img = it.b.img, s = scaleAt(it.a), w = img.width * s, h = img.height * s, bx = ix - w / 2, by = iy - h + 2 * s;
+        if (it.i === fi && outline && pick < 0) { const o = tint(img, '#f4a646'); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([ox, oy]) => blit(o, bx + ox, by + oy, s)); }
+        blit(img, bx, by, s);
+        const depth = (Math.sin(it.a) + 1) / 2, dark = .5 - depth * .45;
+        if (dark > 0) { x.globalAlpha = dark; blit(tint(img, '#07050b'), bx, by, s); x.globalAlpha = 1; }
+        it.bx = bx; it.by = by; it.s = s;
+        hits.push([bx - 2, by - 2, bx + w + 2, by + h + 2, { b: it.i }]);
+      } else if (it.t === 'h') {
+        const p = it.p, j = it.j, s = seated(p.cls, p.gear), k = 1.4 + ((Math.sin(it.a) + 1) / 2) * .6, w = 16 * k, h = s.height * k, flip = it.x > cx;
+        // idle habits
+        if (!reduce && t > nextFx[j]) {
+          nextFx[j] = t + p.every * rnd(.8, 1.3);
+          fired[j] = t;
+          if (p.fx === 'nod') react[j] = t;
+        }
+        const q = (t - react[j]) / 420, hop = q < 1 ? Math.round(Math.sin(Math.PI * q) * (p.fx === 'nod' && pick !== j ? 1.5 : 3) * k) : 0;
+        const hy = iy - h + 2 - hop - (!reduce && Math.sin(t / 600 + j * 1.7) > .7 ? k : 0);
+        const at = (px, py) => [ix + (flip ? (8 - px - .5) : (px + .5 - 8)) * k, hy + (py + .5) * k];
+        x.fillStyle = '#4a3424'; x.fillRect(Math.round(ix - 6 * k), iy, Math.round(12 * k), Math.round(2 * k)); x.fillStyle = '#2e2219'; x.fillRect(Math.round(ix - 6 * k), Math.round(iy + k), Math.round(12 * k), Math.round(k));
+        x.save(); if (flip) { x.translate(ix * 2, 0); x.scale(-1, 1); }
+        if (pick === j) { const o = tint(s, '#f4a646'); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([ox, oy]) => blit(o, ix - w / 2 + ox, hy + oy, k)); }
+        blit(s, ix - w / 2, hy, k);
+        if (it.y < cy) { x.globalAlpha = .3; blit(tint(s, '#07050b'), ix - w / 2, hy, k); x.globalAlpha = 1; }
+        x.restore();
+        if (!reduce && p.at) {
+          const [ax, ay] = at(p.at[0], p.at[1]);
+          if (p.fx === 'sharpen' && t - fired[j] < 70) for (let n = 0; n < 4; n++) parts.push({ x: ax, y: ay, vx: rnd(-14, 14), vy: rnd(-18, -4), t0: t, life: rnd(250, 450), c1: '#fff3c8', c2: '#f7b34a' });
+          if (p.fx === 'motes' && Math.random() < .06) parts.push({ x: ax + rnd(-2, 2), y: ay, vx: rnd(-2, 2), vy: -rnd(6, 12), t0: t, life: rnd(900, 1500), c1: '#e8d8ff', c2: '#bb96ee' });
+          if (p.fx === 'smoke' && Math.random() < .05) parts.push({ x: ax, y: ay, vx: rnd(1, 5), vy: -rnd(5, 9), t0: t, life: 1600, smoke: true });
+          if (p.fx === 'lamp') lamps.push([ax, ay, .45 + Math.sin(t / 160 + j) * .1, 12]);
+          if (p.fx === 'glint' && t - fired[j] < 160) lamps.push([ax, ay, .9, 4]);
+        }
+        hits.push([ix - w / 2, hy, ix + w / 2, iy + 2, { h: j, x: ix, y: hy }]);
+      } else if (it.t === 'p') {
+        const p = prop('post'), k = scaleAt(it.a) * .9; blit(p, ix - 2.5 * k, iy - p.height * k + k, k); lamps.push([ix, iy - p.height * k + 3 * k, .4, 14]);
+      } else if (it.t === 'f') {
+        fx.clearRect(0, 0, 16, 14);
+        for (let a = 0; a < Math.PI * 2; a += .7) { fx.fillStyle = '#5f6266'; fx.fillRect(Math.round(8 + Math.cos(a) * 6), Math.round(11 + Math.sin(a) * 2.5), 2, 1); }
+        fx.fillStyle = '#4a3424'; fx.fillRect(4, 10, 9, 2); fx.fillStyle = '#6b4a2e'; fx.fillRect(5, 9, 7, 1);
+        const fl = Math.floor(t / 90);
+        for (let i = -3; i <= 3; i++) {
+          const hgt = Math.max(1, Math.round((8 - Math.abs(i) * 1.8) * (.7 + ((Math.sin(fl * 1.7 + i * 2.3) + 1) / 2) * .6)));
+          for (let k = 0; k < hgt; k++) { fx.fillStyle = k >= hgt - 1 ? '#e2582e' : k > hgt * .45 ? '#f7b34a' : '#fff0c0'; if (Math.abs(i) >= 2 && k < 2) fx.fillStyle = '#e2582e'; fx.fillRect(8 + i, 9 - k, 1, 1); }
+        }
+        blit(fireCv, cx - 16, cy - 22, 2);
+        if (!reduce && Math.random() < .3) parts.push({ x: cx + rnd(-4, 4), y: cy - 14, vx: rnd(-5, 5), vy: -rnd(14, 26), t0: t, life: rnd(700, 1300), c1: '#ffd27a', c2: '#e2582e', wave: 1 });
+      }
+    }
+    // smoke drifts under the light; sparks and motes glow above it
+    for (const s of parts) if (s.smoke) { const q = (t - s.t0) / s.life, sec = (t - s.t0) / 1000; x.globalAlpha = .35 * (1 - q); x.fillStyle = '#9a8ea4'; x.fillRect(Math.round(s.x + s.vx * sec), Math.round(s.y + s.vy * sec), 2, 2); x.globalAlpha = 1; }
+    const dk = x.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * .75);
+    dk.addColorStop(0, 'rgba(7,5,11,0)'); dk.addColorStop(.35, 'rgba(7,5,11,.15)'); dk.addColorStop(1, 'rgba(7,5,11,.78)');
+    x.fillStyle = dk; x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = 'lighter';
+    const fk = .42 + Math.sin(t / 110) * .04 + Math.sin(t / 37) * .03;
+    const lg = x.createRadialGradient(cx, cy - 6, 1, cx, cy - 6, 85); lg.addColorStop(0, `rgba(244,150,60,${fk})`); lg.addColorStop(1, 'rgba(244,150,60,0)');
+    x.fillStyle = lg; x.fillRect(0, 0, W, H);
+    lamps.forEach(([lx, ly, a, r]) => { const g2 = x.createRadialGradient(lx, ly, 0, lx, ly, r); g2.addColorStop(0, `rgba(255,190,100,${a})`); g2.addColorStop(1, 'rgba(255,190,100,0)'); x.fillStyle = g2; x.fillRect(lx - r, ly - r, r * 2, r * 2); });
+    items.forEach(it => { if (it.t !== 'b') return; it.b.lights.forEach(([px, py]) => { const lx = it.bx + (px + .5) * it.s, ly = it.by + (py + .5) * it.s, r = 4 * it.s, g2 = x.createRadialGradient(lx, ly, 0, lx, ly, r); g2.addColorStop(0, 'rgba(255,200,110,.45)'); g2.addColorStop(1, 'rgba(255,200,110,0)'); x.fillStyle = g2; x.fillRect(lx - r, ly - r, r * 2, r * 2); }); });
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const s = parts[i], q = (t - s.t0) / s.life; if (q >= 1) { parts.splice(i, 1); continue; } if (s.smoke) continue;
+      const sec = (t - s.t0) / 1000; x.fillStyle = q < .5 ? s.c1 : s.c2; x.globalAlpha = 1 - q;
+      x.fillRect(Math.round(s.x + s.vx * sec + (s.wave ? Math.sin(sec * 6) * 1.5 : 0)), Math.round(s.y + s.vy * sec), 1, 1); x.globalAlpha = 1;
+    }
+    x.globalCompositeOperation = 'source-over';
+    items.forEach(it => {
+      if (it.t !== 'b' || !it.b.badge) return;
+      const bob = reduce ? 0 : Math.round(Math.sin(t / 300 + it.i)), bx = Math.round(it.x) - 5, by = Math.round(it.by) - 15 + bob;
+      x.fillStyle = '#0d0911'; x.fillRect(bx - 1, by - 1, 11, 11); x.fillStyle = '#2a1a0e'; x.fillRect(bx, by, 9, 9);
+      x.fillStyle = '#f4a646'; x.fillRect(bx, by, 9, 1); x.fillRect(bx, by + 8, 9, 1); x.fillRect(bx, by, 1, 9); x.fillRect(bx + 8, by, 1, 9);
+      const ic = ICONS[it.b.badge]; x.drawImage(sprite(ic.map, ic.pal, 'i:' + it.b.badge), bx + 1, by + 1);
+      x.fillStyle = '#f4a646'; x.fillRect(bx + 3, by + 9, 3, 1); x.fillRect(bx + 4, by + 10, 1, 1);
+    });
+  }
+  camps.push({ el, frame });
+}
+document.querySelectorAll('[data-camp]').forEach(initCamp);
+
+/* ---------- region map ---------- */
+document.querySelectorAll('.mapwrap[data-map]').forEach(wrap => {
+  const cv = wrap.querySelector('canvas'), x = cv.getContext('2d'), W = cv.width, H = cv.height, R = mulberry(11);
+  const N = 18, CUR = 13, ELITE = new Set([5, 11, 15]);
+  const pt = t => ({ x: W / 2 + Math.sin(t * Math.PI * 3.1 + .4) * 58, y: H - 22 - t * (H - 52) });
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07050b'); g.addColorStop(.5, '#100c17'); g.addColorStop(1, '#1a1320');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  for (let i = 0; i < 260; i++) { x.fillStyle = R() > .5 ? '#1c1624' : '#140f1b'; x.fillRect(R() * W | 0, R() * H | 0, 2, 1); }
+  const path = []; for (let i = 0; i <= 200; i++) path.push(pt(i / 200));
+  const stroke = (w, c, upto = 1) => { x.strokeStyle = c; x.lineWidth = w; x.lineCap = 'round'; x.beginPath(); path.slice(0, Math.round(upto * 200) + 1).forEach((p, i) => i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y)); x.stroke(); };
+  stroke(10, '#0b0810'); stroke(7, '#2a1f26'); stroke(7, '#5a3e28', CUR / (N - 1)); stroke(2, '#8a6038', CUR / (N - 1));
+  const near = (px, py) => path.some(p => Math.abs(p.x - px) < 14 && Math.abs(p.y - py) < 12);
+  for (let i = 0; i < 60; i++) { const px = R() * W | 0, py = 14 + R() * (H - 20) | 0; if (near(px, py)) continue; const k = R() > .7 ? 'deadtree' : R() > .4 ? 'grave' : 'cross'; const s = prop(k); x.globalAlpha = .6; x.drawImage(s, px, py - s.height); x.globalAlpha = 1; }
+  x.globalCompositeOperation = 'lighter';
+  for (let i = 0; i <= CUR; i++) { const p = pt(i / (N - 1)), r = i === CUR ? 30 : 24; const lg = x.createRadialGradient(p.x, p.y, 1, p.x, p.y, r); lg.addColorStop(0, 'rgba(244,166,70,.38)'); lg.addColorStop(1, 'rgba(244,166,70,0)'); x.fillStyle = lg; x.fillRect(p.x - r, p.y - r, r * 2, r * 2); }
+  x.globalCompositeOperation = 'source-over';
+  const fy = pt(CUR / (N - 1)).y, dk = x.createLinearGradient(0, fy - 10, 0, fy - 70); dk.addColorStop(0, 'rgba(7,5,11,0)'); dk.addColorStop(1, 'rgba(7,5,11,.62)'); x.fillStyle = dk; x.fillRect(0, 0, W, fy - 10);
+  for (let i = 0; i < N; i++) {
+    const p = pt(i / (N - 1)), px = Math.round(p.x), py = Math.round(p.y), lit = i <= CUR - 1;
+    if (i === N - 1) { const s = sprite(ICONS.skull.map, { b: '#c86a6a', k: '#1a0d10' }, 'bossskull'); x.drawImage(s, px - 3, py - 4); continue; }
+    if (ELITE.has(i)) { x.fillStyle = '#0d0911'; for (let d = 0; d <= 5; d++) x.fillRect(px - d, py - 5 + d, d * 2 + 1, 1), x.fillRect(px - d, py + 5 - d, d * 2 + 1, 1); x.fillStyle = lit ? '#d4484a' : '#4a2a32'; for (let d = 0; d <= 4; d++) x.fillRect(px - d, py - 4 + d, d * 2 + 1, 1), x.fillRect(px - d, py + 4 - d, d * 2 + 1, 1); continue; }
+    x.fillStyle = '#0d0911'; x.fillRect(px - 3, py - 5, 7, 9); x.fillStyle = lit || i === CUR ? '#9a8ea4' : '#3a3044'; x.fillRect(px - 2, py - 4, 5, 7);
+    x.fillStyle = lit ? '#f4a646' : i === CUR ? '#ffe2a0' : '#1a1420'; x.fillRect(px - 1, py - 3, 3, 4); if (lit) { x.fillStyle = '#ffe2a0'; x.fillRect(px, py - 2, 1, 2); }
+    x.fillStyle = '#3a3044'; x.fillRect(px, py + 3, 1, 3);
+  }
+  const S = 2, add = (cls, html, p, dx = 0, dy = 0) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; d.style.left = (p.x * S + dx) + 'px'; d.style.top = (p.y * S + dy) + 'px'; wrap.appendChild(d); return d; };
+  const cp = pt(CUR / (N - 1));
+  const ring = document.createElement('span'); ring.className = 'ring'; ring.style.left = cp.x * S + 'px'; ring.style.top = cp.y * S + 'px'; wrap.appendChild(ring);
+  add('mlabel cur', '1-14 · Lych-gate', cp, cp.x > W / 2 ? -100 : 100, 0);
+  add('mlabel boss', 'The Sexton', pt(1), 0, -26);
+  [0, 4, 8, 12].forEach(i => { const p = pt(i / (N - 1)); add('mlabel', '1-' + (i + 1), p, p.x > W / 2 ? -34 : 34, 0); });
+  [5, 11].forEach(i => { const p = pt(i / (N - 1)); add('mlabel', 'Elite', p, p.x > W / 2 ? -36 : 36, 0).style.color = '#f08c76'; });
+  if (!wrap.parentElement.querySelector('.sheet')) {
+    const pp = pt((CUR - 1) / (N - 1)), s = heroCanvas('warden');
+    const tok = document.createElement('i'); tok.className = 'spr';
+    tok.style.cssText = `position:absolute;z-index:3;width:${s.width * 2}px;height:${s.height * 2}px;left:${pp.x * S - 16 + (pp.x > W / 2 ? 38 : -38)}px;top:${pp.y * S - 26}px;background-image:url(${urlOf(s)});filter:drop-shadow(0 0 6px rgba(244,166,70,.7))`;
+    wrap.appendChild(tok);
+    const cta = document.createElement('div'); cta.className = 'mapcta';
+    cta.innerHTML = '<div class="row"><span class="btn" style="flex:1">Farm 1-13</span><span class="btn pri" style="flex:1.6">Next · 1-14</span></div>';
+    wrap.appendChild(cta);
+  }
+});
+
+/* ---------- one loop for every stage and camp on screen ---------- */
+function loop(t) {
+  stages.forEach(s => { if (visible(s.el)) s.frame(t); });
+  camps.forEach(c => { if (visible(c.el)) c.frame(t); });
+  requestAnimationFrame(loop);
+}
+const t0 = performance.now();
+stages.forEach(s => s.frame(t0)); camps.forEach(c => c.frame(t0));
+requestAnimationFrame(loop);
+})();
+</script>
