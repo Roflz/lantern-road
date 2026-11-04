@@ -8,7 +8,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
@@ -27,22 +27,26 @@ const newCharacter = (cls, id, name) => Hero.create(cls, id, { name });
 
 function defaultState() {
   const now = Date.now();
-  // Until recruiting arrives (step 5) the roster is the prototype's party of six, in formation order, each with
-  // their own rolled level-1 stats.
-  const roster = PARTY.map((cls, i) => newCharacter(cls, 'c' + (i + 1)));
+  // A new game starts with nobody: the first pick (Sellsword, Hexblade or Pilgrim) makes the first hero (js/camp.js,
+  // Base.newGame), and the Recruit Board brings the rest (build step 5).
   return {
     v: SAVE_VERSION,
     rev: 0,                 // bumped on every commit; decides which copy wins between devices
     created: now,
     lastSeen: now,          // the last moment the game was open; time away is measured from it
     sessions: 0,
-    nextId: roster.length + 1,
-    roster,                 // every character you own
-    party: roster.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6), // formation slots 0-5: 2 front, 4 back
-    inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js), up to ITEM.BAG pieces
-    currencies: { gold: 0, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
+    nextId: 1,
+    roster: [],             // every character you own
+    party: [null, null, null, null, null, null],          // formation slots 0-5: 2 front, 4 back
+    inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js); potions: party items, by id
+    currencies: { gold: typeof BASE !== 'undefined' ? BASE.START_GOLD : 100, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
     campaign: { cleared: [], best: {}, current: null },  // current: { stage, seed } of a battle in progress
-    base: { buildings: {} },                              // id -> { level, focus, stored, since }
+    base: { buildings: {}, plots: [], beds: [], pins: [], hall: {}, done: {}, paid: [], clock: 0, skew: 0 }, // the home base (js/base.js)
+    unlocks: {},            // first-clear unlocks: { id: when } (the campaign records them)
+    renown: { points: 0, awarded: {} },
+    board: { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, free: true, seq: 0 },
+    freePotion: { waiting: 0, since: 0 },
+    shop: { stall: [], refreshedAt: 0, n: 0 },
     settings: { sfx: true, music: true, motion: true, speed: 1 },
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
   };
@@ -74,7 +78,6 @@ function normalize(d) {
   s.v = SAVE_VERSION;
   const seen = new Set();
   s.roster = s.roster.map(normalizeCharacter).filter(c => c && !seen.has(c.id) && seen.add(c.id));
-  if (!s.roster.length) s.roster = defaultState().roster;
   const ids = new Set(s.roster.map(c => c.id));
   s.party = Array.from({ length: 6 }, (_, i) => (ids.has(s.party[i]) ? s.party[i] : null));
   s.campaign.cleared = s.campaign.cleared.filter(x => typeof x === 'string');
@@ -88,6 +91,7 @@ function normalize(d) {
   const uids = new Set(s.roster.flatMap(c => SLOTS.map(k => c.gear[k] && c.gear[k].uid).filter(Boolean)));
   s.inventory.items = s.inventory.items.map(x => Items.valid(x)).filter(x => x && !uids.has(x.uid) && uids.add(x.uid));
   if (!(s.lastSeen > 0)) s.lastSeen = Date.now();
+  if (typeof Base !== 'undefined') Base.ensure(s);
   return s;
 }
 
@@ -95,6 +99,10 @@ function normalize(d) {
 const MIGRATIONS = {
   1: old => {
     const s = defaultState();
+    // The step 1 prototype played with a fixed party of six: they become the roster, in formation order.
+    s.roster = PARTY.map((cls, i) => newCharacter(cls, 'c' + (i + 1)));
+    s.party = s.roster.map(c => c.id);
+    s.nextId = s.roster.length + 1;
     if (Array.isArray(old.cleared)) s.campaign.cleared = old.cleared.filter(x => typeof x === 'string');
     if (isObj(old.best)) s.campaign.best = old.best;
     if ([1, 2, 4].includes(old.speed)) s.settings.speed = old.speed;
@@ -131,6 +139,30 @@ const MIGRATIONS = {
       c.gear = { weapon: isObj(g.weapon) && GEAR[g.weapon.id] ? g.weapon : null, armor: isObj(g.armor) && GEAR[g.armor.id] ? g.armor : null, accessory: isObj(g.accessory) && GEAR[g.accessory.id] ? g.accessory : null };
       if (!c.gear.weapon) c.gear.weapon = Items.starter(c.cls, Math.max(1, Math.round(c.level) || 1));
     }
+    return old;
+  },
+  // Version 4 (build step 5): the home base. Everyone on the roster stays, and so does what the prototype gave for free:
+  // rule slots learned become Masters' Hall lessons already done (step 3 kept them in lessons.rule), and party rule and
+  // loadout slots opened stay open as a floor under the Tactician's. Renown counts the stages already lit and the bosses
+  // already beaten. The first recruit is free only for a party of one.
+  4: old => {
+    const now = Date.now();
+    const roster = Array.isArray(old.roster) ? old.roster : [];
+    const T = isObj(old.tactics) ? old.tactics : {};
+    const B = isObj(old.base) ? old.base : (old.base = {});
+    B.legacySlots = { party: isObj(T.party) && Number.isInteger(T.party.slots) ? T.party.slots : 0, loadout: isObj(T.loadout) && Number.isInteger(T.loadout.slots) ? T.loadout.slots : 0 };
+    B.clock = now;
+    const pts = { points: 0, awarded: {} };
+    const cleared = isObj(old.campaign) && Array.isArray(old.campaign.cleared) ? old.campaign.cleared : [];
+    for (const id of cleared) {
+      const st = STAGES.find(x => x.id === id) || {};
+      pts.awarded['lit:' + id] = 1; pts.points += st.kind === 'elite' ? 100 : 40;
+      if (st.boss || st.kind === 'boss') { pts.awarded['boss:' + id] = 1; pts.points += 250; }
+    }
+    for (const c of roster) if (isObj(c) && c.cls) pts.awarded['cls:' + c.cls] = 1;
+    old.renown = pts;
+    old.board = { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, free: roster.length <= 1, seq: 0 };
+    if (!isObj(old.unlocks)) old.unlocks = {};
     return old;
   },
 };

@@ -173,7 +173,8 @@ const HeroSheet = (() => {
       proto(c),
     ];
   }
-  // Prototype tools: XP for play-testing the later thresholds, until the Training Yard (step 5) and more stages.
+  // Prototype tools: XP for play-testing the later thresholds, without the grind. The final polish step gathers the
+  // prototype tools into one panel.
   function proto(c) {
     const give = n => { click(); const g = Hero.gainXp(c, Hero.xpBetween(c.level, Math.min(HERO.CAP, c.level + n))); Save.commit(); if (g.to > g.from) LevelUp.toast(c, g); draw(); };
     return h('div', { class: 'hs-proto' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Train' }),
@@ -251,7 +252,7 @@ const HeroSheet = (() => {
           h('div', { class: 'hs-tags' }, tagsOf(sk)))),
       descEl(sk, L, 'd', st.L > 0 && st.L < SKILL_LV_MAX),
       h('div', { class: 'hs-aw' + (st.awakened ? ' on' : '') }, h('span', { class: 'hs-k', text: st.awakened ? 'Awakened' : 'When awakened' }), descEl(sk, SKILL_LV_MAX, 'aw', false)),
-      sk.later ? h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Later' }), `This works once ${{ fatigue: 'fatigue', gold: 'gold and loot', gear: 'gear' }[sk.later]} arrives (build step ${sk.later === 'gear' ? 4 : 5}).`) : null,
+      sk.later ? h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Later' }), `This works once ${{ fatigue: 'fatigue', gold: 'gold and loot', gear: 'gear' }[sk.later]} arrives (build step ${sk.later === 'gear' ? 4 : sk.later === 'gold' ? 6 : 5}).`) : null,
       why ? h('p', { class: 'hs-why', text: why }) : null,
       h('div', { class: 'hs-row' }, equipBtn, learnBtn)), 'sheet-bottom');
     if (mini) {
@@ -267,8 +268,20 @@ const HeroSheet = (() => {
       h('div', { class: 'kicker', text: 'Respec' }), h('h2', { text: 'Unlearn and start again' }),
       h('p', { class: 'flavor', text: `Every stat and skill point comes back: ${spent} in all. Opened tiers, combined classes and open awakenings stay; awakened skills go back to level 1.` }),
       c.respecs ? btn(`Use a free respec (${c.respecs} left)`, () => { Hero.respec(c, true); Save.commit(); closeSheet(); ui.pending = {}; toast('Points returned'); draw(); }, 'primary', 'Every threshold gives one, kept until you use it') : null,
-      btn('Respec at the Shrine', () => { Hero.respec(c, false); Save.commit(); closeSheet(); ui.pending = {}; toast('Points returned'); draw(); }, c.respecs ? '' : 'primary', 'The Shrine will charge gold in build step 5. Free in this prototype.'),
+      shrineBtn(c),
       btn('Keep my build', closeSheet)), 'sheet-bottom');
+  }
+
+  // The Shrine's paid respec (js/base.js), once it stands.
+  function shrineBtn(c) {
+    const st = Save.state;
+    if (typeof Base === 'undefined') return null;
+    if (!Base.built('shrine', st)) return h('p', { class: 'hs-why', text: Base.unlocked('region:1', st) ? 'Build the Shrine at camp to respec for gold.' : 'The Shrine, which respecs for gold, comes with the Drowned Chapel.' });
+    const price = Base.respecPrice(c, st), free = Base.freeRespecIn(st) === 0;
+    return btn(free ? 'Respec at the Shrine · free today' : `Respec at the Shrine · ${fmt(price)} gold`, () => {
+      if (!Base.respec(c.id, st, { free })) { toast(`${fmt(price - st.currencies.gold)} gold short`, 'bad'); return; }
+      Save.commit(); closeSheet(); ui.pending = {}; toast('Points returned'); draw();
+    }, c.respecs ? '' : 'primary', free ? 'The Shrine’s free respec, once a day' : 'The Shrine charges 150 × S at the hero’s level');
   }
 
   // ── equipping an active skill
@@ -403,7 +416,7 @@ const HeroSheet = (() => {
           h('div', {}, h('span', { class: 'cond', text: ruleCond(r) }), h('span', { class: 'hs-sk' }, h('span', { class: 'arr', text: '→' }), ico(sk.icon), sk.name), h('span', { class: 'hint', text: r.on ? x.text : 'Switched off' })));
       }) : h('p', { class: 'hs-why', text: 'No rules yet: this hero only uses their basic attack.' })),
       h('div', { class: 'hs-default' }, h('span', { class: 'hs-k', text: 'Otherwise' }), ico(SKILLS[CLASSES[c.cls].basic].icon), h('b', { text: SKILLS[CLASSES[c.cls].basic].name }), h('span', { class: 'hs-kv', text: 'basic attack' })),
-      h('p', { class: 'hs-why', text: `${o.rules.length} of ${o.slots} rule slots used. Every hero starts with 3; the Masters’ Hall teaches more, up to ${o.max}.` }),
+      h('p', { class: 'hs-why', text: `${o.rules.length} of ${o.slots} rule slots used. Every hero starts with 3; a Masters’ Hall lesson teaches each one more, up to ${o.max}${c.classes.length > 1 ? ', the highest of their classes' : ''}.` }),
       btn('Edit rules', () => App.actions.tactics(c.id, () => open(c.id, 'rules')), 'primary', 'Reorder, switch off, or change what each rule does'),
     ];
   }

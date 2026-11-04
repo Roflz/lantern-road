@@ -113,6 +113,7 @@ function simulate(setup) {
       // Worn gear: each item's effect works like a passive (js/items.js).
       for (const id of spec.gear || []) { const G = typeof GEAR !== 'undefined' && GEAR[id]; if (G && G.fx) u.pas.push({ sk: G.fx, p: skillLevel(1, false) }); }
       u.look = spec.look || null;
+      u.land = spec.land || null; // landing chance added to the harmful effects it applies (the Hexing Stone, js/base.js)
     } else {
       const F = FOES[spec.key];
       if (!F) throw new Error('Unknown foe: ' + spec.key);
@@ -230,7 +231,7 @@ function simulate(setup) {
   }
   // Does a harmful effect of this kind land? chance + bonus − resistance, with no floor: 0% or less never lands.
   function lands(src, t, kind, chance = 100) {
-    const c = chance - resOf(t, kind);
+    const c = chance + (src && src.land ? (src.land.all || 0) + (src.land[kind] || 0) : 0) - resOf(t, kind);
     if (c >= 100) return true;
     if (c <= 0) return false;
     return rng() * 100 < c;

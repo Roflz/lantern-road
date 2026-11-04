@@ -175,11 +175,14 @@ function showReport(res, opts = {}) {
   const stage = current.stage, won = res.winner === 0;
   if (!res.saved) {
     res.saved = true;
-    const save = progress();
-    if (won && !save.cleared.includes(stage.id)) save.cleared.push(stage.id);
+    const save = progress(), first = won && !save.cleared.includes(stage.id);
+    if (first) save.cleared.push(stage.id);
     if (won) { const b = save.best[stage.id]; if (!b || res.rounds < b) save.best[stage.id] = res.rounds; }
     save.current = null; // the fight is over: a reload now returns to the road, not into this battle
     res.gains = awardXp(res);
+    // The camp (js/base.js): fatigue, party items used, Renown, and a new recruit board once the party is home. With the
+    // campaign (js/campaign.js) present, its hooks do this instead.
+    if (typeof Base !== 'undefined' && typeof Campaign === 'undefined') res.base = Base.afterBattle(res, stage, { won, first, xpLv: (res.xp || 0) / Hero.xpToNext(stage.level || 1), heroes: res.gains.length, fatigue: true, home: true });
     Save.commit();
     // Level-ups are celebrated after the battle, before the report.
     if (res.gains.some(x => x.g.to > x.g.from) && !opts.report) { LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); return; }
@@ -290,6 +293,8 @@ document.addEventListener('keydown', e => {
 // When the page is republished or reloaded, a viewer mid-battle gets the same battle again: the same seed replays it.
 function boot(data) {
   Save.load();
+  // The camp catches up on the time away: rest, lessons, idle buildings, the board and the free draught.
+  if (typeof Base !== 'undefined') Base.start();
   if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) progress().current = { stage: data.stage, seed: data.seed };
   Battle.init();
   Battle.onPause = () => syncControls();
