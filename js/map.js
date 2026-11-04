@@ -327,8 +327,8 @@ const RoadMap = (() => {
           h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
       })),
       h('div', { class: 'ps-acts' },
-        h('button', { class: 'small', onclick: () => { click(); closeSheet(); App.go('party'); } }, 'Edit'),
-        tired ? h('button', { class: 'textbtn proto', title: 'Rest and the Infirmary arrive with the home base (step 5)', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : null));
+        tired ? h('button', { class: 'textbtn proto', title: 'Rest and the Infirmary arrive with the home base (step 5)', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : h('span'),
+        h('button', { class: 'small', onclick: () => { click(); closeSheet(); App.go('party'); } }, 'Edit party')));
   }
   // Set out (or farm): the party walks the lit road and the battle starts where they stop.
   function setOut(i) {

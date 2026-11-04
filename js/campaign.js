@@ -164,9 +164,9 @@ const Campaign = (() => {
       s.inventory.potions.draught = (s.inventory.potions.draught || 0) + 2;
       const L = Tactics.loadout();
       if (!L.items.some(Boolean)) { Tactics.setItem(0, 'draught'); Tactics.setItem(1, 'draught'); }
-      Tactics.grantPartyRule({ if: 'ally_hp_lt', n: 50, do: 'draught' }, 'draught');
+      Tactics.grantPartyRule({ if: 'ally_hp_lt', n: 50, do: 'draught' });
     },
-    keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE, 'home'); },
+    keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE); },
     tactician: () => {
       for (const id of TACTICIAN_I.concat(HP_MP)) for (const k of variantKeys(id)) Tactics.learn(k);
     },
@@ -177,7 +177,7 @@ const Campaign = (() => {
     s.unlocks[id] = Date.now();
     const U = UNLOCKS[id];
     if (U.cond) for (const c of U.cond) for (const k of variantKeys(c)) Tactics.learn(k);
-    if (U.relic) U.got = Items.grantRelic(s, U.relic);
+    if (U.relic) Items.grantRelic(s, U.relic);
     if (EFFECTS[id]) EFFECTS[id](s);
     for (const fn of unlockHooks) { try { fn(id, s); } catch (e) { } }
     return true;
@@ -257,7 +257,7 @@ const Campaign = (() => {
     else if (stage.boss) why = { k: 'boss', text: `${REGIONS[stage.region].boss} has fallen. The ${REGIONS[stage.region].name} are lit.` };
     else if (!on.length) why = { k: 'spent', text: 'Every hero was Spent.' };
     else if (T.home) why = { k: 'called', text: 'You called the party home.' };
-    else if (!T.keep) why = { k: 'once', text: has('keepgoing', s) ? 'Keep going was off, so the party fought once.' : 'One battle, then home.' };
+    else if (!T.keep) why = { k: 'once', text: has('keepgoing', s) ? 'Keep going was off, so the party fought once and came home.' : 'The party fought once and came home. “Keep going after a win” opens at 1-6.' };
     else {
       next = T.farm ? i : i + 1;
       if (!STAGES[next] || !regionBuilt(STAGES[next].region)) { next = null; why = { k: 'end', text: 'The road ends here, for now.' }; }

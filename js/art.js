@@ -69,7 +69,7 @@ const FOE_ART = {
   shambler: { tpl: 'hunched', pal: { h: '#b4b09c', e: '#c8d0d8', m: '#2a2420', b: '#7e7a6c', c: '#d8d4c4', d: '#4e4a40' }, eye: '#c8d0d8' },
   glutton: { tpl: 'bloat', pal: { h: '#a8a070', e: '#f0e070', m: '#2a1a12', b: '#878152', p: '#c89a50', d: '#4a4630' }, eye: '#f0e070' },
   crows: { tpl: 'swarm', pal: { b: '#221d28', e: '#f4d24a' }, eye: '#f4d24a' },
-  mourner: { tpl: 'humanoid', acc: ['veil'], pal: { h: '#3a3442', e: '#d8d0e8', m: '#0e0c12', b: '#26202c', d: '#141018', c: '#3a3442', v: '#4e465c' }, eye: '#d8d0e8' },
+  mourner: { tpl: 'humanoid', acc: ['veil'], pal: { h: '#6a5e72', e: '#f0e8ff', m: '#0e0c12', b: '#3e3446', d: '#241c2a', c: '#8a7e92', v: '#9a8eae' }, eye: '#f0e8ff' },
   digger: { tpl: 'humanoid', acc: ['shovel'], pal: { h: '#9a7a58', e: '#f0d8a8', m: '#2a1a12', b: '#5a4028', d: '#3a2a1a', c: '#9a7a58', w: '#6b4a2e', s: '#8a9098' }, eye: '#f0d8a8' },
   ratking: { tpl: 'swarm', acc: ['crown'], pal: { b: '#7e6456', e: '#ff6a4a', y: '#c8a040', r: '#a83a2e' }, eye: '#ff6a4a' },
   moths: { tpl: 'swarm', pal: { b: '#cfc6a8', e: '#4a3a24' }, eye: '#fff2c0' },

@@ -30,6 +30,7 @@ const SIM = {
   ROUND: 100,          // timeline units in one round: a Speed 10 character acts once per round
   ENRAGE_ROUND: 15,    // from this round on, foes are enraged (tune)
   ENRAGE_STEP: 0.25,   // each round of enrage adds this much to foe damage (tune)
+  ENRAGE_SURGE: 40,    // from this round on, foe damage also doubles every round, so a party that only defends can't stall
   MAX_ACTIONS: 600,    // a safety stop; enrage should end every battle long before this
   DAZZLE_MISS: 0.4,    // Dazzled: 40% of attacks miss
   CRIT: 1.6,           // critical hit multiplier
@@ -538,7 +539,7 @@ function simulate(setup) {
       if (src.st.bloodlust) m *= 1 + (src.st.bloodlust.v || 20) / 100;
       if (src.st.weak) m *= Math.max(0, 1 - (src.st.weak.v || 25) / 100);
       if (src.st.taunted && src.st.taunted.more) m *= 0.85;
-      if (src.side === 1 && enrage) m *= 1 + enrage * SIM.ENRAGE_STEP;
+      if (src.side === 1 && enrage) m *= (1 + enrage * SIM.ENRAGE_STEP) * (round >= SIM.ENRAGE_SURGE ? 2 ** Math.min(30, round - SIM.ENRAGE_SURGE + 1) : 1);
       if (c.sk && FIRE.includes(c.sk.id) && t.st.burn) m *= 1 + SIM.FIRE_BURN;
       m *= mulHooks(src, 'out', t, c);
       m *= gmul('aOut', src, t, c);

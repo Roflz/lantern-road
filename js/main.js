@@ -159,7 +159,7 @@ function rewardChips(camp, small) {
   if (r.first && !small) kids.push(chip('first', 'lantern', 'First clear · gold and materials doubled'));
   for (const id of r.unlocks) { const U = UNLOCKS[id]; kids.push(chip('unlock', U.icon, U.kind === 'condition' ? `New condition: ${U.name}` : U.name, U.line || '')); }
   if (r.called) kids.push(chip('dim', null, `${r.called} called foe${r.called > 1 ? 's' : ''}: no spoils`));
-  return h('div', { class: 'rewards' + (small ? ' small' : '') }, kids.length ? kids : h('span', { class: 'rw dim', text: 'Nothing this time' }));
+  return h('div', { class: 'rewards' + (small ? ' compact' : '') }, kids.length ? kids : h('span', { class: 'rw dim', text: 'Nothing this time' }));
 }
 // What the trip did to each hero's fatigue, for the report.
 function fatigueLine(camp) {
@@ -287,13 +287,10 @@ function showReport(res, opts = {}) {
         h('div', { class: 'kicker ' + (won ? 'won' : 'lost'), text: `${won ? 'Victory' : 'Defeat'} · ${REGION_NAMES[stage.region].name} ${stage.id}` }),
         h('h2', { text: won ? `${stage.name} is clear` : `Driven back at ${stage.name}` }),
         h('p', { class: 'flavor', text: flavorLine(res, won) }),
-        why,
-        camp ? rewardChips(camp) : null,
-        camp ? fatigueLine(camp) : null,
         h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); } }, ico('star'), 'Levels', (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null,
           badge(kos ? plural(kos, 'knockout') : 'No knockouts', kos ? 'bad' : 'good'), res.rounds >= SIM.ENRAGE_ROUND ? badge('Enraged', 'bad', 'rage') : null,
           h('div', { class: 'sides', role: 'tablist', 'aria-label': 'Whose fight to show' }, [[0, 'Your party'], [1, 'Foes']].map(([id, label]) => h('button', { class: v.side === id ? 'on' : '', role: 'tab', 'aria-selected': v.side === id ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { side: id, sel: null }); } }, label))))),
-      h('div', { class: 'actions' }, actions)),
+      h('div', { class: 'rside' }, h('div', { class: 'actions' }, actions), why, camp ? rewardChips(camp) : null, camp ? fatigueLine(camp) : null)),
     h('div', { class: 'report' },
       h('div', { class: 'stabs' },
         h('div', { class: 'stats', role: 'tablist' }, REPORT_STATS.map(x => h('button', { class: 'stab ' + (x.heal ? 'heal' : 'dmg') + (x.k === v.stat ? ' on' : ''), role: 'tab', 'aria-selected': x.k === v.stat ? 'true' : 'false', title: x.tip, onclick: () => { sfx('click'); showReport(res, { stat: x.k }); } }, ico(x.icon), x.label))),

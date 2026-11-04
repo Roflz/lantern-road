@@ -2,23 +2,32 @@
 
 A dark-fantasy idle party battler, built for phones in portrait. Six lantern-bearers fight on their own, by the rules you give them. The design lives in [docs/design.md](docs/design.md).
 
-## The idle battle prototype (build steps 1–4)
+## The idle battle prototype (build steps 1–4 and 6)
 
-Open `index.html` in a browser. It needs no build step and no internet connection; the fonts ship in `fonts/`. A party of six fights six stages in the Gravefields and the Drowned Chapel, ending with the Drowned Bishop.
+Open `index.html` in a browser. It needs no build step and no internet connection; the fonts ship in `fonts/`. A party of up to six walks the Lantern Road through Region I, the Gravefields: 18 stages, two elites and the Sexton.
+
+- **The Road tab:** the region map, read from the bottom up. Lit stages are burning lanterns whose light joins up; the frontier lantern gutters with the party beside it; the dark stages above show their foes only as silhouettes. Elites are red diamonds and the boss a skull. Tap the region's name for the whole road, all five regions; II–V are locked until step 7.
+- **The stage sheet:** tap a lantern. The stage's foes in their formation (tap one for its stats, skills, phases and resistances), the recommended level and party size coloured by how ready you are, its rewards and first-clear unlocks, the trip settings, the party with their fatigue, and Set out (the frontier) or Farm (a lit stage).
+- **Trips:** the party sets out, fights, and with "Keep going after a win" (from 1-6) walks on to the next stage, until a battle is lost, a between-battle party rule calls it home (on by default: any hero at 75+ fatigue), the boss falls, every hero is Spent, or you call it home. A Spent hero walks home alone while the rest carry on. Closing the app brings the party home after the battle under way, which is resolved on your return; nothing plays while the app is closed. The Road tab shows the trip's summary when the party is home.
+- **Rewards:** every foe defeated drops gold, XP and a chance of loot by its rank; a win adds the clear reward by the stage's tier, doubled for gold and materials on a first clear; Bone Dust; party items and gear into the Bag (a full Bag sells new gear where it drops). XP is a share of a level at the stage's level, so a hero below it catches up fast. Called foes drop nothing.
+- **Fatigue:** each turn a hero takes adds 1 fatigue (gear can change that). Weary at 50, Exhausted at 75, Spent at 100. Its penalties and resting come with the home base (step 5); until then the stage sheet's "Rest all (prototype)" clears it.
+- **First clears teach:** the Tactics screen (1-1), party items (1-3), new conditions, Keep going (1-6), Tactician I (1-11) and the Sexton's Relic, and they record the buildings step 5 will turn into blueprints.
+- **New foe behaviour:** melee foes placed behind wait and step up when a front slot opens; the Rat King calls rats into empty slots; the Sexton changes at half health and digs two graves; wandering foes (a Moth Swarm, a Cage Mimic that runs at round 6) can join replays.
+- **The Party tab:** Arrange moves heroes between the six slots, and leaves some out, so a party of 1 to 6 sets out.
 
 - **Landscape battles:** battles and the report are played in landscape: turn your phone sideways. Held upright, the battle is drawn on its side. Every other screen is portrait.
 - **The party:** the Warden and the Sellsword stand in front, nearest the foes. The Crossbowman, Pilgrim, Lamplighter and Hexblade stand behind. Each has rolled stats, a basic attack, their class's starter skill and a short list of rules.
 - **Characters grow:** battles give XP, up to level 200. Each level brings a stat point, and every fifth a skill point. Thresholds at 30, 50, 80, 100, 120, 150, 180 and 200 open the next tier of a skill tree, combine with another class (at 50 and 200) or open an awakening (from 100), and each brings a free respec. Level-ups are celebrated after the battle.
 - **The hero sheet:** tap a hero on the Party screen. Stats shows the hero on a small stage where skills play on a training dummy, the points to spend and the equipped skills. Skills holds the skill tree: 28 skills per class in three build paths, each with levels 1–5 and an awakened form. Rules opens the rules editor.
 - **Gear:** every hero carries a Common weapon of their class's type, and can wear armour and an accessory. The content spec's 92 items are all in: 42 weapons, 15 armour, 30 accessories (12 of them class-only) and 5 Relics. Most trade a bonus for a cost, or work under a condition. Each piece has a rarity (Common, Fine, Rare or Relic) and an item level, and its plain stats grow with that level. Every piece changes how the hero is drawn, in battle, on the hero sheet and in menus.
-- **The Gear tab and the Bag:** on the hero sheet, tap a piece in the Bag to try it on the sprite, and again for its card: what it gives always, what it costs and when it works, against what the hero wears now. The Bag tab holds up to 60 unworn pieces and sells the ones you don't want; when it's full, new gear sells where it drops. Until stages drop loot (build step 6), the Bag's Prototype panel rolls gear at any region's rates.
+- **The Gear tab and the Bag:** on the hero sheet, tap a piece in the Bag to try it on the sprite, and again for its card: what it gives always, what it costs and when it works, against what the hero wears now. The Bag tab holds up to 60 unworn pieces and sells the ones you don't want; when it's full, new gear sells where it drops. Stages drop loot now; the Bag's Prototype panel still rolls gear at any region's rates.
 - **Rules:** on each turn a character reads its rules from the top and uses the first one that is true and possible. Only equipped skills fire. If no rule applies, it uses its basic attack.
 - **Turn flags:** banners along the top show who acts next and the skill each will use. The first is the turn being played, with the rule that chose it.
 - **The back row:** melee attacks must hit the front row while anyone stands there. Skills with reach leap past it, and a Guard pulls single-target attacks onto the tank.
 - **Statuses and resistances:** the content spec's statuses. A harmful one lands on a roll of its chance minus the target's resistance (Stun, Move, Bleed, Blight, Curse, Debuff).
 - **Mana and enrage:** skills cost mana, and basic attacks restore some. From round 15 the foes are enraged and hit harder every round, so no battle can stall.
-- **Watching:** battles play on their own, at 1×, 2× or 4×. Pause, then tap Turn to play one turn at a time, or skip to the result. The next stage waits until you choose it.
-- **The report:** XP gained, damage dealt and taken, and healing done and received, for every character. Tap a character to see how often each of its rules fired and its best moments.
+- **Watching:** battles play on their own, at 1×, 2× or 4×. Pause, then tap Turn to play one turn at a time, or skip to the result. Between battles on a trip the party walks on by itself; the card that shows the rewards has Report and Come home.
+- **The report:** what the battle brought home (gold, XP, materials, loot, unlocks, fatigue) and why the trip ended, leading with the stage's hint after a loss; damage dealt and taken, and healing done and received, for every character. Tap a character to see how often each of its rules fired and its best moments.
 - **Prototype tools:** the hero sheet's Train buttons add levels, respecs are free, rule slots and conditions can be unlocked for free, and gear can be rolled by hand, until the home base (step 5) and the campaign (step 6) take these over.
 - **Sound:** sound effects only; the music is off until it is reworked.
 - **Keys:** Space or P plays and pauses, N plays one turn, F changes the speed, S skips, and Esc opens the menu.
@@ -37,18 +46,20 @@ Open `index.html` in a browser. It needs no build step and no internet connectio
 | `js/audio.js` | Settings, sound effects and procedural music |
 | `js/save.js` | The game state, its versions and migrations, and saving |
 | `js/battle.js` | The battle screen, which animates the event log |
-| `js/app.js` | The app shell: the Base, Road and Party screens, settings |
+| `js/app.js` | The app shell: the Base and Party screens, settings |
+| `js/campaign.js` | The campaign model: the road's progress, rewards, fatigue, first-clear unlocks and trips |
+| `js/map.js` | The Road tab: the region map, the stage sheet and the whole road (styles in `css/map.css`) |
 | `js/bag.js` | The item card, choosing who wears a piece, and the Bag screen (styles in `css/gear.css`) |
 | `js/rules.js` | Tactics: the rules and loadout model, and the rules editor (styles in `css/rules.css`) |
 | `js/stage.js` | The sprite stage on the hero sheet |
 | `js/sheet.js` | The hero sheet (Stats, Skills, Gear, Rules), skill tree, thresholds and the level-up moment (styles in `css/sheet.css`) |
-| `js/main.js` | The battle screen's controls, the battle report and boot |
+| `js/main.js` | The battle screen's controls, trips between battles, the battle report with its rewards, first-time tips and boot |
 
 The simulation and the hero model never touch the page, so the same code runs the battle on screen, the Skip button and the headless tests.
 
 ### Tests
 
-- `node tools/simtest.js [battles per stage]` simulates hundreds of battles per stage and checks every event log for broken rules. It also runs the party at several levels, rules and skills experiments, a fuzz of random builds across all twelve classes, and tests of the hero model, the save migration and the rules model. For gear, it checks that every item's effect fires, runs random gear on random builds, compares a Common, Fine and Rare weapon in the same fights, and tests loot odds, the Bag and equipping.
+- `node tools/simtest.js [battles per stage]` simulates hundreds of battles per stage and checks every event log for broken rules. It ends with the campaign: Region I's engine pieces, rewards, fatigue, unlocks and trips, and the reference-party report (campaign spec §5.6), every stage one and two levels either side of its recommendation against its target. `node tools/simtest.js --ref` runs only that report (`tools/reference.js`). It also runs the party at several levels, rules and skills experiments, a fuzz of random builds across all twelve classes, and tests of the hero model, the save migration and the rules model. For gear, it checks that every item's effect fires, runs random gear on random builds, compares a Common, Fine and Rare weapon in the same fights, and tests loot odds, the Bag and equipping.
 - `python tools/shot.py index.html out.png` takes phone-sized screenshots in headless Chromium and prints console errors (needs Playwright).
 - `tools/sprites.html` shows every sprite and icon at a large size: all twelve classes from the side and from behind, every weapon, armour and accessory on a hero, the thralls and the item icons. Add `?part=classes`, `weapons`, `armour`, `accessories` or `icons` for one part.
 

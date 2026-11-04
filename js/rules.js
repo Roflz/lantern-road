@@ -201,11 +201,10 @@ const Tactics = (() => {
   }
   // A rule an unlock gives the party (the draught rule at 1-3, the come-home rule at 1-6). If the party already has a
   // rule doing the same, it is left alone; if the list is full, a slot opens for it.
-  function grantPartyRule(rule, kind) {
+  function grantPartyRule(rule) {
     const b = S.party;
-    for (const k of [condKey(rule)]) if (!S.known.includes(k)) S.known.push(k);
+    if (!S.known.includes(condKey(rule))) S.known.push(condKey(rule));
     if (b.rules.some(r => r.do === rule.do && r.if === rule.if)) return false;
-    if (kind && b.rules.some(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind === (PARTY_ACTIONS[rule.do] || {}).kind && r.do === rule.do && r.if === rule.if)) return false;
     if (b.rules.length >= b.slots) { if (b.slots >= PARTY_RULES.slots[1]) return false; b.slots++; }
     b.rules.push(norm(rule));
     return changed();
