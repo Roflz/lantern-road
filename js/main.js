@@ -94,7 +94,7 @@ const REPORT_STATS = [
 const RULE_COLORS = ['#f1d36a', '#8cc4e6', '#c9a6ff', '#b4de98', '#f08c76', '#e8c88a'];
 const ruleColor = r => (r >= 0 ? RULE_COLORS[r % RULE_COLORS.length] : r === -2 ? '#e05a4a' : '#8a7e92');
 const roleOf = u => (u.thrall ? 'Thrall' : u.side === 0 ? `${CLASSES[u.key].role} · Lv ${u.lv || 1}` : `${u.boss ? 'Boss' : u.elite ? 'Elite foe' : 'Foe'} · Lv ${u.lv || 1}`);
-const faceURL = u => (u.thrall ? portraitURL(u.art || 'bones', false) : portraitURL(u.key, u.side === 0));
+const faceURL = u => (u.thrall ? portraitURL('thrall:' + u.key, false) : portraitURL(u.key, u.side === 0, u.look));
 const aName = n => (/^The /.test(n) ? n.replace(/^The /, 'the ') : (/^[AEIOU]/.test(n) ? 'an ' : 'a ') + n);
 let reportView = null; // { res, side, stat, sel }
 

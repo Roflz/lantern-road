@@ -357,7 +357,7 @@ const TacticsEditor = (() => {
     const sk = SKILLS[id], basic = id === CLASSES[clsOf(o)].basic || id === 'defend', on = Tactics.equipped(o, id), learned = basic || !!Tactics.charOf(o).skills[id];
     return { name: sk.name, icon: sk.icon, note: basic ? 'Basic · no mana' : !learned ? 'Not learned' : on ? `${sk.cost || 0} mana` : 'Not equipped', off: !on, tip: [SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') };
   };
-  const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: portraitURL(clsOf(o), true), alt: '' }));
+  const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: heroPortrait(Tactics.charOf(o)), alt: '' }));
   // A skill's text at the character's level, for tips.
   const descText = (sk, o) => { const c = Tactics.charOf(o); return typeof skillText === 'function' ? skillText(sk, (c && c.skills[sk.id]) || 1) : sk.d || ''; };
 

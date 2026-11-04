@@ -5,11 +5,13 @@
 //           resistances, and the equipped skills
 //   Skills  the skill tree of each of the character's classes, tier by tier; a node's card learns, raises, awakens and
 //           equips its skill
-//   Gear    waits for build step 4      Rules  the character's rules, and the way into the rules editor
+//   Gear    the stage shows what's worn or tried on; the three slots; the Bag's pieces this hero can wear, marked
+//           better or worse than what they wear. Tap a piece to try it on, again for its card (js/bag.js)
+//   Rules   the character's rules, and the way into the rules editor
 // Threshold choices, equipping and resistances open as sheets. Every change goes through the hero model (js/hero.js).
 
 const HeroSheet = (() => {
-  const ui = { id: null, tab: 'stats', pending: {}, cls: null, stageEl: null, stage: null, stageFor: null };
+  const ui = { id: null, tab: 'stats', pending: {}, cls: null, stageEl: null, stage: null, stageFor: null, gear: { sel: null, filter: 'all', fits: true } };
   const click = () => sfx('click');
   const char = () => Save.char(ui.id);
   const SHAPES = { foe: 'One foe', front: 'Front row', back: 'Back row', random3: '3 random foes', foes: 'All foes', ally: 'One ally', allies: 'All allies', self: 'Self', fallen: 'Fallen allies' };
@@ -41,7 +43,7 @@ const HeroSheet = (() => {
 
   // ── open, switch and redraw
   function open(id, tab) {
-    if (ui.id !== id) { ui.pending = {}; ui.cls = null; }
+    if (ui.id !== id) { ui.pending = {}; ui.cls = null; ui.gear.sel = null; }
     ui.id = id; if (tab) ui.tab = tab;
     App.go('hero', { id, tab: ui.tab });
   }
@@ -84,18 +86,27 @@ const HeroSheet = (() => {
     const st = (sk.st || sk.self || [])[0];
     return { tag: st && STATUSES[st.k] ? STATUSES[st.k].name : sk.name };
   }
-  function stageFor(c) {
+  // gear: { look, trying } on the Gear tab: the sprite wears what is being tried on, and says so.
+  function stageFor(c, gear) {
     // One stage per hero, kept between redraws so the sprite doesn't flicker as points go in.
     if (ui.stageFor !== c.id || !ui.stageEl) {
       if (ui.stage) ui.stage.stop();
       ui.stageEl = h('div', { class: 'hs-stage', tabindex: '0', role: 'button', 'aria-label': `${c.name}’s battle sprite. Tap to play a skill.` });
-      ui.stage = new SpriteStage(ui.stageEl, { cls: c.cls, scale: 6, hx: 0.3, ambient: [] });
+      ui.stage = new SpriteStage(ui.stageEl, { cls: c.cls, look: Items.look(c), scale: 6, hx: 0.3, ambient: [] });
       ui.stageFor = c.id;
       let k = 0;
       ui.stageEl.addEventListener('click', () => { const list = watchList(char()); const id = list[k++ % list.length]; play(id); });
     }
     const el = ui.stageEl;
     [...el.querySelectorAll('.hs-ov')].forEach(x => x.remove());
+    ui.stage.setLook(gear ? gear.look : Items.look(c));
+    el.classList.toggle('trying', !!(gear && gear.trying));
+    if (gear) {
+      const T = gear.trying && Items.def(gear.trying);
+      el.append(h('div', { class: 'hs-ov who' }, h('span', { class: 'kicker', text: T ? 'Trying on' : 'Wearing' }), h('span', { class: 'hs-kv' }, T ? h('b', { text: T.name }) : `${c.name}’s own gear`)),
+        h('div', { class: 'hs-ov fat' }, h('span', { class: 'hs-k', text: `${CLASSES[c.cls].name} · Lv ${c.level}` })));
+      return el;
+    }
     const C = CLASSES[c.cls], need = Hero.xpToNext(c.level), row = Save.state.party.indexOf(c.id);
     el.append(
       h('div', { class: 'hs-ov who' }, h('span', { class: 'kicker', text: `${C.name} · ${C.role.split(':')[0]}` }), h('span', { class: 'hs-kv' }, h('b', { text: 'Lv ' + c.level }), row < 0 ? ' · resting' : row < 2 ? ' · front row' : ' · back row')),
@@ -337,14 +348,50 @@ const HeroSheet = (() => {
     render();
   }
 
-  // ── Gear and Rules
+  // ── Gear: what's worn, and the Bag's pieces to try on
   function gearTab(c) {
-    const C = CLASSES[c.cls];
+    const st = Save.state, G = ui.gear;
+    const sel = G.sel ? Items.find(st, G.sel) : null;
+    if (!sel) G.sel = null;
+    const x = sel && sel.item, D = x && Items.def(x);
+    const wornHere = sel && sel.where === 'worn' && sel.c === c;
+    const trying = x && !wornHere && Items.canUse(c, x) ? x : null;
+    const look = Items.look(c);
+    if (trying) look[SLOTS.indexOf(D.slot)] = trying.id;
+    const after = () => { G.sel = null; draw(); };
+    const slot = k => {
+      const it = c.gear[k], ID = it && Items.def(it), lit = trying && D.slot === k;
+      return h('button', { class: `gr-slot ${ID ? 'r-' + ID.rarity : 'empty'}${lit ? ' try' : ''}${G.filter === k ? ' on' : ''}`, 'aria-label': `${SLOT_NAMES[k]}: ${ID ? ID.name : 'empty'}`, onclick: () => { click(); if (it) GearUI.card(it.uid, { hero: c.id, after }); else { G.filter = G.filter === k ? 'all' : k; draw(); } } },
+        h('span', { class: 'hs-k', text: SLOT_NAMES[k] }),
+        h('span', { class: 'gr-well' + (ID ? ' r-' + ID.rarity : '') }, it ? gearIco(it.id, 'l') : ico({ weapon: 'sword', armor: 'plate', accessory: 'bag' }[k], 'm faint')),
+        h('b', { class: 'nm', text: ID ? ID.name : 'Empty' }),
+        h('span', { class: 'rar', text: ID ? `${k === 'armor' ? WEIGHT_NAMES[ID.weight] + ' · ' : ''}${RARITY_NAMES[ID.rarity]} · L${it.lv}` : 'Nothing worn' }));
+    };
+    const worn = SLOTS.map(k => c.gear[k]).filter(it => it && (G.filter === 'all' || Items.def(it).slot === G.filter));
+    let pool = st.inventory.items.filter(it => G.filter === 'all' || Items.def(it).slot === G.filter);
+    if (G.fits) pool = pool.filter(it => Items.canUse(c, it));
+    const list = worn.concat(GearUI.sorted(pool));
+    const pick = it => { if (G.sel === it.uid) { click(); GearUI.card(it.uid, { hero: c.id, after }); return; } sfx('click'); G.sel = it.uid; draw(); };
+    const equipNow = () => { if (Items.equip(st, c, x.uid)) { Save.commit(); sfx('equip'); toast(`${c.name} equips ${D.name}`); G.sel = null; draw(); } };
+    const bar = x ? h('div', { class: 'gr-try' + (trying ? ' on' : wornHere ? '' : ' no') }, h('span', { class: 'gr-well r-' + D.rarity }, gearIco(x.id, 'm')),
+      h('div', {}, h('span', { class: 'hs-k' + (trying ? ' e' : ''), text: wornHere ? 'Wearing' : trying ? 'Trying on · tap again for the card' : Items.whyNot(c, x) }), h('b', { text: D.name })),
+      h('button', { class: 'small', onclick: () => { click(); GearUI.card(x.uid, { hero: c.id, after }); } }, 'Card'),
+      trying ? h('button', { class: 'small on', onclick: equipNow }, 'Equip') : null) : null;
+    const chip = (k, n) => h('button', { class: 'chip' + (G.filter === k ? ' on' : ''), onclick: () => { click(); G.filter = k; draw(); } }, n);
     return [
-      stageFor(c),
-      h('div', { class: 'hs-gslots' }, [['weapon', 'Weapon', 'sword'], ['armor', 'Armour', 'plate'], ['accessory', 'Accessory', 'bag']].map(([k, n, i]) => h('div', { class: 'hs-gslot' }, h('span', { class: 'hs-well' }, ico(i, 'm')), h('b', { text: n }), h('span', { class: 'hs-k', text: c.gear[k] || 'Empty' })))),
+      stageFor(c, { look, trying }),
+      h('div', { class: 'gr-slots' }, SLOTS.map(slot)),
+      bar,
+      h('div', { class: 'gr-bagrow' }, h('span', { class: 'hs-k', text: `Bag ${st.inventory.items.length}/${ITEM.BAG}` }), h('span', { class: 'sp' }),
+        h('button', { class: 'gr-fits' + (G.fits ? ' on' : ''), role: 'switch', 'aria-checked': G.fits ? 'true' : 'false', onclick: () => { click(); G.fits = !G.fits; draw(); } }, `Fits ${c.name}`, h('span', { class: 'tg' }))),
+      h('div', { class: 'gr-filters' }, chip('all', 'All'), chip('weapon', 'Weapon'), chip('armor', 'Armour'), chip('accessory', 'Accessory')),
+      list.length ? h('div', { class: 'gr-inv' }, list.map(it => GearUI.tile(it, { c, sel: G.sel === it.uid, onclick: () => pick(it) })))
+        : h('p', { class: 'ph-note', text: st.inventory.items.length ? `Nothing in the Bag that ${c.name} can wear${G.filter === 'all' ? '' : ' there'}.` : 'The Bag is empty. Roll some gear below to try it on.' }),
+      h('p', { class: 'gr-legend' }, h('span', { class: 'g', text: '▲' }), h('span', { class: 'b', text: '▼' }), ` against what ${c.name} wears`, G.fits ? null : ` · faded: not for ${CLASSES[c.cls].name}s`),
       h('p', { class: 'hs-why', text: `Weapons: ${c.classes.map(k => CLASSES[k].weapon).join(', ')}. Any armour weight; accessories suit anyone.` }),
-      h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Step 4' }), 'Loot arrives in build step 4: every item changes how the hero looks.'),
+      h('div', { class: 'hs-proto' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Roll gear' }),
+        h('button', { class: 'small', onclick: () => { const got = GearUI.rollPrototype(3, c.classes); if (got[0]) G.sel = got[0].uid; draw(); } }, `3 for ${c.name}`),
+        h('button', { class: 'small', onclick: () => { click(); App.go('bag'); } }, ico('bag'), 'The Bag')),
     ];
   }
   function rulesTab(c) {
@@ -399,7 +446,7 @@ const LevelUp = (() => {
       if (x.g.slots) chips.push(h('span', { class: 'hs-tag w' }, 'New skill slot'));
       for (const t of x.g.thresholds) chips.push(h('span', { class: 'hs-tag y' }, ico('star'), `Threshold · Lv ${t}`));
       return h('div', { class: 'lu-card' + (up ? ' up' : '') },
-        h('div', { class: 'pennant hero' }, h('img', { src: portraitURL(c.cls, true), alt: '' })),
+        h('div', { class: 'pennant hero' }, h('img', { src: heroPortrait(c), alt: '' })),
         h('div', { class: 'lu-mid' },
           h('div', { class: 'lu-nm' }, h('b', { text: c.name }), up ? h('span', { class: 'lu-lv' }, `Lv ${x.g.from} `, h('em', { text: '→ ' + x.g.to })) : h('span', { class: 'lu-lv dim', text: 'Lv ' + c.level })),
           h('div', { class: 'lu-bar' }, bar),

@@ -3,28 +3,53 @@
 <title>Sprite sheet</title>
 <style>
   body { margin: 0; padding: 16px; background: #120e1c; color: #f2e7d0; font: 12px monospace; }
-  .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-bottom: 18px; }
+  h2 { font: bold 14px monospace; color: #f4a646; margin: 18px 0 8px; letter-spacing: .08em; text-transform: uppercase; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-bottom: 12px; }
   figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
+  figcaption { max-width: 120px; text-align: center; }
   canvas { image-rendering: pixelated; background: #38322a; }
+  .r-common { color: #b4a8b6; } .r-fine { color: #b4de98; } .r-rare { color: #8cc4e6; } .r-relic { color: #f1d36a; }
 </style>
-<div class="row" id="heroes"></div>
-<div class="row" id="walk"></div>
-<div class="row" id="side"></div>
-<div class="row" id="foes"></div>
-<div class="row" id="icons"></div>
+<div id="sheet"></div>
 <script src="../js/core.js"></script>
 <script src="../js/data.js"></script>
 <script src="../js/classes.js"></script>
+<script src="../js/classes-late.js"></script>
+<script src="../js/items.js"></script>
 <script src="../js/art.js"></script>
 <script>
-  // A sheet of every sprite at 6×, to check the pixel art. Open in a browser, or screenshot with Playwright.
-  const big = (src, k = 6) => { const c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height); return c; };
-  const fig = (el, label) => h('figure', {}, el, h('figcaption', { text: label }));
-  for (const k of PARTY) $('#heroes').append(fig(big(heroSprite(k)), `${k} ${heroSprite(k).width}x${heroSprite(k).height}`));
-  for (const k of PARTY) $('#walk').append(fig(big(heroSprite(k, 1), 4), 'step 1'), fig(big(heroSprite(k, 2), 4), 'step 2'));
-  for (const k of PARTY) $('#side').append(fig(big(heroSide(k)), 'side ' + k), fig(big(heroSide(k, 1), 4), 'step'));
-  for (const k of Object.keys(FOE_ART)) $('#foes').append(fig(big(foeSprite(k), 5), `${k} ${foeSprite(k).width}x${foeSprite(k).height}`));
-  for (const k of Object.keys(UI_ICONS)) $('#icons').append(fig(h('img', { src: iconURL(k), style: 'width:42px;height:42px;image-rendering:pixelated' }), k));
-  for (const k of PARTY) $('#icons').append(fig(h('img', { src: portraitURL(k, true), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'p:' + k));
-  for (const k of Object.keys(FOE_ART)) $('#icons').append(fig(h('img', { src: portraitURL(k, false), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'f:' + k));
+  // A sheet of every sprite, to check the pixel art: the twelve classes from the side and from behind, walking, every
+  // weapon, armour and accessory on a hero, the thralls, the foes and the icons. Open in a browser, or screenshot
+  // with tools/shot.py. Add ?part=classes, weapons, armour, accessories or icons to show one part.
+  const part = new URLSearchParams(location.search).get('part') || 'all';
+  const big = (src, k = 5) => { const c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height); return c; };
+  const fig = (el, label, cls = '') => h('figure', {}, el, h('figcaption', { class: cls, text: label }));
+  const sec = (name, kids) => $('#sheet').append(h('h2', { text: name }), h('div', { class: 'row' }, kids));
+  const show = p => part === 'all' || part === p;
+  const ownerOf = id => { const D = GEAR[id]; return D.slot === 'weapon' ? WEAPON_TYPES[D.type].cls : D.cls || 'sellsword'; };
+  if (show('classes')) {
+    sec('Side · bare', CLASS_ORDER.map(k => fig(big(heroSide(k)), k)));
+    sec('Side · a Common weapon', CLASS_ORDER.map(k => fig(big(heroSide(k, 0, [Items.starter(k).id, null, null])), k)));
+    sec('Side · walking', CLASS_ORDER.map(k => fig(big(heroSide(k, 1, [Items.starter(k).id, null, null]), 3), 'step')));
+    sec('Back · a Common weapon', CLASS_ORDER.map(k => fig(big(heroSprite(k, 0, [Items.starter(k).id, null, null])), k)));
+    sec('Back · walking', CLASS_ORDER.map(k => fig(big(heroSprite(k, 2, [Items.starter(k).id, 'rustedplate', null]), 3), 'step, plate')));
+    sec('Thralls (side)', Object.keys(THRALL_SIDE).map(k => fig(big(thrallSide(k)), k)));
+  }
+  if (show('weapons')) sec('Weapons, each in its class’s hand', GEAR_ORDER.filter(id => GEAR[id].slot === 'weapon').map(id => fig(big(heroSide(ownerOf(id), 0, [id, null, null]), 4), GEAR[id].name, 'r-' + GEAR[id].rarity)));
+  if (show('armour')) {
+    const armours = GEAR_ORDER.filter(id => GEAR[id].slot === 'armor');
+    for (const k of ['sellsword', 'pilgrim', 'hexblade', 'duellist']) sec('Armour on the ' + k, armours.map(id => fig(big(heroSide(k, 0, [Items.starter(k).id, id, null]), 4), GEAR[id].name, 'r-' + GEAR[id].rarity)));
+    sec('Armour from behind', armours.map(id => fig(big(heroSprite('warden', 0, [Items.starter('warden').id, id, null]), 3), GEAR[id].name, 'r-' + GEAR[id].rarity)));
+  }
+  if (show('accessories')) {
+    const accs = GEAR_ORDER.filter(id => GEAR[id].slot === 'accessory');
+    sec('Accessories', accs.map(id => { const k = GEAR[id].cls || 'sellsword'; return fig(big(heroSide(k, 0, [Items.starter(k).id, null, id]), 4), GEAR[id].name, 'r-' + GEAR[id].rarity); }));
+    sec('Full kits', CLASS_ORDER.map((k, i) => { const arm = GEAR_ORDER.filter(id => GEAR[id].slot === 'armor'), acc = GEAR_ORDER.filter(id => GEAR[id].slot === 'accessory' && !GEAR[id].cls); const w = GEAR_ORDER.filter(id => GEAR[id].type === WEAPON_OF[k]); return fig(big(heroSide(k, 0, [w[i % w.length], arm[i % arm.length], acc[(i * 5) % acc.length]])), k); }));
+  }
+  if (show('icons')) {
+    sec('Item icons', GEAR_ORDER.map(id => fig(h('img', { src: gearIconURL(id), style: 'width:44px;height:44px;image-rendering:pixelated;background:#0d0a12;border:2px solid #3a3346' }), GEAR[id].name, 'r-' + GEAR[id].rarity)));
+    sec('Portraits', CLASS_ORDER.map(k => fig(h('img', { src: portraitURL(k, true, [Items.starter(k).id, 'brigandine', 'hollowcrown']), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'p:' + k)).concat(Object.keys(THRALL_SIDE).map(k => fig(h('img', { src: portraitURL('thrall:' + k, false), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'thrall:' + k))));
+    sec('Foes', Object.keys(FOE_ART).map(k => fig(big(foeSprite(k), 4), k)));
+    sec('Interface icons', Object.keys(UI_ICONS).map(k => fig(h('img', { src: iconURL(k), style: 'width:36px;height:36px;image-rendering:pixelated' }), k)));
+  }
 </script>

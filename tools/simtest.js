@@ -2,10 +2,10 @@
 // Headless battle test: simulates many battles per stage and reports win rates, battle length, which skills
 // and rules fire, and any broken invariants. Then it runs rules experiments (the same battles with different rules),
 // battles with characters at several levels, a fuzz of random builds across all twelve classes, and tests the Tactics
-// and Hero models and the save migration. Run: node tools/simtest.js [battles per stage, default 300]
+// and Hero models and the save migration, and gear: every item's effect, weapons by rarity, loot and the Bag. Run: node tools/simtest.js [battles per stage, default 300]
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'sim.js', 'hero.js', 'save.js', 'rules.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
+for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'save.js', 'rules.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
 
 const N = Number(process.argv[2]) || 300;
 const EVENTS = new Set(['start', 'round', 'enrage', 'turn', 'tick', 'act', 'hit', 'miss', 'heal', 'revive', 'status', 'die', 'delay', 'end', 'item', 'mana',
@@ -331,6 +331,175 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(never.length <= 3, 'some actives never fired: ' + never.join(', '));
 }
 
+// ── Gear: every item's effect seen firing, what a weapon's rarity does to a fight, and the item model
+{
+  // A test-only foe that stuns and staggers (no stage foe does yet), for the Ironbound Collar.
+  SKILLS.teststun = { id: 'teststun', name: 'Test Stun', icon: 'stun', fx: 'knell', shape: 'foe', range: 'magic', power: 0.4, st: [{ k: 'stunned', t: 1 }], push: 0.3 };
+  FOES.teststunner = { name: 'Test Stunner', hp: 160, mp: 0, pow: 12, def: 3, spd: 12, crit: 0, dodge: 0, mpGain: 0, basic: 'teststun', skills: [], rules: [], res: { stun: 0, move: 0, bleed: 0, blight: 0, curse: 0, debuff: 0 } };
+  // And one that Bleeds and Dooms, for the Drowned Mail.
+  SKILLS.testcurse = { id: 'testcurse', name: 'Test Curse', icon: 'doom', fx: 'doom', shape: 'foe', range: 'magic', power: 0.3, st: [{ k: 'bleed', t: 2, p: 0.2 }, { k: 'doom', t: 2, p: 0.2 }] };
+  FOES.testcurser = Object.assign({}, FOES.teststunner, { name: 'Test Curser', basic: 'testcurse' });
+  const STUNNER = { id: 'T-1', name: 'Test', level: 20, foes: ['teststunner', 'teststunner', null, 'teststunner', null, null] };
+  const CURSER = { id: 'T-2', name: 'Test', level: 20, foes: ['testcurser', 'testcurser', null, 'testcurser', null, null] };
+  const rng = makeRng(404), pickOf = list => list[Math.floor(rng() * list.length)];
+  // A character of a class at a level, every tree open and every skill at level 5, with five active slots.
+  function full(cls, id, level = 200) {
+    const c = Hero.create(cls, id, { rng, level });
+    for (const k of c.classes) c.tiers[k] = HERO.TIERS;
+    for (const sid of [CLASSES[cls].starter, ...CLASSES[cls].tree.flat()]) c.skills[sid] = 5;
+    c.lessons.skill = 2;
+    return c;
+  }
+  // A plainer character, for effects that need the wearer to be hit by statuses, or an ally to fall.
+  function plain(cls, id, level = 40) { const c = Hero.autoBuild(Hero.create(cls, id, { rng, level })); for (const sid of NEEDS_OF(cls)) c.skills[sid] = Math.max(1, c.skills[sid] || 0); c.lessons.skill = 2; return c; }
+  const NEEDS_OF = cls => (cls === 'pilgrim' ? ['rites', 'mend'] : []);
+  // The skills an item needs used to show its effect.
+  const NEEDS = { shutteredlantern: ['kindle'], bonfirelantern: ['kindle'], wickshears: ['lighttheway'], blackbolts: ['aimed'], repeater: ['rapidfire', 'aimed'], fencingglove: ['challenge'], philosopherspebble: ['quickbrew'],
+    bellrope: ['toll'], vesperbell: ['toll'], chapelbell: ['knell'], surgeonskit: ['stitch', 'tonic'], butcherssaw: ['stitch'], surgeonsapron: ['stitch', 'tonic'], emberthurible: ['mend'], chapelcenser: ['mend'], drownedcenser: ['mend'],
+    witchsknot: ['hexswarm', 'contagion'], hexedkris: ['doom'], witchironsickle: ['doom'], mourningblade: ['doom'], twinstilettos: ['backstab'], widowskiss: ['envenom'], fencesledger: ['pickpocket'], oathboundgorget: ['guard', 'cover'],
+    watchmansflail: ['guard'], bastionplate: ['guard'], gravecutter: ['cleave'], fingerbone: ['rites'], bishopscrozier: ['rites'], penitentsrags: ['mend'], ossuaryrod: [CLASSES.gravecaller.starter], barrowkingstaff: [CLASSES.gravecaller.starter], phylactery: [CLASSES.gravecaller.starter] };
+  // Who wears it: a weapon's class, a class-only accessory's class, or a hero that suits the effect.
+  const WEARER = { halberdiershook: 'sellsword', huntershauberk: 'warden', thornmail: 'warden', ashenplate: 'warden', drownedmail: 'sellsword', bastionplate: 'warden', sellswordsjack: 'sellsword', vanguardsbadge: 'sellsword',
+    penitentsrags: 'pilgrim', mothsilk: 'lamplighter', gravediggersleathers: 'duellist', shadowweave: 'duellist', courierspur: 'crossbowman', earstoppers: 'hexblade', ironboundcollar: 'sellsword', gravediggersspade: 'crossbowman', hollowcrown: 'hexblade' };
+  const STAGE_FOR = { huntershauberk: ['1-2'], mothlure: ['2-1', '2-2', '2-3'], earstoppers: ['1-3'], ironboundcollar: ['T-1'], drownedmail: ['T-2'], marshalsblade: ['1-1', '1-2', '2-1'] };
+  const ownerOf = id => { const D = GEAR[id]; return D.slot === 'weapon' ? WEAPON_TYPES[D.type].cls : D.cls || WEARER[id] || pickOf(CLASS_ORDER); };
+  const withFx = GEAR_ORDER.filter(id => GEAR[id].fx);
+  GEAR_TRACK.on = {};
+  let runs = 0;
+  const HARD = ['fingerbone', 'bishopscrozier', 'gravediggersspade'], PLAIN = HARD.concat(['drownedmail', 'ironboundcollar']);
+  for (const id of withFx) {
+    for (let i = 0; i < (HARD.includes(id) ? 16 : 8); i++) {
+      const cls = ownerOf(id), c = PLAIN.includes(id) ? plain(cls, 'w0') : full(cls, 'w0');
+      const acts = Hero.actives(c), need = (NEEDS[id] || []).filter(x => c.skills[x]);
+      const rest = acts.filter(x => !need.includes(x)).sort(() => rng() - 0.5);
+      c.equip = need.concat(rest).slice(0, Hero.activeSlots(c));
+      c.gear[GEAR[id].slot] = Items.make(id, 20);
+      const rules = c.equip.map(a => (a === 'rites' ? { if: 'ally_fallen', do: a } : { if: 'always', do: a }));
+      if (i % 2) rules.push(rules.shift());
+      const wearer = Hero.spec(c, rules);
+      // The rest of the party: built heroes with a Pilgrim to heal, at a lower level so that some fall.
+      const others = ['warden', cls === 'pilgrim' ? 'hexblade' : 'pilgrim', 'sellsword', 'crossbowman', 'lamplighter'].map((k, j) => Hero.spec(Hero.autoBuild(Hero.create(k, 'o' + j, { rng, level: HARD.includes(id) ? 10 + Math.floor(rng() * 20) : 40 + Math.floor(rng() * 60) })), CLASSES[k].rules));
+      const front = id === 'halberdiershook' ? false : id === 'mothlure' ? true : CLASSES[cls].row === 'front' || ['sellswordsjack', 'vanguardsbadge', 'ashenplate', 'thornmail', 'huntershauberk'].includes(id);
+      const party = front ? [wearer, others[0], others[1], others[2], others[3], others[4]] : [others[0], others[2], wearer, others[1], others[3], others[4]];
+      if (cls === 'gravecaller') party[4] = party[5] = null; // room for thralls
+      const ids = STAGE_FOR[id] || STAGES.map(s => s.id);
+      const stage = ids[i % ids.length] === 'T-1' ? STUNNER : ids[i % ids.length] === 'T-2' ? CURSER : STAGES.find(s => s.id === ids[i % ids.length]);
+      const setup = { seed: strSeed(id + ':' + i), party, foes: stage.foes, level: HARD.includes(id) ? 30 + Math.floor(rng() * 30) : PLAIN.includes(id) ? 30 : 30 + Math.floor(rng() * 130), partyRules: PARTY_RULES.rules, loadout: ['draught', 'salts'] };
+      try { const res = simulate(setup); check(res, stage); runs++; if (res.stalled) totalStalls++; }
+      catch (e) { problems.push(`item ${id}: ${e.stack.split('\n').slice(0, 3).join(' | ')}`); }
+    }
+  }
+  // Gear in a fuzz of random builds: random pieces on random characters of every class.
+  let fz = 0;
+  for (let i = 0; i < Math.max(150, N); i++) {
+    const stage = STAGES[i % STAGES.length], party = [];
+    for (let s = 0; s < 6; s++) {
+      if (rng() < 0.15) { party.push(null); continue; }
+      const cls = pickOf(CLASS_ORDER), c = full(cls, 'f' + s, 1 + Math.floor(rng() * 200));
+      if (rng() < 0.3) { const o = CLASS_ORDER.filter(k => k !== cls); c.classes.push(pickOf(o)); c.tiers[c.classes[1]] = 3; }
+      const acts = Hero.actives(c).sort(() => rng() - 0.5);
+      c.equip = acts.slice(0, Hero.activeSlots(c));
+      for (const slot of SLOTS) {
+        if (rng() < 0.15) { c.gear[slot] = null; continue; }
+        const pool = GEAR_ORDER.filter(g => GEAR[g].slot === slot && Items.canUse(c, Items.make(g)));
+        c.gear[slot] = Items.make(pickOf(pool), 1 + Math.floor(rng() * 150));
+      }
+      party.push(Hero.spec(c, c.equip.map(a => ({ if: pickOf(['always', 'front_foe', 'foe_lowest', 'ally_hp_lt', 'self_hp_lt', 'ally_fallen']), n: 50, do: a }))));
+    }
+    if (!party.some(Boolean)) continue;
+    const setup = { seed: 9000 + i, party, foes: stage.foes, level: 1 + Math.floor(rng() * 150), partyRules: PARTY_RULES.rules, loadout: ['draught', 'salts', 'tincture', 'lampoil'] };
+    let res;
+    try { res = simulate(setup); } catch (e) { problems.push(`gear fuzz ${i}: ${e.stack.split('\n').slice(0, 3).join(' | ')}`); continue; }
+    check(res, stage); fz++;
+    if (res.stalled) totalStalls++;
+    if (i < 10 && JSON.stringify(simulate(setup).log) !== JSON.stringify(res.log)) problems.push(`gear fuzz ${i}: not deterministic`);
+  }
+  const fired = GEAR_TRACK.on, never = withFx.filter(id => !fired[id]);
+  GEAR_TRACK.on = null;
+  console.log(`\nGear: ${runs} battles with each item worn by a hero who uses it, and ${fz} with random gear on random builds. ${withFx.length - never.length} of ${withFx.length} item effects fired${never.length ? '; never: ' + never.join(', ') : ''}.`);
+  ok(!never.length, 'some item effects never fired: ' + never.join(', '));
+  const quiet = withFx.map(id => [id, fired[id] || 0]).sort((a, b) => a[1] - b[1]).slice(0, 6);
+  console.log('   Rarest to fire: ' + quiet.map(([id, n]) => `${GEAR[id].name} ${n}`).join(' · '));
+
+  // What a weapon's rarity does: the same party and seeds with no weapon, then a Common, a Fine and a Rare one.
+  const M = Math.max(60, Math.round(N / 3));
+  console.log(`\nWeapons by rarity (${M} battles each, same seeds; the party built 3 levels under the stage, item level = stage level)`);
+  console.log('   ' + pad('stage', 24) + ['None', 'Common', 'Fine', 'Rare'].map(r => lpad(r, 22)).join(''));
+  const table = {};
+  for (const sid of ['1-3', '2-1', '2-3']) {
+    const stage = STAGES.find(s => s.id === sid), row = [];
+    for (const rar of [null, 'common', 'fine', 'rare']) {
+      let w = 0, r = 0, ko = 0, dealt = 0;
+      for (let i = 0; i < M; i++) {
+        const chars = builtParty(Math.max(1, stage.level - 3), ':wr' + i);
+        for (const c of chars) {
+          const pool = GEAR_ORDER.filter(g => GEAR[g].type === WEAPON_OF[c.cls] && GEAR[g].rarity === rar);
+          c.gear.weapon = rar ? Items.make(pool[i % pool.length], stage.level) : null;
+        }
+        const res = simulate(stageSetup(stage, strSeed('wr' + sid + i), partySetup(chars)));
+        check(res, stage);
+        if (res.stalled) totalStalls++;
+        if (res.winner === 0) w++;
+        r += res.rounds;
+        for (const u of res.start) if (u.side === 0) { ko += res.stats[u.id].falls; dealt += res.stats[u.id].dealt; }
+      }
+      table[sid + ':' + rar] = { w: w / M, dealt: dealt / M, r: r / M, ko: ko / M };
+      row.push(lpad(`${Math.round(100 * w / M)}% ${(r / M).toFixed(1)}r ${(ko / M).toFixed(1)}ko ${Math.round(dealt / M)}`, 22));
+    }
+    console.log('   ' + pad(`${sid} ${stage.name} lv ${stage.level}`, 24) + row.join(''));
+  }
+  console.log('   (win %, rounds, knockouts per battle, party damage)');
+  for (const sid of ['1-3', '2-1', '2-3']) ok(table[sid + ':common'].r < table[sid + ':null'].r && table[sid + ':common'].w >= table[sid + ':null'].w - 0.05, `${sid}: a Common weapon should end battles sooner, and lose no more often`);
+  ok(table['2-3:rare'].r <= table['2-3:common'].r + 0.2, 'Rare weapons should end 2-3 about as fast as Common ones, or faster');
+
+  // The item model
+  ok(GEAR_ORDER.length === 92, `92 items (got ${GEAR_ORDER.length})`);
+  const count = f => GEAR_ORDER.filter(f).length;
+  ok(count(id => GEAR[id].slot === 'weapon' && GEAR[id].rarity !== 'relic') === 42 && count(id => GEAR[id].slot === 'armor' && GEAR[id].rarity !== 'relic') === 15 && count(id => GEAR[id].slot === 'accessory' && GEAR[id].rarity !== 'relic') === 30 && count(id => GEAR[id].cls) === 12 && RELICS.length === 5, 'the content spec’s counts: 42 weapons, 15 armour, 30 accessories (12 class-only), 5 Relics');
+  for (const cls of CLASS_ORDER) for (const r of ['common', 'fine', 'rare']) ok(count(id => GEAR[id].type === WEAPON_OF[cls] && GEAR[id].rarity === r) >= 1, `${cls} has a ${r} weapon`);
+  for (const id of GEAR_ORDER) { const b = Items.bands(Items.make(id, 1), { row: 'front' }); ok(b.good.length + b.bad.length + b.when.length > 0, id + ': the card says something'); }
+  const lv1 = Items.stats(Items.make('rustedplate', 1)), lv16 = Items.stats(Items.make('rustedplate', 16));
+  ok(lv1.hp === 35 && lv1.def === 4 && lv1.spd === -1 && lv16.hp === 70 && lv16.def === 8 && lv16.spd === -1, `plain stats grow with item level, costs don't (${JSON.stringify(lv16)})`);
+  const rr = makeRng(7), tally = (region, rank) => { const t = { common: 0, fine: 0, rare: 0 }; for (let i = 0; i < 6000; i++) t[Items.rarity(Items.roll(5, region, rr, { rank }))]++; return t; };
+  const t0 = tally(0, 'normal'), tb = tally(0, 'boss'), t4 = tally(4, 'elite');
+  ok(Math.abs(t0.common / 6000 - 0.7) < 0.03 && Math.abs(t0.rare / 6000 - 0.05) < 0.015, `Region I rolls 70/25/5 (${JSON.stringify(t0)})`);
+  ok(Math.abs(tb.common / 6000 - 0.5) < 0.03 && Math.abs(tb.rare / 6000 - 0.25) < 0.03, `a Region I boss rolls 50/25/25 (${JSON.stringify(tb)})`);
+  ok(Math.abs(t4.common / 6000 - 0.15) < 0.03 && Math.abs(t4.rare / 6000 - 0.35) < 0.03, `a Region V elite rolls 15/50/35 (${JSON.stringify(t4)})`);
+  for (let i = 0; i < 300; i++) { const x = Items.roll(1 + i, i % 5, rr, { classes: ['pilgrim', 'warden'] }); const D = Items.def(x); ok(D.rarity !== 'relic' && x.lv === 1 + i && (D.slot !== 'weapon' || ['censer', 'mace'].includes(D.type)) && (!D.cls || ['pilgrim', 'warden'].includes(D.cls)), 'a roll follows the roster: ' + x.id); }
+  const S0 = defaultState();
+  ok(S0.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && Items.rarity(c.gear.weapon) === 'common'), 'every recruit carries a Common weapon of their type');
+  const g0 = S0.currencies.gold;
+  for (let i = 0; i < ITEM.BAG; i++) ok(Items.add(S0, Items.roll(3, 0, rr)).added, 'the Bag takes 60');
+  const over = Items.add(S0, Items.make('notchedsword', 5));
+  ok(!over.added && over.sold === Items.sellPrice(Items.make('notchedsword', 5)) && S0.currencies.gold === g0 + over.sold, 'a full Bag sells new gear on the spot');
+  const relic = Items.grantRelic(S0, 'gravediggersspade');
+  ok(relic && S0.inventory.items.length === ITEM.BAG + 1 && !Items.grantRelic(S0, 'gravediggersspade') && Items.sellPrice(relic) === 0 && !Items.sell(S0, relic.uid), 'a Relic always finds room, comes once, and does not sell');
+  const sw = S0.roster.find(c => c.cls === 'sellsword'), hx = S0.roster.find(c => c.cls === 'hexblade');
+  const blade = Items.make('headsmansblade', 4); S0.inventory.items.push(blade);
+  ok(!Items.equip(S0, hx, blade.uid), 'a Hexblade can’t wield a sword');
+  const was = sw.gear.weapon;
+  ok(Items.equip(S0, sw, blade.uid) && sw.gear.weapon === blade && S0.inventory.items.includes(was) && !S0.inventory.items.includes(blade), 'equipping swaps with the Bag');
+  hx.classes.push('sellsword');
+  const sickle = hx.gear.weapon;
+  ok(Items.canUse(hx, blade) && Items.equip(S0, hx, blade.uid) && hx.gear.weapon === blade && sw.gear.weapon === null && S0.inventory.items.includes(sickle), 'a combined Hexblade-Sellsword takes the sword from the Sellsword, and its sickle goes to the Bag');
+  const gold1 = S0.currencies.gold, p = Items.sellPrice(was, S0);
+  ok(Items.sell(S0, was.uid) === p && S0.currencies.gold === gold1 + p && !Items.find(S0, was.uid), 'selling a piece');
+  ok(Items.unequip(S0, hx, 'weapon') && hx.gear.weapon === null && Items.find(S0, blade.uid).where === 'bag', 'unequipping into the Bag');
+  const wd = Hero.create('warden', 'pb', { rng, level: 40 }); wd.gear.armor = Items.make('bastionplate', 1);
+  const spd0 = Hero.geared(wd).spd; wd.skills.plateborn = 5;
+  ok(Math.abs(Hero.geared(wd).spd - spd0 - 2) < 1e-9, 'Plate-born takes 2 off heavy armour’s Speed cost');
+  const tc = JSON.parse(JSON.stringify(Hero.create('pilgrim', 'tc', { rng }))); tc.gear.weapon = Items.make('notchedsword'); tc.gear.armor = { id: 'nope' }; tc.gear.accessory = Items.make('rustedplate');
+  const tz = Hero.sanitize(tc);
+  ok(!tz.gear.weapon && !tz.gear.armor && !tz.gear.accessory, 'saved gear that doesn’t fit is dropped');
+  const kept = Hero.create('lamplighter', 'kp', { rng }); kept.gear.accessory = Items.make('hollowcrown');
+  ok(JSON.stringify(Hero.sanitize(JSON.parse(JSON.stringify(kept)))) === JSON.stringify(kept), 'gear survives a save round-trip');
+  const sp = Hero.spec(kept);
+  ok(sp.gear.includes('hollowcrown') && sp.look[2] === 'hollowcrown' && sp.look[0] === 'tinlantern', 'the battle spec carries gear effects and the look');
+  const res = simulate({ seed: 3, party: [null, null, sp, null, null, null], foes: STAGES[0].foes, partyRules: [], loadout: [] });
+  ok(res.start.find(u => u.side === 0).look[2] === 'hollowcrown', 'the battle log carries the look');
+  console.log('Item model checked: counts, item levels, region and rank odds, starting weapons, the Bag’s 60, selling, Relics, equipping, combined classes, Plate-born, save round-trip.');
+}
+
 // ── The Hero model
 {
   const rng = makeRng(5);
@@ -393,15 +562,22 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 2, 'save version 2');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 3, 'save version 3');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
+  ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
   ok(s.tactics.heroes.c1 && s.tactics.heroes.c1.rules[0].do === 'guard' && !s.tactics.heroes.warden, 'rules moved from the class to the character');
   ok(s.tactics.sets[0].heroes.c1, 'saved sets moved too');
   ok(s.roster[0].lessons.rule === 1 && Hero.ruleSlots(s.roster[0]) === 4, 'a rule slot bought in step 2 becomes a lesson');
   const v0 = upgrade({ cleared: ['1-1'], best: { '1-1': 4 }, speed: 2 });
-  ok(v0.v === 2 && v0.campaign.cleared[0] === '1-1' && v0.roster.length === 6, 'a step 1 save still upgrades');
-  console.log('Save migration checked: version 1 → 2 (characters and their rules), and version 0 → 2.');
+  ok(v0.v === SAVE_VERSION && v0.campaign.cleared[0] === '1-1' && v0.roster.length === 6, 'a step 1 save still upgrades');
+  const v2 = JSON.parse(JSON.stringify(defaultState()));
+  v2.v = 2; v2.roster.forEach(c => { c.gear = { weapon: null, armor: null, accessory: null }; c.level = 7; });
+  v2.roster[1].gear = { weapon: 'Rusty sword', armor: null, accessory: null };
+  v2.inventory.items = [{ id: 'bonecharm', lv: 2, uid: 'x1' }, { id: 'nope' }, 'junk', { id: 'gravecutter', lv: 9 }];
+  const s3 = upgrade(v2);
+  ok(s3.v === 3 && s3.roster.every(c => c.gear.weapon && c.gear.weapon.lv === 7) && s3.inventory.items.map(x => x.id).join() === 'bonecharm,gravecutter' && s3.inventory.items[1].uid, `version 2 → 3: weapons at the character's level, the Bag cleaned (${JSON.stringify(s3.inventory.items)})`);
+  console.log('Save migration checked: version 1 → 3 (characters, their rules, gear), version 2 → 3 (gear), and version 0 → 3.');
 }
 
 // ── The Tactics model

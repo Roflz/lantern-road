@@ -7,7 +7,8 @@ const DUMMY_MAP = ['..nnnn..', '.nnnnnn.', '.nkknkn.', '.nnnnnn.', '..nnnn..', '
 const DUMMY_PAL = { n: '#c8a050', k: '#5a3a20', w: '#6b4a2e' };
 
 class SpriteStage {
-  // el: the element to fill. o: { cls, scale, hx (the hero's place, 0–1), dummy, ambient: skill ids to play now and then }
+  // el: the element to fill. o: { cls, look (the gear drawn: Items.look), scale, hx (the hero's place, 0–1), dummy,
+  // ambient: skill ids to play now and then }
   constructor(el, o) {
     this.el = el; this.o = o; this.k = o.scale || 6;
     this.cv = document.createElement('canvas'); this.cv.className = 'stg-cv';
@@ -35,7 +36,13 @@ class SpriteStage {
     this.props = [];
     for (let i = 0; i < Math.ceil(w / 9); i++) this.props.push({ x: Math.floor(r() * w), y: Math.floor(this.gy - 3 - r() * 6), k: r() > 0.5 ? 'grave' : 'cross' });
   }
-  hero() { return heroSide(this.o.cls); }
+  hero() { return heroSide(this.o.cls, 0, this.o.look || null); }
+  // Puts other gear on the sprite (trying an item on), with a little flourish.
+  setLook(look) {
+    const was = lookKey(this.o.look || null);
+    this.o.look = look;
+    if (lookKey(look) !== was && this.H) { const s = this.hero(); this.burst(this.hx, this.gy - Math.round((s.bh || s.height) * 0.55), '#fff3c8', 12, 1.2); }
+  }
   at(dt, fn) { this.events.push({ t: performance.now() + dt, fn }); this.events.sort((a, b) => a.t - b.t); }
   pop(px, py, text, cls) {
     const d = document.createElement('div');
@@ -53,7 +60,7 @@ class SpriteStage {
   // Plays a skill. info: { sk, num, heal, tag }: what the numbers should say.
   play(sk, info = {}) {
     const F = (typeof Battle !== 'undefined' && Battle.FX && Battle.FX[sk.fx]) || { kind: 'buff', color: '#f4a646' };
-    const now = performance.now(), s = this.hero(), top = this.gy - s.height, hx = this.hx, dx = this.dx, ty = this.gy - 8;
+    const now = performance.now(), s = this.hero(), top = this.gy - (s.bh || s.height), hx = this.hx, dx = this.dx, ty = this.gy - 8;
     const hit = (delay, big) => this.at(delay, () => {
       this.dummyHit = performance.now() + 90; this.dummyShake = performance.now();
       this.burst(dx, ty, F.color || '#fff0d0', big ? 14 : 8, big ? 1.4 : 1);
@@ -130,7 +137,7 @@ class SpriteStage {
     }
     // the hero
     const s = this.hero();
-    let hy = gy - s.height + 1, hxo = this.hx - Math.floor(s.width / 2);
+    let hy = gy - s.height + 1, hxo = this.hx - Math.round(s.ax != null ? s.ax : s.width / 2);
     if (!noMotion() && Math.sin(t / 520 + this.phase) > 0.55) hy -= 1;
     if (this.anim) {
       const q = (t - this.anim.t0) / this.anim.dur;
@@ -140,6 +147,13 @@ class SpriteStage {
     }
     x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(this.hx - 4, gy + 1, 8, 1);
     x.drawImage(s, hxo, hy);
+    // what the gear gives off: a lantern's flame, a glowing blade, censer smoke
+    x.globalCompositeOperation = 'lighter';
+    const glow = (gx, gy2, r, col, a) => { const n = parseInt(col.slice(1), 16), c = `${n >> 16},${(n >> 8) & 255},${n & 255}`, rg = x.createRadialGradient(gx, gy2, 0, gx, gy2, r); rg.addColorStop(0, `rgba(${c},${a})`); rg.addColorStop(1, `rgba(${c},0)`); x.fillStyle = rg; x.fillRect(gx - r, gy2 - r, r * 2, r * 2); };
+    if (s.lamp) glow(hxo + s.lamp[0] + 0.5, hy + s.lamp[1] + 0.5, 9 + Math.sin(t / 110) * 0.6, '#ffb04a', 0.45);
+    for (const g of s.glows || []) glow(hxo + g[0] + 0.5, hy + g[1] + 0.5, Math.max(3, g[2] * 0.4), g[3], 0.24 + Math.sin(t / 300 + g[0]) * 0.05);
+    x.globalCompositeOperation = 'source-over';
+    if (s.smoke && !noMotion() && Math.random() < 0.05) this.parts.push({ kind: 'smoke', x: hxo + s.smoke[0], y: hy + s.smoke[1], vy: -vrand(5, 9), vx: vrand(-2, 3), t0: t, life: vrand(900, 1400), color: '#9a90a0' });
     // effects
     this.fx = this.fx.filter(f => t - f.t0 < f.life);
     for (const f of this.fx) {
@@ -168,7 +182,8 @@ class SpriteStage {
       const q = (t - p.t0) / p.life, sec = (t - p.t0) / 1000;
       if (q < 0) continue;
       x.globalCompositeOperation = 'lighter';
-      if (p.kind === 'dot') { x.globalAlpha = 1 - q; x.fillStyle = p.color; x.fillRect(Math.round(p.x + p.vx * sec), Math.round(p.y + p.vy * sec), 1, 1); }
+      if (p.kind === 'smoke') { x.globalCompositeOperation = 'source-over'; x.globalAlpha = 0.45 * (1 - q); x.fillStyle = p.color; x.fillRect(Math.round(p.x + p.vx * sec), Math.round(p.y + p.vy * sec), 1, 1); }
+      else if (p.kind === 'dot') { x.globalAlpha = 1 - q; x.fillStyle = p.color; x.fillRect(Math.round(p.x + p.vx * sec), Math.round(p.y + p.vy * sec), 1, 1); }
       else if (p.kind === 'mote') { x.globalAlpha = 1 - q; x.fillStyle = p.color; const px = Math.round(p.x), py = Math.round(p.y + p.vy * sec); x.fillRect(px - 1, py, 3, 1); x.fillRect(px, py - 1, 1, 3); }
       else if (p.kind === 'ring') { const r = 2 + p.r * q; x.globalAlpha = 1 - q; x.fillStyle = p.color; for (let a = 0; a < Math.PI * 2; a += 0.25) x.fillRect(Math.round(p.x + Math.cos(a) * r), Math.round(p.y + Math.sin(a) * r * 0.35), 1, 1); }
       else if (p.kind === 'flash') { x.globalAlpha = 0.18 * (1 - q); x.fillStyle = p.color; x.fillRect(0, 0, W, H); }
