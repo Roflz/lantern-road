@@ -22,11 +22,12 @@ Open `index.html` in a browser. It needs no build step and no internet connectio
 | File | What it holds |
 |---|---|
 | `js/core.js` | Seeded random numbers and small helpers |
-| `js/data.js` | Classes, foes, skills, statuses, rule conditions and stages |
+| `js/data.js` | Classes, foes, skills, statuses, rule conditions, items and stages |
 | `js/sim.js` | The battle simulation: a seed and a setup in, an event log out |
 | `js/art.js` | Pixel sprites, icons and scenery |
 | `js/audio.js` | Settings, sound effects and procedural music |
 | `js/battle.js` | The battle screen, which animates the event log |
+| `js/rules.js` | Tactics: the rules and loadout model, and the rules editor (styles in `css/rules.css`) |
 | `js/main.js` | The camp, the battle report, settings and saving |
 
 The simulation never touches the page, so the same code runs the battle on screen, the Skip button and the headless tests.

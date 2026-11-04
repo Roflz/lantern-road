@@ -79,7 +79,7 @@ const Battle = (() => {
       h('div', { class: 'bar hp' }, u.lagEl = h('i', { class: 'lag' }), u.hpEl = h('i', { class: 'fill' })),
       u.maxMp ? h('div', { class: 'bar mp' }, u.mpEl = h('i', { class: 'fill' })) : null,
       u.stEl = h('div', { class: 'sts' }));
-    u.plate.addEventListener('click', () => showUnitTip(u));
+    u.plate.addEventListener('click', () => (aim ? aimAt(u) : showUnitTip(u)));
     platesEl.append(u.plate);
     syncPlate(u, true);
     return u;
@@ -444,6 +444,13 @@ const Battle = (() => {
         syncPlate(t);
         break;
       }
+      case 'mana': {
+        const t = U[e.tgt];
+        t.mp = e.mp;
+        if (e.amt > 0) pop(t, '+' + e.amt, 'mana');
+        syncPlate(t);
+        break;
+      }
       case 'delay': {
         const t = U[e.who];
         pop(t, 'Staggered', 'tag stagger');
@@ -469,7 +476,7 @@ const Battle = (() => {
       const t = { i, who: log[i].who, skill: null, rule: -1, tick: null };
       for (let j = i + 1; j < log.length && log[j].t !== 'turn'; j++) {
         const x = log[j];
-        if (x.t === 'act') { t.skill = x.skill; t.rule = x.rule; t.prule = x.prule; t.focus = x.focus; break; }
+        if (x.t === 'act') { t.skill = x.skill; t.rule = x.rule; t.focus = x.focus; break; }
         if (x.t === 'tick') t.tick = x.key;
       }
       out.push(t);
@@ -480,7 +487,6 @@ const Battle = (() => {
     if (!t.skill) return [h('b', { text: t.tick ? STATUSES[t.tick].name : 'Fallen' }), 'falls before acting'];
     const focus = t.focus != null ? ' · focus fire' : '';
     if (t.rule >= 0) return [h('b', { text: `Rule ${t.rule + 1}` }), ruleCond(u.rules[t.rule]) + focus];
-    if (t.rule === -4) return [h('b', { text: `Party rule ${t.prule + 1}` }), ruleCond(B.res.partyRules[t.prule])];
     if (t.rule === -2) return [h('b', { text: 'Charged' }), 'the big attack lands'];
     if (t.skill === 'wait') return [h('b', { text: 'No target' }), 'it waits'];
     return [h('b', { text: 'No rule fit' }), 'basic attack' + focus];
@@ -551,7 +557,9 @@ const Battle = (() => {
   // ── a battle, start to finish
   // Runs the simulation, walks the party in, plays the log, and calls onEnd(result) when it is over.
   function run(stage, seed, opts = {}) {
-    const res = simulate(stageSetup(stage, seed));
+    const setup = stageSetup(stage, seed);
+    const res = simulate(setup);
+    endAim(true);
     queue = []; S.fx = []; hideBanner(); clearFlags(); stepping = false;
     const regionChange = S.region !== stage.region;
     S.region = stage.region;
@@ -563,11 +571,12 @@ const Battle = (() => {
     if (!wasLand) for (const u of S.list) if (u.hero) u.march = { t0: P.t, dur: 900, fx: u.bx - S.W * 0.4, fy: u.by };
     platesEl.classList.add('away');
     for (const u of S.list) if (!u.hero) { u.alpha = 0; u.fade = { t0: P.t + 380, dur: 480, rise: true, enter: true }; }
-    B = { res, stage, i: 1, busyUntil: P.t + 950, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0 };
+    B = { res, stage, i: 1, busyUntil: P.t + 950, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0, setup, curK: -1 };
     B.turns.forEach((t, k) => B.turnAt.set(t.i, k));
     setHud(stage, 1, 0);
     hudEl.hidden = false; $('#controls').hidden = false;
     renderFlags(0, false);
+    buildTray();
     // walk up the road
     S.walkUntil = P.t + 850;
     const R = REGION_NAMES[stage.region];
@@ -591,11 +600,18 @@ const Battle = (() => {
         if (e.level === 1) { S.active = null; banner('The foes are enraged', 'rage', 'They hit harder every round'); sfx('enrage'); screenFlash('#e5574a', .3, 500); B.busyUntil = P.t + 800; at(P.t + 760, hideBanner); return; }
         continue;
       }
+      if (e.t === 'item') {
+        const j = groupEnd(log, B.i), dur = playItem(log.slice(B.i, j));
+        B.i = j;
+        B.busyUntil = P.t + dur;
+        syncTray();
+        return;
+      }
       if (e.t === 'turn') {
         if (stepping && B.stepped) { stepping = false; B.stepped = false; setPaused(true); return; }
         if (stepping) B.stepped = true;
-        let j = B.i + 1;
-        while (j < log.length && !['turn', 'round', 'enrage', 'end'].includes(log[j].t)) j++;
+        const j = groupEnd(log, B.i);
+        B.curK = B.turnAt.get(B.i);
         const group = log.slice(B.i, j), dur = playTurn(group, B.turnAt.get(B.i));
         const act = group.find(x => x.t === 'act');
         B.durs.push([act ? act.skill : 'tick', Math.round(dur), group.filter(x => x.t === 'tick').length, group.filter(x => x.t === 'die').length]);
@@ -603,13 +619,170 @@ const Battle = (() => {
         B.busyUntil = B.turnUntil = P.t + dur;
         return;
       }
-      if (e.t === 'end') { B.i++; finish(); return; }
+      if (e.t === 'end') { B.i++; finish(); syncTray(); return; }
       B.i++;
     }
   }
+  // Where a beat that starts at log[i] ends: at the next turn, round, enrage, item or end.
+  const BEATS = ['turn', 'round', 'enrage', 'end', 'item'];
+  function groupEnd(log, i) {
+    let j = i + 1;
+    while (j < log.length && !BEATS.includes(log[j].t)) j++;
+    return j;
+  }
+
+  // ── items: the party's, used by the player at any moment (or by an item rule), taking no one's turn
+  // A battle is simulated before it is shown. Using an item adds it to the battle's inputs, to land just before the
+  // next turn, and simulates the battle again from the same seed: every turn already shown comes out the same, and
+  // the rest follows from the item. The screen carries on from where it was, on the new log.
+  let trayEl = null, callEl = null, aimEl = null, aim = null;
+  const itemOf = slot => B && B.res.loadout && ITEMS[B.res.loadout[slot]];
+  // Used, as far as the screen has shown; or asked for and about to land.
+  const shownUsed = slot => B.res.log.slice(0, B.i).some(e => e.t === 'item' && e.slot === slot);
+  const pending = slot => !shownUsed(slot) && (B.setup.inputs || []).some(x => x.slot === slot);
+  function useItem(slot, target) {
+    if (!B || B.over || !itemOf(slot) || shownUsed(slot) || pending(slot)) return false;
+    const log = B.res.log;
+    let j = B.i;
+    while (j < log.length && log[j].t !== 'turn') { if (log[j].t === 'end') return false; j++; }
+    if (j >= log.length) return false;
+    B.setup.inputs = (B.setup.inputs || []).concat([{ at: log[j].k, slot, target: target || null }]);
+    const res = simulate(B.setup);
+    B.res = res;
+    B.turns = buildTurns(res.log);
+    B.turnAt = new Map();
+    B.turns.forEach((x, k) => B.turnAt.set(x.i, k));
+    // The coming turns may have changed: draw their flags again.
+    for (const [k, el] of flagEls) if (k > B.curK) { el.remove(); flagEls.delete(k); }
+    if (B.started) renderFlags(Math.max(0, B.curK), B.curK >= 0);
+    if (P.paused) landNow();
+    syncTray();
+    return true;
+  }
+  // Paused: the turn on screen finishes at once and the item lands now, without waiting for the clock.
+  function landNow() {
+    const q = queue.sort((a, b) => a.t - b.t);
+    queue = [];
+    q.forEach(x => x.fn());
+    B.busyUntil = B.turnUntil = P.t;
+    const log = B.res.log;
+    while (B.i < log.length && log[B.i].t !== 'turn' && log[B.i].t !== 'end') {
+      const e = log[B.i];
+      if (e.t === 'round') { B.round = e.n; setHud(B.stage, B.round, B.enrage); B.i++; continue; }
+      if (e.t === 'enrage') { B.enrage = e.level; setHud(B.stage, B.round, B.enrage); B.i++; continue; }
+      if (e.t !== 'item') { B.i++; continue; }
+      const j = groupEnd(log, B.i);
+      showCall(e);
+      sfx(FX[SKILLS[ITEMS[e.item].skill].fx].sfx || 'heal');
+      log.slice(B.i + 1, j).forEach(apply);
+      B.i = j;
+    }
+  }
+  // Plays an item's beat: the callout, a flask arcing up from the party's pack to each target, then its effect.
+  function playItem(group) {
+    const T = P.t, e = group[0], sk = SKILLS[ITEMS[e.item].skill], F = FX[sk.fx] || FX.none, land = {};
+    at(T, () => { showCall(e); sfx('click'); });
+    e.targets.forEach((id, k) => {
+      const tg = S.units[id];
+      if (!tg) return;
+      const [x, y] = midOf(tg), t0 = T + 120 + k * 60;
+      at(t0, () => addFx({ type: 'proj', x0: x - 14, y0: S.H + 6, x1: x, y1: y, dur: 340, style: 'orb', color: F.color || '#b4f098', arcH: 20, light: 8 }));
+      land[id] = t0 + 340;
+      at(land[id], () => {
+        if (F.kind === 'raise') addFx({ type: 'pillar', x: tg.x, y: tg.y, dur: 640, color: F.color, w: 6 });
+        else { motes(x, y + 4, F.color || '#b4f098', 9); addFx({ type: 'light', x, y, r: 16, dur: 420, warm: true }); }
+        if (k === 0) sfx(F.sfx || 'heal');
+      });
+    });
+    let end = 500;
+    for (const x of group.slice(1)) {
+      const tt = (land[x.tgt || x.who] || T + 460) + 60;
+      at(tt, () => apply(x));
+      end = Math.max(end, tt - T);
+    }
+    return end + 260;
+  }
+  // The callout: which item, and whether the player or a party rule used it.
+  function showCall(e) {
+    if (!callEl) { callEl = h('div', { class: 'it-call', 'aria-live': 'polite' }); frame.append(callEl); }
+    const it = ITEMS[e.item], r = e.by === 'rule' && B.res.partyRules[e.prule];
+    callEl.replaceChildren(ico(it.icon), h('div', {}, h('b', { text: it.name }),
+      h('span', { text: r ? `Party rule ${e.prule + 1} \u00b7 ${ruleCond(r)}` : 'Used by your hand' })));
+    callEl.classList.remove('show'); void callEl.offsetWidth; callEl.classList.add('show');
+    clearTimeout(callEl.timer);
+    callEl.timer = setTimeout(() => callEl.classList.remove('show'), Math.max(900, 1800 / P.speed));
+  }
+
+  // The tray: one button per packed item, beside the battle controls.
+  function buildTray() {
+    if (!trayEl) { trayEl = h('div', { class: 'it-tray', role: 'group', 'aria-label': 'Items' }); $('#controls').append(trayEl); }
+    const list = (B && B.res.loadout) || [];
+    trayEl.hidden = !list.length;
+    trayEl.replaceChildren(...list.map((id, slot) => h('button', { class: 'ctl it-btn', 'data-slot': slot, title: `${ITEMS[id].name}: ${ITEMS[id].tip}`, onclick: () => tapItem(slot) },
+      ico(ITEMS[id].icon), h('span', { class: 'it-tag', 'aria-hidden': 'true' }))));
+    syncTray();
+  }
+  function syncTray() {
+    if (!trayEl || !B) return;
+    for (const b of trayEl.children) {
+      const slot = +b.dataset.slot, it = itemOf(slot), sk = it && SKILLS[it.skill];
+      const used = shownUsed(slot), wait = !used && pending(slot);
+      const none = !used && !wait && sk && sk.revive && !S.list.some(u => u.hero && !u.alive);
+      b.disabled = B.over || used || wait;
+      b.classList.toggle('used', used);
+      b.classList.toggle('pending', wait);
+      b.classList.toggle('idle', !!none);
+      b.classList.toggle('on', !!aim && aim.slot === slot);
+      b.setAttribute('aria-label', `${it.name}${used ? ', used' : wait ? ', about to be used' : none ? ', no one has fallen' : ''}`);
+      b.lastChild.textContent = used ? '\u2713' : '';
+    }
+  }
+  function tapItem(slot) {
+    if (!B || B.over) return;
+    if (aim) { const same = aim.slot === slot; endAim(); if (same) return; }
+    const it = itemOf(slot), sk = SKILLS[it.skill];
+    if (sk.shape !== 'ally') { sfx('click'); useItem(slot, null); return; }
+    const cands = S.list.filter(u => u.hero && (sk.revive ? !u.alive : u.alive));
+    if (!cands.length) { sfx('click'); if (typeof toast === 'function') toast(`${it.name}: no one has fallen.`); return; }
+    sfx('click');
+    aim = { slot, wasPaused: P.paused };
+    setPaused(true);
+    if (!aimEl) { aimEl = h('div', { class: 'it-aim' }); frame.append(aimEl); }
+    aimEl.replaceChildren(
+      h('button', { class: 'it-hint', onclick: () => { sfx('click'); endAim(); } }, ico(it.icon), `${it.name}: tap ${sk.revive ? 'a fallen ally' : 'an ally'}`, h('span', { text: 'Cancel' })),
+      ...cands.map(u => {
+        const [w, hh] = sizeOf(u), [x, y] = css(u.x - w / 2 - 3, headY(u) - 3);
+        const el = h('button', { class: 'it-pick', 'aria-label': `Use on ${u.name}`, onclick: () => aimAt(u) });
+        el.style.cssText = `left:${x}px;top:${y}px;width:${(w + 6) * S.scale}px;height:${(hh + 12) * S.scale}px`;
+        return el;
+      }));
+    aimEl.hidden = false;
+    syncTray();
+  }
+  function aimAt(u) {
+    if (!aim) return;
+    const sk = SKILLS[itemOf(aim.slot).skill];
+    if (!u.hero || (sk.revive ? u.alive : !u.alive)) return;
+    const a = aim;
+    endAim(true);
+    useItem(a.slot, u.id);
+    if (!a.wasPaused) setPaused(false);
+    syncTray();
+  }
+  // Stops aiming. Unless an item was just used, the battle goes back to playing if it was.
+  function endAim(keep) {
+    if (!aim) return;
+    const a = aim;
+    aim = null;
+    if (aimEl) { aimEl.hidden = true; aimEl.replaceChildren(); }
+    if (!keep && !a.wasPaused) setPaused(false);
+    syncTray();
+  }
+
   function finish() {
     if (!B || B.over) return;
     B.over = true;
+    syncTray();
     S.active = null; stepping = false; clearFlags();
     const won = B.res.winner === 0;
     at(P.t + 150, () => {
@@ -642,6 +815,7 @@ const Battle = (() => {
     for (const u of S.list) u.march = null;
     clearFlags();
     B.i = B.res.log.length;
+    endAim(true);
     stepping = false; setPaused(false);
     finish();
   }
@@ -1033,6 +1207,8 @@ const Battle = (() => {
     setUnits(PARTY.map((k, i) => ({ id: 'p' + i, side: 0, slot: i, key: k, name: CLASSES[k].name, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] })));
     for (const u of S.list) u.plate.hidden = true;
     hudEl.hidden = true; $('#controls').hidden = true;
+    endAim(true);
+    if (trayEl) trayEl.replaceChildren();
   }
   function walk(ms) { S.walkUntil = P.t + ms; }
   function init() {
@@ -1043,6 +1219,8 @@ const Battle = (() => {
   }
   return {
     init, run, skip, idle, walk, setSpeed, setPaused, play, stepOnce, resize,
+    // items: use the item in a loadout slot (on a hero's id, for an item that needs one), as the player does
+    useItem, tapItem,
     set onPause(fn) { onPause = fn; },
     get paused() { return P.paused; }, get speed() { return P.speed; }, get stepping() { return stepping; },
     get battle() { return B; }, get busy() { return !!B && !B.over; }, get land() { return S.land; },

@@ -88,8 +88,10 @@ const SKILLS = {
   font: { name: 'Font of Brine', icon: 'wave', shape: 'foes', range: 'magic', power: 0.5, cost: 25, fx: 'font' },
   raise: { name: 'Raise the Drowned', icon: 'holy', shape: 'ally', revive: 0.5, cost: 35, fx: 'raise', tip: 'Raises a fallen ally with half its health.' },
 
-  // Party items: what each does when a party rule uses it.
+  // Party items: what each does when used (see ITEMS). mana: mana restored to each target.
   draught: { name: 'Healing Draught', icon: 'flask', shape: 'ally', healPct: 0.4, item: true, fx: 'mend', tip: 'Restores 40% of one ally’s health.' },
+  salts: { name: 'Smelling Salts', icon: 'salts', shape: 'ally', revive: 0.3, item: true, fx: 'rites', tip: 'A fallen ally gets back up with 30% health.' },
+  lampoil: { name: 'Lamp Oil', icon: 'oil', shape: 'allies', mana: 20, item: true, fx: 'kindle', tip: 'Every ally gains 20 mana.' },
 
   // Nothing it can do: it waits.
   wait: { name: 'Wait', icon: 'mana', shape: 'self', fx: 'none' },
@@ -146,20 +148,29 @@ for (const id in CONDITIONS) CONDITIONS[id].id = id;
 // points, each more than the last: RULE_SLOT_COST[k] is the price of the (k+1)-th extra slot (tune).
 const RULE_SLOT_COST = [1, 2, 3, 4, 5];
 
-// ── Party items and party rules
-// Party rules are read from the top at the start of every hero's turn, before that hero's own rules.
-//   An item rule that is true and possible spends that hero's turn on the item, from the party's stock.
-//   A focus rule names a foe. Heroes attack it whenever their own rule didn't pick a target.
-// An item's skill is what it does when used, so the battle screen animates it like any skill.
-// carry: how many the party takes into each battle (tune).
+// ── Party items
+// The party packs items into its loadout before a battle: one item per slot, used once per battle. They belong to the
+// party, not to a character, so using one takes no one's turn. The player can use them by hand at any moment of a
+// battle, and party rules can use them on their own (below).
+// skill is what an item does (in SKILLS), so the battle screen animates it like any skill. These three stand in until
+// the content spec's items arrive.
 const ITEMS = {
-  draught: { name: 'Healing Draught', icon: 'flask', skill: 'draught', carry: 3, tip: 'Restores 40% of one ally’s health.' },
+  draught: { name: 'Healing Draught', icon: 'flask', skill: 'draught', tip: 'Restores 40% of one ally’s health.' },
+  salts: { name: 'Smelling Salts', icon: 'salts', skill: 'salts', tip: 'A fallen ally gets back up with 30% health.' },
+  lampoil: { name: 'Lamp Oil', icon: 'oil', skill: 'lampoil', tip: 'Every ally gains 20 mana.' },
 };
+// Loadout slots: how many a party starts with and the most it can open (from a home base building later), and the
+// starting loadout (tune).
+const LOADOUT = { slots: [2, 4], items: ['draught', 'salts'] };
+
+// ── Party rules
+// A separate, small list of team-wide rules, read from the top.
+//   An item rule is checked between every two turns. The first that holds uses that item, if one is still packed.
+//   A focus rule names a foe. On each hero's turn, the hero attacks it whenever their own rule didn't pick a target.
 // kind: item (uses ITEMS[item]) or focus. who: for focus, the side its condition must look at.
-const PARTY_ACTIONS = {
-  draught: { kind: 'item', item: 'draught', name: 'Healing Draught', icon: 'flask', tip: 'Restores 40% of one ally’s health. The hero whose turn it is uses it.' },
-  focus: { kind: 'focus', who: 'foe', name: 'Focus fire', icon: 'mark', tip: 'Every hero attacks this foe, unless their own rule picked a target.' },
-};
+const PARTY_ACTIONS = {};
+for (const id in ITEMS) PARTY_ACTIONS[id] = { kind: 'item', item: id, name: ITEMS[id].name, icon: ITEMS[id].icon, tip: ITEMS[id].tip + ' Used at once, if one is packed.' };
+PARTY_ACTIONS.focus = { kind: 'focus', who: 'foe', name: 'Focus fire', icon: 'mark', tip: 'Every hero attacks this foe, unless their own rule picked a target.' };
 // Party rule slots: the starting number and the most the Tactician can add (tune). rules: the starting set.
 const PARTY_RULES = { slots: [2, 5], rules: [{ if: 'ally_hp_lt', n: 30, do: 'draught' }, { if: 'foe_lowest', do: 'focus', on: false }] };
 

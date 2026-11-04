@@ -17,9 +17,13 @@ const SIM = {
   QUEUE: 8,            // turns shown on the turn strip
 };
 
-// setup: { seed, party: [6 slots], foes: [6 slots], scale?: { hp, pow }, partyRules?: [rules], items?: { id: count } }
+// setup: { seed, party: [6 slots], foes: [6 slots], scale?: { hp, pow }, partyRules?: [rules], loadout?: [item ids],
+//          inputs?: [{ at, slot, target }] }
 // A slot holds null, a class or foe id, or { key, name?, rules?, over? } where over replaces stats.
-// partyRules are the team-wide rules (PARTY_ACTIONS), and items the party's stock for this battle.
+// partyRules are the team-wide rules (PARTY_ACTIONS). loadout is the items the party brings, one use per slot.
+// inputs are items the player used by hand: slot's item is used on target (a unit id, or none) just before turn
+// number at (0 is the first turn). The battle screen adds one and simulates again; everything before it is unchanged.
+// Using an item is the party's act, not a character's: it takes no one's turn.
 function simulate(setup) {
   const rng = makeRng((setup.seed >>> 0) || 1);
   const units = [];
@@ -47,15 +51,16 @@ function simulate(setup) {
   const byId = {};
   for (const u of units) byId[u.id] = u;
   const partyRules = (setup.partyRules || []).map(r => Object.assign({ on: true }, r));
-  const items = Object.assign({}, setup.items || {});
+  const pack = (setup.loadout || []).map(id => ({ id, used: false })).filter(p => ITEMS[p.id]);
+  const inputs = (setup.inputs || []).slice().sort((a, b) => a.at - b.at);
 
   const log = [];
   const emit = e => { log.push(e); return e; };
   const stats = {};
   // Per character, for the battle report: damage and healing both ways, the biggest hit, and how often each rule fired.
-  for (const u of units) stats[u.id] = { dealt: 0, taken: 0, healed: 0, healedIn: 0, soaked: 0, dot: 0, crits: 0, best: null, kills: 0, falls: 0, koRounds: [], raised: 0, revives: 0, turns: 0, basic: 0, charged: 0, items: 0, rules: u.rules.map(() => 0) };
-  // How often each party rule fired, and the items used.
-  const party = { rules: partyRules.map(() => 0), used: {} };
+  for (const u of units) stats[u.id] = { dealt: 0, taken: 0, healed: 0, healedIn: 0, soaked: 0, dot: 0, crits: 0, best: null, kills: 0, falls: 0, koRounds: [], raised: 0, revives: 0, turns: 0, basic: 0, charged: 0, rules: u.rules.map(() => 0) };
+  // How often each party rule fired, the items used (by id), and how many of those were used by hand.
+  const party = { rules: partyRules.map(() => 0), used: {}, hand: 0 };
 
   let clock = 0, round = 1, enrage = 0, actor = null;
   const interval = u => 1000 / u.spd;
@@ -197,10 +202,9 @@ function simulate(setup) {
   }
   const usable = (u, r) => r.on && (r.do === u.basic || u.skills.includes(r.do)) && SKILLS[r.do] && (SKILLS[r.do].cost || 0) <= u.mp;
   // Read the rules from the top; the first that holds and is possible fires. Otherwise, the basic attack.
-  // Heroes read the party rules first: an item rule can spend the turn, and a focus rule can pick the foe.
+  // Heroes read the party's focus rules first: they can pick the foe.
   function choose(u) {
     const team = u.side === 0 ? partyPlan(u) : {};
-    if (team.item) return team.item;
     let plan = null;
     for (let i = 0; i < u.rules.length && !plan; i++) {
       const r = u.rules[i];
@@ -220,24 +224,77 @@ function simulate(setup) {
     }
     return plan;
   }
-  // The party rules, read from the top for the hero whose turn it is.
-  // Returns { item: a plan that uses an item, focus: { unit, prule } }.
+  // The party's focus rules, read from the top for the hero whose turn it is. Returns { focus: { unit, prule } }.
   const FOCUS = { shape: 'foe', reach: true };
   function partyPlan(u) {
-    const out = {};
     for (let i = 0; i < partyRules.length; i++) {
       const r = partyRules[i], A = PARTY_ACTIONS[r.do];
-      if (!r.on || !A) continue;
-      if (A.kind === 'item' && !out.item && items[A.item] > 0) {
-        const sk = SKILLS[ITEMS[A.item].skill], got = resolve(u, sk, r);
-        if (got) { out.item = { sk, targets: got.targets, rule: -4, prule: i, item: A.item }; break; }
+      if (!r.on || !A || A.kind !== 'focus') continue;
+      const pick = test(u, r, FOCUS, living(1 - u.side));
+      if (pick && pick !== true) return { focus: { unit: pick, prule: i } };
+    }
+    return {};
+  }
+
+  // ── items: the party's, used between turns by hand (inputs) or by an item rule, taking no one's turn
+  const leader = () => living(0).reduce((b, x) => (!b || x.slot < b.slot ? x : b), null);
+  // Uses the item in a slot. target: a unit id the player chose, or a unit an item rule picked. If it no longer fits
+  // (the ally fell, say), the item finds its own target; with none at all, it isn't used.
+  function useItem(slot, target, by, prule) {
+    const p = pack[slot], lead = leader();
+    if (!p || p.used || !lead) return false;
+    const sk = SKILLS[ITEMS[p.id].skill], pool = poolFor(lead, sk);
+    if (!pool.length) return false;
+    const want = typeof target === 'string' ? byId[target] : target;
+    let targets;
+    if (sk.shape === 'ally') targets = [want && pool.includes(want) ? want : defaultTarget(lead, sk, pool)];
+    else targets = pool;
+    p.used = true;
+    party.used[p.id] = (party.used[p.id] || 0) + 1;
+    if (by === 'hand') party.hand++; else party.rules[prule]++;
+    const ev = { t: 'item', slot, item: p.id, by, targets: targets.map(x => x.id) };
+    if (by === 'rule') ev.prule = prule;
+    emit(ev);
+    for (const x of targets) {
+      if (sk.revive) {
+        if (x.alive) continue;
+        x.alive = true; x.hp = Math.max(1, Math.round(x.maxHp * sk.revive)); x.st = {};
+        x.next = clock + interval(x) * 0.5;
+        stats[x.id].healedIn += x.hp; stats[x.id].raised++;
+        emit({ t: 'revive', src: null, tgt: x.id, hp: x.hp, item: p.id });
+        continue;
       }
-      if (A.kind === 'focus' && !out.focus) {
-        const pick = test(u, r, FOCUS, living(1 - u.side));
-        if (pick && pick !== true) out.focus = { unit: pick, prule: i };
+      if (!x.alive) continue;
+      if (sk.healPct || sk.heal) {
+        const got = Math.min(x.maxHp - x.hp, Math.round(x.maxHp * (sk.healPct || 0)));
+        x.hp += got; stats[x.id].healedIn += got;
+        emit({ t: 'heal', src: null, tgt: x.id, amt: got, hp: x.hp, item: p.id });
+      }
+      if (sk.mana) {
+        const got = Math.min(x.maxMp - x.mp, sk.mana);
+        x.mp += got;
+        emit({ t: 'mana', tgt: x.id, amt: got, mp: x.mp, item: p.id });
       }
     }
-    return out;
+    return true;
+  }
+  // Between turns: the player's items first, then the first item rule that holds (one item at a time).
+  function betweenTurns() {
+    while (inputs.length && inputs[0].at <= actions) { const x = inputs.shift(); useItem(x.slot, x.target, 'hand'); }
+    const lead = leader();
+    if (!lead) return;
+    for (let i = 0; i < partyRules.length; i++) {
+      const r = partyRules[i], A = PARTY_ACTIONS[r.do];
+      if (!r.on || !A || A.kind !== 'item') continue;
+      const slot = pack.findIndex(p => p.id === A.item && !p.used);
+      if (slot < 0) continue;
+      const sk = SKILLS[ITEMS[A.item].skill], pool = poolFor(lead, sk);
+      if (!pool.length) continue;
+      const pick = test(lead, r, sk, pool);
+      if (!pick) continue;
+      useItem(slot, pick === true ? null : pick, 'rule', i);
+      return;
+    }
   }
 
   // ── a turn
@@ -245,16 +302,14 @@ function simulate(setup) {
     const { sk, targets, rule } = plan, st = stats[u.id];
     if (rule >= 0) st.rules[rule]++;
     else if (rule === -2) st.charged++;
-    else if (rule === -4) { st.items++; party.rules[plan.prule]++; items[plan.item]--; party.used[plan.item] = (party.used[plan.item] || 0) + 1; }
     else if (sk.id === u.basic) st.basic++;
     if (plan.focus != null) party.rules[plan.focus]++;
     if (sk.shape === 'foe') u.lastTarget = targets[0];
     u.mp -= sk.cost || 0;
     if (sk.id === u.basic) u.mp = Math.min(u.maxMp, u.mp + u.mpGain);
-    // rule: the rule that chose this (-1 none, -2 a charged attack landing, -4 a party rule: see prule).
-    // focus: the party rule that aimed it, when focus fire did. item and left: the item used and how many remain.
+    // rule: the rule that chose this (-1 none, -2 a charged attack landing). focus: the party rule that aimed it,
+    // when focus fire did.
     const ev = { t: 'act', who: u.id, skill: sk.id, rule, targets: targets.map(x => x.id), mp: u.mp };
-    if (rule === -4) Object.assign(ev, { prule: plan.prule, item: plan.item, left: items[plan.item] });
     if (plan.focus != null) ev.focus = plan.focus;
     emit(ev);
 
@@ -315,7 +370,7 @@ function simulate(setup) {
   function takeTurn(u) {
     actor = u;
     stats[u.id].turns++;
-    emit({ t: 'turn', who: u.id, round, queue: projectQueue() });
+    emit({ t: 'turn', who: u.id, round, k: actions, queue: projectQueue() });
     // Curses and bleeding bite at the start of the turn.
     for (const k of ['doom', 'bleed']) {
       const s = u.st[k];
@@ -350,7 +405,7 @@ function simulate(setup) {
   }
 
   // ── the battle
-  emit({ t: 'start', units: units.map(snap), queue: projectQueue(), partyRules: partyRules.map(r => Object.assign({}, r)), items: Object.assign({}, items) });
+  emit({ t: 'start', units: units.map(snap), queue: projectQueue(), partyRules: partyRules.map(r => Object.assign({}, r)), loadout: pack.map(p => p.id) });
   let winner = -1, actions = 0, stalled = false;
   while (winner < 0) {
     const u = nextActor();
@@ -364,6 +419,7 @@ function simulate(setup) {
         emit({ t: 'enrage', level: enrage, mult: 1 + enrage * SIM.ENRAGE_STEP });
       }
     }
+    betweenTurns();
     takeTurn(u);
     actions++;
     const p = living(0).length, f = living(1).length;
@@ -372,19 +428,17 @@ function simulate(setup) {
     else if (actions >= SIM.MAX_ACTIONS) { winner = 1; stalled = true; }
   }
   emit({ t: 'end', winner, round, actions, stalled });
-  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, party, partyRules: log[0].partyRules, start: log[0].units, final: units.map(snap) };
+  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, party, partyRules: log[0].partyRules, loadout: log[0].loadout, start: log[0].units, final: units.map(snap) };
 }
 
 // A stage's battle, with the fixed party.
-// tactics: { party: [slots of { key, rules }], partyRules, items }. Without it, stageSetup.tactics() is asked (the
+// tactics: { party: [slots of { key, rules }], partyRules, loadout }. Without it, stageSetup.tactics() is asked (the
 // rules editor sets it, in js/rules.js), and otherwise each class's starting rules are used.
 function defaultTactics() {
-  const items = {};
-  for (const k in ITEMS) items[k] = ITEMS[k].carry;
-  return { party: PARTY, partyRules: PARTY_RULES.rules, items };
+  return { party: PARTY, partyRules: PARTY_RULES.rules, loadout: LOADOUT.items };
 }
 function stageSetup(stage, seed, tactics) {
   const t = tactics || (stageSetup.tactics && stageSetup.tactics()) || defaultTactics();
-  return { seed, party: t.party, foes: stage.foes, scale: stage.scale, partyRules: t.partyRules, items: t.items };
+  return { seed, party: t.party, foes: stage.foes, scale: stage.scale, partyRules: t.partyRules, loadout: t.loadout, inputs: [] };
 }
 stageSetup.tactics = null;
