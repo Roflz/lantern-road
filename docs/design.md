@@ -1,6 +1,6 @@
 # Lantern Road: Game Design
 
-Agreed 2026-11-03, with decisions from the screen mockups added the same day. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. Numbers marked *(tune)* are starting values to adjust in play-testing.
+Agreed 2026-11-03, updated 2026-11-04 with decisions from the screen mockups, the content spec and play-testing. The full class, skill, condition, item and status details live in `docs/content-spec.md`. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. Numbers marked *(tune)* are starting values to adjust in play-testing.
 
 ## 1. Pillars
 
@@ -22,6 +22,9 @@ Stages chain on their own until one of these happens:
 You then strengthen the party and push further. Cleared stages can be replayed to farm XP, gear and materials.
 
 ## 3. Battles
+
+### Orientation
+- Battles play sideways (landscape). Every other screen is portrait.
 
 ### Formation
 - Each side has up to 6 characters: 2 in the front row and 4 in the back.
@@ -55,7 +58,8 @@ You then strengthen the party and push further. Cleared stages can be replayed t
 ### Health and mana
 - Characters have health and mana.
 - Skills cost mana, and basic attacks restore a little, so skills come up naturally.
-- Potions are party items that party rules use.
+- Health and mana reset before every battle.
+- Party items (such as potions) are packed into a loadout before battle. Party rules use them on their own, and you can also tap one at any moment to use it by hand, without anyone losing a turn.
 
 ### How a battle ends
 - A battle ends when one side has no one standing.
@@ -76,14 +80,15 @@ Gambit-style behaviour rules, after Final Fantasy XII.
 - You drag rules to reorder them and toggle each one on or off without deleting it.
 
 ### Rule slots
-- Each class starts with 1–2 rule slots and has its own maximum, around 4–6 *(tune)*.
-- You buy extra slots with level-up points, and each extra slot costs more than the last.
+- Every character starts with 3 rule slots. Each class has its own maximum *(tune)*.
+- More slots are learned by training at a home base building (the Masters' Hall), where the character is away for idle time.
 
 ### Party rules
 - A separate, small set of team-wide rules. Examples:
   - "Any ally below 30% health → Healing draught"
   - "Everyone attacks the leader's target"
   - "Return to base when any character reaches X fatigue"
+- Party rules are checked between every turn.
 - Extra party rule slots come from home base buildings.
 
 ### Unlocking conditions
@@ -118,30 +123,39 @@ More conditions come from the home base and from battle rewards:
 | Warden | Front-row tank | Guard skills |
 | Lamplighter | Support | Light-based buffs and dazzles |
 | Crossbowman | Back-row ranged damage | |
+| Duellist | Tank: dodging and countering | Joins later |
+| Alchemist | Area damage and items | Joins later |
+| Barber-Surgeon | Healer: cleansing and fatigue | Joins later |
+| Bellringer | Control: delays, slows and stuns | Joins later |
+| Gravecaller | Summoner | Joins later |
+| Cutpurse | Assassin and thief | Joins later |
+
+Twelve classes to start. The later six join the recruit board region by region. Two of the same class can share a party.
 
 ### Stats
 - Health, Mana, Power, Defense, Speed, Crit chance and Dodge.
 - Each class has its own growth per level.
 
 ### Recruits
-- Recruits arrive with randomised stats within their class's ranges. That makes choosing between two recruits of the same class a real decision.
+- Recruits arrive with randomised level-1 stats within their class's ranges. That makes choosing between two recruits of the same class a real decision.
+- Home base upgrades bring recruits at higher levels, with their points already spent to match.
 
 ### Levels and points
-- XP comes from battles.
-- Each level gives **universal points**. You spend them on any of:
-  - an extra rule slot
-  - a stat increase
-  - a skill point in the class's skill tree
+- XP comes from battles. The level cap is 200.
+- Each level gives 1 **stat point**, and every 5 levels give 1 **skill point**.
+- **Thresholds** at levels 30, 50, 80, 100, 120, 150, 180 and 200 open the next tier of the skill tree and offer a free respec. The respec refunds stat and skill points; a class combination stays.
+- **Combining classes:** at level 50 a character can combine with a second class instead of opening a tier, gaining that class's first tier. At 200 they can combine with a third. From then on, later thresholds can open tiers in any of their trees.
+- **Awakening:** from level 100, a threshold can awaken one skill instead of opening a tier. Skills level from 1 to 5, and a level-5 skill awakens for 5 more skill points.
 
 ### Skill trees
-- Each class has its own skill tree.
-- Nodes unlock new skills, rank skills up and add passives.
+- Each class has its own skill tree, opened tier by tier at thresholds.
+- Trees hold active skills and **passive skills**. Passives are always on once learned and never need a skill slot.
 - You can't take everything.
 - Respeccing costs gold at a home base building.
 
 ### Equipped skills
-- Each character has a basic attack plus 1 equipped skill.
-- A second skill slot unlocks at a later level.
+- Each character has a basic attack plus 1 equipped active skill.
+- One more skill slot comes at level 50 and another at 200, and the Masters' Hall can teach more.
 - Rules decide when the equipped skills are used.
 
 ### Fatigue
@@ -197,12 +211,18 @@ Home base upgrades improve recruiting:
 
 ### Who can wear what
 - **Weapons** come in types tied to classes: swords, crossbows, censers and so on.
-- **Armour** comes in three weights, each with a trade-off: light, medium and heavy. Heavy armour gives more health but less speed.
+- **Armour** comes in three weights, each with a trade-off: light, medium and heavy. Heavy armour gives more health but less speed. Any class can wear any weight, though some suit certain classes better.
 - **Accessories** can be used by anyone, plus a few class-only accessories.
 
 ### Rarity and drops
 - Common, Fine, Rare and Relic. A Relic is unique: you can only own one copy.
 - Drops get stronger in later regions.
+- Stage rewards can include a random gear roll; higher stages roll better. Gear progression beyond that is deliberately undecided for now.
+- Unwanted items sell for gold.
+
+### Party items
+- Items come from timed free potions, loot drops at rarity rates, stage rewards, the home base shop and buildings that brew them.
+- Nothing refills for free.
 
 ### Gear shows on the sprite
 - Every item changes how the hero's sprite looks, whether it's a weapon, armour or an accessory. You can read a hero's kit from their sprite in battle, at the camp and in menus.
@@ -248,6 +268,8 @@ You build the home base with gold and with materials earned in battle. Each regi
 | Infirmary | Speeds up fatigue recovery and adds beds for resting characters |
 | Tactician | Teaches new rule conditions and adds party rule slots |
 | Shrine | Respecs skill trees |
+| Masters' Hall | Trains a character, away for idle time, to gain a skill slot or a rule slot |
+| Shop | Sells party items |
 | Passive-bonus buildings | Small permanent bonuses for the party, e.g. +5% health |
 | Idle buildings | Gains while the app is closed (section 9) |
 
@@ -295,16 +317,16 @@ Stages and foes are defined in data tables so content can grow quickly.
 - **In battle:** lunges, projectiles, spell flashes, hit sparks, damage numbers, status icons, and a fade on defeat. Skill callouts show the rule behind each action.
 - **Rewards:** loot flies into the bag. Level-ups are celebrated after a battle, never mid-battle.
 - **Hero sheet:** the Stats and Gear tabs show the hero's full battle sprite on a small stage, where you can watch each of their skills play out. The Skills and Rules tabs leave that space to their content.
-- **Layout:** every screen is built for one-handed portrait phone use.
+- **Layout:** every screen apart from battles is built for one-handed portrait phone use.
 - **Visual identity:** cozy-gothic pixel art, warm lantern light against the dark, procedural music and sound.
 
 ## 12. Build order
 
 Each step ends with something you can play-test.
 
-1. **Battle engine and battle screen.** A fixed party of 6 fights a few stages. The test: is it fun to watch?
-2. **Rules:** character and party rules, with unlocks.
-3. **Characters:** classes, stats, levels, universal points, skill trees and equipped skills.
+1. **Battle engine and battle screen.** A fixed party of 6 fights a few stages. The test: is it fun to watch? *(done)*
+2. **Rules:** character and party rules, with unlocks. *(done, plus the app shell and saves)*
+3. **Characters:** classes, stats, levels, stat and skill points, thresholds, skill trees, passives and equipped skills.
 4. **Equipment** loot.
 5. **Home base:** the camp, building plots and Renown, recruiting, the roster, fatigue and recovery, the first buildings, materials, idle buildings and offline gains.
 6. **Campaign map** and a fully built Region I.

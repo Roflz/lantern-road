@@ -47,7 +47,6 @@ Damage = Power × the skill's multiplier × the Defense factor, with a ±8% spre
 | Crit | +1%, up to 25 points |
 | Dodge | +1%, up to 25 points |
 | A resistance | +1% to one of the six (section 3), up to 25 points each |
-| A rule slot | 5, 10, 15, 20 and 25 points for slots 2 to 6 *(still open)* |
 
 ### Skills
 - **Active skills** fire when a rule calls them, and a character can only use the actives they have equipped.
@@ -74,11 +73,11 @@ At levels 30, 50, 80, 100, 120, 150, 180 and 200 a character gets a **free respe
 - Outside thresholds, a respec costs gold at the Shrine *(tune)*.
 
 ### The Masters' Hall
-A home-base building where a master teaches a character to use one more active skill. The character is away while they train. Placeholder until you settle it: two lessons at most, 8 hours for the first from level 20, and 24 hours for the second from level 100 *(tune)*.
+A home-base building where a master teaches a character one more active skill slot, or one more rule slot, up to their class's rule-slot maximum. The character is away while they train. Placeholder until you settle it: two lessons at most, 8 hours for the first from level 20, and 24 hours for the second from level 100 *(tune)*.
 
 ### Recruits
 - A recruit's level-1 stats roll within their class's ranges. Growth per level is fixed by class.
-- Recruit-board upgrades bring recruits who start at higher levels, with stats and skills to match. How their points arrive (spent or unspent) is still open.
+- Recruit-board upgrades bring recruits who start at higher levels, with stats and skills to match. They arrive with their points already spent to match their level, and a free respec.
 - Every recruit knows their basic attack and starter skill, carries a Common weapon of their type and comes with the class's starter rules.
 
 ### Shapes, range and rows
@@ -177,18 +176,18 @@ The Lamplighter's Snuff and the Alchemist's Transmute strip these from foes, and
 ### Overview *(tune)*
 | Class | Role | Usual row | Weapon type | Rule slots (start → max) | Basic attack | Starter skill |
 |---|---|---|---|---|---|---|
-| Sellsword | Front-row damage | Front | Swords | 2 → 4 | Strike | Cleave |
-| Hexblade | Curses and damage over time | Back, or front with Blade-Hex | Cursed blades | 2 → 5 | Hex Bolt | Doom |
-| Pilgrim | Healer: restoring | Back | Censers | 2 → 6 | Smite | Mend |
-| Warden | Tank: soaking hits | Front | Mace and shield | 2 → 5 | Mace | Guard |
-| Lamplighter | Support: buffs and speed | Back | Lanterns | 1 → 6 | Flare | Kindle |
-| Crossbowman | Back-row ranged damage | Back | Crossbows | 1 → 5 | Bolt | Aimed Shot |
-| Duellist | Tank: dodging and countering | Front | Rapiers | 2 → 5 | Thrust | Challenge |
-| Alchemist | Area damage and items | Back | Flasks | 1 → 5 | Vial Toss | Firebomb |
-| Barber-Surgeon | Healer: cleansing and fatigue | Back | Bonesaws | 2 → 6 | Lancet Throw | Stitch |
-| Bellringer | Control: delays, slows and stuns | Back | Handbells | 1 → 6 | Clang | Toll |
-| Gravecaller | Summoner | Back | Bone staves | 1 → 5 | Grave Bolt | Raise Thrall |
-| Cutpurse | Assassin and thief | Back | Daggers | 2 → 5 | Throwing Knife | Backstab |
+| Sellsword | Front-row damage | Front | Swords | 3 → 4 | Strike | Cleave |
+| Hexblade | Curses and damage over time | Back, or front with Blade-Hex | Cursed blades | 3 → 5 | Hex Bolt | Doom |
+| Pilgrim | Healer: restoring | Back | Censers | 3 → 6 | Smite | Mend |
+| Warden | Tank: soaking hits | Front | Mace and shield | 3 → 5 | Mace | Guard |
+| Lamplighter | Support: buffs and speed | Back | Lanterns | 3 → 6 | Flare | Kindle |
+| Crossbowman | Back-row ranged damage | Back | Crossbows | 3 → 5 | Bolt | Aimed Shot |
+| Duellist | Tank: dodging and countering | Front | Rapiers | 3 → 5 | Thrust | Challenge |
+| Alchemist | Area damage and items | Back | Flasks | 3 → 5 | Vial Toss | Firebomb |
+| Barber-Surgeon | Healer: cleansing and fatigue | Back | Bonesaws | 3 → 6 | Lancet Throw | Stitch |
+| Bellringer | Control: delays, slows and stuns | Back | Handbells | 3 → 6 | Clang | Toll |
+| Gravecaller | Summoner | Back | Bone staves | 3 → 5 | Grave Bolt | Raise Thrall |
+| Cutpurse | Assassin and thief | Back | Daggers | 3 → 5 | Throwing Knife | Backstab |
 
 - **Sellsword:** fights for the kill. The best single-target melee damage, with bleeds and reach, and more dangerous when hurt.
 - **Hexblade:** wins slowly. Lays Doom, spreads it, detonates it, and takes apart foe healers and casters.
@@ -273,7 +272,7 @@ Some pairings for one character who combines classes at level 50, with the first
 - "Not self" marks a one-ally skill that can't target its user.
 
 ### Sellsword
-*Front row · swords · mana gain 10 · rule slots 2 → 4*
+*Front row · swords · mana gain 10 · rule slots 3 → 4*
 
 A mercenary who fights for the kill. Hits single targets harder than anyone in melee, opens bleeds and reaches into the back row, and grows more dangerous as they get hurt.
 
@@ -352,7 +351,7 @@ A mercenary who fights for the kill. Hits single targets harder than anyone in m
 **Later rules:** "Foe: health below 35% → Finishing Blow". "Foe: healer → Drag Out". "Self: health above 75% → Reckless Swing". "Boss present → Headsman's Swing".
 
 ### Hexblade
-*Back row, or front with Blade-Hex · cursed blades · mana gain 12 · rule slots 2 → 5*
+*Back row, or front with Blade-Hex · cursed blades · mana gain 12 · rule slots 3 → 5*
 
 A cursed duellist who wins slowly. Lays Doom, spreads it across the foe line and detonates it, takes apart healers and casters, or wades into the front row and drinks the life out of what it cuts. Strongest in long fights and against tough single foes.
 
@@ -431,7 +430,7 @@ A cursed duellist who wins slowly. Lays Doom, spreads it across the foe line and
 **Later rules:** "Foe: without Doomed → Doom". "3 or more foes present → Hex Swarm". "Foe: healer → Hush". "Foe: boss or elite → Wither". "Ally: has Guarding → Hex Ward".
 
 ### Pilgrim
-*Back row · censers · mana gain 12 · rule slots 2 → 6*
+*Back row · censers · mana gain 12 · rule slots 3 → 6*
 
 A healer who walks the road on faith. Heals and raises the fallen, prevents damage before it lands, or carries holy fire to the undead. Triage is about order, so the Pilgrim gets the most rule slots.
 
@@ -510,7 +509,7 @@ A healer who walks the road on faith. Heals and raises the fallen, prevents dama
 **Later rules:** "Ally: fallen → Last Rites". "2 or more allies below 60% health → Hymn of Rest". "Ally: has Doomed → Purify". "Ally: has Guarding → Shelter".
 
 ### Warden
-*Front row · mace and shield · mana gain 10 · rule slots 2 → 5*
+*Front row · mace and shield · mana gain 10 · rule slots 3 → 5*
 
 The wall. Takes the hits meant for others, outlasts what it can't stop, or makes every blow cost the foe dearly. Fatigue is measured against max health, so the Warden's huge health pool lets it carry the party's damage, and its fatigue, further than anyone.
 
@@ -589,7 +588,7 @@ The wall. Takes the hits meant for others, outlasts what it can't stop, or makes
 **Later rules:** "Foe: charging a big attack → Shield Toss". "Ally: has Marked → Cover". "Self: health below 25% → Unbroken". "3 or more foes present → Stand Fast".
 
 ### Lamplighter
-*Back row · lanterns · mana gain 12 · rule slots 1 → 6*
+*Back row · lanterns · mana gain 12 · rule slots 3 → 6*
 
 The keeper of the lantern. Makes the party hit harder and act sooner, blinds the dark and strips foes of their protections. The fastest class, and the one whose turns matter most for their timing, so it rewards good rules more than any other.
 
@@ -668,7 +667,7 @@ The keeper of the lantern. Makes the party hit harder and act sooner, blinds the
 **Later rules:** "Foe: charging a big attack → Dazzle". "Ally: has Charging → Light the Way". "Ally: mana below 30% → Share the Flame". "Foe: has Guarding → Snuff". "Foe: spirit → Sunburst".
 
 ### Crossbowman
-*Back row · crossbows · mana gain 10 · rule slots 1 → 5*
+*Back row · crossbows · mana gain 10 · rule slots 3 → 5*
 
 The patient marksman. Hits any row, so the foes' back row is never safe, and sets up crits for the whole party. Rewards protection: a Crossbowman nobody touches gets more accurate.
 
@@ -747,7 +746,7 @@ The patient marksman. Hits any row, so the foes' back row is never safe, and set
 **Later rules:** "Foe: boss or elite → Mark Quarry". "Foe: healer → Pinning Shot". "3 or more foes present → Scatter Shot". "Foe: beast → Barbed Bolt".
 
 ### Duellist
-*Front row · rapiers · mana gain 10 · rule slots 2 → 5 · new*
+*Front row · rapiers · mana gain 10 · rule slots 3 → 5 · new*
 
 A fencer who tanks by not being hit. Taunts foes into attacking, dodges and answers each miss with a counter, or picks one opponent and takes it apart. Where the Warden soaks damage, the Duellist slips it, so they shine against a few big hitters and struggle against hits that can't miss.
 
@@ -826,7 +825,7 @@ A fencer who tanks by not being hit. Taunts foes into attacking, dodges and answ
 **Later rules:** "Self: has Marked → Parry". "Foe: highest attack → Disarm". "Self: without Riposte → Riposte". "Boss present → Thousand Cuts".
 
 ### Alchemist
-*Back row · flasks · mana gain 10 · rule slots 1 → 5 · new*
+*Back row · flasks · mana gain 10 · rule slots 3 → 5 · new*
 
 Throws fire and acid at whole rows, and makes the party's items and brews go further. The best at clearing crowds of weaker foes, and weaker against one tough boss unless it's built to melt armour.
 
@@ -905,7 +904,7 @@ Throws fire and acid at whole rows, and makes the party's items and brews go fur
 **Later rules:** "3 or more foes present → Volatile Mix". "Foe: highest health → Acid Flask". "Foe: charging a big attack → Smoke Pot". "Foe: has Guarding → Transmute".
 
 ### Barber-Surgeon
-*Back row · bonesaws · mana gain 12 · rule slots 2 → 6 · new*
+*Back row · bonesaws · mana gain 12 · rule slots 3 → 6 · new*
 
 The field doctor. Stops bleeding, cures afflictions and patches the worst wounds at a price, then sends the party out fresher than it came in. Where the Pilgrim keeps health topped up, the Surgeon fixes what's wrong and keeps fatigue down.
 
@@ -984,7 +983,7 @@ The field doctor. Stops bleeding, cures afflictions and patches the worst wounds
 **Later rules:** "Ally: has Bleeding → Stitch". "Ally: has Stunned → Tonic". "Ally: health below 25% → Field Surgery". "Ally: highest Power → Adrenaline".
 
 ### Bellringer
-*Back row · handbells · mana gain 12 · rule slots 1 → 6 · new*
+*Back row · handbells · mana gain 12 · rule slots 3 → 6 · new*
 
 Rings the hours. Pushes foes' turns back, slows, stuns and confuses them, while chimes steady the party. Where the Lamplighter speeds the party up, the Bellringer slows the foes down, so together they own the turn strip.
 
@@ -1063,7 +1062,7 @@ Rings the hours. Pushes foes' turns back, slows, stuns and confuses them, while 
 **Later rules:** "Foe: charging a big attack → Knell". "Foe: acts next → Knell". "Ally: has Stunned → Wake". "3 or more foes present → Discord".
 
 ### Gravecaller
-*Back row · bone staves · mana gain 12 · rule slots 1 → 5 · new*
+*Back row · bone staves · mana gain 12 · rule slots 3 → 5 · new*
 
 Raises bone thralls into the party's empty slots, then spends them as shields, as healing or as explosions. Strongest when the party has room to spare, as it does early on, and weaker when every slot is already full.
 
@@ -1151,7 +1150,7 @@ Raises bone thralls into the party's empty slots, then spends them as shields, a
 **Later rules:** "Self: fewer than 1 thrall → Raise Thrall". "3 or more foes present → Corpse Blast". "Ally: health below 30% → Death Pact". "Boss present → Raise Champion".
 
 ### Cutpurse
-*Back row · daggers · mana gain 10 · rule slots 2 → 5 · new*
+*Back row · daggers · mana gain 10 · rule slots 3 → 5 · new*
 
 A thief who strikes from the shadows. Hides from attacks, stabs the foes nobody else can reach, poisons them, and steals gold and loot along the way: the class that pays for itself. Fragile once found, so they want foes busy with someone else.
 
@@ -1339,7 +1338,7 @@ Each Tactician lesson costs gold and the region's material *(tune)*.
 | Switch rule set | Every character loads their saved rule set with that name. | Tactician III |
 
 #### Party items *(tune)*
-As step 2 built them, the party brings a **loadout** into each battle: 2 slots to start, up to 4. Each slot holds one use per battle and refills for free for now. You can use an item by hand at any moment, even while paused, by tapping it and then a hero, and party rules can use items automatically.
+As step 2 built them, the party brings a **loadout** into each battle: 2 slots to start, up to 4. Each slot holds one use per battle, drawn from the party's Bag. Nothing refills for free. You can use an item by hand at any moment, even while paused, by tapping it and then a hero, and party rules can use items automatically.
 
 | Item | Effect |
 |---|---|
@@ -1348,7 +1347,12 @@ As step 2 built them, the party brings a **loadout** into each battle: 2 slots t
 | Lamp Oil | Every ally gains 20 mana. |
 | Bitter Tincture | Removes all harmful statuses from one ally. New in this draft. |
 
-Items are bought at the home base's shop, and building upgrades can brew them. Once the economy is in, loadout slots draw from the Bag instead of refilling for free.
+Items reach the Bag from five sources:
+- **Timed free potions:** a free Healing Draught every so often *(tune)*.
+- **Loot drops** in battle, at rarity rates *(tune)*.
+- **Stage rewards**, which sometimes include items.
+- **The home base shop.**
+- **Building upgrades** that brew them.
 
 #### Saved rule sets
 Each character can save up to 3 named rule sets *(tune)*, and the party can save its own. "Switch rule set" lets a push change tactics on its own, for example before a boss.
@@ -1578,9 +1582,7 @@ The Warden carries fatigue best, with the largest health pool and Iron Will. The
 
 ### Still open
 You passed on these for now, so the spec keeps a placeholder for each:
-- How extra rule slots are earned. The placeholder is stat points, 5 to 25 per slot.
 - The rule-slot maximum for a combined character.
-- Whether higher-level recruits arrive with their points spent or unspent.
 - Whether an item's plain stats grow with the level of the stage it drops from (section 6).
 - The Masters' Hall's lesson times and level requirements.
 
@@ -1601,7 +1603,9 @@ You passed on these for now, so the spec keeps a placeholder for each:
   - Bleeding stacks without limit, and healing doesn't stop it.
 - **Kept as proposed:** Cover catching area hits, thralls as described, and the Cutpurse's gold and loot bonuses.
 - **Rows and armour:** any class can wear any weight. Melee from the back row needs the Halberdier's Hook, except skills with reach.
-- **Party rules and items:** "Always" is a starting condition and party rules fire between turns, both as step 2 built them. Items come from the shop or are brewed by buildings, and unwanted ones sell for gold.
+- **Party rules and items:** "Always" is a starting condition and party rules fire between turns, both as step 2 built them. Items come from timed free potions, loot drops, stage rewards, the shop and buildings, with no free refills. Unwanted ones sell for gold.
+- **Rule slots:** every character starts with 3, and more come from training at a home base building.
+- **Higher-level recruits** arrive with their points already spent to match their level.
 - **Small decisions:**
   - Fatigue counting and foe families stay as proposed for now.
   - Two of one class can share a party.
@@ -1610,10 +1614,10 @@ You passed on these for now, so the spec keeps a placeholder for each:
 
 ## Appendix: notes for the build
 
-- **`docs/design.md` needs updating** in section 5. It still describes universal points and a second skill slot "at a later level". The levels, points, thresholds, combining, awakenings and the Masters' Hall above replace that.
+- **`docs/design.md`** has been updated to match the levels, points, thresholds, combining, awakenings, rule slots and item sources here.
 - **Skills:** each prototype class's two skills become its starter and its second tier-1 active, with the same numbers at level 1.
 - **Stats:** the prototype's stats are the level-1 averages here. Only the Warden's Dodge moves, from 0 to a 0–2% range.
-- **Rule slots** use step 2's numbers: the Warden starts with 2 and the Crossbowman goes up to 5.
+- **Rule slots:** every character starts with 3. More are learned by training at a home base building, which takes idle time away, like extra skill-slot lessons. Each class keeps its own maximum.
 - **Statuses:** Doom, Dazzled, Kindled, Guarding, Charging and Marked keep their prototype numbers. Bleeding now stacks without limit, and healing no longer stops it. The rest are new.
 - **Conditions:** step 2 built 20 of the 42. Add the rest to `CONDITIONS`.
 - **Items:** keep step 2's Healing Draught, Smelling Salts and Lamp Oil, and add the Bitter Tincture.
