@@ -116,3 +116,8 @@ body.no-proto .proto-only{display:none!important}
 
 /* A sheet redrawn in place (a switch flipped in Settings, a tool used in the Prototype panel) doesn't rise again. */
 #sheet .box.quiet{animation:none}
+
+/* A toast while a bottom sheet is open sits over the dimmed strip above it, not on the sheet's title. */
+#frame:has(#sheet.sheet-bottom:not([hidden])) #toasts{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto}
+/* The stage sheet's foe card: what a foe does that its skills don't say (Hidden, healing every turn). */
+.fi-tr{margin:0;font-size:13px;line-height:1.35;color:var(--ember)}

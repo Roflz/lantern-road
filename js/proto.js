@@ -2,7 +2,7 @@
 // Lantern Road · the prototype tools, in one panel (build step 7b). They skip the grind so the user can review later
 // content quickly. They are not part of the game: Settings → Prototype tools opens them, and the "Show prototype tools"
 // toggle there also shows or hides the buttons in place (the camp's chip, Train on the hero sheet, Roll gear in the Bag
-// and on the Gear tab, Rest all on the stage sheet, Learn all on Tactics). Each of those carries the class
+// and on the Gear tab, Learn all on Tactics). Each of those carries the class
 // `proto-only`; <body> gets `no-proto` when the toggle is off (App.applySettings).
 //
 // To remove the tools before release: delete this file and its <script> tag, the elements with `proto-only`, and
@@ -42,8 +42,10 @@ const Proto = (() => {
   const roadLevel = (s = st()) => (STAGES[Campaign.frontier(s)] || STAGES[STAGES.length - 1]).level;
   function trainTo(L, s = st()) { for (const c of s.roster) if (c.level < L) Hero.gainXp(c, Hero.xpBetween(c.level, Math.min(HERO.CAP, L))); }
   function spendPoints(s = st()) { for (const c of s.roster) Hero.autoBuild(c); }
+  // Campaign.restAll (fatigue to 0, kept for the tests), and nobody Spent or in a bed: in the game, rest takes time.
   function restAll(s = st()) {
-    for (const c of s.roster) { c.fatigue = 0; c.spent = false; }
+    Campaign.restAll(s);
+    for (const c of s.roster) c.spent = false;
     if (s.base) s.base.beds = s.base.beds.map(() => null);
   }
   // Free recruits until six stand in the formation, at the party's level, of classes the board offers.
@@ -89,7 +91,7 @@ const Proto = (() => {
       h('h2', { text: 'Prototype tools' }),
       h('p', { class: 'flavor', text: 'They skip the grind so you can try later content quickly. They are not part of the game, and they come out before release.' }),
       h('div', { class: 'setting' }, h('div', { class: 'nm', text: 'Show prototype tools' }),
-        h('div', { class: 'ds', text: 'Also shows the buttons where they’re used: the camp’s chip, Train on the hero sheet, Roll gear in the Bag, Rest all on the stage sheet and Learn all on Tactics.' }),
+        h('div', { class: 'ds', text: 'Also shows the buttons where they’re used: the camp’s chip, Train on the hero sheet, Roll gear in the Bag and on the Gear tab, and Learn all on Tactics.' }),
         h('button', { class: 'small' + (on ? ' on' : ''), role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': 'Show prototype tools', onclick: () => { click(); s.settings.proto = !on; App.applySettings(true); Save.commit(); App.refresh(); show(true); } }, on ? 'On' : 'Off')),
       sect('The road',
         h('p', { class: 'pt-now', text: at ? `${lit} of ${STAGES.length} stages lit · next: ${at.id} ${at.name}, ${R.name}` : `All ${STAGES.length} built stages lit` }),

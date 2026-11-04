@@ -311,6 +311,8 @@ const RoadMap = (() => {
     return h('div', { class: 'foeinfo' },
       h('div', { class: 'fi-h' }, h('b', { text: F.name }), h('span', { text: `${F.boss ? 'Boss' : F.elite ? 'Elite' : 'Foe'} · Lv ${L}${F.tags && F.tags.length ? ' · ' + F.tags.map(t => TAGS[t]).join(', ') : ''}` })),
       h('p', { class: 'flavor', text: F.intro || '' }),
+      // What the foe does that its skills don't say: it starts Hidden, or heals every turn.
+      F.hidden || F.regen ? h('p', { class: 'fi-tr', text: [F.hidden ? 'Starts Hidden: single-target attacks can’t aim at it until it attacks' : null, F.regen ? `Heals ${+(F.regen * 100).toFixed(1)}% of its health every turn` : null].filter(Boolean).join(' · ') }) : null,
       h('div', { class: 'fi-st' }, [['heart', fs.hp, 'Health'], ['sword', Math.round(fs.pow), 'Power'], ['shield', Math.round(fs.def), 'Defense'], ['boot', fs.spd.toFixed(1), 'Speed']].map(([i, v, k]) => h('span', { title: k }, ico(i), v))),
       h('ul', { class: 'fi-sk' }, [F.basic, ...F.skills].filter(id => SKILLS[id]).map(sk), phase),
       h('div', { class: 'fi-res' }, RES_KEYS.map(k => h('span', {}, RESISTS[k].name, h('b', { text: Math.round(fs.res[k]) + '%' })))));

@@ -441,12 +441,17 @@ const TIPS = {
   regen: 'Regenerating: this foe heals at the start of every turn. Hit it hard and fast.',
   splash: 'Splash: a heavy blow on the front row spills onto the hero behind.',
   threshold: 'A threshold: choose what it opens on the hero’s Skills tab, the next tier or more.',
+  move: 'Move: a rule sent this hero to the other row. It costs the turn.',
+  gather: 'Gather: no attack this turn, but twice the mana back.',
 };
 function showTip(k, text) { Guide.tip(k, text || TIPS[k]); }
 const isHeroId = id => /^p\d$/.test(id);
 function battleTip(e) {
   if (!current) return;
   Guide.battleEvent(e);
+  // A foe that starts the battle Hidden (Region III's Hanged Man): said at the first turn, before anyone misses it.
+  if (e.t === 'turn' && current.res && current.res.start.some(u => u.side === 1 && u.st && u.st.hidden)) showTip('hidden');
+  if (e.t === 'act' && isHeroId(e.who) && (e.skill === 'move' || e.skill === 'gather')) showTip(e.skill);
   if (e.t === 'status' && e.on && isHeroId(e.who) && (e.key === 'bleed' || e.key === 'marked')) showTip(e.key);
   else if (e.t === 'hit' && e.guard && e.tgt[0] === 'f') {
     const g = current.res && current.res.start.find(u => u.id === e.tgt);

@@ -120,7 +120,7 @@ const Guide = (() => {
     recruitboard: () => ({ line: 'It stands at camp, and your first recruit is free.', label: 'Recruit', fn: goBoard }),
     items: () => ({ line: 'Two Healing Draughts are packed. A party rule uses one when an ally drops below half health, or tap one in battle.', label: 'The loadout', fn: () => App.actions.tactics('party', 'map') }),
     keepgoing: () => ({ line: 'After a win the party walks on to the next stage. The come-home rule brings everyone back at 75 fatigue.' }),
-    tactician: () => ({ line: 'Thresholds, Focus fire, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
+    tactician: () => ({ line: 'Thresholds, Focus fire, the Move action, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     gravecaller: () => ({ line: 'A new class joins the Recruit Board: the Gravecaller, who raises thralls from the fallen.', label: 'Recruit', fn: goBoard }),
   };
   function newRow(id) {
