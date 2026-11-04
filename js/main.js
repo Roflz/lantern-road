@@ -376,6 +376,7 @@ $('#bMenu').addEventListener('click', () => { sfx('click'); openMenu(); });
 $('#hudRound').addEventListener('click', e => toast(e.currentTarget.dataset.tip.replace('|', ': ')));
 document.addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
+  if (Title.up) return; // the title takes its own keys: Enter or Space begins, Escape closes the servers
   if (!sheet.hidden || !scr.hidden) {
     if (e.key !== 'Escape') return;
     if (!sheet.hidden && sheet.className === 'menu') resumeFromMenu();
@@ -391,23 +392,43 @@ document.addEventListener('keydown', e => {
 });
 
 // ── boot
+// Every boot opens on the title (js/title.js), which loads the game behind its lanterns: the fonts, the sprites, and
+// the save with its cloud copy. One tap begins.
 // When the page is republished or reloaded, a viewer mid-battle gets the same battle again: the same seed replays it.
+let hotData = null;
 function boot(data) {
+  hotData = data || null;
+  Title.run({ load: loadSave, prepare: prepareSave, begin });
+}
+// The last server's save, then its cloud copy when the page runs as an artifact. The title waits up to 6 seconds for
+// the cloud; a copy that comes later still replaces the save.
+async function loadSave(report) {
   Save.load();
+  report('save', 1);
+  await Promise.race([Save.initCloud(), new Promise(r => setTimeout(r, 6000))]);
+  report('cloud', 1);
+}
+// The save the title opens on, made ready to play: once at boot (first), and again for another server's save.
+function prepareSave(first) {
   Campaign.ensure();
   // The camp listens to the road from the start, so a battle resolved below still counts for Renown and items.
   if (typeof Base !== 'undefined') Base.prepare();
   // Republished while a battle played: the same seed replays it. Back after closing the app: the battle that was
   // under way is resolved now, and the party comes home (campaign spec §7.5). Nothing played while the app was closed.
+  const data = first ? hotData : null;
   if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) progress().current = { stage: data.stage, seed: data.seed };
   else if (progress().current) resolveClosed();
   // The camp catches up on the time away (js/base.js): rest, lessons, idle buildings, the board and the free draught.
   if (typeof Base !== 'undefined') Base.start();
+}
+// The tap on the title: a returning player goes to camp (or the battle under way), with "While you were away" first
+// after 5 minutes or more; a new save goes on to the first pick.
+function begin() {
   Battle.init();
   Battle.onPause = () => syncControls();
   Battle.onEvent = battleTip;
   App.start();
-  Guide.boot();
+  startMusic();
   if (progress().rebuilt) { delete progress().rebuilt; Save.commit(); setTimeout(() => toast('The road was rebuilt: Region I has 18 stages now. Your heroes keep their levels and gear.', 'tip'), 600); }
 }
 // The battle under way when the app closed: resolved from its seed, its rewards settled, and the trip over.

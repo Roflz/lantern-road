@@ -7,7 +7,7 @@
 //   new things    the trip summary on the Road tab lists what the trip unlocked, each with one line and a button that
 //                 goes straight to it: open Tactics, the Recruit Board, build the blueprint, see the Relic.
 //   tab dots      a dot on Base, Party, Bag or Road when something there waits for you.
-//   the title     a short title card over the first pick of a new game.
+// The title card over a new game's first pick is now the title screen, on every boot (js/title.js).
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
 // and Settings → First-time tips turns them all off. The new-thing rows are part of the trip summary and always show.
 
@@ -161,23 +161,6 @@ const Guide = (() => {
     return out;
   }
 
-  // ── the title: a new game opens on the name of the road, over the first pick
-  function intro() {
-    if (noMotion()) return;
-    const el = h('div', { class: 'intro', 'aria-hidden': 'true' },
-      h('div', { class: 'in-glow' }), h('div', { class: 'in-l' }, ico('lantern')),
-      h('div', { class: 'in-t', text: 'Lantern Road' }),
-      h('div', { class: 'in-s', text: 'Light the road, one lantern at a time' }));
-    frame().append(el);
-    const go = () => { if (!el.isConnected || el.classList.contains('out')) return; el.classList.add('out'); setTimeout(() => el.remove(), 700); };
-    el.addEventListener('pointerdown', go);
-    setTimeout(go, 2300);
-  }
-  function boot() {
-    const s = st();
-    if (s && !s.roster.length) intro();
-  }
-
   if (typeof App !== 'undefined') App.actions.dots = dots;
-  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, dots, visit, intro, boot };
+  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, dots, visit };
 })();

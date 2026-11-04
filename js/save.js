@@ -5,6 +5,12 @@
 // (Not data/users/<id>/save: the roguelike this link used to hold keeps its own save there, with `v: 1` and a `rev`
 // of its own. Read as one of ours it would migrate into an empty game and win over the real one.)
 //
+// Servers (the title's server picker, js/title.js, a placeholder for multiplayer): each server keeps its own save.
+// S1 keeps the save the game always had, under the same key and cloud path. S2 and up save beside it, with a "-s2"
+// suffix: lantern-road-save-s2 and data/users/<id>/game-s2. A small index (lantern-road-servers, and
+// data/users/<id>/servers in the cloud) remembers the last server used, and each server's lead hero, their look and
+// Renown, so the picker can show them without loading every save.
+//
 // To extend the state in a later step:
 //   1. add the new fields to defaultState(), so new players and old saves both get them;
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
@@ -12,9 +18,12 @@
 
 const SAVE_VERSION = 5;
 const SAVE_KEY = 'lantern-road-save';
-const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
-const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
+const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
+const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
 const LEGACY_IDLE = 'lantern-road-idle-v1';      // the step 1 prototype's save: cleared stages, best rounds, speed
+const SERVERS_KEY = 'lantern-road-servers';      // the last server used, and a line on each server with a save
+// A server's own key: S1 has the keys above, S2 and up the same with "-s2" and so on (-bak and -broken after it).
+const saveKey = (n, part = '') => (n > 1 ? `${SAVE_KEY}-s${n}` : SAVE_KEY) + part;
 
 // Each region drops one material more often than the others (design §8). The names are placeholders.
 const MATERIALS = [
@@ -201,6 +210,7 @@ function upgrade(d) {
 
 const Save = (() => {
   let state = null;
+  let server = 1;      // the server whose save this is (js/title.js picks it)
   // What happened when the game loaded, for the app to report: where the save came from, and the time away.
   const info = { source: 'new', recovered: null, awayMs: 0, cloud: 'off', savedAt: 0 };
   let replaced = null; // called when a newer copy arrives from the cloud
@@ -212,18 +222,63 @@ const Save = (() => {
     try { return { data: upgrade(JSON.parse(raw)) }; } catch (e) { return { broken: true, error: e }; }
   }
 
-  // Read the save, falling back to the backup and then to a fresh start. Never throws.
+  // ── the servers' index: the last server used, and a line on each server with a save
+  let idx = null;
+  const cleanLine = e => (isObj(e) ? {
+    lead: typeof e.lead === 'string' && CLASSES[e.lead] ? e.lead : null,
+    look: Array.isArray(e.look) ? e.look.slice(0, 3).map(x => (typeof x === 'string' ? x : null)) : null,
+    renown: Number.isFinite(e.renown) ? e.renown : 1,
+    at: Number.isFinite(e.at) ? e.at : 0,
+  } : null);
+  function readIndex() {
+    let x = null;
+    try { x = JSON.parse(read(SERVERS_KEY) || 'null'); } catch (e) { x = null; }
+    const out = { last: 1, saves: {} };
+    if (isObj(x) && Number.isInteger(x.last) && x.last >= 1) out.last = x.last;
+    if (isObj(x) && isObj(x.saves)) for (const k in x.saves) { const e = cleanLine(x.saves[k]); if (e && Number(k) >= 1) out.saves[Number(k)] = e; }
+    return out;
+  }
+  const index = () => idx || (idx = readIndex());
+  // A save's line: its lead hero (the first in the party, or on the roster), their look, and the Renown level.
+  function line(s) {
+    const id = s.party.find(Boolean) || (s.roster[0] && s.roster[0].id), c = id ? s.roster.find(x => x.id === id) : null;
+    return { lead: c ? c.cls : null, look: c && typeof Items !== 'undefined' ? Items.look(c) : null, renown: typeof Base !== 'undefined' ? Base.renown(s).level : 1 };
+  }
+  // Notes the current server in the index, after a load or a commit.
+  function note() {
+    const I = index(), e = Object.assign(line(state), { at: Date.now() }), old = I.saves[server];
+    const changed = !old || old.lead !== e.lead || old.renown !== e.renown || JSON.stringify(old.look) !== JSON.stringify(e.look);
+    I.saves[server] = e; I.last = server;
+    store(SERVERS_KEY, JSON.stringify(I));
+    if (changed) queueIndex();
+  }
+  // The server list, a placeholder until real servers come: every server with a save, then the newest, one past the
+  // highest used, so a fresh start is always there. The statuses are placeholders too: yours Busy, the newest New.
+  function servers() {
+    const I = index(), mine = Object.keys(I.saves).map(Number).sort((a, b) => a - b);
+    const newest = Math.max(server, ...mine) + 1;
+    return { current: server, newest, list: mine.map(n => Object.assign({ n, status: 'busy', mine: true }, I.saves[n])).concat([{ n: newest, status: 'new', mine: false }]) };
+  }
+
+  // Read the last server's save. Never throws.
   function load() {
-    const raw = read(SAVE_KEY), main = parse(raw);
-    if (main.data) { state = main.data; info.source = 'local'; store(SAVE_BAK, raw); }
+    idx = readIndex();
+    server = idx.last;
+    return loadServer();
+  }
+  // Read the current server's save, falling back to its backup and then to a fresh start.
+  function loadServer() {
+    const raw = read(saveKey(server)), main = parse(raw);
+    info.source = 'new'; info.recovered = null;
+    if (main.data) { state = main.data; info.source = 'local'; store(saveKey(server, '-bak'), raw); }
     else if (main.broken) {
-      store(SAVE_BROKEN, raw);
-      const bak = parse(read(SAVE_BAK));
+      store(saveKey(server, '-broken'), raw);
+      const bak = parse(read(saveKey(server, '-bak')));
       if (bak.data) { state = bak.data; info.source = 'backup'; info.recovered = 'backup'; }
       else { state = defaultState(); info.source = 'new'; info.recovered = 'fresh'; }
-      console.warn('Lantern Road: the save could not be read (' + main.error.message + '). ' + (info.recovered === 'backup' ? 'Restored the backup.' : 'Started fresh; the broken save is kept under ' + SAVE_BROKEN + '.'));
+      console.warn('Lantern Road: the save could not be read (' + main.error.message + '). ' + (info.recovered === 'backup' ? 'Restored the backup.' : 'Started fresh; the broken save is kept under ' + saveKey(server, '-broken') + '.'));
     } else {
-      const old = parse(read(LEGACY_IDLE));
+      const old = server === 1 ? parse(read(LEGACY_IDLE)) : {};
       if (old.data) { state = old.data; info.source = 'legacy'; }
       else state = defaultState();
     }
@@ -234,40 +289,71 @@ const Save = (() => {
     state.sessions++;
     state.lastSeen = now;
     writeLocal();
+    note();
     return state;
+  }
+
+  // Moves to server n: this server's save is written first (local and cloud), then n's is read, or, fresh, a new game
+  // starts there. The other servers' saves stay as they were. The switch is done when this returns; the promise
+  // settles once the cloud copy of n's save has been read.
+  function use(n, fresh) {
+    n = Math.max(1, Math.floor(n) || 1);
+    if (n === server && !fresh) return Promise.resolve(state);
+    if (state) { writeLocal(); queueCloud(true); }
+    clearTimeout(timer);
+    doc = null;
+    server = n;
+    if (fresh) {
+      const raw = read(saveKey(n));
+      if (raw) store(saveKey(n, '-bak'), raw); // whatever was there is kept as the backup
+      state = defaultState(); state.sessions = 1;
+      info.source = 'new'; info.recovered = null; info.awayMs = 0;
+      writeLocal(); note();
+    } else loadServer();
+    const done = () => { if (fresh && server === n) commit(); return state; };
+    return cloud ? loadCloud().then(done) : Promise.resolve(done());
   }
 
   function writeLocal() {
     state.lastSeen = Date.now();
-    if (store(SAVE_KEY, JSON.stringify(state))) info.savedAt = state.lastSeen;
+    if (store(saveKey(server), JSON.stringify(state))) info.savedAt = state.lastSeen;
   }
   // Save a change that matters: it bumps the revision and goes to the cloud too.
   function commit() {
     if (!state) return;
     state.rev++;
     writeLocal();
+    note();
     queueCloud();
   }
   // Note that the game is still open: refreshes lastSeen without a new revision.
   function touch() { if (state) writeLocal(); }
 
-  // ── the artifact db, when the page has the db and user capabilities
-  let doc = null, writing = false, again = false, timer = 0;
+  // ── the artifact db, when the page has the db and user capabilities: each server's save, and the index
+  let cloud = null, connecting = null, doc = null, idxDoc = null, timer = 0, idxTimer = 0;
+  let chain = Promise.resolve(); // the cloud writes, one after another, each with the doc and data of its moment
+  function write(ref, data) {
+    chain = chain.then(() => ref.set(data)).then(() => { if (ref === doc) info.cloud = 'synced'; }, e => {
+      if (e && e.code !== 'unavailable' && e.code !== 'resource_exhausted') { if (ref === doc) { doc = null; info.cloud = 'off'; } }
+      else if (ref === doc) info.cloud = 'retrying';
+    });
+    return chain;
+  }
   function queueCloud(now) {
     if (!doc) return;
     clearTimeout(timer);
     if (now) cloudWrite(); else timer = setTimeout(cloudWrite, 1500);
   }
-  async function cloudWrite() {
-    if (!doc) return;
-    if (writing) { again = true; return; }
-    writing = true;
-    try { await doc.set(JSON.parse(JSON.stringify(state))); info.cloud = 'synced'; }
-    catch (e) { if (e && e.code !== 'unavailable' && e.code !== 'resource_exhausted') { doc = null; info.cloud = 'off'; } else info.cloud = 'retrying'; }
-    writing = false;
-    if (again) { again = false; cloudWrite(); }
+  function cloudWrite() { if (doc && state) write(doc, JSON.parse(JSON.stringify(state))); }
+  function queueIndex() {
+    if (!idxDoc) return;
+    clearTimeout(idxTimer);
+    idxTimer = setTimeout(() => { if (idxDoc) write(idxDoc, { saves: JSON.parse(JSON.stringify(index().saves)) }); }, 2000);
   }
-  async function initCloud() {
+  const path = (id, n) => 'data/users/' + id + '/game' + (n > 1 ? '-s' + n : '');
+  // Connects once; later calls get the same promise.
+  function initCloud() { return connecting || (connecting = connect()); }
+  async function connect() {
     try {
       const cl = window.claude;
       if (!cl || typeof cl.use !== 'function') return;
@@ -275,8 +361,28 @@ const Save = (() => {
       if (!db || !user) return;
       const id = await user.id();
       if (!id) return;
-      const ref = db.doc('data/users/' + id + '/game');
-      const snap = await ref.get();
+      cloud = { db, id };
+      await syncIndex();
+      await loadCloud();
+    } catch (e) { doc = null; info.cloud = 'off'; }
+  }
+  // The index from the cloud, merged with this device's: each server's newer line wins.
+  async function syncIndex() {
+    try {
+      const ref = cloud.db.doc('data/users/' + cloud.id + '/servers'), snap = await ref.get(), I = index();
+      const remote = snap.exists && isObj(snap.data()) && isObj(snap.data().saves) ? snap.data().saves : {};
+      for (const k in remote) { const e = cleanLine(remote[k]), n = Number(k); if (e && n >= 1 && (!I.saves[n] || e.at > I.saves[n].at)) I.saves[n] = e; }
+      store(SERVERS_KEY, JSON.stringify(I));
+      idxDoc = ref;
+      if (Object.keys(I.saves).some(k => !isObj(remote[k]) || !(remote[k].at >= I.saves[k].at))) queueIndex();
+    } catch (e) { idxDoc = null; }
+  }
+  // The current server's save from the cloud: the copy with the higher rev wins.
+  async function loadCloud() {
+    const n = server;
+    try {
+      const ref = cloud.db.doc(path(cloud.id, n)), snap = await ref.get();
+      if (n !== server) return; // moved to another server meanwhile
       doc = ref; info.cloud = 'synced';
       if (snap.exists) {
         let d = null;
@@ -284,17 +390,17 @@ const Save = (() => {
         if (d && d.rev > state.rev) {
           // Keep this device's time-away bookkeeping: lastSeen is about this session, not the other device's.
           d.away = state.away; d.sessions = Math.max(d.sessions, state.sessions);
-          state = d; writeLocal();
+          state = d; writeLocal(); note();
           if (replaced) replaced(state);
         } else if (!d || state.rev > d.rev) queueCloud(true);
       } else if (state.rev > 0) queueCloud(true);
-    } catch (e) { doc = null; info.cloud = 'off'; }
+    } catch (e) { if (n === server) { doc = null; info.cloud = 'off'; } }
   }
 
   // Start again from nothing. The old save stays in the backup slot.
   function reset() {
-    const raw = read(SAVE_KEY);
-    if (raw) store(SAVE_BAK, raw);
+    const raw = read(saveKey(server));
+    if (raw) store(saveKey(server, '-bak'), raw);
     state = defaultState();
     state.sessions = 1;
     commit();
@@ -305,8 +411,8 @@ const Save = (() => {
   function flush() { if (state) { writeLocal(); queueCloud(true); } }
 
   return {
-    load, commit, touch, flush, reset, initCloud,
-    get state() { return state; }, info,
+    load, commit, touch, flush, reset, initCloud, use, servers,
+    get state() { return state; }, get server() { return server; }, info,
     set onReplace(fn) { replaced = fn; },
     char: id => state.roster.find(c => c.id === id) || null,
   };

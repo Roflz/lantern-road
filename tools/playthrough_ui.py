@@ -87,6 +87,11 @@ def main():
                 build: Base.available(s).filter(id => Base.canPay(Base.cost(id, 1), s)).length > 0 && s.base.plots.some((x, i) => i < Base.plotsCleared(s) && !x),
                 trip: !!s.campaign.trip, cleared: s.campaign.cleared.length }; }""")
 
+        # ── the title (js/title.js): once it has loaded, a tap begins
+        page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+        shot('title')
+        if not tap('#title', None, 1500):
+            problems.append('no title to tap')
         # ── the first pick
         if not tap('.pickc', a.hero.capitalize()) and not tap('.pickc'):
             problems.append('no first pick on a new game')

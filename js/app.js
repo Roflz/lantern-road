@@ -249,6 +249,7 @@ const App = (() => {
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = Date.now(); Save.flush(); return; }
+    if (!Save.state) return; // still on the title, before the save has loaded
     // Back after a while with the page left open (a phone switching apps): count it as time away too.
     const ms = hiddenAt ? Date.now() - Save.state.lastSeen : 0;
     hiddenAt = 0;

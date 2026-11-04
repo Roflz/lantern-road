@@ -336,6 +336,7 @@ Stages and foes are defined in data tables so content can grow quickly.
 
 ## 11. Visuals and flow
 
+- **Title:** every boot opens on the title (`docs/mockups/title.html`): the road's lanterns light as the game loads, then one tap begins. Its server picker is a placeholder for multiplayer. Servers are numbered, each keeps its own save, and a new one starts a fresh save there.
 - **Between stages:** the party walks the lit road between stages, and each battle starts where they stop.
 - **In battle:** lunges, projectiles, spell flashes, hit sparks, damage numbers, status icons, and a fade on defeat. Skill callouts show the rule behind each action.
 - **Rewards:** loot flies into the bag. Level-ups are celebrated after a battle, never mid-battle.

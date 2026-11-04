@@ -5,10 +5,12 @@ Run it turned (a touch phone held upright, the default), flat, and at desktop si
   python tools/frame_check.py --w 844 --h 390 --touch  # a phone on its side
   python tools/frame_check.py --w 1280 --h 720         # a desktop window with a mouse: letterboxed, never turned
 
-It checks that a tap lands where it was aimed, in design pixels; the camp turns under a drag along the frame and not
-across it; a roster row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings, the Road map and Tactics
-scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at 3×, the coach mark rings
-the thing it points at, and a tap on the HUD answers; and, with touch, the frame keeps clear of emulated notches.
+It checks that the title covers the frame with its scene at 3×, and its server picker opens, asks before a new server,
+and closes; a tap lands where it was aimed, in design pixels, and on the title it begins; the camp turns under a drag
+along the frame and not across it; a roster row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings,
+the Road map and Tactics scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
+3×, the coach mark rings the thing it points at, and a tap on the HUD answers; starting S2 from the title, playing,
+reloading and switching back to S1 leaves both saves intact; and, with touch, the frame keeps clear of emulated notches.
 Fingers are CDP touch events, so the browser's own touch scrolling and pointer events run as on a phone. --shots DIR
 saves a few screenshots.
 """
@@ -114,10 +116,25 @@ def main():
                 tap_at(r)
             return bool(r)
 
-        # 1. a pointer lands where it was aimed, in design pixels
+        # 0. the title (js/title.js): it covers the stage with its art at 3×, and the server picker opens and closes
+        page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+        tb = js("(() => { const b = Frame.box(document.getElementById('title')), cv = document.querySelector('#title .tt-cv'); return [b.left, b.top, b.width, b.height, cv.width * 3 === parseFloat(cv.style.width), cv.height]; })()")
+        check(abs(tb[0]) < 1 and abs(tb[1]) < 1 and abs(tb[2] - info['W']) < 1 and abs(tb[3] - 390) < 1 and tb[4] and tb[5] == 130, f'the title covers the stage with its scene at 3x ({[round(v) if isinstance(v, float) else v for v in tb]})')
+        shot('title')
+        tap_el('.tt-pill')
+        check(js("!!document.querySelector('#title .tt-dlg') && document.querySelectorAll('.tt-svr').length === 2"), 'a tap on the server pill opens the servers: S1, and S2 new')
+        tap_el('.tt-svr:not(.cur)')
+        check(js("!!document.querySelector('.tt-cf') && /Start on S2\\?/.test(document.querySelector('.tt-cf').textContent)"), 'a new server asks first')
+        tap_el('.tt-cf button:not(.pri)')
+        tap_el('.tt-x')
+        check(js("!document.querySelector('.tt-layer').children.length && Save.server === 1"), 'Cancel, then the close button: back on the title, still on S1')
+
+        # 1. a pointer lands where it was aimed, in design pixels; on the title, that tap begins
         tap_at(to_client(200, 120))
+        page.wait_for_timeout(600)
         seen = js('__seen')
-        check(bool(seen) and abs(seen[0][1] - 200) < 1.5 and abs(seen[0][2] - 120) < 1.5, f'a tap at design (200, 120) reads as {seen[:1]}')
+        check(bool(seen) and abs(seen[-1][1] - 200) < 1.5 and abs(seen[-1][2] - 120) < 1.5, f'a tap at design (200, 120) reads as {seen[-1:]}')
+        check(js("!Title.up && App.current === 'home'"), f'that tap on the title begins: the game opens on the camp ({js("App.current")})')
 
         # 2. a new game; the camp card's Map button, tapped where it is drawn
         js("Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
@@ -242,7 +259,37 @@ def main():
         shot('battle')
         check(tap_el('#hudRound') and js("[...document.querySelectorAll('#toasts .toast')].some(t => /Enrage/.test(t.textContent))"), 'a tap on the round counter shows its toast')
 
-        # 8. notches: 47px safe-area insets at both ends of the frame's long side, which it keeps clear of
+        # 8. servers keep their own saves: start S2 from the title, play a little, reload, and switch back to S1
+        def title_up():
+            page.reload()
+            page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+            js(HELPERS)
+        snap = "JSON.stringify({ n: Save.state.roster.length, ids: Save.state.roster.map(c => c.id + c.cls + c.level), gold: Save.state.currencies.gold, lit: Save.state.campaign.cleared.length })"
+        title_up()  # the battle under way is resolved now, as when the app is closed mid-battle
+        s1 = js(snap)
+        check(js('Save.server') == 1 and js('Save.state.roster.length') >= 4, 'a reload opens the title on S1, with its save')
+        tap_el('.tt-pill'); tap_el('.tt-svr:not(.cur)'); tap_el('.tt-cf .pri')
+        page.wait_for_function("typeof Title !== 'undefined' && Title.ready && Save.server === 2", timeout=20000, polling=50)
+        check(js("Save.server === 2 && !Save.state.roster.length && /S2/.test(document.querySelector('.tt-pill').textContent)"), 'Start on S2: a fresh save there, and the pill shows S2')
+        shot('title-s2')
+        tap_at(to_client(200, 120))
+        page.wait_for_timeout(800)
+        js("Base.newGame('pilgrim', Save.state); Tactics.owner(Save.state.roster[0].id); Save.state.currencies.gold = 4321; Save.commit(); 'ok'")
+        title_up()
+        check(js("Save.server === 2 && Save.state.currencies.gold === 4321 && Save.state.roster[0].cls === 'pilgrim'"), 'the next boot opens on S2, the last server used, with its save')
+        tap_el('.tt-pill')
+        check(js("[...document.querySelectorAll('.tt-svr')].map(b => b.getAttribute('aria-label')).join() === 'S1, your server,S2, your server, current,S3, new'"), 'the servers: S1 and S2 yours, S3 new')
+        check(js("[...document.querySelectorAll('.tt-svr .tt-pf')].length === 2"), 'each of your servers shows its lead hero')
+        shot('servers')
+        tap_el('.tt-svr:not(.cur)')
+        page.wait_for_function("typeof Title !== 'undefined' && Title.ready && Save.server === 1", timeout=20000, polling=50)
+        check(js(snap) == s1, f'back on S1: its save exactly as it was ({s1})')
+        check(js("(() => { const s = JSON.parse(localStorage.getItem('lantern-road-save-s2')); return s.currencies.gold === 4321 && s.roster.length === 1 && s.roster[0].cls === 'pilgrim'; })()"), 'and S2 keeps its own save beside it')
+        tap_at(to_client(200, 120))
+        page.wait_for_timeout(800)
+        check(js("!Title.up && Save.server === 1 && ['home', 'map'].includes(App.current)"), f'the tap begins on S1 (on {js("App.current")}: a trip summary waiting opens the Road, as before)')
+
+        # 9. notches: 47px safe-area insets at both ends of the frame's long side, which it keeps clear of
         if a.touch:
             ctx2 = b.new_context(viewport={'width': a.w, 'height': a.h}, device_scale_factor=1, is_mobile=True, has_touch=True)
             p2 = ctx2.new_page()

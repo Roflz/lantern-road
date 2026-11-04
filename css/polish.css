@@ -32,15 +32,6 @@
 .newrow .small{min-height:40px;min-width:0;padding:0 9px;font-size:9px;white-space:nowrap}
 .tripcard{max-height:calc(100% - 152px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
 
-/* ── the title over a new game's first pick */
-.intro{position:absolute;inset:0;z-index:11;display:grid;place-content:center;justify-items:center;gap:10px;background:radial-gradient(ellipse 70% 45% at 50% 46%,#2a1a14 0%,#120c14 55%,#07050b 100%);cursor:pointer;animation:fadein .5s}
-.intro.out{animation:fadeout .65s forwards;pointer-events:none}
-.in-glow{position:absolute;left:50%;top:44%;width:240px;height:240px;margin:-120px 0 0 -120px;border-radius:50%;background:radial-gradient(circle,rgba(244,166,70,.35),rgba(244,166,70,0) 65%);animation:breathe2 2.4s ease-in-out infinite}
-@keyframes breathe2{50%{transform:scale(1.12);opacity:.8}}
-.in-l .ico{width:44px;height:44px;filter:drop-shadow(0 0 12px rgba(244,166,70,.9));animation:titlein .8s .1s both}
-.in-t{position:relative;font:52px/1 var(--f-display);color:var(--bone);text-shadow:0 0 30px rgba(244,166,70,.45),0 3px 0 #000;animation:titlein .9s .25s both}
-.in-s{position:relative;font:9px var(--f-pixel);letter-spacing:.18em;text-transform:uppercase;color:var(--ember);animation:titlein .9s .6s both}
-
 /* ── the prototype tools: one look everywhere, and one switch hides them all */
 body.no-proto .proto-only{display:none!important}
 .protobox .kicker{display:flex;align-items:center;gap:8px}
