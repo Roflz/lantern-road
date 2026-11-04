@@ -8,7 +8,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
@@ -41,7 +41,13 @@ function defaultState() {
     party: roster.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6), // formation slots 0-5: 2 front, 4 back
     inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js), up to ITEM.BAG pieces
     currencies: { gold: 0, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
-    campaign: { cleared: [], best: {}, current: null },  // current: { stage, seed } of a battle in progress
+    // The road (js/campaign.js). current: { stage, seed } of a battle under way. road: the trip settings and the rule
+    // set chosen for each stage. trip: the trip under way. lastTrip: its summary once home. tips: first-time tips shown.
+    campaign: { cleared: [], best: {}, current: null, road: { keepGoing: true, sets: {} }, trip: null, lastTrip: null, tips: {} },
+    unlocks: {},                                          // every first-clear unlock: id -> when (UNLOCKS in js/data.js)
+    // A new road starts with no party rules and nothing packed: 1-3 brings the items and the draught rule, 1-6 the
+    // come-home rule (js/campaign.js). Tactics fills in the rest (js/rules.js).
+    tactics: { party: { slots: PARTY_RULES.slots[0], rules: [] }, loadout: { slots: LOADOUT.slots[0], items: [] } },
     base: { buildings: {} },                              // id -> { level, focus, stored, since }
     settings: { sfx: true, music: true, motion: true, speed: 1 },
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
@@ -80,7 +86,13 @@ function normalize(d) {
   s.campaign.cleared = s.campaign.cleared.filter(x => typeof x === 'string');
   if (!isObj(s.campaign.best)) s.campaign.best = {};
   const cur = s.campaign.current;
-  if (cur && !(Number.isInteger(cur.stage) && Number.isFinite(cur.seed))) s.campaign.current = null;
+  if (cur && !(Number.isInteger(cur.stage) && STAGES[cur.stage] && Number.isFinite(cur.seed))) s.campaign.current = null;
+  const T = s.campaign.trip;
+  if (T && !(isObj(T) && Number.isInteger(T.stage) && STAGES[T.stage] && isObj(T.totals) && Array.isArray(T.out))) s.campaign.trip = null;
+  if (s.campaign.lastTrip && !(isObj(s.campaign.lastTrip) && isObj(s.campaign.lastTrip.why))) s.campaign.lastTrip = null;
+  s.campaign.cleared = s.campaign.cleared.filter(id => STAGES.some(st => st.id === id));
+  for (const k of Object.keys(s.unlocks)) if (!UNLOCKS[k] || !Number.isFinite(s.unlocks[k])) delete s.unlocks[k];
+  for (const c of s.roster) c.fatigue = clamp(Number(c.fatigue) || 0, 0, 100);
   if (![1, 2, 4].includes(s.settings.speed)) s.settings.speed = 1;
   for (const k of ['sfx', 'music', 'motion']) s.settings[k] = s.settings[k] !== false;
   s.nextId = Math.max(s.nextId, ...s.roster.map(c => (parseInt(c.id.slice(1), 10) || 0) + 1));
@@ -131,6 +143,19 @@ const MIGRATIONS = {
       c.gear = { weapon: isObj(g.weapon) && GEAR[g.weapon.id] ? g.weapon : null, armor: isObj(g.armor) && GEAR[g.armor.id] ? g.armor : null, accessory: isObj(g.accessory) && GEAR[g.accessory.id] ? g.accessory : null };
       if (!c.gear.weapon) c.gear.weapon = Items.starter(c.cls, Math.max(1, Math.round(c.level) || 1));
     }
+    return old;
+  },
+  // Version 4 (build step 6): the campaign. The prototype's six stages (1-1 to 2-3) are replaced by Region I's 18, so
+  // the road starts again from 1-1; heroes keep their levels, gear and rules. Unlocks start empty, a trip is new, and
+  // the battle that was under way is dropped. rebuilt tells the app to say so once.
+  4: old => {
+    const c = isObj(old.campaign) ? old.campaign : (old.campaign = {});
+    const had = Array.isArray(c.cleared) ? c.cleared.length : 0;
+    c.cleared = []; c.best = {}; c.current = null; c.trip = null; c.lastTrip = null;
+    c.road = { keepGoing: true, sets: {} }; c.tips = {};
+    if (had) c.rebuilt = true;
+    old.unlocks = {};
+    for (const ch of Array.isArray(old.roster) ? old.roster : []) if (isObj(ch)) ch.fatigue = 0;
     return old;
   },
 };

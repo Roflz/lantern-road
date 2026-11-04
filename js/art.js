@@ -56,6 +56,8 @@ const ACCESSORIES = {
   mitre: { x: 5, y: -4, map: ["..yy..", ".yyyy.", ".yrry.", "yyyyyy"] },
   horns: { x: 4, y: -2, map: ["k......k", ".k....k."] },
   shovel: { x: 14, y: 2, map: [".w", ".w", ".w", ".w", ".w", ".w", ".w", "ss", "ss", "s."] },
+  // the Mourner's veil, draped over the head and shoulders
+  veil: { x: 4, y: -1, map: ["..vvvv..", ".vvvvvv.", "vv....vv", "v......v", "v......v", "v......v", ".v....v."] },
 };
 const FOE_ART = {
   ghoul: { tpl: 'hunched', pal: { h: '#7d8a6a', e: '#e8f07a', m: '#1e1612', b: '#4d5640', c: '#c9c2a4', d: '#343a2c' }, eye: '#e8f07a' },
@@ -63,6 +65,15 @@ const FOE_ART = {
   bones: { tpl: 'skeleton', pal: { x: '#d8d0bc', e: '#7ad0ff', c: '#a89e88' }, eye: '#7ad0ff' },
   gravewarden: { tpl: 'knight', pal: { h: '#55575e', e: '#ff7a3a', b: '#3e4047', a: '#6b6d75', r: '#6b2b22', c: '#6b6d75', s: '#c9ccd4' }, eye: '#ff7a3a' },
   sexton: { tpl: 'humanoid', acc: ['shovel'], pal: { h: '#a89a86', e: '#ffd36a', m: '#1e1612', b: '#3b3029', d: '#211a15', c: '#a89a86', w: '#6b4a2e', s: '#9aa0a8' }, eye: '#ffd36a' },
+  // Region I's new foes reuse the templates with their own palettes (campaign spec §3.3)
+  shambler: { tpl: 'hunched', pal: { h: '#b4b09c', e: '#c8d0d8', m: '#2a2420', b: '#7e7a6c', c: '#d8d4c4', d: '#4e4a40' }, eye: '#c8d0d8' },
+  glutton: { tpl: 'bloat', pal: { h: '#a8a070', e: '#f0e070', m: '#2a1a12', b: '#878152', p: '#c89a50', d: '#4a4630' }, eye: '#f0e070' },
+  crows: { tpl: 'swarm', pal: { b: '#221d28', e: '#f4d24a' }, eye: '#f4d24a' },
+  mourner: { tpl: 'humanoid', acc: ['veil'], pal: { h: '#3a3442', e: '#d8d0e8', m: '#0e0c12', b: '#26202c', d: '#141018', c: '#3a3442', v: '#4e465c' }, eye: '#d8d0e8' },
+  digger: { tpl: 'humanoid', acc: ['shovel'], pal: { h: '#9a7a58', e: '#f0d8a8', m: '#2a1a12', b: '#5a4028', d: '#3a2a1a', c: '#9a7a58', w: '#6b4a2e', s: '#8a9098' }, eye: '#f0d8a8' },
+  ratking: { tpl: 'swarm', acc: ['crown'], pal: { b: '#7e6456', e: '#ff6a4a', y: '#c8a040', r: '#a83a2e' }, eye: '#ff6a4a' },
+  moths: { tpl: 'swarm', pal: { b: '#cfc6a8', e: '#4a3a24' }, eye: '#fff2c0' },
+  mimic: { tpl: 'knight', pal: { h: '#5a4a3e', e: '#ffd36a', b: '#3e3028', a: '#6e5a48', r: '#8a3a2a', c: '#6e5a48', s: '#a89880' }, eye: '#ffd36a' },
   acolyte: { tpl: 'humanoid', pal: { h: '#7aa6a0', e: '#d8fff4', m: '#142221', b: '#2e4a4c', d: '#1b2e30', c: '#7aa6a0' }, eye: '#d8fff4' },
   bloat: { tpl: 'bloat', pal: { h: '#8aa58a', e: '#f4fff0', m: '#1e1612', b: '#6b8a72', p: '#c9d47a', d: '#34453a' }, eye: '#f4fff0' },
   bellwraith: { tpl: 'wraith', pal: { w: '#9ab8c8', e: '#141020', m: '#141020' }, eye: '#9ab8c8' },
