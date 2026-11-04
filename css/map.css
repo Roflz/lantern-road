@@ -11,9 +11,11 @@
 .maphead .rn .k{font:9px var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ember)}
 .maphead .rn .nm{font:26px/1 var(--f-display);text-shadow:0 0 14px rgba(244,166,70,.3)}
 .maphead .rn:hover .nm{color:#fff3dc}
-.mapwrap{flex:1;min-height:0;position:relative;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none}
+/* Labels past the edge are clipped by .mapinner, not by overflow-x:hidden here: that would stop a finger scrolling the
+   map when the frame is turned (js/frame.js). */
+.mapwrap{flex:1;min-height:0;position:relative;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
 .mapwrap::-webkit-scrollbar{display:none}
-.mapinner{position:relative;width:100%}
+.mapinner{position:relative;width:100%;overflow-x:clip}
 .mapcv{position:absolute;left:0;top:0;image-rendering:pixelated}
 .road-page .node{position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;background:none;border:none;border-radius:50%;cursor:pointer;z-index:2}
 .road-page .node:hover,.road-page .node:focus-visible{box-shadow:0 0 0 2px rgba(244,166,70,.7),0 0 16px rgba(244,166,70,.4);outline:none}
@@ -175,7 +177,6 @@
 
 /* ── between battles: a card over the road while the party walks on */
 .between{position:absolute;left:50%;top:56px;z-index:8;transform:translateX(-50%);width:min(560px,calc(100% - 24px));display:grid;gap:7px;padding:10px 12px;background:linear-gradient(180deg,rgba(36,26,42,.96),rgba(22,17,29,.96));border:2px solid var(--ember);box-shadow:0 0 0 3px rgba(11,9,19,.6),0 16px 40px rgba(0,0,0,.6);animation:rise .35s cubic-bezier(.2,.9,.3,1.1)}
-.turned .between{top:52px}
 .bt-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .bt-head b{font:22px/1 var(--f-display)}
 .kicker.won{color:var(--good)}

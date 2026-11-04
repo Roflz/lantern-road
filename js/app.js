@@ -4,6 +4,8 @@
 // js/main.js registers it.
 //
 // A screen is registered with App.screen(name, def):
+//   def.full    true for a screen built for the landscape frame, drawn on the whole stage (the battle). Every other
+//               screen keeps its portrait layout in the frame's centred column until it is redesigned (js/frame.js).
 //   def.tab     true to show the top bar and tab bar (and to slide between tabs)
 //   def.parent  the tab to light while it shows (the hero sheet lights Party)
 //   def.render  (params) => element: builds the screen's page, every time it is shown
@@ -36,6 +38,7 @@ const App = (() => {
     const from = cur;
     cur = name; curParams = params;
     closeSheet();
+    Frame.column(!def.full);
     if (def.tab) {
       const el = def.render(params);
       el.classList.add('view');

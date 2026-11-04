@@ -38,6 +38,7 @@ function showCamp() { App.go('map'); }
 // The Battle screen. A battle under way is remembered in the save. On a reload while the page is republished, the same
 // seed replays it; on a return after closing the app, it is resolved at once and the party comes home (boot, below).
 App.screen('battle', {
+  full: true,
   enter(p) { startStage(p.stage, p.seed); },
   leave() { walkToken++; hideBetween(); current = null; progress().current = null; Save.commit(); },
 });

@@ -32,7 +32,7 @@ You then strengthen the party and set out again. Cleared stages can be replayed 
 ## 3. Battles
 
 ### Orientation
-- Battles play sideways (landscape). Every other screen is portrait.
+- Every screen is landscape, battles included: your decision of 2026-11-04. A phone held upright gets the game drawn on its side, so it reads with the phone turned, even with rotation lock on.
 
 ### Formation
 - Each side has up to 6 characters: 2 in the front row and 4 in the back.
@@ -340,7 +340,7 @@ Stages and foes are defined in data tables so content can grow quickly.
 - **In battle:** lunges, projectiles, spell flashes, hit sparks, damage numbers, status icons, and a fade on defeat. Skill callouts show the rule behind each action.
 - **Rewards:** loot flies into the bag. Level-ups are celebrated after a battle, never mid-battle.
 - **Hero sheet:** the Stats and Gear tabs show the hero's full battle sprite on a small stage, where you can watch each of their skills play out. The Skills and Rules tabs leave that space to their content.
-- **Layout:** every screen apart from battles is built for one-handed portrait phone use.
+- **Layout:** every screen is landscape: your decision of 2026-11-04. Screens are built for a phone on its side (844×390) and scale to fit any window. They are redesigned for landscape one at a time (`docs/idle-heroes-study.md` §6); until its turn, a screen keeps its portrait layout in a centred column.
 - **Visual identity:** cozy-gothic pixel art, warm lantern light against the dark, procedural music and sound.
 
 ## 12. Build order

@@ -137,4 +137,3 @@
 .gr-proto .hs-row{flex-wrap:wrap}
 .gr-proto .small{min-height:40px}
 .gr-proto .small .ico{width:12px;height:12px}
-@media (max-width:360px){.gr-inv{grid-template-columns:repeat(5,minmax(0,1fr))}.gr-slot .nm{font-size:14px}}

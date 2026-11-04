@@ -501,11 +501,13 @@ const TacticsEditor = (() => {
     if (list.length < 2) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    const tops = list.map(el => el.getBoundingClientRect()), step = tops.length > 1 ? tops[1].top - tops[0].top : tops[0].height;
-    drag = { i, to: i, y0: e.clientY, row, list, step, moved: false };
+    // Measured in the landscape frame's design pixels (js/frame.js), so the row follows the finger when the frame is
+    // scaled or turned.
+    const tops = list.map(el => Frame.box(el)), step = tops.length > 1 ? tops[1].top - tops[0].top : tops[0].height;
+    drag = { i, to: i, y0: Frame.point(e).y, row, list, step, moved: false };
     const grip = e.currentTarget;
     const move = ev => {
-      const dy = ev.clientY - drag.y0;
+      const dy = Frame.point(ev).y - drag.y0;
       if (Math.abs(dy) > 4) drag.moved = true;
       if (!drag.moved) return;
       row.classList.add('lift');

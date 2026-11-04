@@ -12,8 +12,8 @@
 .coach-ring.out,.coach-tip.out{animation:fadeout .3s forwards}
 @keyframes coachin{from{opacity:0;transform:translateY(6px) scale(.97)}}
 @keyframes fadeout{to{opacity:0}}
-/* in the battle, the tip sits over the field: keep it compact */
-.land .coach-tip{max-width:min(280px,46%);font-size:13px;padding:7px 10px}
+/* in the battle (the whole landscape frame), the tip sits over the field: keep it compact */
+#frame:not(.column) .coach-tip{max-width:min(280px,46%);font-size:13px;padding:7px 10px}
 
 /* ── tab dots: something waits there */
 .tab::after{content:"";position:absolute;top:10px;left:calc(50% + 9px);width:8px;height:8px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 2px #0b0913,0 0 8px var(--ember);transform:scale(0);transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
@@ -60,8 +60,8 @@ body.no-proto .proto-only{display:none!important}
 .camp-chips .chip.proto,.gr-proto{border-style:dashed}
 
 /* ── battle tips: one line over the middle of the field, clear of both formations */
-.land #toasts .toast.tip{max-width:min(380px,48%);font-size:13px;padding:7px 11px}
-.land #toasts{bottom:70px}
+#frame:not(.column) #toasts .toast.tip{max-width:min(380px,48%);font-size:13px;padding:7px 11px}
+#frame:not(.column) #toasts{bottom:70px}
 /* the report's first-loss note */
 .rside .why .note{font-size:13px;font-style:italic;color:var(--ash)}
 
@@ -75,22 +75,18 @@ body.no-proto .proto-only{display:none!important}
 .ss-top .rec{margin-top:0}
 .ss-t .kicker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* ── a small phone (the frame under 350px): stat labels without their icon, so DEFENSE fits */
-@media (max-width:380px){
-  .hs-stt .hs-k{letter-spacing:.04em}
-  .hs-stt .hs-k .ico{display:none}
-  .hs-stt{padding:7px 6px 6px}
+/* ── a frame under 720 design pixels wide (an aspect under 1.85: a 16:9 phone or window): the battle's controls go
+   compact, clear of the bottom row of each formation */
+@container (max-width:719px){
+  #controls{gap:4px;padding:5px 6px 6px}
+  #controls .ctl{height:40px;min-width:40px;padding:0 7px}
+  #controls .ctl.wide{min-width:48px}
+  #bStep{font-size:0;gap:0}
+  .it-tray{gap:4px;margin-left:2px;padding-left:6px}
+  #controls .it-btn{min-width:40px;padding:0 6px}
+  .report-box .stab{font-size:0;gap:0;padding:0 9px}
+  .report-box .stab .ico{width:14px;height:14px}
 }
-
-/* ── a small phone on its side (js/battle.js sets .narrow under 720px): compact controls, clear of the bottom row */
-.narrow #controls{gap:4px;padding:5px 6px 6px}
-.narrow .ctl{height:40px;min-width:40px;padding:0 7px}
-.narrow .ctl.wide{min-width:48px}
-.narrow #bStep{font-size:0;gap:0}
-.narrow .it-tray{gap:4px;margin-left:2px;padding-left:6px}
-.narrow .it-btn{min-width:40px;padding:0 6px}
-.narrow .report-box .stab{font-size:0;gap:0;padding:0 9px}
-.narrow .report-box .stab .ico{width:14px;height:14px}
 
 /* ── a view is a grid (or a flex column) of a fixed height that scrolls. When its content runs past that height, rows
    (and flex items) were squeezed to their minimum: a button with a min-height lost its second line. Size every row to
@@ -118,6 +114,6 @@ body.no-proto .proto-only{display:none!important}
 #sheet .box.quiet{animation:none}
 
 /* A toast while a bottom sheet is open sits over the dimmed strip above it, not on the sheet's title. */
-#frame:has(#sheet.sheet-bottom:not([hidden])) #toasts{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto}
+#frame:has(#sheet.sheet-bottom:not([hidden])) #toasts{top:12px;bottom:auto}
 /* The stage sheet's foe card: what a foe does that its skills don't say (Hidden, healing every turn). */
 .fi-tr{margin:0;font-size:13px;line-height:1.35;color:var(--ember)}

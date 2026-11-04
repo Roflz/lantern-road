@@ -20,19 +20,13 @@ const Guide = (() => {
 
   // ── coach marks
   let mark = null; // { ring, tip, timer }
-  // An element's box in #frame's own coordinates, measured on screen (so centring transforms count). On an upright
-  // phone the landscape battle is drawn turned a quarter (js/battle.js: translateX(height) rotate(90deg) from the
-  // frame's corner), so the screen box is turned back.
+  // An element's box in #frame's own coordinates, measured on screen (so centring transforms count) and turned back
+  // into the landscape frame's design pixels, allowing for its scale and quarter-turn (js/frame.js).
   function boxOf(el) {
     const fr = frame();
     if (!fr.contains(el)) return null;
-    const r = el.getBoundingClientRect();
-    if (fr.classList.contains('turned')) {
-      const a = $('#app').getBoundingClientRect(), fh = fr.offsetHeight;
-      return { x: r.top - a.top, y: fh - (r.right - a.left), w: r.height, h: r.width };
-    }
-    const f = fr.getBoundingClientRect();
-    return { x: r.left - f.left, y: r.top - f.top, w: r.width, h: r.height };
+    const b = Frame.box(el, fr);
+    return { x: b.left, y: b.top, w: b.width, h: b.height };
   }
   function clear() {
     if (!mark) return;

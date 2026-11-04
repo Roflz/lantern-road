@@ -127,7 +127,10 @@
 .pslot.empty .add{font:8px var(--f-pixel);letter-spacing:.08em;color:var(--ember)}
 .pslot.spent img,.rrow.spent img{filter:grayscale(.7) brightness(.7)}
 .rwrap{position:relative;overflow:hidden}
-.rwrap .rrow{position:relative;z-index:1;width:100%;transition:transform .18s ease-out;background:#231b2c}
+.rwrap .rrow{position:relative;z-index:1;width:100%;transition:transform .18s ease-out;background:#231b2c;touch-action:pan-y}
+/* a finger's sideways swipe is the row's, not a pan; the browser reads pan-x and pan-y on the screen, so a turned frame
+   (js/frame.js) swaps them */
+#stage.turned .rwrap .rrow{touch-action:pan-x}
 .rwrap .rdismiss{position:absolute;right:0;top:0;bottom:0;width:92px;border:2px solid #6a3030;background:#2a1216;color:var(--bad);font:9px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
 .rrow .lv{display:grid;justify-items:end;gap:3px}
 .rrow .lv .tag{font-size:7px;padding:2px 4px}
