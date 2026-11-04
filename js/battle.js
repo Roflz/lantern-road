@@ -32,6 +32,7 @@ const Battle = (() => {
       frame.style.cssText = `position:absolute;left:0;top:0;width:${fw}px;height:${fh}px;max-width:none;transform-origin:0 0;transform:translateX(${fh}px) rotate(90deg)`;
     }
     frame.classList.toggle('land', S.land); frame.classList.toggle('turned', S.turned);
+    frame.classList.toggle('narrow', S.land && fw < 720); // a small phone on its side: compact controls (css/polish.css)
     S.scale = S.land ? Math.max(2, Math.floor(fh / 118)) : Math.max(2, Math.floor(fw / 110));
     S.W = Math.floor(fw / S.scale); S.H = Math.floor(fh / S.scale);
     cv.width = S.W; cv.height = S.H; mask.width = S.W; mask.height = S.H;
@@ -795,6 +796,8 @@ const Battle = (() => {
         B.curK = B.turnAt.get(B.i);
         const group = log.slice(B.i, j), dur = playTurn(group, B.turnAt.get(B.i));
         const act = group.find(x => x.t === 'act');
+        // The turn and its action, for the first-hour coach marks (js/guide.js): the flags are drawn by now.
+        if (onEvent) { try { onEvent(e); if (act) onEvent(act); } catch (err) { } }
         B.durs.push([act ? act.skill : 'tick', Math.round(dur), group.filter(x => x.t === 'tick').length, group.filter(x => x.t === 'die').length]);
         B.i = j;
         B.busyUntil = B.turnUntil = P.t + dur;

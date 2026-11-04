@@ -94,6 +94,10 @@ function sfx(k, vol = 1) {
       case 'win': [523, 659, 784, 1046].forEach((f, i) => tone(f, .5, 'triangle', v(.05), 0, i * .1, .45)); break;
       case 'lose': [392, 330, 262, 196].forEach((f, i) => tone(f, .8, 'sine', v(.05), 0, i * .26, .4)); break;
       case 'region': [392, 494, 587].forEach((f, i) => tone(f, 1.4, 'triangle', v(.035), 0, i * .18, .5)); break;
+      // the interface (build step 7b): a tip appearing, something new unlocked, a sheet sliding up
+      case 'tip': tone(1047, .22, 'sine', v(.016)); tone(1568, .3, 'sine', v(.01), 0, .06, .4); break;
+      case 'unlock': [659, 880, 1175, 1568].forEach((f, i) => tone(f, .5, 'triangle', v(.03), 0, i * .07, .45)); noise(.25, v(.03), 4200, 0, sfxBus, 'highpass'); break;
+      case 'sheet': noise(.09, v(.022), 2400, 0, sfxBus, 'highpass'); break;
     }
   } catch (e) { }
 }

@@ -4,7 +4,8 @@
 // ‹ › and the arrow keys, to walk round the fire: on release it eases to the nearest building, whose card offers its
 // main action. Plots Renown hasn't cleared are gaps in the ring. The ring is the only way into buildings.
 // Also here: the first pick of a new game, "While you were away", the Renown track, the roster rows and formation
-// picker on the Party screen, and the prototype tools. Building screens are js/buildings.js; the model is js/base.js.
+// picker on the Party screen, and the chip that opens the prototype tools (js/proto.js). Building screens are
+// js/buildings.js; the model is js/base.js.
 
 // ── building art: pixel maps in one palette. Most come from the screen mockups; the Shop, the Masters' Hall and the
 // four passive-bonus buildings are new, in the same style.
@@ -437,7 +438,7 @@ const Camp = (() => {
             ico('lantern', 'm'), h('div', {}, h('span', { class: 'k', text: `Renown ${R.level}` }), h('span', { class: 'meter' }, h('i', { style: `width:${Math.round(100 * R.into / R.need)}%` })))),
           h('div', { class: 'camp-chips' },
             s.away.last >= 5 * 60000 && Base.lastReport() ? h('button', { class: 'chip', onclick: () => { click(); showAway(s.away.last); } }, ico('hourglass'), 'Away') : null,
-            h('button', { class: 'chip proto', onclick: () => { click(); showProto(); } }, 'Prototype')),
+            h('button', { class: 'chip proto proto-only', onclick: () => { click(); App.actions.proto(); } }, 'Prototype')),
           h('div', { class: 'hintbar' }, h('span', { text: '◂ Drag to walk around the fire ▸' })),
           h('div', { class: 'bcard' },
             h('button', { class: 'sq', 'data-step': '-1', 'aria-label': 'Previous building' }, '‹'),
@@ -612,19 +613,7 @@ const Camp = (() => {
   };
   App.actions.building = id => Buildings.open(id);
 
-  // ── prototype tools: gold, materials, blueprints, Renown and time, so the camp can be tried without grinding
-  function showProto() {
-    const s = Save.state, P = Base.proto;
-    const act = (label, fn, sub) => btn(label, () => { fn(s); Base.tick(s); Save.commit(); App.refresh(); showProto(); }, '', sub);
-    openSheet(h('div', { class: 'box' },
-      h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
-      h('div', { class: 'kicker', text: 'Prototype tools' }), h('h2', { text: 'For play-testing the camp' }),
-      h('p', { class: 'flavor', text: 'These skip the grind. They are not part of the game, and the final polish step gathers them into one panel.' }),
-      h('div', { class: 'row2' }, act('+1,000 gold', () => P.gold(1000)), act('+50 materials', () => P.mats(50), 'Of every kind')),
-      h('div', { class: 'row2' }, act('All blueprints', P.blueprints, 'And every region reached'), act('+1 Renown', P.renown, 'Clears plots sooner')),
-      h('div', { class: 'row2' }, act('Skip 1 hour', () => P.skip(1), 'Idle buildings, rest, lessons'), act('Skip 8 hours', () => P.skip(8), 'Then see what came in')),
-      btn('Show “While you were away”', () => { closeSheet(); showAway(Base.lastReport() ? Math.max(Base.lastReport().ms, 60000) : 3600000); })), 'sheet-bottom');
-  }
+  // The prototype tools (gold, materials, blueprints, Renown and time) are in the one panel in Settings: js/proto.js.
 
   return { entries, card, badge, showPick, showAway, showRenown, statusOf, timeStr };
 })();

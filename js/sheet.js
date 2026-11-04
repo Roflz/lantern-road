@@ -110,8 +110,8 @@ const HeroSheet = (() => {
     const C = CLASSES[c.cls], need = Hero.xpToNext(c.level), row = Save.state.party.indexOf(c.id);
     el.append(
       h('div', { class: 'hs-ov who' }, h('span', { class: 'kicker', text: `${C.name} · ${C.role.split(':')[0]}` }), h('span', { class: 'hs-kv' }, h('b', { text: 'Lv ' + c.level }), row < 0 ? ' · resting' : row < 2 ? ' · front row' : ' · back row')),
-      h('div', { class: 'hs-ov fat' }, h('span', { class: 'hs-tag ' + (c.fatigue >= 50 ? 'b' : 'g') }, ico('fatigue'), c.fatigue >= 75 ? `Exhausted ${c.fatigue}` : c.fatigue >= 50 ? `Weary ${c.fatigue}` : 'Rested'),
-        h('span', { class: 'hs-k', text: 'Fatigue · step 5' })),
+      h('div', { class: 'hs-ov fat' }, h('span', { class: 'hs-tag ' + (c.fatigue >= 50 || c.spent ? 'b' : 'g') }, ico('fatigue'), typeof Fatigue !== 'undefined' ? FATIGUE_NAMES[Fatigue.state(c)] : c.fatigue >= 50 ? 'Weary' : 'Rested'),
+        h('span', { class: 'hs-k', text: `Fatigue ${Math.floor(c.fatigue || 0)}` })),
       h('div', { class: 'hs-ov xpbar' }, h('span', { class: 'hs-k', text: 'XP' }),
         h('div', { class: 'hs-meter' }, h('i', { style: `width:${c.level >= HERO.CAP ? 100 : Math.min(100, 100 * c.xp / need)}%` })),
         h('span', { class: 'hs-k', text: c.level >= HERO.CAP ? 'Level cap' : `${fmt(c.xp)}/${fmt(need)}` })));
@@ -173,11 +173,11 @@ const HeroSheet = (() => {
       proto(c),
     ];
   }
-  // Prototype tools: XP for play-testing the later thresholds, without the grind. The final polish step gathers the
-  // prototype tools into one panel.
+  // Prototype tools: XP for play-testing the later thresholds, without the grind. The rest are in Settings → Prototype
+  // tools (js/proto.js), whose toggle also hides these.
   function proto(c) {
     const give = n => { click(); const g = Hero.gainXp(c, Hero.xpBetween(c.level, Math.min(HERO.CAP, c.level + n))); Save.commit(); if (g.to > g.from) LevelUp.toast(c, g); draw(); };
-    return h('div', { class: 'hs-proto' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Train' }),
+    return h('div', { class: 'hs-proto proto-only' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Train' }),
       [1, 5, 25].map(n => h('button', { class: 'small', disabled: c.level >= HERO.CAP, onclick: () => give(n) }, `+${n} Lv`)));
   }
 
@@ -252,7 +252,7 @@ const HeroSheet = (() => {
           h('div', { class: 'hs-tags' }, tagsOf(sk)))),
       descEl(sk, L, 'd', st.L > 0 && st.L < SKILL_LV_MAX),
       h('div', { class: 'hs-aw' + (st.awakened ? ' on' : '') }, h('span', { class: 'hs-k', text: st.awakened ? 'Awakened' : 'When awakened' }), descEl(sk, SKILL_LV_MAX, 'aw', false)),
-      sk.later ? h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Later' }), `This works once ${{ fatigue: 'fatigue', gold: 'gold and loot', gear: 'gear' }[sk.later]} arrives (build step ${sk.later === 'gear' ? 4 : sk.later === 'gold' ? 6 : 5}).`) : null,
+      sk.later ? h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Later' }), 'Not in effect yet: it comes with a later update.') : null,
       why ? h('p', { class: 'hs-why', text: why }) : null,
       h('div', { class: 'hs-row' }, equipBtn, learnBtn)), 'sheet-bottom');
     if (mini) {
@@ -402,7 +402,7 @@ const HeroSheet = (() => {
         : h('p', { class: 'ph-note', text: st.inventory.items.length ? `Nothing in the Bag that ${c.name} can wear${G.filter === 'all' ? '' : ' there'}.` : 'The Bag is empty. Roll some gear below to try it on.' }),
       h('p', { class: 'gr-legend' }, h('span', { class: 'g', text: '▲' }), h('span', { class: 'b', text: '▼' }), ` against what ${c.name} wears`, G.fits ? null : ` · faded: not for ${CLASSES[c.cls].name}s`),
       h('p', { class: 'hs-why', text: `Weapons: ${c.classes.map(k => CLASSES[k].weapon).join(', ')}. Any armour weight; accessories suit anyone.` }),
-      h('div', { class: 'hs-proto' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Roll gear' }),
+      h('div', { class: 'hs-proto proto-only' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('span', { class: 'hs-kv', text: 'Roll gear' }),
         h('button', { class: 'small', onclick: () => { const got = GearUI.rollPrototype(3, c.classes); if (got[0]) G.sel = got[0].uid; draw(); } }, `3 for ${c.name}`),
         h('button', { class: 'small', onclick: () => { click(); App.go('bag'); } }, ico('bag'), 'The Bag')),
     ];

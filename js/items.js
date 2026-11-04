@@ -457,7 +457,7 @@ classOnly('fingerbone', 'pilgrim', 'Saint’s Finger-bone', {
   flavor: 'It points the way to heaven. It points at you.',
 });
 classOnly('oathboundgorget', 'warden', 'Oathbound Gorget', {
-  lines: [B('Guard and Cover cost 5 less', 'mana'), X('The Warden can’t leave the front row', 'anchor', { later: 'formation' })],
+  lines: [B('Guard and Cover cost 5 less', 'mana'), X('The Warden can’t leave the front row', 'anchor')],
   fx: {
     cost: (E, u, sk, p, c) => { if (sk.id === 'guard' || sk.id === 'cover') { c.add -= 5; return true; } },
     stat: u => { u.fixedFront = true; },
