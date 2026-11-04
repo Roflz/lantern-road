@@ -10,7 +10,8 @@
 // ── How a skill reads
 // Every skill: name, icon, fx (its look in battle), kind ('active', 'passive' or 'key' for a keystone), d (what it
 // does: {a,b} is a value that grows from level 1 to level 5, {a,b,n} the same rounded to a whole number), aw (what
-// awakening adds), later (an effect that waits for a later build step: 'fatigue', 'gold' or 'gear').
+// awakening adds), later (an effect that waits for a later build step: 'fatigue' or 'gold'). Plate-born works through
+// the gear the Warden wears (js/items.js, Items.gearStats).
 // Values are a number, or [level 1, level 5] rising evenly in between.
 // Actives also have
 //   shape, range, reach   as for foe skills (js/data.js)
@@ -265,7 +266,7 @@ defClass('warden', {
   [ // Bastion
     { id: 'brace', name: 'Brace', icon: 'brace', fx: 'guard', shape: 'self', cost: 10, self: [S('braced', 2, { v: [40, 55] })], d: 'Braced for 2 turns: −{40,55}% damage taken.', aw: 'Each hit taken while Braced restores 10 mana.', awk: { self: [S('braced', 2, { v: 55, more: true })] } },
     { id: 'stalwart', kind: 'passive', name: 'Stalwart', icon: 'heart', d: '+{5,15}% max health.', aw: 'Also +15% Defense.', stat: (u, p) => { u.maxHp *= 1 + p.v([0.05, 0.15]); if (p.A) u.def *= 1.15; } },
-    { id: 'plateborn', kind: 'passive', name: 'Plate-born', icon: 'plate', later: 'gear', d: 'Heavy armour’s Speed penalty is {1,2,n} lower.', aw: 'Heavy armour also gives 10% more health.' },
+    { id: 'plateborn', kind: 'passive', name: 'Plate-born', icon: 'plate', d: 'Heavy armour’s Speed penalty is {1,2,n} lower.', aw: 'Heavy armour also gives 10% more health.' },
     { id: 'unbreak', name: 'Unbroken', icon: 'anchor', fx: 'guard', shape: 'self', cost: 30, self: [S('unbroken', [2, 3])], d: 'Unbroken for {2,3,n} turns: can’t fall below 1 health.', aw: 'Also −20% damage taken.', awk: { self: [S('unbroken', 3, { more: true })] } },
     { id: 'ironwill', kind: 'passive', name: 'Iron Will', icon: 'fatigue', later: 'fatigue', d: 'The Warden gains {10,35}% less fatigue.', aw: 'Knock-out fatigue is halved too.' },
     { id: 'secondbreath', name: 'Second Breath', icon: 'heart', fx: 'mend', shape: 'self', cost: 25, healPct: [0.2, 0.35], d: 'Heals {20,35}% of max health.', aw: 'Also Fortified for 2 turns.', awk: { self: [S('fortified', 2)] } },

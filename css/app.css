@@ -29,7 +29,7 @@
 @keyframes viewout{to{opacity:0;transform:translateX(calc(var(--dir,0)*36px))}}
 
 /* Tab bar: three big targets under the thumb */
-#tabbar{display:grid;grid-template-columns:repeat(3,1fr);padding:0 6px env(safe-area-inset-bottom,0px);background:linear-gradient(0deg,rgba(11,9,19,.99),rgba(11,9,19,.93));border-top:1px solid rgba(63,52,75,.8);box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+#tabbar{display:grid;grid-template-columns:repeat(4,1fr);padding:0 6px env(safe-area-inset-bottom,0px);background:linear-gradient(0deg,rgba(11,9,19,.99),rgba(11,9,19,.93));border-top:1px solid rgba(63,52,75,.8);box-shadow:0 -10px 30px rgba(0,0,0,.5)}
 .tab{position:relative;display:grid;justify-items:center;align-content:center;gap:4px;min-height:62px;background:none;border:none;color:var(--dim);font:9px var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:color .2s}
 .tab .ico{width:20px;height:20px;opacity:.55;transition:opacity .2s,transform .2s}
 .tab:hover{color:var(--ash)}

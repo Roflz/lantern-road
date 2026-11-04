@@ -8,7 +8,8 @@
 //   { id, cls, name, level, xp, base: { hp, mp, pow, def, spd, crit, dodge }, alloc: { hp.., res: { stun.. } },
 //     classes: [first class, second?, third?], tiers: { cls: highest open tier }, skills: { id: level 1–5 },
 //     awakened: [ids], awakenSlots, equip: [active ids or null], picks: { threshold level: choice }, respecs,
-//     lessons: { skill, rule }, fatigue, gear, rules, joined }
+//     lessons: { skill, rule }, fatigue, gear: { weapon, armor, accessory } (pieces worn, js/items.js), rules, joined }
+// Every recruit carries a Common weapon of their class's type (content spec §2).
 
 const HERO = {
   CAP: 200,
@@ -53,7 +54,7 @@ const Hero = (() => {
       base: o.base || roll(cls, o.rng), alloc: zeroAlloc(),
       classes: [cls], tiers: { [cls]: 1 }, skills: { [C.starter]: 1 }, awakened: [], awakenSlots: 0,
       equip: [C.starter], picks: {}, respecs: 0, lessons: { skill: 0, rule: 0 },
-      fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: o.joined || Date.now(),
+      fatigue: 0, gear: { weapon: o.bare ? null : Items.starter(cls, o.level || 1), armor: null, accessory: null }, rules: null, joined: o.joined || Date.now(),
     };
     if (o.level > 1) gainXp(c, xpBetween(1, o.level));
     return c;
@@ -72,14 +73,21 @@ const Hero = (() => {
     for (const k of RES_KEYS) out[k] = C.res[k] + HERO.RES_GROWTH * (c.level - 1) + (c.alloc.res[k] || 0) * HERO.RES_POINT;
     return out;
   }
-  // As the hero sheet shows them: with the stat changes of the passives they know (Thick Hide, Light Feet...).
-  // row: the row they stand in, for passives that care.
+  // With the plain stats of the gear they wear (js/items.js).
+  function geared(c) {
+    const s = stats(c), g = Items.gearStats(c);
+    for (const k of STAT_KEYS) s[k] += g[k] || 0;
+    return s;
+  }
+  // As the hero sheet shows them: with their gear and the stat changes of the passives they know (Thick Hide, Light
+  // Feet...) and of the gear they wear (Witch-iron's −10% health...). row: the row they stand in, for those that care.
   function sheet(c, row = CLASSES[c.cls].row) {
-    const s = stats(c), u = { maxHp: s.hp, maxMp: s.mp, pow: s.pow, def: s.def, spd: s.spd, crit: s.crit, dodge: s.dodge, row, res: res(c) };
+    const s = geared(c), u = { maxHp: s.hp, maxMp: s.mp, pow: s.pow, def: s.def, spd: s.spd, crit: s.crit, dodge: s.dodge, row, res: res(c) };
     for (const id in c.skills) {
       const sk = SKILLS[id];
       if (sk && sk.stat && sk.kind !== 'active') sk.stat(u, skillLevel(c.skills[id], c.awakened.includes(id)));
     }
+    for (const id of Items.effects(c)) if (GEAR[id].fx.stat) GEAR[id].fx.stat(u, skillLevel(1, false));
     if (u.noDodge) u.dodge = 0;
     return { hp: Math.round(u.maxHp), mp: u.maxMp, pow: u.pow, def: u.def, spd: u.spd, crit: u.crit, dodge: u.dodge, res: u.res };
   }
@@ -236,10 +244,11 @@ const Hero = (() => {
 
   // ── what the battle reads (js/sim.js)
   function spec(c, rules) {
-    const s = stats(c);
+    const s = geared(c);
     return {
       key: c.cls, name: c.name, char: c.id, lv: c.level, stats: s, res: res(c),
       equip: fixEquip(c).filter(Boolean), sl: clone(c.skills), awk: c.awakened.slice(), rules: rules || CLASSES[c.cls].rules,
+      gear: Items.effects(c), look: Items.look(c),
     };
   }
 
@@ -248,17 +257,16 @@ const Hero = (() => {
     const cls = CLASSES[old.cls] ? old.cls : 'sellsword';
     const base = {};
     for (const k of STAT_KEYS) base[k] = old.stats && Number.isFinite(old.stats[k]) ? old.stats[k] : CLASSES[cls][k];
-    const c = create(cls, old.id, { name: old.name, base, joined: old.joined });
+    const c = create(cls, old.id, { name: old.name, base, joined: old.joined, bare: true });
     c.level = clamp(Math.round(old.level || 1), 1, HERO.CAP);
     c.xp = Math.max(0, old.xp || 0);
-    if (old.gear) c.gear = old.gear;
     c.fatigue = old.fatigue || 0;
     return c;
   }
   // Takes saved data and keeps only what still makes sense.
   function sanitize(d) {
     if (!d || typeof d !== 'object' || !CLASSES[d.cls] || typeof d.id !== 'string') return null;
-    const c = create(d.cls, d.id, { base: d.base, name: d.name, joined: d.joined });
+    const c = create(d.cls, d.id, { base: d.base, name: d.name, joined: d.joined, bare: true });
     c.level = clamp(Math.round(d.level) || 1, 1, HERO.CAP);
     c.xp = Math.max(0, Number(d.xp) || 0);
     if (d.base && typeof d.base === 'object') for (const k of STAT_KEYS) if (Number.isFinite(d.base[k])) c.base[k] = d.base[k];
@@ -284,13 +292,14 @@ const Hero = (() => {
     if (p.stat < 0) c.alloc = zeroAlloc();
     if (p.skill < 0) { const keep = {}; for (const k of c.classes) keep[CLASSES[k].starter] = 1; c.skills = keep; c.awakened = []; fixEquip(c); }
     for (const k of ['fatigue', 'joined']) if (Number.isFinite(d[k])) c[k] = d[k];
-    if (d.gear && typeof d.gear === 'object') c.gear = Object.assign(c.gear, d.gear);
+    // Gear: only real pieces, each in its own slot and usable by this character.
+    if (d.gear && typeof d.gear === 'object') for (const k of SLOTS) { const x = Items.valid(d.gear[k], k); c.gear[k] = x && Items.canUse(c, x) ? x : null; }
     if (d.rules !== undefined) c.rules = d.rules;
     return c;
   }
 
   return {
     xpToNext, xpBetween, roll, create, stats, res, sheet, points, allocate, placed, capOf, skill, learn, awaken, awakenOpen,
-    activeSlots, ruleSlots, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild,
+    activeSlots, ruleSlots, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, geared,
   };
 })();

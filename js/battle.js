@@ -65,10 +65,13 @@ const Battle = (() => {
     if (S.mode === 'camp' && u.hero) u.by = u.slot < 2 ? Math.round(S.H * 0.868) : Math.round(S.H * 0.967);
   }
   const css = (x, y) => [S.ox + x * S.scale, S.oy + y * S.scale];
-  const sprOf = u => (u.thrall ? foeSprite(u.art || 'bones') : u.hero ? (S.land ? heroSide(u.key, u.step || 0) : heroSprite(u.key, u.step || 0)) : foeSprite(u.key));
-  const lampOf = u => (u.thrall ? null : S.land ? (HERO_SIDE[u.key] || {}).lamp : (HERO_ART[u.key] || {}).lamp);
-  const faceOf = u => (u.thrall ? portraitURL(u.art || 'bones', false) : portraitURL(u.key, u.side === 0));
-  const sizeOf = u => { const s = sprOf(u), k = u.boss ? 2 : 1; return [s.width * k, s.height * k]; };
+  // Heroes are drawn in their gear (js/art.js, heroCanvas); thralls from the side, facing the foes.
+  const sprOf = u => (u.thrall ? (S.land ? thrallSide(u.key) : foeSprite(u.art || 'bones')) : u.hero ? (S.land ? heroSide(u.key, u.step || 0, u.look) : heroSprite(u.key, u.step || 0, u.look)) : foeSprite(u.key));
+  const lampOf = u => (u.thrall || !u.hero ? null : sprOf(u).lamp);
+  const faceOf = u => (u.thrall ? portraitURL('thrall:' + u.key, false) : portraitURL(u.key, u.side === 0, u.look));
+  // The body's size, without a raised weapon: where numbers float and projectiles land.
+  const sizeOf = u => { const s = sprOf(u), k = u.boss ? 2 : 1; return [(s.bw || s.width) * k, (s.bh || s.height) * k]; };
+  const leftOf = (u, s) => u.x - (s.ax != null ? s.ax : s.width / 2) * (u.boss ? 2 : 1);
   const headY = u => u.y - sizeOf(u)[1];
   const midOf = u => [u.x, u.y - sizeOf(u)[1] * 0.55];
 
@@ -1080,7 +1083,7 @@ const Battle = (() => {
     if (walking) { const ph = Math.floor((P.t / 140) + u.slot) % 4; u.step = ph === 1 ? 1 : ph === 3 ? 2 : 0; dy += ph % 2 ? -1 : 0; }
     else u.step = 0;
     const bob = (!noMotion() && u.alive && !walking && Math.floor(realT / 520 + u.phase) % 2) ? -1 : 0;
-    const x = Math.round(u.x - w / 2), y = Math.round(u.y - hh) + bob + dy + (dark ? 2 : 0);
+    const x = Math.round(leftOf(u, s)), y = Math.round(u.y - hh) + bob + dy + (dark ? 2 : 0);
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,.5)';
     ctx.fillRect(Math.round(u.x - w * .32), Math.round(u.y), Math.round(w * .64), 1);
@@ -1186,9 +1189,11 @@ const Battle = (() => {
     g.addColorStop(0, `rgba(0,0,0,${a})`); g.addColorStop(.55, `rgba(0,0,0,${a * .7})`); g.addColorStop(1, 'rgba(0,0,0,0)');
     mctx.fillStyle = g; mctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
-  function warm(x, y, r, a) {
+  // A warm glow, or one in a colour of its own (gear that glows: '#9ae06a' and the like).
+  function warm(x, y, r, a, col) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, `rgba(255,160,70,${a})`); g.addColorStop(.6, `rgba(230,110,60,${a * .35})`); g.addColorStop(1, 'rgba(230,110,60,0)');
+    if (typeof col === 'string') { const n = parseInt(col.slice(1), 16), c = `${n >> 16},${(n >> 8) & 255},${n & 255}`; g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(.6, `rgba(${c},${a * .35})`); g.addColorStop(1, `rgba(${c},0)`); }
+    else { g.addColorStop(0, `rgba(255,160,70,${a})`); g.addColorStop(.6, `rgba(230,110,60,${a * .35})`); g.addColorStop(1, 'rgba(230,110,60,0)'); }
     ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
 
@@ -1230,8 +1235,10 @@ const Battle = (() => {
       if (u.hero) {
         if (!u.alive) continue;
         lights.push([x, y, 20 + flick, .8, false]);
-        const L = lampOf(u);
-        if (L) { const s = sprOf(u); lights.push([u.x - s.width / 2 + L[0], u.y - s.height + L[1], 40 + flick * 2, 1, true]); }
+        const s = sprOf(u), L = lampOf(u), x0 = leftOf(u, s), y0 = u.y - s.height;
+        if (L) lights.push([x0 + L[0], y0 + L[1], 40 + flick * 2, 1, true]);
+        // Gear that glows: rare blades, embers, relics
+        for (const g of s.glows || []) lights.push([x0 + g[0], y0 + g[1], g[2] + flick * 0.6, 0.85, g[3]]);
       } else if (u.alive) lights.push([x, y, (u.boss ? 34 : 22) + flick * .5, u.boss ? .8 : .72, false]);
       if (u === S.active && u.alive && B && !B.over) lights.push([x, y, 26, .9, u.hero]);
     }
@@ -1244,13 +1251,13 @@ const Battle = (() => {
     mctx.globalAlpha = 1;
     ctx.drawImage(mask, 0, 0);
     ctx.globalCompositeOperation = 'lighter';
-    for (const l of lights) if (l[4]) warm(l[0], l[1], l[2] * 1.15, .24);
+    for (const l of lights) if (l[4]) warm(l[0], l[1], l[2] * 1.15, .24, l[4]);
     for (const l of fxl) if (l[4]) warm(l[0], l[1], l[2], .3 * l[3]);
     ctx.globalCompositeOperation = 'source-over';
     // the Lamplighter's flame
     for (const u of S.list) {
       const L = u.hero && u.alive && lampOf(u);
-      if (L) { const s = sprOf(u); ctx.fillStyle = '#fff3c8'; ctx.fillRect(Math.round(u.x - s.width / 2 + L[0]), Math.round(u.y - s.height + L[1]), 1, 1); }
+      if (L) { const s = sprOf(u); ctx.fillStyle = '#fff3c8'; ctx.fillRect(Math.round(leftOf(u, s) + L[0]), Math.round(u.y - s.height + L[1]), 1, 1); }
     }
     // effects that glow above the dark
     drawFxTop();
@@ -1340,7 +1347,7 @@ const Battle = (() => {
     B = null; queue = []; S.fx = []; S.active = null; stepping = false; clearFlags(); hideBanner();
     S.region = region; S.mode = 'camp'; S.land = false; resize(); setMusicKey(HEARTH_SCALE); platesEl.classList.remove('away');
     const form = typeof Save !== 'undefined' && Save.state ? Save.state.party.map(id => Save.char(id)) : PARTY.map(k => ({ cls: k, name: CLASSES[k].name }));
-    setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
+    setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, look: c.gear && typeof Items !== 'undefined' ? Items.look(c) : null, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
     for (const u of S.list) u.plate.hidden = true;
     hudEl.hidden = true; $('#controls').hidden = true;
     endAim(true);

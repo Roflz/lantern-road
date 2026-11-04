@@ -8,7 +8,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
@@ -39,7 +39,7 @@ function defaultState() {
     nextId: roster.length + 1,
     roster,                 // every character you own
     party: roster.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6), // formation slots 0-5: 2 front, 4 back
-    inventory: { items: [], potions: {} },
+    inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js), up to ITEM.BAG pieces
     currencies: { gold: 0, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
     campaign: { cleared: [], best: {}, current: null },  // current: { stage, seed } of a battle in progress
     base: { buildings: {} },                              // id -> { level, focus, stored, since }
@@ -84,6 +84,9 @@ function normalize(d) {
   if (![1, 2, 4].includes(s.settings.speed)) s.settings.speed = 1;
   for (const k of ['sfx', 'music', 'motion']) s.settings[k] = s.settings[k] !== false;
   s.nextId = Math.max(s.nextId, ...s.roster.map(c => (parseInt(c.id.slice(1), 10) || 0) + 1));
+  // The Bag: real pieces only, each once (a piece worn by someone isn't in the Bag too).
+  const uids = new Set(s.roster.flatMap(c => SLOTS.map(k => c.gear[k] && c.gear[k].uid).filter(Boolean)));
+  s.inventory.items = s.inventory.items.map(x => Items.valid(x)).filter(x => x && !uids.has(x.uid) && uids.add(x.uid));
   if (!(s.lastSeen > 0)) s.lastSeen = Date.now();
   return s;
 }
@@ -114,6 +117,19 @@ const MIGRATIONS = {
       const rekey = h => { const out = {}; if (!isObj(h)) return out; for (const c of old.roster) if (h[c.cls] && !out[c.id]) out[c.id] = h[c.cls]; return out; };
       T.heroes = rekey(T.heroes);
       if (Array.isArray(T.sets)) T.sets.forEach(x => { if (isObj(x)) x.heroes = rekey(x.heroes); });
+    }
+    return old;
+  },
+  // Version 3 (build step 4): gear. Every character gets the Common weapon a recruit carries, at their level, and the
+  // Bag holds gear pieces.
+  3: old => {
+    const inv = isObj(old.inventory) ? old.inventory : (old.inventory = {});
+    inv.items = Array.isArray(inv.items) ? inv.items.filter(x => isObj(x) && GEAR[x.id]) : [];
+    for (const c of Array.isArray(old.roster) ? old.roster : []) {
+      if (!isObj(c) || !CLASSES[c.cls]) continue;
+      const g = isObj(c.gear) ? c.gear : {};
+      c.gear = { weapon: isObj(g.weapon) && GEAR[g.weapon.id] ? g.weapon : null, armor: isObj(g.armor) && GEAR[g.armor.id] ? g.armor : null, accessory: isObj(g.accessory) && GEAR[g.accessory.id] ? g.accessory : null };
+      if (!c.gear.weapon) c.gear.weapon = Items.starter(c.cls, Math.max(1, Math.round(c.level) || 1));
     }
     return old;
   },

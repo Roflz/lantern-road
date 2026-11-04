@@ -89,6 +89,8 @@ function sfx(k, vol = 1) {
       case 'turn': tone(880, .04, 'sine', v(.012)); break;
       case 'step': noise(.04, v(.025), 600); break;
       case 'click': tone(700, .04, 'sine', v(.022)); break;
+      case 'coin': tone(1320, .08, 'square', v(.018)); tone(1760, .16, 'triangle', v(.03), 0, .06, .4); break;
+      case 'equip': noise(.06, v(.05), 1600); tone(392, .12, 'triangle', v(.04), 0, .02); tone(587, .22, 'sine', v(.035), 0, .07, .4); break;
       case 'win': [523, 659, 784, 1046].forEach((f, i) => tone(f, .5, 'triangle', v(.05), 0, i * .1, .45)); break;
       case 'lose': [392, 330, 262, 196].forEach((f, i) => tone(f, .8, 'sine', v(.05), 0, i * .26, .4)); break;
       case 'region': [392, 494, 587].forEach((f, i) => tone(f, 1.4, 'triangle', v(.035), 0, i * .18, .5)); break;

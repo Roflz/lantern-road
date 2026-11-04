@@ -20,8 +20,11 @@
 //   cost(E,u,sk,p,c)             c.mul and c.add change u's costs      mpGain(E,u,sk,p)  + mana from a basic attack
 //   basic(E,u,p)                 the id u's basic attack becomes       canUse(E,u,sk,p)  false forbids a skill
 //   used(E,u,sk,p,c)             after u used a skill                  dot / dotOut / dotIn  damage over time
+//   healIn(E,u,src,p)            × healing u receives                  stealMul(E,u,t,p)  × gold u steals
+//   hook(E,u)                    true: u's melee skills work from the back row (Halberdier's Hook)
 // Global hooks watch everyone (o is the owner): aIn, aOut, aDodge, aCost, aStat, aFall, aSave, aHurt, aStatus, aTurn,
-// aMiss, aRes, aNoCrit.
+// aMiss, aRes, aNoCrit, and aAim(E,o,u,p,plan): a unit o draws u's single-target attack to (the Moth-lure Lantern).
+// Gear (js/items.js) works the same way: each worn item's effect joins its wearer's passives.
 
 const SIM = {
   ROUND: 100,          // timeline units in one round: a Speed 10 character acts once per round
@@ -38,7 +41,7 @@ const SIM = {
   STUN_RES: 'stun', MOVE_RES: 'move',
 };
 const AREA_SHAPES = ['front', 'back', 'random3', 'foes'];
-const HOOKS_GLOBAL = ['aIn', 'aOut', 'aDodge', 'aCost', 'aStat', 'aFall', 'aSave', 'aHurt', 'aStatus', 'aTurn', 'aMiss', 'aRes', 'aNoCrit'];
+const HOOKS_GLOBAL = ['aIn', 'aOut', 'aDodge', 'aCost', 'aStat', 'aFall', 'aSave', 'aHurt', 'aStatus', 'aTurn', 'aMiss', 'aRes', 'aNoCrit', 'aAim'];
 const skillVal = (x, L) => (Array.isArray(x) ? x[0] + (x[1] - x[0]) * (clamp(L, 1, SKILL_LV_MAX) - 1) / (SKILL_LV_MAX - 1) : x);
 // A skill's level: L (1–5) and A (awakened), with v(x) and n(x) to read a value at that level.
 function skillLevel(L, A) {
@@ -68,7 +71,7 @@ const THRALLS = {
 // setup: { seed, party: [6 slots], foes: [6 slots], level?, scale?: { hp, pow }, partyRules?: [rules],
 //          loadout?: [item ids], inputs?: [{ at, slot, target }] }
 // A party slot holds null, a class id, or a hero spec (js/hero.js, Hero.spec): { key, name, char, lv, stats, res,
-// equip, sl, awk, rules }. A bare class id stands for a level-1 recruit with average stats and their starter skill.
+// equip, sl, awk, rules, gear (worn item ids, js/items.js), look (how the sprite is drawn) }. A bare class id stands for a level-1 recruit with average stats and their starter skill.
 // A foe slot holds a foe id or { key, rules?, over? }. level: the stage's level, which grows its foes (FOE_GROWTH).
 // partyRules are the team-wide rules (PARTY_ACTIONS). loadout is the items the party brings, one use per slot.
 // inputs are items the player used by hand: slot's item is used on target (a unit id, or none) just before turn
@@ -107,6 +110,9 @@ function simulate(setup) {
       });
       u.skills = b.equip.filter(id => SKILLS[id] && SKILLS[id].kind === 'active' && u.sl[id]);
       u.pas = Object.keys(u.sl).filter(id => SKILLS[id] && (SKILLS[id].kind === 'passive' || SKILLS[id].kind === 'key')).map(id => ({ sk: SKILLS[id], p: skillLevel(u.sl[id], u.awk.has(id)) }));
+      // Worn gear: each item's effect works like a passive (js/items.js).
+      for (const id of spec.gear || []) { const G = typeof GEAR !== 'undefined' && GEAR[id]; if (G && G.fx) u.pas.push({ sk: G.fx, p: skillLevel(1, false) }); }
+      u.look = spec.look || null;
     } else {
       const F = FOES[spec.key];
       if (!F) throw new Error('Unknown foe: ' + spec.key);
@@ -207,7 +213,7 @@ function simulate(setup) {
   }
   const stSnap = s => { const o = { turns: s.turns }; if (s.dmg) o.dmg = s.dmg; if (s.v) o.v = s.v; if (s.n) o.n = s.n; if (s.list) o.n = s.list.length; return o; };
   const snap = u => ({
-    id: u.id, side: u.side, slot: u.slot, key: u.key, name: u.name, boss: u.boss, elite: u.elite, thrall: u.thrall || undefined, art: u.art,
+    id: u.id, side: u.side, slot: u.slot, key: u.key, name: u.name, boss: u.boss, elite: u.elite, thrall: u.thrall || undefined, art: u.art, look: u.look || undefined,
     hp: u.hp, maxHp: u.maxHp, mp: u.mp, maxMp: u.maxMp, alive: u.alive, lv: u.lv, char: u.char || undefined,
     pow: Math.round(u.pow), def: Math.round(u.def), spd: +u.spd.toFixed(2), crit: Math.round(u.crit), dodge: Math.round(u.dodge),
     basic: u.basic, skills: (u.skills || []).slice(), rules: u.rules.map(r => Object.assign({}, r)),
@@ -398,7 +404,7 @@ function simulate(setup) {
     }
     return { sk: SKILLS[u.basic], p: skillLevel(1, false) };
   }
-  const backMelee = (u, sk) => u.hero && u.row === 'back' && sk.range === 'melee' && !sk.reach;
+  const backMelee = (u, sk) => u.hero && u.row === 'back' && sk.range === 'melee' && !sk.reach && !anyHook(u, 'hook');
   function costOf(u, sk, p) {
     let base = sk.cost || 0;
     if (sk.costLess) base -= p.n(sk.costLess);
@@ -467,6 +473,8 @@ function simulate(setup) {
     // Taunted: single-target attacks must aim at the taunter, when they can reach them.
     const tt = u.st.taunted && byId[u.st.taunted.src];
     if (single && tt && tt.alive && plan.pool && plan.pool.includes(tt)) { plan.targets = [tt]; plan.taunted = true; return plan; }
+    // Drawn: something on the other side pulls this attack to itself (the Moth-lure Lantern).
+    if (single && plan.pool) for (const g of G.aAim) { const t = g.sk.aAim(E, g.u, u, g.p, plan); if (t && t !== plan.targets[0]) { plan.targets = [t]; plan.drawn = true; return plan; } }
     // Focus fire: a single-target attack whose rule didn't choose the foe goes at the party's focus.
     const f = team.focus;
     if (f && single && !plan.picked && plan.pool && plan.pool.includes(f.unit)) {
@@ -710,6 +718,7 @@ function simulate(setup) {
       if (anyHook0(src, 'healCrit') && rng() * 100 < src.crit) a *= SIM.CRIT;
     }
     if (t.st.festering) a *= 0.5;
+    a *= mulHooks(t, 'healIn', src, {});
     let cap = t.maxHp;
     for (const x of t.h.healCap || []) cap = Math.min(cap, Math.round(t.maxHp * x.sk.healCap(E, t, x.p)));
     a = Math.round(a);
@@ -777,6 +786,7 @@ function simulate(setup) {
     return true;
   }
   function swap(a, b) {
+    if (a.row !== b.row && [a, b].some(x => x.fixedFront && x.row === 'front')) return false; // the Oathbound Gorget
     [a.slot, b.slot] = [b.slot, a.slot];
     for (const x of [a, b]) { x.row = ROWS[x.slot]; x.lane = LANE[x.slot]; x.order = x.side * 6 + x.slot; }
     emit({ t: 'swap', a: a.id, b: b.id, slots: [a.slot, b.slot] });
@@ -849,6 +859,7 @@ function simulate(setup) {
     saved: (o, t, label) => emit({ t: 'saved', who: t.id, by: o.id, label }),
     covering: o => units.some(x => x.alive && x.st.covered && x.st.covered.src === o.id),
     taken: u => u.takenTotal,
+    turns: u => (stats[u.id] ? stats[u.id].turns : 0),
     corpses: () => corpses, eat: u => { if (corpses > 0) { corpses--; emit({ t: 'corpse', n: corpses }); fire(u, 'eaten'); } },
     extend: (t, n) => { for (const k in t.st) { const s = t.st[k]; if (isBad(k) && STATUSES[k].time !== 'use' && s.turns < 90) { s.turns += n; if (s.list) s.list.forEach(x => { x.turns += n; }); } } },
     dotLeft: (t, k) => {
@@ -860,7 +871,7 @@ function simulate(setup) {
     },
     spreadBurn: (src, t, n) => { const s = t.st.burn; if (!s) return; const others = living(t.side).filter(x => x !== t && !x.st.burn).sort((a, b) => Math.abs(a.lane - t.lane) - Math.abs(b.lane - t.lane)).slice(0, n); for (const x of others) addStatus(src, x, 'burn', { turns: Math.max(1, s.turns), dmg: s.list ? s.list[0].dmg : s.dmg, raw: true }); },
     pass: (u, from, to) => { for (const k of Object.keys(from.st)) { if (!isBad(k) || k === 'charging' || k === 'marked') continue; const s = from.st[k]; dropStatus(from, k); addStatus(u, to, k, { turns: Math.max(1, s.turns), dmg: s.dmg, v: s.v, raw: true }); } },
-    steal: (u, t, base, mul = 1, onePer) => { if (onePer) { if (t.stolen) return 0; t.stolen = true; } const g = Math.round(base * (1 + 0.15 * (stageLv - 1)) * mul); loot.gold += g; emit({ t: 'steal', who: u.id, from: t.id, gold: g }); return g; },
+    steal: (u, t, base, mul = 1, onePer) => { if (onePer) { if (t.stolen) return 0; t.stolen = true; } const g = Math.round(base * (1 + 0.15 * (stageLv - 1)) * mul * mulHooks(u, 'stealMul', t, {})); loot.gold += g; emit({ t: 'steal', who: u.id, from: t.id, gold: g }); return g; },
     bonusXp: (t, frac) => { loot.xpBonus += foeXp(t) * frac; },
     brew: u => { const x = passive(u, 'unstablebrews'); return x ? SKILLS.unstablebrews.brewMul(x) : 1; },
     brewSide: (u, t) => { const x = passive(u, 'unstablebrews'); if (x && !x.A && rng() < 0.2) addStatus(u, t, 'poison', { turns: 2, p: 0.2, sure: true }); },

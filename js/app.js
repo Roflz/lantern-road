@@ -18,6 +18,7 @@ const App = (() => {
     { id: 'home', label: 'Base', icon: 'kindle' },
     { id: 'map', label: 'Road', icon: 'lantern' },
     { id: 'party', label: 'Party', icon: 'shield' },
+    { id: 'bag', label: 'Bag', icon: 'bag' },          // js/bag.js
   ];
   let cur = null, curParams = {};
   const actions = {}; // hooks other modules fill in, e.g. actions.tactics(charId) opens the rules editor
@@ -160,7 +161,7 @@ const App = (() => {
         const c = Save.char(s.party[i]);
         if (!c) return h('div', { class: 'pslot empty' }, h('span', { text: 'Empty' }));
         return h('button', { class: 'pslot', onclick: () => { sfx('click'); showCharacter(c.id); } },
-          h('img', { src: portraitURL(c.cls, true), alt: '' }),
+          h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })),
           h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }), flags(c),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })));
       };
@@ -170,12 +171,12 @@ const App = (() => {
         h('h3', { class: 'sect', text: 'Back row' }), h('div', { class: 'prow back' }, [2, 3, 4, 5].map(slot)),
         h('h3', { class: 'sect', text: 'Roster' }),
         h('div', { class: 'roster' }, s.roster.map(c => h('button', { class: 'rrow', onclick: () => { sfx('click'); showCharacter(c.id); } },
-          h('img', { src: portraitURL(c.cls, true), alt: '' }),
+          h('img', { src: heroPortrait(c), alt: '' }),
           h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: c.classes.length > 1 ? c.classes.map(k => CLASSES[k].name).join(' + ') : CLASSES[c.cls].role })),
           h('span', { class: 'lv' }, flags(c), 'Lv ' + c.level),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })),
           h('span', { class: 'chev', 'aria-hidden': 'true' })))),
-        placeholder('Gear arrives in step 4, and recruiting in step 5.'));
+        placeholder('Recruiting arrives in step 5.'));
     },
     enter: restScene,
   });
