@@ -1,6 +1,6 @@
 # Lantern Road: Game Design
 
-Agreed 2026-11-03. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. Numbers marked *(tune)* are starting values to adjust in play-testing.
+Agreed 2026-11-03, with decisions from the screen mockups added the same day. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. Numbers marked *(tune)* are starting values to adjust in play-testing.
 
 ## 1. Pillars
 
@@ -166,7 +166,7 @@ The recruiting system follows Darkest Dungeon's stagecoach.
 
 ### The recruit board
 - The recruit board shows a few recruits with randomised stats.
-- It refreshes each time you return to the home base, and also slowly over real time *(tune)*.
+- It refreshes each time you return to the home base, and also slowly over real time *(tune)*. The board shows a timer for its next refresh.
 - Recruits cost gold.
 
 ### Upgrades
@@ -204,8 +204,32 @@ Home base upgrades improve recruiting:
 - Common, Fine, Rare and Relic. A Relic is unique: you can only own one copy.
 - Drops get stronger in later regions.
 
+### Gear shows on the sprite
+- Every item changes how the hero's sprite looks, whether it's a weapon, armour or an accessory. You can read a hero's kit from their sprite in battle, at the camp and in menus.
+- Gear is drawn as layers on the class sprite, so one item looks the same wherever the hero appears.
+- You can try an item on before equipping it and see the change on the sprite.
+
 ## 8. Home base
 
+### The camp
+- The home base is a camp. The current party sits around a fire in the middle, with the building plots in a ring around them.
+- You drag sideways to walk around the fire. The building nearest you comes to the front, and its card offers its main action.
+- The ring is the only way into buildings. There is no separate list view.
+- Heroes at the fire have small idle animations and react when tapped.
+
+### Building plots
+- You start with 3 building plots *(tune after play-testing)* and choose what to build on each one.
+- More plots unlock as your Renown rises. Plots you haven't unlocked are left as gaps in the ring until they open.
+- For now, the most plots you can have is the number of building types, one plot for each. Until then there are more buildings on offer than plots, so every plot is a choice.
+- You can tear a building down to free its plot. You get nothing back, so a building you raise again starts from scratch.
+
+### Renown (account level)
+- Renown is an account level, separate from the heroes' levels.
+- It rises with your overall progress through the game *(tune)*, for example new stages lit, bosses beaten, hero levels gained and buildings built.
+- Certain Renown levels unlock another building plot. For now, plots are all Renown unlocks; other rewards may come later.
+- Recruiting upgrades, such as more picks and a bigger roster, come from buildings, not from Renown.
+
+### Materials
 You build the home base with gold and with materials earned in battle. Each region drops one material more often than others, so particular buildings send you back to particular regions. Material names are placeholders:
 
 | Region | Material |
@@ -270,6 +294,7 @@ Stages and foes are defined in data tables so content can grow quickly.
 - **Between stages:** the party walks the lit road between stages, and each battle starts where they stop.
 - **In battle:** lunges, projectiles, spell flashes, hit sparks, damage numbers, status icons, and a fade on defeat. Skill callouts show the rule behind each action.
 - **Rewards:** loot flies into the bag. Level-ups are celebrated after a battle, never mid-battle.
+- **Hero sheet:** the Stats and Gear tabs show the hero's full battle sprite on a small stage, where you can watch each of their skills play out. The Skills and Rules tabs leave that space to their content.
 - **Layout:** every screen is built for one-handed portrait phone use.
 - **Visual identity:** cozy-gothic pixel art, warm lantern light against the dark, procedural music and sound.
 
@@ -281,7 +306,7 @@ Each step ends with something you can play-test.
 2. **Rules:** character and party rules, with unlocks.
 3. **Characters:** classes, stats, levels, universal points, skill trees and equipped skills.
 4. **Equipment** loot.
-5. **Home base:** recruiting, the roster, fatigue and recovery, the first buildings, materials, idle buildings and offline gains.
+5. **Home base:** the camp, building plots and Renown, recruiting, the roster, fatigue and recovery, the first buildings, materials, idle buildings and offline gains.
 6. **Campaign map** and a fully built Region I.
 7. **Regions II–V**, onboarding and polish.
 
