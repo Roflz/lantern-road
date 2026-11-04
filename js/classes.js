@@ -188,7 +188,7 @@ defClass('hexblade', {
 // ═══════════════════════════════════════════════════════════════════ Pilgrim
 const healSkill = sk => !!(SKILLS[sk] && (SKILLS[sk].heal || SKILLS[sk].healPct || SKILLS[sk].revive || SKILLS[sk].healer));
 defClass('pilgrim', {
-  name: 'Pilgrim', role: 'Healer: restoring', row: 'back', weapon: 'Censers', mpGain: 12, slots: [3, 6],
+  name: 'Pilgrim', role: 'Healer: restoring', row: 'back', healer: true, weapon: 'Censers', mpGain: 12, slots: [3, 6],
   blurb: 'A healer who walks the road on faith. Heals and raises the fallen, prevents damage before it lands, or carries holy fire to the undead.',
   stats: { hp: [95, 115, 7], mp: [45, 55, 2], pow: [13, 15, 0.9], def: [4, 6, 0.3], spd: [8, 10, 0.02], crit: [3, 7, 0.03], dodge: [3, 7, 0.03] },
   res: { stun: 25, move: 20, bleed: 20, blight: 30, curse: 45, debuff: 30 },

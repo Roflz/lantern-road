@@ -12,7 +12,7 @@ let reportRes = null;      // the battle the open report describes
 
 function toast(text, cls = '') {
   const el = h('div', { class: 'toast ' + cls, text });
-  $('#toasts').append(el); setTimeout(() => el.remove(), 2600);
+  $('#toasts').append(el); setTimeout(() => el.remove(), cls.includes('tip') ? 5600 : 2600);
   const all = $('#toasts').children; if (all.length > 3) all[0].remove();
 }
 function setScreen(el) { scr.replaceChildren(el); scr.hidden = false; scr.scrollTop = 0; }
@@ -24,22 +24,79 @@ const btn = (label, fn, cls = '', sub) => h('button', { class: 'btn ' + cls, onc
 // Leave the battle for the road (the Campaign Map).
 function showCamp() { App.go('map'); }
 
-// ── a battle
-// The Battle screen. A battle in progress is remembered in the save, so a reload replays the same fight.
+// ── a battle on a trip
+// The Battle screen. A battle under way is remembered in the save. On a reload while the page is republished, the same
+// seed replays it; on a return after closing the app, it is resolved at once and the party comes home (boot, below).
 App.screen('battle', {
   enter(p) { startStage(p.stage, p.seed); },
-  leave() { current = null; progress().current = null; Save.commit(); },
+  leave() { walkToken++; hideBetween(); current = null; progress().current = null; Save.commit(); },
 });
 function startStage(i, seed) {
-  closeScreen(); closeSheet();
+  closeScreen(); closeSheet(); hideBetween();
   const stage = STAGES[i];
+  // Setting out from anywhere but the map (a reload, Try again): a trip starts here.
+  if (!Campaign.trip()) Campaign.setOut(i);
   seed = seed != null ? seed : (Date.now() ^ (i * 7919)) >>> 0;
   Battle.play();
   current = { index: i, stage, seed, res: null };
   progress().current = { stage: i, seed };
   Save.commit();
-  current.res = Battle.run(stage, seed, { onEnd: res => showReport(res), first: true });
+  current.res = Battle.run(stage, seed, { onEnd: res => afterBattle(res), first: true, setup: Campaign.setup(i, seed) });
   syncControls();
+}
+// The battle is over: rewards, XP, fatigue and unlocks are settled (js/campaign.js), then the party walks on, or the
+// trip ends and the report shows what it brought home.
+function afterBattle(res) {
+  if (!current || res.camp) return;
+  const out = Campaign.afterBattle(res);
+  res.camp = out; res.xp = out.r.xp; res.gains = out.r.gains; res.saved = true;
+  if (out.next == null) progress().current = null;
+  Save.commit();
+  afterTips(res);
+  if (out.next != null) betweenBattles(res);
+  else if (res.gains.some(x => x.g.to > x.g.from)) LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, res.winner === 0);
+  else showReport(res);
+}
+
+// ── between battles (campaign spec §7.4): loot into the Bag, a level-up banner, the party rules checked, then the
+// party walks on for about 3 seconds and the next battle starts where they stop. Report and Come home stay at hand.
+const WALK_MS = 1400; // the walk between stages, in play time: about 3 seconds at 1× (tune)
+let betweenEl = null, walkToken = 0;
+function hideBetween() { if (betweenEl) { betweenEl.remove(); betweenEl = null; } }
+function betweenBattles(res) {
+  const c = res.camp, next = STAGES[c.next];
+  hideBetween();
+  const ups = res.gains.filter(x => x.g.to > x.g.from);
+  const bar = h('i');
+  betweenEl = h('div', { class: 'between', role: 'status' },
+    h('div', { class: 'bt-head' }, h('span', { class: 'kicker won', text: `${current.stage.id} is clear` }), h('b', { text: next.id === current.stage.id ? `Again: ${next.name}` : `On to ${next.id} · ${next.name}` })),
+    rewardChips(c, true),
+    ups.length ? h('div', { class: 'bt-ups' }, ups.map(x => h('span', { class: 'lvup' }, ico('star'), `${x.c.name} · Lv ${x.g.to}`))) : null,
+    c.left.length ? h('div', { class: 'bt-left', text: c.left.map(id => Save.char(id).name).join(', ') + (c.left.length > 1 ? ' are' : ' is') + ' Spent, and walks home alone.' }) : null,
+    h('div', { class: 'bt-bar' }, bar),
+    h('div', { class: 'bt-acts' },
+      h('button', { class: 'btn', onclick: () => { sfx('click'); walkToken++; hideBetween(); showReport(res, { paused: true }); } }, 'Report'),
+      h('button', { class: 'btn', onclick: () => { sfx('click'); comeHomeNow(res); } }, 'Come home')));
+  $('#frame').append(betweenEl);
+  if (ups.length) sfx('win');
+  walkOn(res, bar);
+}
+// The party walks on to the next stage; the next battle starts where they stop.
+function walkOn(res, bar) {
+  const T = Campaign.trip();
+  if (!T || !current) return showCamp();
+  const token = ++walkToken, real = WALK_MS / (0.5 * Math.max(1, Battle.speed));
+  if (bar) requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `width ${real}ms linear`; bar.style.width = '100%'; }));
+  Battle.travel(WALK_MS, () => { if (token !== walkToken || !current || !Campaign.trip()) return; hideBetween(); startStage(T.stage); });
+}
+// Come home from between battles: the trip ends here.
+function comeHomeNow(res) {
+  walkToken++; hideBetween();
+  const why = { k: 'called', text: 'You called the party home.' };
+  Campaign.end(why);
+  if (res && res.camp) { res.camp.next = null; res.camp.why = why; }
+  Save.commit();
+  if (res) showReport(res); else showCamp();
 }
 
 // Battle controls: play or pause, one turn at a time, speed, skip.
@@ -71,14 +128,47 @@ function resumeFromMenu() { closeSheet(); closeScreen(); Battle.setPaused(menuWa
 function openMenu(again) {
   if (!again) menuWasPaused = Battle.paused;
   Battle.setPaused(true);
+  const T = Campaign.trip();
   openSheet(h('div', { class: 'box' },
     h('div', { class: 'kicker', text: current ? `${current.stage.id} · ${current.stage.name}` : 'Paused' }),
     h('h2', { text: 'Paused' }),
     btn('Resume', resumeFromMenu, 'primary'),
-    btn('Retreat to the road', () => { closeSheet(); showCamp(); }, '', 'Leave this battle. Nothing is lost.'),
+    T && !T.home
+      ? btn('Come home after this battle', () => { Campaign.callHome(); Save.commit(); toast('The party comes home after this battle'); resumeFromMenu(); }, '', 'The battle finishes first. Skip it to come home now.')
+      : T ? h('p', { class: 'flavor', text: 'The party comes home after this battle.' }) : null,
     settingRows(() => openMenu(true)),
     btn('How battles work', () => { closeSheet(); showHow(() => { closeScreen(); openMenu(true); }); })), 'menu');
   syncControls();
+}
+
+// ── what a battle brought home: chips for gold, XP, materials, items, gear and unlocks
+const RARITY_COLOR = { common: '#c9c2b0', fine: '#8cc4e6', rare: '#f1d36a', relic: '#ff9a5a' };
+function rewardChips(camp, small) {
+  const r = camp.r, kids = [];
+  const chip = (cls, icon, text, title) => h('span', { class: 'rw ' + cls, title: title || text }, icon ? ico(icon) : null, text);
+  if (r.gold) kids.push(chip('gold', 'coin', `+${fmt(r.gold)}`, `${r.spoilsGold} gold from the foes${r.clearGold ? `, ${r.clearGold} for the clear` : ''}`));
+  if (r.xp) kids.push(chip('xp', 'star', `+${fmt(r.xp)} XP`, 'XP for each hero who fought'));
+  for (const m of MATERIALS) if (r.mats[m.id]) kids.push(chip('mat', 'bone', `${m.name} ×${r.mats[m.id]}`));
+  for (const id in r.items) kids.push(chip('item', ITEMS[id].icon, `${ITEMS[id].name}${r.items[id] > 1 ? ' ×' + r.items[id] : ''}`));
+  for (const g of r.gear) {
+    const D = Items.def(g.piece), rar = Items.rarity(g.piece);
+    const el = chip('gear' + (g.sold ? ' sold' : ''), null, g.sold ? `${D.name} · sold +${g.sold}` : D.name, `${RARITY_NAMES[rar]} ${SLOT_NAMES[D.slot].toLowerCase()}${g.sold ? ': the Bag was full, so it sold where it dropped' : ', into the Bag'}`);
+    el.style.setProperty('--rc', RARITY_COLOR[rar]);
+    kids.push(el);
+  }
+  if (r.first && !small) kids.push(chip('first', 'lantern', 'First clear · gold and materials doubled'));
+  for (const id of r.unlocks) { const U = UNLOCKS[id]; kids.push(chip('unlock', U.icon, U.kind === 'condition' ? `New condition: ${U.name}` : U.name, U.line || '')); }
+  if (r.called) kids.push(chip('dim', null, `${r.called} called foe${r.called > 1 ? 's' : ''}: no spoils`));
+  return h('div', { class: 'rewards' + (small ? ' compact' : '') }, kids.length ? kids : h('span', { class: 'rw dim', text: 'Nothing this time' }));
+}
+// What the trip did to each hero's fatigue, for the report.
+function fatigueLine(camp) {
+  const f = camp.r.fatigue, ids = Object.keys(f);
+  if (!ids.length) return null;
+  return h('div', { class: 'fatigues' }, ids.map(id => {
+    const c = Save.char(id), x = f[id], lvl = x.after >= FATIGUE.SPENT ? 'spent' : x.after >= FATIGUE.EXHAUSTED ? 'exh' : x.after >= FATIGUE.WEARY ? 'weary' : '';
+    return h('span', { class: 'fg ' + lvl, title: `${c.name}: +${x.gain} fatigue from ${x.gain} turns` }, h('img', { src: heroPortrait(c), alt: '' }), h('span', { class: 'fbar' }, h('i', { style: `width:${x.after}%` })), h('b', { text: Math.floor(x.after) }));
+  }));
 }
 
 // ── the battle report
@@ -159,34 +249,8 @@ function characterCard(u, res) {
     h('div', { class: 'slots' }, tactics),
     moments.length ? [h('h4', { text: 'Moments' }), h('div', { class: 'moments' }, moments)] : null);
 }
-// XP from the foes the party felled goes to every character who fought (design §5). Returns what changed for each.
-function awardXp(res) {
-  const out = [];
-  for (const u of res.start) {
-    const c = u.side === 0 && u.char && Save.char(u.char);
-    if (!c) continue;
-    const before = { level: c.level, xp: c.xp };
-    out.push({ c, before, g: Hero.gainXp(c, res.xp) });
-  }
-  if (res.loot && res.loot.gold) Save.state.currencies.gold += res.loot.gold;
-  return out;
-}
 function showReport(res, opts = {}) {
-  const stage = current.stage, won = res.winner === 0;
-  if (!res.saved) {
-    res.saved = true;
-    const save = progress(), first = won && !save.cleared.includes(stage.id);
-    if (first) save.cleared.push(stage.id);
-    if (won) { const b = save.best[stage.id]; if (!b || res.rounds < b) save.best[stage.id] = res.rounds; }
-    save.current = null; // the fight is over: a reload now returns to the road, not into this battle
-    res.gains = awardXp(res);
-    // The camp (js/base.js): fatigue, party items used, Renown, and a new recruit board once the party is home. With the
-    // campaign (js/campaign.js) present, its hooks do this instead.
-    if (typeof Base !== 'undefined' && typeof Campaign === 'undefined') res.base = Base.afterBattle(res, stage, { won, first, xpLv: (res.xp || 0) / Hero.xpToNext(stage.level || 1), heroes: res.gains.length, fatigue: true, home: true });
-    Save.commit();
-    // Level-ups are celebrated after the battle, before the report.
-    if (res.gains.some(x => x.g.to > x.g.from) && !opts.report) { LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); return; }
-  }
+  const stage = current.stage, won = res.winner === 0, camp = res.camp;
   const again = reportView && reportView.res === res && !sheet.hidden;
   const v = reportView = Object.assign(again ? reportView : { res, side: 0, stat: 'dealt', sel: null }, opts);
   const S = res.stats, units = res.start.filter(u => u.side === v.side);
@@ -205,22 +269,28 @@ function showReport(res, opts = {}) {
       h('b', { class: val ? '' : 'zero', text: val ? fmt(val) : '–' }),
       h('span', { class: 'chev', 'aria-hidden': 'true' }));
   });
-  const nextI = current.index + 1 < STAGES.length ? current.index + 1 : -1;
-  const actions = won
-    ? [nextI >= 0 ? h('button', { class: 'btn primary', onclick: () => { sfx('click'); startStage(nextI); } }, 'Next stage', h('span', { class: 'sub', text: `${STAGES[nextI].id} · ${STAGES[nextI].name}` }))
-      : h('button', { class: 'btn primary', onclick: () => { sfx('click'); App.go('home'); } }, 'The road is clear', h('span', { class: 'sub', text: 'Back to base' })),
-    btn('Fight again', () => startStage(current.index)), btn('Road', showCamp)]
-    : [btn('Try again', () => startStage(current.index), 'primary'), btn('Road', showCamp)];
+  // On a trip that carries on (the report was opened between battles): walk on, or come home. Once the trip is over:
+  // home to the road, or set out again.
+  const going = camp && camp.next != null && Campaign.trip();
+  const nextI = Campaign.frontier();
+  const again2 = () => { sfx('click'); if (Campaign.setOut(current.index)) { Save.commit(); startStage(current.index); } else toast('No one is fit to set out.'); };
+  const actions = going
+    ? [h('button', { class: 'btn primary', onclick: () => { sfx('click'); closeSheet(); betweenBattles(res); } }, 'Walk on', h('span', { class: 'sub', text: `${STAGES[camp.next].id} · ${STAGES[camp.next].name}` })), btn('Come home', () => comeHomeNow(null))]
+    : [h('button', { class: 'btn primary', onclick: () => { sfx('click'); showCamp(); } }, 'Home', h('span', { class: 'sub', text: camp && camp.why ? 'The party walks back to camp' : 'Back to the road' })),
+      won && nextI < STAGES.length && nextI !== current.index && !stage.boss ? btn('Set out', () => { sfx('click'); if (Campaign.setOut(nextI)) { Save.commit(); startStage(nextI); } }, '', `${STAGES[nextI].id} · ${STAGES[nextI].name}`) : null,
+      btn(won ? 'Farm again' : 'Try again', again2)];
+  // Why the trip ended, and after a loss, the stage's hint first (campaign spec §8.1).
+  const why = camp && camp.why && !going ? h('div', { class: 'why ' + camp.why.k }, camp.why.hint ? h('p', { class: 'hint' }, ico('book'), camp.why.hint) : null, h('span', { text: camp.why.text })) : null;
   const box = h('div', { class: 'box report-box wide' },
     h('div', { class: 'rhead' },
       h('div', { class: 'rtitle' },
         h('div', { class: 'kicker ' + (won ? 'won' : 'lost'), text: `${won ? 'Victory' : 'Defeat'} · ${REGION_NAMES[stage.region].name} ${stage.id}` }),
         h('h2', { text: won ? `${stage.name} is clear` : `Driven back at ${stage.name}` }),
         h('p', { class: 'flavor', text: flavorLine(res, won) }),
-        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); } }, ico('star'), `+${fmt(res.xp)} XP`, (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null, res.loot && res.loot.gold ? badge(`+${res.loot.gold} gold`, 'good', 'coin') : null,
+        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); } }, ico('star'), 'Levels', (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null,
           badge(kos ? plural(kos, 'knockout') : 'No knockouts', kos ? 'bad' : 'good'), res.rounds >= SIM.ENRAGE_ROUND ? badge('Enraged', 'bad', 'rage') : null,
           h('div', { class: 'sides', role: 'tablist', 'aria-label': 'Whose fight to show' }, [[0, 'Your party'], [1, 'Foes']].map(([id, label]) => h('button', { class: v.side === id ? 'on' : '', role: 'tab', 'aria-selected': v.side === id ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { side: id, sel: null }); } }, label))))),
-      h('div', { class: 'actions' }, actions)),
+      h('div', { class: 'rside' }, h('div', { class: 'actions' }, actions), why, camp ? rewardChips(camp) : null, camp ? fatigueLine(camp) : null)),
     h('div', { class: 'report' },
       h('div', { class: 'stabs' },
         h('div', { class: 'stats', role: 'tablist' }, REPORT_STATS.map(x => h('button', { class: 'stab ' + (x.heal ? 'heal' : 'dmg') + (x.k === v.stat ? ' on' : ''), role: 'tab', 'aria-selected': x.k === v.stat ? 'true' : 'false', title: x.tip, onclick: () => { sfx('click'); showReport(res, { stat: x.k }); } }, ico(x.icon), x.label))),
@@ -293,12 +363,64 @@ document.addEventListener('keydown', e => {
 // When the page is republished or reloaded, a viewer mid-battle gets the same battle again: the same seed replays it.
 function boot(data) {
   Save.load();
-  // The camp catches up on the time away: rest, lessons, idle buildings, the board and the free draught.
-  if (typeof Base !== 'undefined') Base.start();
+  Campaign.ensure();
+  // The camp listens to the road from the start, so a battle resolved below still counts for Renown and items.
+  if (typeof Base !== 'undefined') Base.prepare();
+  // Republished while a battle played: the same seed replays it. Back after closing the app: the battle that was
+  // under way is resolved now, and the party comes home (campaign spec §7.5). Nothing played while the app was closed.
   if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) progress().current = { stage: data.stage, seed: data.seed };
+  else if (progress().current) resolveClosed();
+  // The camp catches up on the time away (js/base.js): rest, lessons, idle buildings, the board and the free draught.
+  if (typeof Base !== 'undefined') Base.start();
   Battle.init();
   Battle.onPause = () => syncControls();
+  Battle.onEvent = battleTip;
   App.start();
+  if (progress().rebuilt) { delete progress().rebuilt; Save.commit(); setTimeout(() => toast('The road was rebuilt: Region I has 18 stages now. Your heroes keep their levels and gear.', 'tip'), 600); }
+}
+// The battle under way when the app closed: resolved from its seed, its rewards settled, and the trip over.
+function resolveClosed() {
+  const cur = progress().current;
+  try {
+    if (!Campaign.trip()) Campaign.setOut(cur.stage);
+    const res = simulate(Campaign.setup(cur.stage, cur.seed));
+    const out = Campaign.afterBattle(res, Save.state, { closed: true });
+    if (out.next != null || Campaign.trip()) Campaign.end({ k: 'closed', text: 'The app closed, so the party came home after that battle.' });
+  } catch (e) { console.warn('Lantern Road: the battle under way could not be resolved', e); Campaign.end({ k: 'closed', text: 'The party came home.' }); }
+  progress().current = null;
+  Save.commit();
+}
+
+// ── first-time tips (campaign spec §8.3): one line, the first time something happens, never blocking the battle
+const TIPS = {
+  bleed: 'Bleeding: loses health each turn. Healing doesn’t stop it.',
+  marked: 'Marked: a big hit lands on this hero next turn. Guard them, or kill the one charging.',
+  enrage: 'Enraged: from round 15 foes hit harder every round.',
+  fell: 'Knocked out: back up after the battle, at full health. “Ally: fallen” is now a condition.',
+  step: 'A melee foe in the back row waits, and steps up when a front slot opens.',
+  called: 'Called foes drop no spoils. Kill the one calling them.',
+  weary: 'Weary: rest at camp. The Infirmary will speed it up.',
+  stat: 'A stat point: spend it on the hero’s Stats tab.',
+  skill: 'A skill point: learn a tier-1 skill, then choose which one to equip.',
+};
+function showTip(k, text) { if (Campaign.tip(k)) toast(text || TIPS[k], 'tip'); }
+const isHeroId = id => /^p\d$/.test(id);
+function battleTip(e) {
+  if (!current) return;
+  if (e.t === 'status' && e.on && isHeroId(e.who) && (e.key === 'bleed' || e.key === 'marked')) showTip(e.key);
+  else if (e.t === 'hit' && e.guard && e.tgt[0] === 'f') {
+    const g = current.res && current.res.start.find(u => u.id === e.tgt);
+    showTip('guarded', `Guarded: ${g ? (/^The /.test(g.name) ? g.name.replace(/^The /, 'the ') : g.name) : 'a foe'} took that hit for its ally.`);
+  } else if (e.t === 'enrage') showTip('enrage');
+  else if (e.t === 'die' && isHeroId(e.who)) showTip('fell');
+  else if (e.t === 'step') showTip('step');
+  else if (e.t === 'summon' && e.unit.side === 1) showTip('called');
+}
+function afterTips(res) {
+  const f = res.camp.r.fatigue;
+  if (Object.values(f).some(x => x.before < FATIGUE.WEARY && x.after >= FATIGUE.WEARY)) showTip('weary');
+  if (res.gains.some(x => x.g.to > x.g.from)) showTip('stat');
+  if (res.gains.some(x => x.g.skillPts > 0)) showTip('skill');
 }
 try {
   const hot = window.claude && window.claude.hot;

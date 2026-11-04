@@ -146,6 +146,8 @@ const Camp = (() => {
   function setOut() {
     if (App.actions.setOut) return App.actions.setOut();
     const s = Save.state;
+    // The road's own sheet: readiness, rewards and the trip settings (js/map.js).
+    if (typeof RoadMap !== 'undefined' && typeof Campaign !== 'undefined') { App.go('map'); RoadMap.stageSheet(Math.min(Campaign.frontier(s), STAGES.length - 1)); return; }
     if (!s.party.some(Boolean)) { toast('Nobody in the party: add a hero on the Party tab', 'bad'); return; }
     const i = STAGES.findIndex(st => !s.campaign.cleared.includes(st.id));
     App.go('battle', { stage: i < 0 ? STAGES.length - 1 : i });
@@ -600,31 +602,6 @@ const Camp = (() => {
       h('p', { class: 'flavor', text: why || `${c.name} walks off down the road for good. ${worn ? `Their gear (${noun(worn, 'piece')}) goes back to the Bag.` : 'They wear no gear.'} Nothing else comes back.` }),
       why ? null : btn(`Dismiss ${c.name}`, () => { Base.dismiss(cid, s); Save.commit(); closeSheet(); toast(`${c.name} has left the company`); App.refresh(); }, 'danger'),
       btn(why ? 'Back' : `Keep ${c.name}`, closeSheet, 'primary')), 'sheet-bottom');
-  }
-  // An empty formation slot: choose who stands there.
-  App.actions.pickSlot = i => slotSheet(i);
-  App.actions.slotMenu = i => slotSheet(i);
-  function slotSheet(i) {
-    const s = Save.state, cur = Save.char(s.party[i]), row = i < 2 ? 'front' : 'back';
-    const options = s.roster.filter(c => c.id !== s.party[i]);
-    const place = c => {
-      const from = s.party.indexOf(c ? c.id : null);
-      if (c && from >= 0) s.party[from] = cur ? cur.id : null; // a swap within the formation
-      s.party[i] = c ? c.id : null;
-      Save.commit(); closeSheet(); App.refresh();
-    };
-    openSheet(h('div', { class: 'box' },
-      h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
-      h('div', { class: 'kicker', text: `${row === 'front' ? 'Front' : 'Back'} row · slot ${i + 1}` }), h('h2', { text: cur ? cur.name : 'Who stands here?' }),
-      cur ? h('div', { class: 'row2' }, btn('Their sheet', () => { closeSheet(); App.showCharacter(cur.id); }), btn('Leave the slot empty', () => place(null))) : null,
-      h('div', { class: 'pickl' }, options.map(c => {
-        const st = statusOf(c, s), why = s.base.hall[c.id] ? 'At a lesson' : Fatigue.spent(c) ? 'Spent' : '';
-        return h('button', { class: 'rost' + (why ? ' no' : ''), disabled: !!why, onclick: () => { click(); place(c); } },
-          h('img', { class: 'sbox', src: heroPortrait(c), alt: '' }),
-          h('div', {}, h('span', { class: 'nm', text: c.name }), h('span', { class: 'k', text: `${CLASSES[c.cls].name} · Lv ${c.level} · ${st.text}` })),
-          h('span', { class: 'tag ' + st.tag[1], text: why || (s.party.includes(c.id) ? 'Swap' : CLASSES[c.cls].row === row ? 'Fits' : 'Place') }));
-      })),
-      options.length ? null : h('p', { class: 'flavor', text: 'Nobody else on the roster yet. The Recruit Board brings more.' })), 'sheet-bottom');
   }
   App.actions.recruitLink = () => {
     const s = Save.state;

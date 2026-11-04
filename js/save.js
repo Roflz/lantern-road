@@ -8,7 +8,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
@@ -40,9 +40,14 @@ function defaultState() {
     party: [null, null, null, null, null, null],          // formation slots 0-5: 2 front, 4 back
     inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js); potions: party items, by id
     currencies: { gold: typeof BASE !== 'undefined' ? BASE.START_GOLD : 100, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
-    campaign: { cleared: [], best: {}, current: null },  // current: { stage, seed } of a battle in progress
+    // The road (js/campaign.js). current: { stage, seed } of a battle under way. road: the trip settings and the rule
+    // set chosen for each stage. trip: the trip under way. lastTrip: its summary once home. tips: first-time tips shown.
+    campaign: { cleared: [], best: {}, current: null, road: { keepGoing: true, sets: {} }, trip: null, lastTrip: null, tips: {} },
+    unlocks: {},                                          // every first-clear unlock: id -> when (UNLOCKS in js/data.js)
+    // A new road starts with no party rules and nothing packed: 1-3 brings the items and the draught rule, 1-6 the
+    // come-home rule (js/campaign.js). Tactics fills in the rest (js/rules.js).
+    tactics: { party: { slots: PARTY_RULES.slots[0], rules: [] }, loadout: { slots: LOADOUT.slots[0], items: [] } },
     base: { buildings: {}, plots: [], beds: [], pins: [], hall: {}, done: {}, paid: [], clock: 0, skew: 0 }, // the home base (js/base.js)
-    unlocks: {},            // first-clear unlocks: { id: when } (the campaign records them)
     renown: { points: 0, awarded: {} },
     board: { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, free: true, seq: 0 },
     freePotion: { waiting: 0, since: 0 },
@@ -83,7 +88,13 @@ function normalize(d) {
   s.campaign.cleared = s.campaign.cleared.filter(x => typeof x === 'string');
   if (!isObj(s.campaign.best)) s.campaign.best = {};
   const cur = s.campaign.current;
-  if (cur && !(Number.isInteger(cur.stage) && Number.isFinite(cur.seed))) s.campaign.current = null;
+  if (cur && !(Number.isInteger(cur.stage) && STAGES[cur.stage] && Number.isFinite(cur.seed))) s.campaign.current = null;
+  const T = s.campaign.trip;
+  if (T && !(isObj(T) && Number.isInteger(T.stage) && STAGES[T.stage] && isObj(T.totals) && Array.isArray(T.out))) s.campaign.trip = null;
+  if (s.campaign.lastTrip && !(isObj(s.campaign.lastTrip) && isObj(s.campaign.lastTrip.why))) s.campaign.lastTrip = null;
+  s.campaign.cleared = s.campaign.cleared.filter(id => STAGES.some(st => st.id === id));
+  for (const k of Object.keys(s.unlocks)) if (!UNLOCKS[k] || !Number.isFinite(s.unlocks[k])) delete s.unlocks[k];
+  for (const c of s.roster) c.fatigue = clamp(Number(c.fatigue) || 0, 0, 100);
   if (![1, 2, 4].includes(s.settings.speed)) s.settings.speed = 1;
   for (const k of ['sfx', 'music', 'motion']) s.settings[k] = s.settings[k] !== false;
   s.nextId = Math.max(s.nextId, ...s.roster.map(c => (parseInt(c.id.slice(1), 10) || 0) + 1));
@@ -141,11 +152,24 @@ const MIGRATIONS = {
     }
     return old;
   },
-  // Version 4 (build step 5): the home base. Everyone on the roster stays, and so does what the prototype gave for free:
+  // Version 4 (build step 6): the campaign. The prototype's six stages (1-1 to 2-3) are replaced by Region I's 18, so
+  // the road starts again from 1-1; heroes keep their levels, gear and rules. Unlocks start empty, a trip is new, and
+  // the battle that was under way is dropped. rebuilt tells the app to say so once.
+  4: old => {
+    const c = isObj(old.campaign) ? old.campaign : (old.campaign = {});
+    const had = Array.isArray(c.cleared) ? c.cleared.length : 0;
+    c.cleared = []; c.best = {}; c.current = null; c.trip = null; c.lastTrip = null;
+    c.road = { keepGoing: true, sets: {} }; c.tips = {};
+    if (had) c.rebuilt = true;
+    old.unlocks = {};
+    for (const ch of Array.isArray(old.roster) ? old.roster : []) if (isObj(ch)) ch.fatigue = 0;
+    return old;
+  },
+  // Version 5 (build step 5): the home base. Everyone on the roster stays, and so does what the prototype gave for free:
   // rule slots learned become Masters' Hall lessons already done (step 3 kept them in lessons.rule), and party rule and
   // loadout slots opened stay open as a floor under the Tactician's. Renown counts the stages already lit and the bosses
   // already beaten. The first recruit is free only for a party of one.
-  4: old => {
+  5: old => {
     const now = Date.now();
     const roster = Array.isArray(old.roster) ? old.roster : [];
     const T = isObj(old.tactics) ? old.tactics : {};

@@ -30,6 +30,7 @@ const SIM = {
   ROUND: 100,          // timeline units in one round: a Speed 10 character acts once per round
   ENRAGE_ROUND: 15,    // from this round on, foes are enraged (tune)
   ENRAGE_STEP: 0.25,   // each round of enrage adds this much to foe damage (tune)
+  ENRAGE_SURGE: 40,    // from this round on, foe damage also doubles every round, so a party that only defends can't stall
   MAX_ACTIONS: 600,    // a safety stop; enrage should end every battle long before this
   DAZZLE_MISS: 0.4,    // Dazzled: 40% of attacks miss
   CRIT: 1.6,           // critical hit multiplier
@@ -72,7 +73,7 @@ const THRALLS = {
 //          loadout?: [item ids], inputs?: [{ at, slot, target }] }
 // A party slot holds null, a class id, or a hero spec (js/hero.js, Hero.spec): { key, name, char, lv, stats, res,
 // equip, sl, awk, rules, gear (worn item ids, js/items.js), look (how the sprite is drawn) }. A bare class id stands for a level-1 recruit with average stats and their starter skill.
-// A foe slot holds a foe id or { key, rules?, over? }. level: the stage's level, which grows its foes (FOE_GROWTH).
+// A foe slot holds a foe id or { key, level?, rules?, over? }. level: the stage's level, which grows its foes (foeStats).
 // partyRules are the team-wide rules (PARTY_ACTIONS). loadout is the items the party brings, one use per slot.
 // inputs are items the player used by hand: slot's item is used on target (a unit id, or none) just before turn
 // number at (0 is the first turn). The battle screen adds one and simulates again; everything before it is unchanged.
@@ -84,7 +85,7 @@ function simulate(setup) {
   const G = {};                 // global hooks: name → [{ u, sk, p }]
   for (const k of HOOKS_GLOBAL) G[k] = [];
   let thrallN = 0, corpses = 0, actions = 0, clock = 0, round = 1, enrage = 0, actor = null;
-  const loot = { gold: 0, xpBonus: 0 };
+  const loot = { gold: 0, xpLv: 0 };
   const later = [];
 
   // ── units
@@ -96,13 +97,14 @@ function simulate(setup) {
     for (const k of ['hp', 'mp', 'pow', 'def', 'spd', 'crit', 'dodge']) st[k] = C[k];
     return { C, st, res: C.res, lv: 1, equip: (spec.equip || [C.starter]), sl: spec.sl || Object.fromEntries((spec.equip || [C.starter]).map(k => [k, 1])), awk: spec.awk || [] };
   }
-  const make = (e, side, slot) => {
+  // o: { id, summoned } for a foe called into the battle (Call the Swarm).
+  const make = (e, side, slot, o = {}) => {
     const spec = typeof e === 'string' ? { key: e } : e;
-    const u = { id: (side ? 'f' : 'p') + slot, side, slot, row: ROWS[slot], lane: LANE[slot], order: side * 6 + slot, key: spec.key, hero: !side, thrall: false, st: {}, once: {}, kills: 0, takenTotal: 0, lastTarget: null, hp: 0, mp: 0, alive: true };
+    const u = { id: o.id || (side ? 'f' : 'p') + slot, side, slot, row: ROWS[slot], lane: LANE[slot], order: side * 6 + slot, key: spec.key, hero: !side, thrall: false, st: {}, once: {}, kills: 0, takenTotal: 0, lastTarget: null, hp: 0, mp: 0, alive: true };
     if (side === 0) {
       const b = heroBase(spec);
       Object.assign(u, {
-        name: spec.name || b.C.name, char: spec.char || null, boss: false, elite: false, lv: b.lv,
+        name: spec.name || b.C.name, char: spec.char || null, boss: false, elite: false, healer: !!b.C.healer, lv: b.lv,
         maxHp: b.st.hp, maxMp: b.st.mp, pow: b.st.pow, def: b.st.def, spd: b.st.spd, crit: b.st.crit, dodge: b.st.dodge,
         res: Object.assign({}, b.res), mpGain: b.C.mpGain, basic: b.C.basic, tags: [],
         sl: Object.assign({}, b.sl), awk: new Set(b.awk),
@@ -117,14 +119,19 @@ function simulate(setup) {
     } else {
       const F = FOES[spec.key];
       if (!F) throw new Error('Unknown foe: ' + spec.key);
-      const src = Object.assign({}, F, spec.over || {}), g = stageLv - 1;
+      const src = Object.assign({}, F, spec.over || {}), lv = spec.level || stageLv, fs = foeStats(src, lv);
       Object.assign(u, {
-        name: spec.name || src.name, boss: !!src.boss, elite: !!src.elite, healer: !!src.healer, lv: stageLv,
-        maxHp: Math.round(src.hp * (scale.hp || 1) * (1 + FOE_GROWTH.hp * g)), maxMp: src.mp, pow: src.pow * (scale.pow || 1) * (1 + FOE_GROWTH.pow * g),
-        def: src.def * (1 + FOE_GROWTH.def * g), spd: src.spd, crit: src.crit, dodge: src.dodge, res: foeRes(src),
-        mpGain: src.mpGain, basic: src.basic, skills: src.skills.slice(), tags: (src.tags || []).slice(), sl: {}, awk: new Set(), pas: [],
+        name: spec.name || src.name, boss: !!src.boss, elite: !!src.elite, healer: !!src.healer, lv,
+        maxHp: Math.round(fs.hp * (scale.hp || 1)), maxMp: fs.mp, pow: fs.pow * (scale.pow || 1),
+        def: fs.def, spd: fs.spd, crit: fs.crit, dodge: fs.dodge, res: fs.res,
+        mpGain: fs.mpGain, basic: src.basic, skills: src.skills.slice(), tags: (src.tags || []).slice(), sl: {}, awk: new Set(), pas: [],
         rules: (spec.rules || src.rules || []).map(r => Object.assign({ on: true }, r)),
+        phases: src.phases ? src.phases.map(x => Object.assign({}, x)) : null, flee: src.flee || 0, summoned: !!o.summoned,
       });
+      // A foe whose every attack is melee without reach can't attack from the back row: it waits there, Defending,
+      // and steps up when a front slot opens (campaign spec §3.3).
+      const attacks = [src.basic, ...src.skills].map(id => SKILLS[id]).filter(sk => sk && (sk.power || sk.charge));
+      u.waits = attacks.length > 0 && attacks.every(sk => (sk.charge ? SKILLS[sk.charge] : sk).range === 'melee' && !sk.reach && !(sk.charge && SKILLS[sk.charge].reach));
     }
     units.push(u);
     return u;
@@ -145,7 +152,8 @@ function simulate(setup) {
     index(u);
     byId[u.id] = u;
   }
-  for (const u of units) {
+  // Stat passives (its own and everyone's), then full health and half mana.
+  function ready(u) {
     for (const x of u.h.stat || []) x.sk.stat(u, x.p);
     for (const g of G.aStat) g.sk.aStat(g.u, u, g.p);
     if (u.noDodge) u.dodge = 0;
@@ -153,6 +161,7 @@ function simulate(setup) {
     u.base = { maxHp: u.maxHp };
     u.hp = u.maxHp; u.mp = Math.floor(u.maxMp / 2);
   }
+  for (const u of units) ready(u);
   const partyRules = (setup.partyRules || []).map(r => Object.assign({ on: true }, r));
   const pack = (setup.loadout || []).map(id => ({ id, used: false, str: 1 })).filter(p => ITEMS[p.id]);
   const inputs = (setup.inputs || []).slice().sort((a, b) => a.at - b.at);
@@ -215,6 +224,7 @@ function simulate(setup) {
   const stSnap = s => { const o = { turns: s.turns }; if (s.dmg) o.dmg = s.dmg; if (s.v) o.v = s.v; if (s.n) o.n = s.n; if (s.list) o.n = s.list.length; return o; };
   const snap = u => ({
     id: u.id, side: u.side, slot: u.slot, key: u.key, name: u.name, boss: u.boss, elite: u.elite, thrall: u.thrall || undefined, art: u.art, look: u.look || undefined,
+    summoned: u.summoned || undefined, fled: u.fled || undefined, waits: u.waits || undefined,
     hp: u.hp, maxHp: u.maxHp, mp: u.mp, maxMp: u.maxMp, alive: u.alive, lv: u.lv, char: u.char || undefined,
     pow: Math.round(u.pow), def: Math.round(u.def), spd: +u.spd.toFixed(2), crit: Math.round(u.crit), dodge: Math.round(u.dodge),
     basic: u.basic, skills: (u.skills || []).slice(), rules: u.rules.map(r => Object.assign({}, r)),
@@ -405,7 +415,8 @@ function simulate(setup) {
     }
     return { sk: SKILLS[u.basic], p: skillLevel(1, false) };
   }
-  const backMelee = (u, sk) => u.hero && u.row === 'back' && sk.range === 'melee' && !sk.reach && !anyHook(u, 'hook');
+  // Melee from the back row: heroes and foes Defend instead (a waiting foe steps up when it can, in takeTurn).
+  const backMelee = (u, sk) => (u.hero || (u.side === 1 && !u.thrall)) && u.row === 'back' && sk.range === 'melee' && !sk.reach && !anyHook(u, 'hook');
   function costOf(u, sk, p) {
     let base = sk.cost || 0;
     if (sk.costLess) base -= p.n(sk.costLess);
@@ -442,6 +453,7 @@ function simulate(setup) {
     if (backMelee(u, sk)) return null;
     for (const x of u.h.canUse || []) if (!x.sk.canUse(E, u, sk, x.p)) return null;
     if (sk.need && !sk.need(E, u, got.p)) return null;
+    if (sk.call && !emptySlots(u.side).length) return null;
     if (!priceOf(u, sk, got.p)) return null;
     return got;
   }
@@ -528,7 +540,7 @@ function simulate(setup) {
       if (src.st.bloodlust) m *= 1 + (src.st.bloodlust.v || 20) / 100;
       if (src.st.weak) m *= Math.max(0, 1 - (src.st.weak.v || 25) / 100);
       if (src.st.taunted && src.st.taunted.more) m *= 0.85;
-      if (src.side === 1 && enrage) m *= 1 + enrage * SIM.ENRAGE_STEP;
+      if (src.side === 1 && enrage) m *= (1 + enrage * SIM.ENRAGE_STEP) * (round >= SIM.ENRAGE_SURGE ? 2 ** Math.min(30, round - SIM.ENRAGE_SURGE + 1) : 1);
       if (c.sk && FIRE.includes(c.sk.id) && t.st.burn) m *= 1 + SIM.FIRE_BURN;
       m *= mulHooks(src, 'out', t, c);
       m *= gmul('aOut', src, t, c);
@@ -579,6 +591,7 @@ function simulate(setup) {
     stats[t.id].taken += d;
     if (src && src.side !== t.side) { stats[src.id].dealt += d; if (c.dot) stats[src.id].dot += d; }
     if (d > 0 && !c.dot) t.hitSince = true;
+    if (t.phases && t.hp > 0) later.push(() => phaseCheck(t));
     return { d, absorbed };
   }
   // An attack: src hits aimed for power × src's Power. c: { sk, p, area, single, sure, crit, critX, pierce, noGuard,
@@ -780,9 +793,9 @@ function simulate(setup) {
   function breakCharge(src, t) {
     if (!t.st.charging) return false;
     if (!lands(src, t, SIM.STUN_RES, 100)) { resisted(t, 'charging'); return false; }
-    const mk = byId[t.st.charging.target];
+    const ids = t.st.charging.targets || [t.st.charging.target];
     dropStatus(t, 'charging');
-    if (mk) dropStatus(mk, 'marked');
+    for (const id of ids) if (byId[id]) dropStatus(byId[id], 'marked');
     emit({ t: 'broke', who: t.id, by: src.id });
     return true;
   }
@@ -812,7 +825,7 @@ function simulate(setup) {
   // ── summons
   function emptySlots(side, frontOnly) {
     const taken = new Set(units.filter(x => x.alive && x.side === side).map(x => x.slot));
-    for (const x of units) if (!x.alive && x.side === side && !x.thrall && !x.gone) taken.add(x.slot); // a fallen hero keeps their place
+    for (const x of units) if (!x.alive && x.side === 0 && side === 0 && !x.thrall && !x.gone) taken.add(x.slot); // a fallen hero keeps their place; a fallen foe doesn't
     return (frontOnly ? [0, 1] : [0, 1, 2, 3, 4, 5]).filter(s => !taken.has(s));
   }
   function room(u, past, front) {
@@ -837,6 +850,55 @@ function simulate(setup) {
     emit({ t: 'summon', by: owner.id, unit: snap(u), queue: projectQueue() });
     if (u.fort) addStatus(owner, u, 'fortified', { turns: u.fort });
     return u;
+  }
+  // Foes called into empty foe slots, front row first, at the caller's level (the Rat King's Call the Swarm). They
+  // count as foes for every rule, and drop no spoils (summoned).
+  let calledN = 0;
+  function callFoes(owner, call) {
+    const out = [];
+    for (let i = 0; i < (call.n || 1); i++) {
+      const slot = emptySlots(owner.side)[0];
+      if (slot == null) break;
+      const u = make({ key: call.key, level: owner.lv }, owner.side, slot, { id: 'f' + slot + 'c' + (++calledN), summoned: true });
+      index(u); byId[u.id] = u; stats[u.id] = newStats(u);
+      ready(u);
+      u.next = clock + interval(u) * 0.6;
+      emit({ t: 'summon', by: owner.id, unit: snap(u), queue: projectQueue() });
+      out.push(u);
+    }
+    return out;
+  }
+  // A waiting foe steps into the nearest open front slot.
+  function stepUp(u) {
+    const free = emptySlots(u.side, true);
+    if (!free.length) return false;
+    const slot = free.reduce((b, s) => (Math.abs(LANE[s] - u.lane) < Math.abs(LANE[b] - u.lane) ? s : b));
+    const from = u.slot;
+    u.slot = slot; u.row = ROWS[slot]; u.lane = LANE[slot]; u.order = u.side * 6 + slot;
+    emit({ t: 'step', who: u.id, from, slot });
+    return true;
+  }
+  // A boss's phases: once, below a share of its health, its skills change (campaign spec §3.3).
+  function phaseCheck(u) {
+    if (!u.phases || !u.alive) return;
+    u.phases.forEach((ph, n) => {
+      if (ph.done || u.hp / u.maxHp >= ph.below) return;
+      ph.done = true;
+      for (const from in ph.swap || {}) {
+        const to = ph.swap[from];
+        u.skills = u.skills.map(id => (id === from ? to : id));
+        u.rules.forEach(r => { if (r.do === from) r.do = to; });
+      }
+      emit({ t: 'phase', who: u.id, n: n + 2, name: ph.name, line: ph.line || '' });
+    });
+  }
+  // Fleeing: at the start of its round, a foe with somewhere to be leaves the field. It drops nothing.
+  function fleeCheck() {
+    for (const u of units) {
+      if (!u.alive || !u.flee || round < u.flee) continue;
+      u.alive = false; u.fled = true; u.gone = true; u.st = {};
+      emit({ t: 'flee', who: u.id });
+    }
   }
   function destroy(src, t) {
     if (!t.alive) return;
@@ -873,7 +935,7 @@ function simulate(setup) {
     spreadBurn: (src, t, n) => { const s = t.st.burn; if (!s) return; const others = living(t.side).filter(x => x !== t && !x.st.burn).sort((a, b) => Math.abs(a.lane - t.lane) - Math.abs(b.lane - t.lane)).slice(0, n); for (const x of others) addStatus(src, x, 'burn', { turns: Math.max(1, s.turns), dmg: s.list ? s.list[0].dmg : s.dmg, raw: true }); },
     pass: (u, from, to) => { for (const k of Object.keys(from.st)) { if (!isBad(k) || k === 'charging' || k === 'marked') continue; const s = from.st[k]; dropStatus(from, k); addStatus(u, to, k, { turns: Math.max(1, s.turns), dmg: s.dmg, v: s.v, raw: true }); } },
     steal: (u, t, base, mul = 1, onePer) => { if (onePer) { if (t.stolen) return 0; t.stolen = true; } const g = Math.round(base * (1 + 0.15 * (stageLv - 1)) * mul * mulHooks(u, 'stealMul', t, {})); loot.gold += g; emit({ t: 'steal', who: u.id, from: t.id, gold: g }); return g; },
-    bonusXp: (t, frac) => { loot.xpBonus += foeXp(t) * frac; },
+    bonusXp: (t, frac) => { if (!t.summoned && !t.thrall && t.side === 1) loot.xpLv += SPOILS[t.boss ? 'boss' : t.elite ? 'elite' : 'normal'].xp * frac; },
     brew: u => { const x = passive(u, 'unstablebrews'); return x ? SKILLS.unstablebrews.brewMul(x) : 1; },
     brewSide: (u, t) => { const x = passive(u, 'unstablebrews'); if (x && !x.A && rng() < 0.2) addStatus(u, t, 'poison', { turns: 2, p: 0.2, sure: true }); },
     refill: (n, str) => { let k = 0; for (const p of pack) if (p.used && k < n) { p.used = false; p.str = str; k++; emit({ t: 'refill', slot: pack.indexOf(p), item: p.id }); } },
@@ -1030,11 +1092,19 @@ function simulate(setup) {
 
   // ── a turn
   function perform(u, plan) {
-    const { sk, targets, rule } = plan, st = stats[u.id];
+    const { sk, rule } = plan, st = stats[u.id];
+    let targets = plan.targets;
+    // A charge that Marks several (Two Graves): the rule's target, then the lowest health among the rest.
+    if (sk.charge && sk.marks > 1 && targets[0]) {
+      const rest = poolFor(u, sk, plan.p).filter(x => x !== targets[0]).sort((a, b) => a.hp - b.hp || a.slot - b.slot);
+      targets = [targets[0], ...rest].slice(0, sk.marks);
+    }
     const p = Object.assign({}, plan.p);
+    // A basic attack restores mana: a hero's (marked basic) and a foe's own basic attack alike.
+    const basic = !!sk.basic || (rule !== -2 && sk.id === u.basic);
     if (rule >= 0) st.rules[rule]++;
     else if (rule === -2) st.charged++;
-    else if (sk.basic) st.basic++;
+    else if (basic) st.basic++;
     if (plan.focus != null) party.rules[plan.focus]++;
     if (sk.shape === 'foe' && targets[0] && targets[0].side !== u.side) u.lastTarget = targets[0];
     // the price
@@ -1044,7 +1114,7 @@ function simulate(setup) {
       p.paid = price.mp; u.mp -= price.mp;
       if (price.hp) { p.paidHp = selfCost(u, price.hp); if (price.blood && price.blood.p.A) addStatus(u, u, 'kindled', { turns: 1 }); }
     }
-    if (sk.basic) u.mp = Math.min(u.maxMp, u.mp + u.mpGain + sumHooks(u, 'mpGain', sk));
+    if (basic) u.mp = Math.min(u.maxMp, u.mp + u.mpGain + sumHooks(u, 'mpGain', sk));
     // rule: the rule that chose this (-1 none, -2 a charged attack landing). focus: the party rule that aimed it.
     const ev = { t: 'act', who: u.id, skill: sk.id, rule, targets: targets.map(x => x.id), mp: u.mp };
     if (plan.focus != null) ev.focus = plan.focus;
@@ -1056,11 +1126,12 @@ function simulate(setup) {
 
     if (sk.charge) {
       const tgt = targets[0];
-      u.st.charging = { key: 'charging', turns: 1, skill: sk.charge, target: tgt.id, fresh: true, p, A: p.A };
-      emit({ t: 'status', who: u.id, key: 'charging', on: true, turns: 1, target: tgt.id, skill: sk.charge });
-      addStatus(u, tgt, 'marked', { turns: 1, sure: true });
+      u.st.charging = { key: 'charging', turns: 1, skill: sk.charge, target: tgt.id, targets: targets.map(x => x.id), fresh: true, p, A: p.A };
+      emit({ t: 'status', who: u.id, key: 'charging', on: true, turns: 1, target: tgt.id, targets: targets.length > 1 ? targets.map(x => x.id) : undefined, skill: sk.charge });
+      for (const t of targets) addStatus(u, t, 'marked', { turns: 1, sure: true });
       return;
     }
+    if (sk.call) { callFoes(u, sk.call); fire(u, 'used', sk, { targets }); return; }
     const wasHidden = !!u.st.hidden;
     let res;
     if (sk.run) { sk.run(E, u, targets, p); res = []; }
@@ -1146,11 +1217,18 @@ function simulate(setup) {
       // The charged attack lands now, on its marked victim if they still stand.
       dropStatus(u, 'charging');
       const base = SKILLS[c.skill], sk = c.A && base.awk ? awakened(c.skill) : base;
-      let tgt = byId[c.target];
-      if (tgt) dropStatus(tgt, 'marked');
-      if (!tgt || !tgt.alive) tgt = defaultTarget(u, sk, poolFor(u, sk, c.p || skillLevel(1)));
-      if (tgt && tgt.st.hidden && tgt.side !== u.side) { emit({ t: 'act', who: u.id, skill: sk.id, rule: -2, targets: [tgt.id], mp: u.mp }); emit({ t: 'miss', src: u.id, tgt: tgt.id, why: 'hidden' }); stats[u.id].charged++; return endTurn(u); }
-      plan = tgt ? { sk, p: c.p || skillLevel(1), targets: [tgt], rule: -2 } : { sk: SKILLS.wait, p: skillLevel(1), targets: [u], rule: -1 };
+      const marked = (c.targets || [c.target]).map(id => byId[id]).filter(Boolean);
+      for (const t of marked) dropStatus(t, 'marked');
+      let tgts = marked.filter(t => t.alive);
+      if (!tgts.length) { const d = defaultTarget(u, sk, poolFor(u, sk, c.p || skillLevel(1))); tgts = d ? [d] : []; }
+      const tgt = tgts[0];
+      if (tgts.length === 1 && tgt.st.hidden && tgt.side !== u.side) { emit({ t: 'act', who: u.id, skill: sk.id, rule: -2, targets: [tgt.id], mp: u.mp }); emit({ t: 'miss', src: u.id, tgt: tgt.id, why: 'hidden' }); stats[u.id].charged++; return endTurn(u); }
+      plan = tgts.length ? { sk, p: c.p || skillLevel(1), targets: tgts, rule: -2 } : { sk: SKILLS.wait, p: skillLevel(1), targets: [u], rule: -1 };
+    } else if (u.waits && u.row === 'back' && emptySlots(u.side, true).length) {
+      // A waiting foe steps up into the open front slot: that is its turn.
+      emit({ t: 'act', who: u.id, skill: 'stepup', rule: -1, targets: [u.id], mp: u.mp });
+      stepUp(u);
+      return endTurn(u);
     } else plan = choose(u);
     perform(u, plan);
     endTurn(u);
@@ -1195,7 +1273,11 @@ function simulate(setup) {
         enrage = round - SIM.ENRAGE_ROUND + 1;
         emit({ t: 'enrage', level: enrage, mult: 1 + enrage * SIM.ENRAGE_STEP });
       }
+      fleeCheck();
+      if (!living(1).length) break;
     }
+    if (!living(1).length) { winner = 0; break; }
+    if (!u.alive) continue;
     betweenTurns();
     takeTurn(u);
     actions++;
@@ -1207,14 +1289,9 @@ function simulate(setup) {
   // With no heroes standing, the thralls crumble.
   if (winner === 1) for (const t of thrallsOf(0)) { t.hp = 0; t.alive = false; t.st = {}; emit({ t: 'die', who: t.id, by: null }); }
   emit({ t: 'end', winner, round, actions, stalled });
-  const xp = units.filter(u => u.side === 1 && !u.alive).reduce((a, u) => a + foeXp(u), 0);
-  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, party, partyRules: log[0].partyRules, loadout: log[0].loadout, start: log[0].units, final: units.map(snap), level: stageLv, xp: Math.round(xp + loot.xpBonus), loot: { gold: loot.gold } };
-}
-
-// What felling a foe is worth: its rank and level (tune).
-function foeXp(u) {
-  const base = u.boss ? FOE_XP.boss : u.elite ? FOE_XP.elite : FOE_XP.normal;
-  return u.thrall ? 0 : base * (1 + 0.35 * ((u.lv || 1) - 1));
+  // loot: gold stolen in battle, and bonus XP in levels' worth at the stage's level (the Cutpurse's Master Thief).
+  // Spoils, XP and the clear reward are worked out from the result by js/campaign.js.
+  return { seed: setup.seed, winner, rounds: round, actions, stalled, log, stats, party, partyRules: log[0].partyRules, loadout: log[0].loadout, start: log[0].units, final: units.map(snap), level: stageLv, xp: 0, loot: { gold: loot.gold, xpLv: loot.xpLv } };
 }
 
 // A stage's battle.
@@ -1223,8 +1300,22 @@ function foeXp(u) {
 function defaultTactics() {
   return { party: PARTY, partyRules: PARTY_RULES.rules, loadout: LOADOUT.items };
 }
-function stageSetup(stage, seed, tactics) {
+// o.replay: the stage is already lit, so a wandering foe may join (campaign spec §3.4), rolled from the battle's seed
+// so the same replay always meets the same foes.
+function stageSetup(stage, seed, tactics, o = {}) {
   const t = tactics || (stageSetup.tactics && stageSetup.tactics()) || defaultTactics();
-  return { seed, party: t.party, foes: stage.foes, scale: stage.scale, level: stage.level || 1, partyRules: t.partyRules, loadout: t.loadout, inputs: [] };
+  return { seed, party: t.party, foes: o.replay ? wanderers(stage, seed) : stage.foes, scale: stage.scale, level: stage.level || 1, partyRules: t.partyRules, loadout: t.loadout, inputs: [] };
+}
+function wanderers(stage, seed) {
+  const rng = makeRng((((seed >>> 0) ^ 0x9e3779b9) >>> 0) || 7), foes = stage.foes.slice();
+  for (const w of WANDERERS) {
+    if (rng() >= w.chance) continue;
+    const free = [0, 1, 2, 3, 4, 5].filter(i => !foes[i]);
+    if (!free.length) break;
+    // The Cage Mimic stands in front when it can; the Moth Swarm takes either row.
+    const front = free.filter(i => i < 2), pick = w.key === 'mimic' && front.length ? front : free;
+    foes[pick[Math.floor(rng() * pick.length)]] = w.key;
+  }
+  return foes;
 }
 stageSetup.tactics = null;

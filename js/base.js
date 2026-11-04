@@ -138,6 +138,9 @@ const RECRUIT_NAMES = ['Ottilie', 'Brannoc', 'Isolde', 'Maud', 'Fenn', 'Wick', '
 // The classes that join the board as the road goes on (content spec §4): the six original ones are there from the start.
 const CLASS_JOINS = { gravecaller: 'gravecaller', surgeon: 'region:1', bellringer: 'region:1', duellist: 'region:2', cutpurse: 'region:2', alchemist: 'region:3' };
 const STARTERS = ['sellsword', 'hexblade', 'pilgrim'];
+// The regions after the Drowned Chapel open in build step 7. Their unlocks are known here already, so the passive-bonus
+// buildings' blueprints (and the prototype tools) survive a reload.
+if (typeof UNLOCKS !== 'undefined') for (const [id, name] of [['region:2', 'Thornwood opens'], ['region:3', 'The Ashen Keep opens'], ['region:4', 'The Hollow Throne opens']]) if (!UNLOCKS[id]) UNLOCKS[id] = { id, kind: 'region', name, icon: 'lantern', line: 'Its stages come in a later build.', step: 7 };
 
 const Base = (() => {
   const store = () => (typeof Save !== 'undefined' && Save.state ? Save.state : null);
@@ -375,8 +378,9 @@ const Base = (() => {
     for (const lv in TACTICIAN_LESSONS) {
       if (level('tactician', s) < +lv) continue;
       const L = TACTICIAN_LESSONS[lv];
-      for (const id of L.conds) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
-      if (L.thresholds) for (const id of ['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt']) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
+      const conds = +lv === 1 && typeof TACTICIAN_I !== 'undefined' ? TACTICIAN_I : L.conds; // the campaign's list, when it has one
+      for (const id of conds) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
+      if (L.thresholds) for (const id of ['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt', 'bb_fatigue']) if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v));
     }
     if (Tactics.learnMany) Tactics.learnMany(keys); else keys.forEach(k => Tactics.learn(k));
   }
@@ -1017,11 +1021,11 @@ const Base = (() => {
 
   // ── boot: wrap the battle setup, catch up on time away, and report it
   let report = null;
+  // Before anything else at boot: the battle setup draws from the Bag, and the campaign's hooks reach the camp.
+  function prepare(s = store()) { if (s) ensure(s); wrapSetup(); hookCampaign(); }
   function start(s = store(), o = {}) {
     if (!s) return null;
-    ensure(s);
-    wrapSetup();
-    hookCampaign();
+    prepare(s);
     syncSlots(s);
     const t = now(s), from = s.base.clock || t;
     const before = snapshot(s);
@@ -1103,7 +1107,7 @@ const Base = (() => {
     whyNotDismiss, dismiss,
     rooms, inHall, lessonsFor, whyNotStudy, startLesson, lessonOf, lessonEnd, cancelLesson, finishLesson,
     shrine, respecPrice, freeRespecIn, respec, unlearnPrice, unlearn,
-    newGame, afterBattle, settleHome, spendItems, limitLoadout, tickTo, tick, start, lastReport, collectAll, wrapSetup, proto,
+    newGame, afterBattle, settleHome, spendItems, limitLoadout, tickTo, tick, prepare, start, lastReport, collectAll, wrapSetup, proto,
     onChange: fn => listeners.push(fn), changed,
   };
 })();

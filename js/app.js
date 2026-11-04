@@ -1,7 +1,7 @@
 'use strict';
 // Lantern Road · the app shell: screens, the tab bar, the purse, settings and the "while you were away" note.
-// The Home Base (the camp) is js/camp.js. The Campaign Map is a placeholder in the game's look until its design lands.
-// The battle is a screen too; js/main.js registers it.
+// The Home Base (the camp around the fire) is js/camp.js. The Road tab is js/map.js, and the battle is a screen too;
+// js/main.js registers it.
 //
 // A screen is registered with App.screen(name, def):
 //   def.tab     true to show the top bar and tab bar (and to slide between tabs)
@@ -81,7 +81,7 @@ const App = (() => {
   function sheetBox(kids, cls = '') {
     return h('div', { class: 'box ' + cls }, h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { sfx('click'); closeSheet(); } }, '×'), kids);
   }
-  const stageIndex = () => { const i = STAGES.findIndex(s => !Save.state.campaign.cleared.includes(s.id)); return i < 0 ? 0 : i; };
+  const stageIndex = () => Math.min(Campaign.frontier(), STAGES.length - 1);
   const placeholder = (text) => h('p', { class: 'ph-note' }, h('span', { class: 'ph-tag', text: 'Placeholder' }), text);
 
   // The party waits on the road behind the tab screens. Only reset it when coming back from a battle (or at boot),
@@ -95,33 +95,14 @@ const App = (() => {
 
   // ── Home Base: the camp around the fire is js/camp.js (build step 5), which registers the 'home' screen.
 
-  // ── Campaign Map: the road through each region, lit where it is cleared
-  screen('map', {
-    tab: true,
-    render() {
-      const s = Save.state, next = stageIndex();
-      const regions = REGION_NAMES.map((R, r) => {
-        const list = STAGES.map((st, i) => [st, i]).filter(([st]) => st.region === r);
-        const lit = list.filter(([st]) => s.campaign.cleared.includes(st.id)).length;
-        return h('section', { class: 'region' },
-          h('div', { class: 'rhd' }, h('span', { class: 'kicker', text: `Region ${R.num}` }), h('h2', { text: R.name }), h('span', { class: 'lit', text: `${lit}/${list.length} lit` })),
-          h('ol', { class: 'road' }, list.map(([st, i]) => {
-            const done = s.campaign.cleared.includes(st.id), isNext = i === next && !done;
-            const best = s.campaign.best[st.id];
-            return h('li', {}, h('button', { class: 'stop' + (done ? ' done' : '') + (isNext ? ' next' : '') + (st.boss ? ' boss' : ''), onclick: () => { sfx('click'); go('battle', { stage: i }); } },
-              h('span', { class: 'node', 'aria-hidden': 'true' }),
-              h('span', { class: 'k' }, st.id, st.boss ? h('span', { class: 'tagb', text: 'Boss' }) : null),
-              h('span', { class: 'nm', text: st.name }),
-              h('span', { class: 'foes' }, st.foes.filter(Boolean).map(k => h('img', { src: portraitURL(k, false), alt: FOES[k].name, class: FOES[k].boss ? 'big' : '' }))),
-              done ? h('span', { class: 'meta', text: best ? `Best: round ${best}` : 'Cleared' }) : isNext ? h('span', { class: 'meta go', text: 'March' }) : null));
-          })));
-      });
-      return h('div', { class: 'map' }, h('div', { class: 'kicker', text: 'Campaign' }), h('h1', { text: 'The Road' }), regions, placeholder('The full map comes in step 6.'));
-    },
-    enter: restScene,
-  });
-
   // ── Party: the formation and the roster
+  let arrange = null; // the formation slot picked while arranging, or -1 when arranging with none picked
+  function placeIn(slot, id) {
+    const p = Save.state.party, was = p.indexOf(id);
+    if (was >= 0) p[was] = p[slot];
+    p[slot] = id;
+    Save.commit();
+  }
   screen('party', {
     tab: true,
     render() {
@@ -132,25 +113,45 @@ const App = (() => {
         return t ? h('span', { class: 'pflag t', title: 'A threshold to choose' }, ico('star')) : P.stat + P.skill > 0 ? h('span', { class: 'pflag', title: `${P.stat} stat and ${P.skill} skill points to spend`, text: String(P.stat + P.skill) }) : null;
       };
       const xpPct = c => (c.level >= HERO.CAP ? 100 : Math.min(100, 100 * c.xp / Hero.xpToNext(c.level)));
-      const fat = c => (typeof Fatigue !== 'undefined' ? h('span', { class: 'fat ' + Fatigue.state(c), title: `Fatigue ${Math.floor(c.fatigue || 0)}` }, h('i', { style: `width:${Math.min(100, c.fatigue || 0)}%` })) : null);
+      // Arranging: tap a slot, then another slot to swap them, or a hero in the roster to put them there.
+      const pickSlot = i => {
+        sfx('click');
+        if (arrange == null || arrange < 0) { arrange = i; refresh(); return; }
+        if (arrange === i) { arrange = -1; refresh(); return; }
+        const a = s.party[arrange], b = s.party[i];
+        s.party[arrange] = b; s.party[i] = a; arrange = -1; Save.commit(); refresh();
+      };
       const slot = i => {
         const c = Save.char(s.party[i]);
-        if (!c) return h('button', { class: 'pslot empty', disabled: !actions.pickSlot, onclick: () => { sfx('click'); if (actions.pickSlot) actions.pickSlot(i); } }, h('span', { text: 'Empty' }), actions.pickSlot ? h('span', { class: 'add', text: '+ Add' }) : null);
-        return h('button', { class: 'pslot' + (typeof Fatigue !== 'undefined' && Fatigue.spent(c) ? ' spent' : ''), onclick: () => { sfx('click'); if (actions.slotMenu) actions.slotMenu(i); else showCharacter(c.id); } },
+        if (arrange != null) return h('button', { class: 'pslot arr' + (c ? '' : ' empty') + (arrange === i ? ' sel' : ''), 'aria-pressed': arrange === i ? 'true' : 'false', onclick: () => pickSlot(i) },
+          c ? [h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })), h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level })] : h('span', { text: arrange === i ? 'Pick a hero' : 'Empty' }));
+        if (!c) return h('div', { class: 'pslot empty' }, h('span', { text: 'Empty' }));
+        return h('button', { class: 'pslot' + (typeof Fatigue !== 'undefined' && Fatigue.spent(c) ? ' spent' : ''), onclick: () => { sfx('click'); showCharacter(c.id); } },
           h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })),
           h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }), flags(c),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })), fat(c));
       };
+      // Fatigue under each hero in the formation (js/rest.js): Weary, Exhausted and Spent show in their colours.
+      const fat = c => (typeof Fatigue !== 'undefined' ? h('span', { class: 'fat ' + Fatigue.state(c), title: `Fatigue ${Math.floor(c.fatigue || 0)}` }, h('i', { style: `width:${Math.min(100, c.fatigue || 0)}%` })) : null);
+      const n = s.party.filter(Boolean).length;
+      const arrTools = arrange != null
+        ? h('div', { class: 'arrbar' }, h('span', { text: arrange >= 0 ? 'Tap another slot to swap, or a hero below to put them here.' : 'Tap a slot to move a hero.' }),
+          arrange >= 0 && s.party[arrange] && n > 1 ? h('button', { class: 'small', onclick: () => { sfx('click'); s.party[arrange] = null; arrange = -1; Save.commit(); refresh(); } }, 'Leave out') : null,
+          h('button', { class: 'small on', onclick: () => { sfx('click'); arrange = null; refresh(); } }, 'Done'))
+        : h('div', { class: 'arrbar' }, h('span', { text: `${n} of 6 set out · 2 in front, 4 behind` }), h('button', { class: 'small', onclick: () => { sfx('click'); arrange = -1; refresh(); } }, 'Arrange'));
       const cap = typeof Base !== 'undefined' ? Base.rosterCap(s) : null;
       return h('div', { class: 'party' },
         h('div', { class: 'kicker', text: cap ? `${s.roster.length} of ${cap} in the roster` : `${s.roster.length} in the roster` }), h('h1', { text: 'The Party' }),
+        arrTools,
         h('h3', { class: 'sect', text: 'Front row' }), h('div', { class: 'prow front' }, [0, 1].map(slot)),
         h('h3', { class: 'sect', text: 'Back row' }), h('div', { class: 'prow back' }, [2, 3, 4, 5].map(slot)),
         h('h3', { class: 'sect', text: 'Roster' }),
-        h('div', { class: 'roster' }, s.roster.map(c => actions.rosterRow ? actions.rosterRow(c) : h('button', { class: 'rrow', onclick: () => { sfx('click'); showCharacter(c.id); } },
+        // The camp's rows (js/camp.js): where each hero is, their fatigue, and a swipe left to dismiss. While arranging,
+        // a tap puts the hero in the slot picked.
+        h('div', { class: 'roster' }, s.roster.map(c => actions.rosterRow && !(arrange != null && arrange >= 0) ? actions.rosterRow(c) : h('button', { class: 'rrow' + (s.party.includes(c.id) ? '' : ' bench'), onclick: () => { sfx('click'); if (arrange != null && arrange >= 0) { placeIn(arrange, c.id); arrange = -1; refresh(); } else showCharacter(c.id); } },
           h('img', { src: heroPortrait(c), alt: '' }),
           h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: c.classes.length > 1 ? c.classes.map(k => CLASSES[k].name).join(' + ') : CLASSES[c.cls].role })),
-          h('span', { class: 'lv' }, flags(c), 'Lv ' + c.level),
+          h('span', { class: 'lv' }, flags(c), s.party.includes(c.id) ? '' : h('em', { class: 'benched', text: 'resting' }), 'Lv ' + c.level),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })),
           h('span', { class: 'chev', 'aria-hidden': 'true' })))),
         actions.recruitLink ? actions.recruitLink() : null);
@@ -245,10 +246,10 @@ const App = (() => {
     if (info.recovered === 'backup') toast('Your save was damaged. Restored the last good copy.', 'bad');
     else if (info.recovered === 'fresh') toast('Your save could not be read. Starting a new road.', 'bad');
     else if (info.source === 'legacy') toast('Carried your cleared stages over from the prototype');
-    const c = Save.state.campaign.current;
+    const c = Save.state.campaign.current, last = Save.state.campaign.lastTrip;
     if (c && STAGES[c.stage]) go('battle', { stage: c.stage, seed: c.seed });
     else {
-      go('home', {}, { instant: true });
+      go(last && !last.seen ? 'map' : 'home', {}, { instant: true });
       if (info.awayMs >= AWAY_MIN) showAway(info.awayMs);
     }
     Save.initCloud();

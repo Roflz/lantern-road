@@ -106,7 +106,7 @@ defClass('alchemist', {
 // ═══════════════════════════════════════════════════════════════════ Barber-Surgeon
 const CLEANSES = ['stitch', 'tonic', 'cleanthewound', 'grandrounds', 'cupping'];
 defClass('surgeon', {
-  name: 'Barber-Surgeon', role: 'Healer: cleansing and fatigue', row: 'back', weapon: 'Bonesaws', mpGain: 12, slots: [3, 6], late: true,
+  name: 'Barber-Surgeon', role: 'Healer: cleansing and fatigue', row: 'back', healer: true, weapon: 'Bonesaws', mpGain: 12, slots: [3, 6], late: true,
   blurb: 'The field doctor. Stops bleeding, cures afflictions and patches the worst wounds at a price, then sends the party out fresher than it came in.',
   stats: { hp: [95, 115, 7], mp: [40, 50, 1.8], pow: [13, 15, 0.9], def: [4, 6, 0.3], spd: [9, 11, 0.02], crit: [4, 8, 0.04], dodge: [4, 8, 0.03] },
   res: { stun: 25, move: 20, bleed: 45, blight: 40, curse: 20, debuff: 25 },
