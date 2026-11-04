@@ -127,7 +127,7 @@ for (const id in LESSONS) LESSONS[id].id = id;
 // levels 3 and 4 (home-base spec §3). Conditions are taught with every number or status they offer.
 const TACTICIAN_I_LINE = 'Thresholds from 25% to 90%, mana, rows and statuses, Foe: health below, the leader’s target, One foe left, and the “an ally fell” and “out of an item” rules. Also Focus fire and saved rule sets.';
 const TACTICIAN_LESSONS = {
-  3: { name: 'Lesson II', conds: ['self_hp_gt', 'ally_mp_lt', 'foe_highest', 'foe_has', 'battle_start', 'allies_hurt'], line: 'Self: health above, Ally: mana below, Foe: highest health, Foe: has, Battle start and N or more allies hurt.' },
+  3: { name: 'Lesson II', conds: ['self_hp_gt', 'ally_mp_lt', 'foe_highest', 'foe_has', 'battle_start', 'allies_hurt'], line: 'Self: health above, Ally: mana below, Foe: highest health, Foe: has, Battle start and N or more allies hurt, and the Gather action.' },
   4: { name: 'Lesson III', conds: [], line: 'Switch rule set: party rules can change everyone’s tactics on their own.' },
 };
 // Recruit names (placeholders, tune).
@@ -379,6 +379,9 @@ const Base = (() => {
     const keys = [], add = id => { if (CONDITIONS[id]) for (const v of Tactics.variants(id)) keys.push(Tactics.condKey(v)); };
     if (unlocked('tactician', s) && typeof TACTICIAN_I !== 'undefined') for (const id of TACTICIAN_I.concat(['self_hp_lt', 'ally_hp_lt', 'foe_hp_lt', 'self_mp_lt', 'bb_fatigue'])) add(id);
     for (const lv in TACTICIAN_LESSONS) if (level('tactician', s) >= +lv) TACTICIAN_LESSONS[lv].conds.forEach(add);
+    // The rule actions the lessons bring (content spec §5): Move with Lesson I, Gather with Lesson II (build step 7a).
+    if (unlocked('tactician', s)) keys.push('act:move');
+    if (level('tactician', s) >= 3) keys.push('act:gather');
     if (Tactics.learnMany) Tactics.learnMany(keys); else keys.forEach(k => Tactics.learn(k));
   }
 

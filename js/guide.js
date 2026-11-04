@@ -132,7 +132,8 @@ const Guide = (() => {
       : { line: 'A new condition for your rules.', label: 'Tactics', fn: () => App.actions.tactics(leader(), 'map') };
     if (!o && U.kind === 'building' && typeof BUILDINGS !== 'undefined' && BUILDINGS[id]) o = { line: `A blueprint: build it on an empty plot at camp. ${U.line || ''}`.trim(), ...BUILD(id) };
     if (!o && U.kind === 'relic') o = { line: 'A Relic: unique, and it can’t be sold. It went into the Bag.', label: 'See it', fn: () => { const x = st().inventory.items.find(p => p.id === U.relic) || st().roster.map(c => c.gear.weapon || c.gear.armor || c.gear.accessory).find(p => p && p.id === U.relic); App.go('bag'); if (x) GearUI.card(x.uid, { after: () => App.refresh() }); } };
-    if (!o && U.kind === 'region') { const r = +id.split(':')[1]; o = { line: `Region ${['I', 'II', 'III', 'IV', 'V'][r] || r + 1} is open. The road goes on past the boss.`, label: 'The map', fn: () => RoadMap.show(r) }; }
+    if (!o && U.kind === 'class') o = { line: `${U.line ? U.line + ' ' : ''}A new class on the Recruit Board.`, label: 'Recruit', fn: goBoard };
+    if (!o && U.kind === 'region') { const r = +id.split(':')[1]; o = { line: U.line || `Region ${['I', 'II', 'III', 'IV', 'V'][r] || r + 1} is open.`, label: 'The map', fn: () => RoadMap.show(r) }; }
     if (!o) o = { line: U.line || '' };
     const name = U.kind === 'condition' ? `New condition: ${U.name}` : U.name;
     return h('div', { class: 'newrow' },

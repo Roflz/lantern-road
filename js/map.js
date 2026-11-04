@@ -20,6 +20,50 @@ const RoadMap = (() => {
   }
   const rng = seed => makeRng(seed);
 
+  // ── what makes each region's map its own, drawn under the road (art: REGION_ART in js/art.js)
+  const MAP_FX = [
+    null,
+    // the Drowned Chapel: a sea-green haze over the drowned nave, and standing water with the night in it
+    (x, W, H, R) => {
+      const gl = x.createLinearGradient(0, 0, 0, Math.min(H, 200));
+      gl.addColorStop(0, 'rgba(70,170,160,.22)'); gl.addColorStop(1, 'rgba(70,170,160,0)');
+      x.fillStyle = gl; x.fillRect(0, 0, W, Math.min(H, 200));
+      for (let i = 0; i < H / 16; i++) {
+        const px = R() * W | 0, py = R() * H | 0, w = 8 + (R() * 18 | 0);
+        x.fillStyle = '#0b181c'; x.beginPath(); x.ellipse(px, py, w / 2, 2.5, 0, 0, Math.PI * 2); x.fill();
+        x.fillStyle = 'rgba(106,240,216,.16)'; x.fillRect(px - w / 4 | 0, py - 1, Math.max(2, w / 2 | 0), 1);
+      }
+    },
+    // Thornwood: dark canopy crowding in from both edges
+    (x, W, H, R) => {
+      for (let i = 0; i < H / 9; i++) {
+        const side = R() < 0.5, cx = side ? R() * 22 : W - R() * 22, cy = R() * H, r = 6 + R() * 9;
+        x.fillStyle = R() < 0.5 ? '#0b170c' : '#102112';
+        x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill();
+      }
+    },
+    // the Ashen Keep: the keep burns on the skyline, and embers drift down the road
+    (x, W, H, R) => {
+      const gl = x.createLinearGradient(0, 0, 0, Math.min(H, 220));
+      gl.addColorStop(0, 'rgba(226,88,46,.38)'); gl.addColorStop(1, 'rgba(226,88,46,0)');
+      x.fillStyle = gl; x.fillRect(0, 0, W, Math.min(H, 220));
+      for (let i = 0; i < H / 6; i++) { x.fillStyle = R() < 0.5 ? 'rgba(255,140,60,.5)' : 'rgba(255,200,110,.35)'; x.fillRect(R() * W | 0, R() * H | 0, 1, 1); }
+    },
+    // the Hollow Throne: tallow candles burning in the dark, and a haze of violet over the throne
+    (x, W, H, R) => {
+      const gl = x.createLinearGradient(0, 0, 0, Math.min(H, 180));
+      gl.addColorStop(0, 'rgba(120,80,170,.28)'); gl.addColorStop(1, 'rgba(120,80,170,0)');
+      x.fillStyle = gl; x.fillRect(0, 0, W, Math.min(H, 180));
+      for (let i = 0; i < H / 14; i++) {
+        const px = R() * W | 0, py = R() * H | 0;
+        const lg = x.createRadialGradient(px, py, 0, px, py, 5);
+        lg.addColorStop(0, 'rgba(255,208,106,.35)'); lg.addColorStop(1, 'rgba(255,208,106,0)');
+        x.fillStyle = lg; x.fillRect(px - 5, py - 5, 10, 10);
+        x.fillStyle = '#ffe2a0'; x.fillRect(px, py, 1, 1);
+      }
+    },
+  ];
+
   // ── the map canvas
   function draw(cv, r, W, L) {
     const x = cv.getContext('2d'), H = L.H, R = rng(11 + r), A = REGION_ART[Math.min(r, REGION_ART.length - 1)];
@@ -28,9 +72,10 @@ const RoadMap = (() => {
     const litN = built ? list.filter(st => Campaign.isLit(st.id)).length : 0, allLit = built && litN === list.length;
     // the night, colder at the top
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#07050b'); g.addColorStop(0.55, '#100c17'); g.addColorStop(1, A.ground || '#1a1320');
+    g.addColorStop(0, A.sky || '#07050b'); g.addColorStop(0.55, '#100c17'); g.addColorStop(1, A.ground || '#1a1320');
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     for (let i = 0; i < W * H / 60; i++) { x.fillStyle = R() > 0.5 ? (A.speck || '#1c1624') : '#140f1b'; x.fillRect(R() * W | 0, R() * H | 0, 2, 1); }
+    (MAP_FX[r] || (() => { }))(x, W, H, R);
     // the road: a dark verge, the dirt, then the lit stretch in warm light up to the frontier
     const path = [];
     for (let i = 0; i <= 240; i++) path.push(L.pt(i / 240));
@@ -110,7 +155,8 @@ const RoadMap = (() => {
     page.append(wrap);
     const s = Save.state, last = s.campaign.lastTrip;
     if (last && !last.seen) page.append(tripCard(last));
-    if (!list.length) { wrap.append(darkRegion(r)); view = { el: page, wrap }; return page; }
+    // A region not reached yet stays in the dark, naming the boss that opens it.
+    if (!list.length || !Campaign.reached(r)) { wrap.append(darkRegion(r)); view = { el: page, wrap }; return page; }
     // the map is drawn once the page has a width
     view = { el: page, wrap, r };
     requestAnimationFrame(() => paint(r));
@@ -152,7 +198,7 @@ const RoadMap = (() => {
       h('div', { class: 'dr-l' }, ico(open ? 'lantern' : 'lock')),
       h('h2', { text: R.name }),
       h('p', { class: 'flavor', text: R.line }),
-      h('p', { class: 'k', text: open ? 'The road is open. Its stages come in the next build.' : R.opens }),
+      h('p', { class: 'k', text: open ? 'The road is open.' : R.opens }),
       h('p', { class: 'k dim', text: `Levels ${R.levels[0]}–${R.levels[1]} · ${R.stages} stages · ${MATERIALS.find(m => m.id === R.mat).name}` }));
   }
   // The buttons at the thumb: farm the last lit stage, or set out for the frontier.
@@ -161,7 +207,7 @@ const RoadMap = (() => {
     const kids = [];
     if (lastLit >= 0 && STAGES[lastLit].region === r) kids.push(h('button', { class: 'btn', onclick: () => { click(); stageSheet(lastLit); } }, `Farm ${STAGES[lastLit].id}`));
     if (fr < STAGES.length && STAGES[fr].region === r) kids.push(h('button', { class: 'btn primary', onclick: () => { click(); stageSheet(fr); } }, `Next · ${STAGES[fr].id}`, h('span', { class: 'sub', text: STAGES[fr].name })));
-    else if (fr >= STAGES.length) kids.push(h('div', { class: 'allit', text: 'Every lantern in the Gravefields burns.' }));
+    else if (fr >= STAGES.length) kids.push(h('div', { class: 'allit', text: 'Every lantern on the road burns.' }));
     return h('div', { class: 'mapcta' }, kids);
   }
 
@@ -198,8 +244,8 @@ const RoadMap = (() => {
       return h('button', { class: 'reg ' + (list.length && open ? 'lit' : 'dark') + (here ? ' here' : ''), onclick: () => { click(); region = r; closeSheet(); App.refresh(); } },
         h('div', { class: 'row' }, h('span', { class: 'nm', text: R.name }), h('span', { class: 'sp' }), here ? h('span', { class: 'tag e', text: 'You are here' }) : h('span', { class: 'k', text: R.num })),
         list.length ? h('div', { class: 'pips' }, list.map(st => h('i', { class: (Campaign.isLit(st.id) ? 'f' : '') + (st.elite ? ' el' : '') + (st.boss ? ' bs' : '') }))) : null,
-        h('span', { class: 'kv', text: list.length ? `${Campaign.litIn(r)}/${list.length} lit · ${list.filter(x => x.elite).length} elites · boss: ${R.boss}` : open ? `${R.stages} stages · open, built in the next step` : `${R.stages} stages · ${R.opens}` }),
-        h('span', { class: 'kv' }, ico('bone'), ` Drops ${MATERIALS.find(m => m.id === R.mat).name.toLowerCase()} most`));
+        h('span', { class: 'kv', text: list.length && open ? `${Campaign.litIn(r)}/${list.length} lit · ${list.filter(x => x.elite).length} elites · boss: ${R.boss}` : `${R.stages} stages · ${R.opens}` }),
+        h('span', { class: 'kv' }, ico(typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone'), ` Drops ${MATERIALS.find(m => m.id === R.mat).name.toLowerCase()} most`));
     }).reverse();
     openSheet(h('div', { class: 'box roadbox' },
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
@@ -277,8 +323,8 @@ const RoadMap = (() => {
       h('span', { class: 'k', text: p.tier }),
       tag('y', 'coin', `~${fmt(p.gold)}`, 'Gold for clearing it, every foe defeated'),
       tag('', 'star', `~${fmt(p.xp)} XP`, `About ${Math.round(p.xpLv * 100)}% of a level at level ${st.level}`),
-      tag('', 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
-      tag('w', 'bag', p.gear >= 1 ? 'Gear' : `Gear ${Math.round(p.gear * 100)}%`, st.kind === 'boss' ? 'Boss rarity: up to Rare' : st.kind === 'elite' ? 'Elite rarity' : 'Region I rarity'),
+      tag('', typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
+      tag('w', 'bag', p.gear >= 1 ? 'Gear' : `Gear ${Math.round(p.gear * 100)}%`, st.kind === 'boss' ? 'Boss rarity: up to Rare' : st.kind === 'elite' ? 'Elite rarity' : `${REGIONS[st.region].name} rarity`),
     ];
     const unl = first && st.first.length ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' }), st.first.map(id => tag('e', UNLOCKS[id].icon, UNLOCKS[id].kind === 'condition' ? 'Condition: ' + UNLOCKS[id].name : UNLOCKS[id].name, UNLOCKS[id].line || ''))) : first ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' })) : null;
     return h('div', { class: 'ss-rw' }, h('div', { class: 'row' }, kids), unl);

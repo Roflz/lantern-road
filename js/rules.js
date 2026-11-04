@@ -75,8 +75,13 @@ const Tactics = (() => {
   const book = o => (isParty(o) ? S.party : S.heroes[o]);
   // The actions an owner's rules can take: a character's basic attack, Defend and the actives they know (only the
   // equipped ones fire in battle), or the party actions.
-  const actions = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, ...Hero.actives(c), 'defend']; };
-  const equipped = (o, id) => { const c = charOf(o); return !c || id === CLASSES[c.cls].basic || id === 'defend' || c.equip.includes(id); };
+  // Defend, Move and Gather: actions every hero has, with no mana. The Tactician teaches Move (lesson I, 1-11) and
+  // Gather (lesson II, Region II), recorded as the known keys act:move and act:gather, so the picker offers them from
+  // then on.
+  const SHARED = ['defend', 'move', 'gather'];
+  const taught = () => SHARED.filter(id => id === 'defend' || S.known.includes('act:' + id));
+  const actions = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, ...Hero.actives(c), ...taught()]; };
+  const equipped = (o, id) => { const c = charOf(o); return !c || id === CLASSES[c.cls].basic || SHARED.includes(id) || c.equip.includes(id); };
   // A class's starter rules, kept to the skills the character knows.
   const startRules = c => CLASSES[c.cls].rules.filter(r => r.do === CLASSES[c.cls].basic || c.skills[r.do]).map(norm);
   const norm = r => {
@@ -100,7 +105,7 @@ const Tactics = (() => {
   }
   // Rules may name any active of the character's classes, learned or not, so a respec doesn't erase them; ones the
   // character can't use yet are flagged in the editor and skipped in battle.
-  const allowed = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, 'defend', ...c.classes.flatMap(k => [CLASSES[k].starter, ...CLASSES[k].tree.flat()]).filter(id => SKILLS[id].kind === 'active')]; };
+  const allowed = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, ...SHARED, ...c.classes.flatMap(k => [CLASSES[k].starter, ...CLASSES[k].tree.flat()]).filter(id => SKILLS[id].kind === 'active')]; };
   const valid = (o, r) => !!r && !!CONDITIONS[r.if] && allowed(o).includes(r.do) && fits(o, r);
   const cleanItems = (list, n) => Array.from({ length: n }, (_, i) => (list && ITEMS[list[i]] ? list[i] : null));
 
@@ -222,6 +227,7 @@ const Tactics = (() => {
   function learnAll() {
     let any = false;
     for (const id in CONDITIONS) for (const v of variants(id)) if (!S.known.includes(condKey(v))) { S.known.push(condKey(v)); any = true; }
+    for (const k of ['act:move', 'act:gather']) if (!S.known.includes(k)) { S.known.push(k); any = true; }
     return any ? changed() : false;
   }
 
@@ -292,7 +298,7 @@ const Tactics = (() => {
     }
     const sk = SKILLS[r.do];
     const ch = charOf(o);
-    if (ch && !ch.skills[r.do] && r.do !== 'defend' && r.do !== CLASSES[ch.cls].basic) return { text: `${sk.name} isn’t learned: skipped in battle`, warn: true };
+    if (ch && !ch.skills[r.do] && !SHARED.includes(r.do) && r.do !== CLASSES[ch.cls].basic) return { text: `${sk.name} isn’t learned: skipped in battle`, warn: true };
     if (!equipped(o, r.do)) return { text: `${sk.name} isn’t equipped: skipped in battle`, warn: true };
     const side = sk.shape === 'foe' ? 'foe' : sk.shape === 'ally' ? 'ally' : null;
     if (sk.revive && (C.who === 'ally' || C.who === 'self')) return { text: `Never fires: ${sk.name} only reaches fallen allies`, warn: true };
@@ -311,7 +317,7 @@ const Tactics = (() => {
 
   // Every call makes sure the state is current first.
   const api = fn => (...a) => { ensure(); return fn(...a); };
-  const out = { condKey, variants, ownerOk, gate, onChange: fn => listeners.push(fn), charOf: o => charOf(o), roster: () => roster(), formation: () => formation(),
+  const out = { SHARED, condKey, variants, ownerOk, gate, onChange: fn => listeners.push(fn), charOf: o => charOf(o), roster: () => roster(), formation: () => formation(),
     // for the Node tests: a roster and formation of their own
     useRoster: (list, party) => { memRoster = list; memParty = party || list.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6); S = null; } };
   const calls = {
@@ -377,8 +383,9 @@ const TacticsEditor = (() => {
       const A = PARTY_ACTIONS[id], n = A.kind === 'item' ? Tactics.loadout().items.filter(x => x === A.item).length : 0;
       return { name: A.name, icon: A.icon, note: A.kind === 'item' ? (n ? `${n} packed` : 'Not packed') : 'Targeting', tip: A.tip };
     }
-    const sk = SKILLS[id], basic = id === CLASSES[clsOf(o)].basic || id === 'defend', on = Tactics.equipped(o, id), learned = basic || !!Tactics.charOf(o).skills[id];
-    return { name: sk.name, icon: sk.icon, note: basic ? 'Basic · no mana' : !learned ? 'Not learned' : on ? `${sk.cost || 0} mana` : 'Not equipped', off: !on, tip: [SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') };
+    const sk = SKILLS[id], basic = id === CLASSES[clsOf(o)].basic || Tactics.SHARED.includes(id), on = Tactics.equipped(o, id), learned = basic || !!Tactics.charOf(o).skills[id];
+    const note = id === 'move' ? 'Uses the turn' : id === 'gather' ? 'Twice the mana' : basic ? 'Basic · no mana' : !learned ? 'Not learned' : on ? `${sk.cost || 0} mana` : 'Not equipped';
+    return { name: sk.name, icon: sk.icon, note, off: !on, tip: [id === 'move' || id === 'gather' ? null : SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') };
   };
   const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: heroPortrait(Tactics.charOf(o)), alt: '' }));
   // A skill's text at the character's level, for tips.

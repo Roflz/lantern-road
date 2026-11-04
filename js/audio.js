@@ -108,6 +108,9 @@ const MUSIC_ON = false;
 const SCALES = [
   { root: 110, steps: [0, 3, 5, 7, 10, 12, 15], tempo: 1.1 },             // Gravefields
   { root: 98, steps: [0, 2, 3, 7, 9, 10, 14], tempo: 1.25, rain: true },  // Drowned Chapel
+  { root: 104, steps: [0, 2, 5, 7, 9, 12, 14], tempo: 1.15 },             // Thornwood
+  { root: 92, steps: [0, 1, 4, 5, 7, 8, 12], tempo: 1.0 },                // Ashen Keep
+  { root: 87, steps: [0, 3, 6, 7, 10, 12, 15], tempo: 1.35 },             // Hollow Throne
 ];
 const HEARTH_SCALE = { root: 110, steps: [0, 4, 7, 9, 12, 14, 16], tempo: 1.4 }; // camp and menus
 const music = { on: false, key: null, next: 0, timer: 0, drone: null, want: HEARTH_SCALE };
