@@ -175,7 +175,7 @@ const Camp = (() => {
   const FORM = [2, 3, 0, 4, 5, 1]; // the formation as it stands in battle: two columns behind, the front on the right
   let ui = null;
   function screen() {
-    const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The camp. Drag sideways, or use the arrow keys, to turn between the party and the buildings.' });
+    const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The Hearth. Drag sideways, or use the arrow keys, to turn between the party and the buildings.' });
     const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
     const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
     const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');

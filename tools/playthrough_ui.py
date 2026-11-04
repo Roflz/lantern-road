@@ -125,9 +125,9 @@ def main():
             return js("() => JSON.stringify({ on: App.current, sheet: !document.getElementById('sheet').hidden && document.getElementById('sheet').firstChild && document.getElementById('sheet').firstChild.className, view: Camp.scene && Camp.scene.view, yaw: Camp.scene && Math.round(Camp.scene.yaw), toasts: [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent).slice(-2) })")
 
         def to_camp(view='party'):
-            """Back to camp (the Camp tab, from the other screens), turned to a view with the arrow keys."""
-            if js("() => App.current") != 'home' and not tap('#tabbar .tab', '^Camp$', 1200):
-                problems.append(f"no Camp tab on {js('() => App.current')}")
+            """Back to camp (the Hearth tab, from the other screens), turned to a view with the arrow keys."""
+            if js("() => App.current") != 'home' and not tap('#tabbar .tab', '^Hearth$', 1200):
+                problems.append(f"no Hearth tab on {js('() => App.current')}")
                 return False
             if js("() => Camp.scene ? Camp.scene.view : null") != view:
                 page.keyboard.press('ArrowRight')

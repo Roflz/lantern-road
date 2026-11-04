@@ -37,7 +37,9 @@ const CampScene = (() => {
 
   // ── the world: the fire at the origin, north is +z, east is +x (world units are art pixels at scale 1)
   const SEATS = [[-31, 12], [31, 12], [-37, -6], [37, -6], [-29, -22], [29, -22]];
-  const BOARD = [-77, -16], SIGN = [30, 62], WICK = [-51, -30];
+  // The Recruit Board stands where the party can see it, at a seated hero's scale; Wick keeps to the bottom-left corner,
+  // small, like a guide in the corner of the screen (the user's moves of 2026-11-04).
+  const BOARD = [-56, -18], SIGN = [30, 62], WICK = [-61, -41];
   const CAMP_POSTS = [[-62, 40], [62, 40], [-96, -50], [96, -50]];
   // Building plots, as the buildings view sees them (844-wide frame pixels), in the order they open: the middle row's
   // centre three, then outwards. Their places on the ground are worked out from the buildings view's camera.
@@ -515,11 +517,11 @@ const CampScene = (() => {
       } });
       anchors.push({ id: 'hero' + j, hero: j, d: p.d, x: p.x, y: p.y, top, box: [p.x - 8 * s, top - 2, p.x + 8 * s, p.y + s], view: 'both' });
     });
-    // Wick, the lamp-keeper, up front by the board
+    // Wick, the lamp-keeper, in the bottom-left corner, never drawn bigger than 2×
     if (northA > 0.01) {
       const p = at(Wd.wick[0], Wd.wick[1]);
       if (p) {
-        const img = art('wick'), s = cam.scale(p.s), bx = p.x - 6 * s, by = p.y - img.height * s + s;
+        const img = art('wick'), s = Math.min(cam.scale(p.s), 2), bx = p.x - 6 * s, by = p.y - img.height * s + s;
         items.push({ d: p.d, img, x: Math.round(bx), y: Math.round(by), w: Math.round(img.width * s), h: Math.round(img.height * s), a: northA });
         dyn.wick = [bx + 13.5 * s, by + 6.5 * s, 11 * s, northA];
         anchors.push({ id: 'wick', d: p.d, x: p.x, y: p.y, top: by, box: [bx - 2, by - 2, bx + img.width * s + 2, p.y + 2], view: 'party', a: northA });

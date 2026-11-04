@@ -18,7 +18,7 @@ const Camp3D = (() => {
 
   // ── the world: the fire at the origin, north is +z, east is +x (world units are art pixels at scale 1)
   const SEATS = [[-31, 12], [31, 12], [-37, -6], [37, -6], [-29, -22], [29, -22]];
-  const BOARD = [-77, -16], SIGN = [30, 62], WICK_POS = [-51, -30];
+  const BOARD = [-56, -18], SIGN = [30, 62], WICK_POS = [-61, -41];
   const CAMP_POSTS = [[-62, 40], [62, 40], [-96, -50], [96, -50]];
   // Building plots, as the buildings view sees them (frame px), in the order they open: the middle row's centre three,
   // then outwards. Their places on the ground are worked out from the buildings view's camera.
@@ -295,7 +295,7 @@ const Camp3D = (() => {
       });
     });
     if (S.wick) addN(WICK_POS[0], WICK_POS[1], p => {
-      const img = art('wick'), s = cam.scale(p.s), bx = p.x - 6 * s, by = p.y - img.height * s + s;
+      const img = art('wick'), s = Math.min(cam.scale(p.s), 2), bx = p.x - 6 * s, by = p.y - img.height * s + s;
       blit(x, img, bx, by, s); L.push([bx + 13.5 * s, by + 6.5 * s, 11 * s, `rgba(255,190,100,${(0.55 + Math.sin(t / 170) * 0.08).toFixed(3)})`]);
       anchors.push({ id: 'wick', x: p.x * K, y: p.y * K, top: by * K, view: 'both' });
     });

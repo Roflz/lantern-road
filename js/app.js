@@ -19,7 +19,7 @@ const App = (() => {
   const shell = $('#shell'), views = $('#views'), tabbar = $('#tabbar'), purse = $('#purse');
   const screens = {};
   const TABS = [
-    { id: 'home', label: 'Camp', icon: 'kindle' },
+    { id: 'home', label: 'Hearth', icon: 'kindle' },
     { id: 'map', label: 'Road', icon: 'lantern' },
     { id: 'party', label: 'Party', icon: 'shield' },
     { id: 'bag', label: 'Bag', icon: 'bag' },          // js/bag.js
