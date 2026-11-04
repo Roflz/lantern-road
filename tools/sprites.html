@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sprite sheet</title>
+<style>
+  body { margin: 0; padding: 16px; background: #120e1c; color: #f2e7d0; font: 12px monospace; }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; margin-bottom: 18px; }
+  figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
+  canvas { image-rendering: pixelated; background: #38322a; }
+</style>
+<div class="row" id="heroes"></div>
+<div class="row" id="walk"></div>
+<div class="row" id="side"></div>
+<div class="row" id="foes"></div>
+<div class="row" id="icons"></div>
+<script src="../js/core.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/art.js"></script>
+<script>
+  // A sheet of every sprite at 6×, to check the pixel art. Open in a browser, or screenshot with Playwright.
+  const big = (src, k = 6) => { const c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height); return c; };
+  const fig = (el, label) => h('figure', {}, el, h('figcaption', { text: label }));
+  for (const k of PARTY) $('#heroes').append(fig(big(heroSprite(k)), `${k} ${heroSprite(k).width}x${heroSprite(k).height}`));
+  for (const k of PARTY) $('#walk').append(fig(big(heroSprite(k, 1), 4), 'step 1'), fig(big(heroSprite(k, 2), 4), 'step 2'));
+  for (const k of PARTY) $('#side').append(fig(big(heroSide(k)), 'side ' + k), fig(big(heroSide(k, 1), 4), 'step'));
+  for (const k of Object.keys(FOE_ART)) $('#foes').append(fig(big(foeSprite(k), 5), `${k} ${foeSprite(k).width}x${foeSprite(k).height}`));
+  for (const k of Object.keys(UI_ICONS)) $('#icons').append(fig(h('img', { src: iconURL(k), style: 'width:42px;height:42px;image-rendering:pixelated' }), k));
+  for (const k of PARTY) $('#icons').append(fig(h('img', { src: portraitURL(k, true), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'p:' + k));
+  for (const k of Object.keys(FOE_ART)) $('#icons').append(fig(h('img', { src: portraitURL(k, false), style: 'width:48px;height:48px;image-rendering:pixelated;background:#2a2233' }), 'f:' + k));
+</script>
