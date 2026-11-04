@@ -42,8 +42,6 @@ const Campaign = (() => {
 
   // ── where the road stands
   const has = (id, s = store()) => !s || !!(s.unlocks && s.unlocks[id]);
-  // Tactician I: Focus fire and saved rule sets. With the home base, the building teaches it; without, the 1-11 clear.
-  const taught = (s = store()) => (typeof Base !== 'undefined' && s ? Base.built('tactician', s) : has('tactician', s));
   const isLit = (id, s = store()) => !!s && s.campaign.cleared.includes(id);
   // The next stage to light: the first one not yet cleared, or past the end when Region I is all lit.
   const frontier = (s = store()) => { const i = STAGES.findIndex(st => !isLit(st.id, s)); return i < 0 ? STAGES.length : i; };
@@ -80,7 +78,7 @@ const Campaign = (() => {
     const out = (s.campaign.trip && s.campaign.trip.out) || [];
     t.party = t.party.map(p => (p && (out.includes(p.char) || spent(s.roster.find(c => c.id === p.char) || {})) ? null : p));
     if (!has('items')) { t.loadout = []; t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'item'); }
-    if (!taught(s)) t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'focus');
+    if (!has('tactician')) t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'focus');
     return t;
   }
   // The battle for a stage: lit stages are replays, where wandering foes can appear.
@@ -177,9 +175,8 @@ const Campaign = (() => {
       Tactics.grantPartyRule({ if: 'ally_hp_lt', n: 50, do: 'draught' });
     },
     keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE); },
-    // With the home base (build step 5), 1-11 only brings the Tactician's blueprint, and building it teaches Lesson I.
+    // Tactician I. The home base's Tactician builds on it: party rule and loadout slots, then Lessons II and III.
     tactician: () => {
-      if (typeof Base !== 'undefined') return;
       for (const id of TACTICIAN_I.concat(HP_MP)) for (const k of variantKeys(id)) Tactics.learn(k);
     },
   };
@@ -280,7 +277,7 @@ const Campaign = (() => {
     }
     // The between-battle party rules, from the top: the first Return to base that holds sends everyone home.
     if (next != null) {
-      const x = { chars: on, fell: r.fell, next: STAGES[next] };
+      const x = { chars: on, fell: r.fell, next: STAGES[next], bag: s.inventory ? s.inventory.potions : null };
       const rules = (Tactics.owner('party').rules || []).filter(rr => rr.on && PARTY_ACTIONS[rr.do] && PARTY_ACTIONS[rr.do].kind === 'home');
       for (const rr of rules) {
         const C = CONDITIONS[rr.if];
@@ -289,6 +286,7 @@ const Campaign = (() => {
         if (rr.if === 'bb_fatigue') { const c = on.filter(c => c.fatigue >= rr.n).sort((a, b) => b.fatigue - a.fatigue)[0]; text = `${nm(c)} reached ${Math.floor(c.fatigue)} fatigue.`; }
         else if (rr.if === 'bb_fell') text = 'An ally fell, and a party rule called everyone home.';
         else if (rr.if === 'bb_next_boss') text = `Next on the road is ${STAGES[next].name}, and a party rule called everyone home first.`;
+        else if (rr.if === 'bb_out') text = `The Bag is out of ${ITEMS_MANY[rr.s] || rr.s}, and a party rule called everyone home.`;
         why = { k: 'rule', text, rule: rr };
         next = null;
         break;
@@ -329,11 +327,11 @@ const Campaign = (() => {
   // ── first-time tips (campaign spec §8.3): each shows once
   function tip(key, s = store()) { if (!s || s.campaign.tips[key]) return false; s.campaign.tips[key] = Date.now(); return true; }
 
-  // Prototype: until the home base (step 5) brings rest at the fire and the Infirmary, a button rests everyone.
+  // Rests everyone at once, for the tests. In the game, rest takes time at camp (js/rest.js).
   function restAll(s = store()) { for (const c of s.roster) c.fatigue = 0; return true; }
 
   return {
-    ensure, has, taught, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
+    ensure, has, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
     earn, preview, defeated, fatigue, unlock, settle, setOut, afterBattle, end, callHome, trip, setFor, chooseSet, tip, restAll,
     onUnlock: fn => unlockHooks.push(fn), onFirstClear: fn => clearHooks.push(fn), onSettle: fn => settleHooks.push(fn), onHome: fn => homeHooks.push(fn),
   };

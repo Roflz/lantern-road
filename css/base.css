@@ -227,3 +227,5 @@ button.rost:hover:not(:disabled){border-color:var(--ember)}
 #screen:has(> .pick){padding:0;background:var(--night)}
 #frame:has(.view.camp-view:not(.out)) #toasts{bottom:auto;top:132px}
 .page.pick{min-height:100%}
+/* The stage sheet's party strip: when Spent heroes are fit again (it opens the Infirmary). */
+.pstrip .textbtn.rest{min-height:28px;font-size:7px;color:var(--bone);gap:4px}
