@@ -1287,17 +1287,20 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
 {
   const mem = new Map(), was = global.localStorage;
   global.localStorage = { getItem: k => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
+  // A save's content, without lastSeen: leaving a server writes its save once more on the way out, which stamps the
+  // time it was last open, and nothing else.
+  const content = key => { const d = JSON.parse(mem.get(key)); delete d.lastSeen; return JSON.stringify(d); };
   try {
     Save.load();
     ok(Save.server === 1 && !Save.state.roster.length && mem.has('lantern-road-save'), 'a first boot opens S1, under the save key the game always had');
     Base.newGame('sellsword', Save.state); Save.state.currencies.gold = 111; Save.commit();
-    const s1 = mem.get('lantern-road-save');
+    const s1 = content('lantern-road-save');
     let L = Save.servers();
     ok(L.newest === 2 && L.list.length === 2 && L.list[0].n === 1 && L.list[0].lead === 'sellsword' && L.list[1].status === 'new', 'the list: S1 with its lead hero, then S2, the newest');
     Save.use(2, true);
     ok(Save.server === 2 && !Save.state.roster.length && Save.state.currencies.gold !== 111, 'a new server starts a fresh save');
     Base.newGame('pilgrim', Save.state); Save.state.currencies.gold = 222; Save.commit();
-    ok(mem.get('lantern-road-save') === s1, 'starting S2 leaves S1’s save untouched');
+    ok(content('lantern-road-save') === s1, 'starting S2 leaves S1’s save untouched');
     ok(JSON.parse(mem.get('lantern-road-save-s2')).roster[0].cls === 'pilgrim', 'S2 saves beside it, under lantern-road-save-s2');
     Save.use(1);
     ok(Save.server === 1 && Save.state.roster.length === 1 && Save.state.roster[0].cls === 'sellsword' && Save.state.currencies.gold === 111, 'back on S1: its save as it was');
