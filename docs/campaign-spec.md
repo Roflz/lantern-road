@@ -9,7 +9,7 @@ Draft 4. It follows `docs/design.md` (the 2026-11-04 update), which stays the so
 - **The softened cliff:** past level 10 a hero level adds only about 2% to a hero's power, so most later walls move about 5–15 points a level, more where a skill point or a threshold lands (multiples of 5, and 30, 50, 80, 100). Section 5.6 has the numbers. The lever is steeper hero growth per level (build step 3), not the foes, so this build reports it and leaves it to you.
 - **Numbers moved from section 4.3's sketch** to hit the targets. The built level-1 stats are in section 6, and the skills that changed are listed in section 9.
 - **The Mourner's Dirge never fired in build step 6:** its id clashed with the Bellringer's Dirge passive, which replaced it. It works now, at +15% damage instead of +30%, so Region I keeps step 6's balance.
-- **The Move action** (Tactician I, from 1-11) and **the Gather action** (Tactician II, from 2-1) are built, so a hero Lured out of their row can walk back.
+- **The Move action** (Tactician I, from 1-11) and **the Gather action** (Lesson II, at the home base's Tactician level 3) are built, so a hero Lured out of their row can walk back.
 
 **What changed in draft 3:** every open question is now settled (section 9). The coordinator decided them overnight, and they're marked for your review.
 - Closing the app brings the party home after the current battle. Offline gains come only from home-base buildings.
@@ -888,8 +888,8 @@ Times assume about 1–2 minutes per stage, including the rewards and the walk *
 1. **Foe Health from level 50** steps up ×1.5, rising to ×2 at 100 (section 3.1).
 2. **The cliff past Region I** is reported, not forced: most later walls move 5–15 points a level (section 5.6 and the PR's report). Making levels matter more there needs steeper hero growth per level.
 3. **The Mourner's Dirge** gives +15% damage, not +30%, now that it works.
-4. **Who joins the recruit board, and when:** the Barber-Surgeon at 2-4 (the first Silent Sister), the Bellringer at 2-5 (three Bell Wraiths), the Duellist when the Drowned Bishop falls (2-17), the Cutpurse at 3-9, and the Alchemist when the Antlered One falls (3-17).
-5. **Tactician II** comes with 2-1's first clear (its lesson's conditions and the Gather action), until the home base turns it into the Tactician's third level. The Move action comes with Tactician I.
+4. **Who joins the recruit board, and when:** as the home base built it, each class joins when its region opens: the Barber-Surgeon and the Bellringer when the Sexton falls, the Duellist and the Cutpurse when the Drowned Bishop falls, and the Alchemist when the Antlered One falls. The boss's first clear lists them.
+5. **Tactician II** is the home base's Tactician at level 3 (Lesson II), and it now brings the Gather action too. The Move action comes with Tactician I at 1-11.
 6. **The region's buildings** come with the boss before it: the Masters' Hall and Shrine with the Sexton, the Whetstone and Ossuary with the Drowned Bishop, and the Hexing Stone and Bell Tower with the Antlered One. A save past the Sexton gets the first two when it loads.
 7. **Skills tuned from section 4.3:** Toll 0.25× (from 0.5×) and 30 mana, and it pushes each turn back 20%; the Drowned Hymn heals 0.8×; Burst 0.8×; Pack Tear 0.8×, +15% per other wolf; Gallows Drop 1.2×; Siege Shot 2.4×; Kiln Blast 1.3×; Rite of Ash heals 0.5×; the Herald's Doom ticks 0.45×; the Kingsguard's Halberd 1.3×; the Old Growth heals 1.5% a turn; Drain the Font heals 1.2% of its health per 10 mana; the Court of Shades calls one shade at a time, in the Hollow King's first phase only (his second swaps it for Snuff the Light); Long Live the King Dooms at 0.2× a tick.
 8. **Formations:** some rich and late stages field 5 foes, not 6, and Region I's undead lead the Drowned Chapel's front row at first.
