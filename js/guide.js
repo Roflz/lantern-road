@@ -20,14 +20,19 @@ const Guide = (() => {
 
   // ── coach marks
   let mark = null; // { ring, tip, timer }
-  // An element's box in #frame's own coordinates: the battle frame may be turned on its side, and views scroll.
+  // An element's box in #frame's own coordinates, measured on screen (so centring transforms count). On an upright
+  // phone the landscape battle is drawn turned a quarter (js/battle.js: translateX(height) rotate(90deg) from the
+  // frame's corner), so the screen box is turned back.
   function boxOf(el) {
     const fr = frame();
-    let x = 0, y = 0, n = el;
-    while (n && n !== fr) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
-    if (n !== fr) return null;
-    for (let p = el.parentElement; p && p !== fr; p = p.parentElement) { x -= p.scrollLeft || 0; y -= p.scrollTop || 0; }
-    return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+    if (!fr.contains(el)) return null;
+    const r = el.getBoundingClientRect();
+    if (fr.classList.contains('turned')) {
+      const a = $('#app').getBoundingClientRect(), fh = fr.offsetHeight;
+      return { x: r.top - a.top, y: fh - (r.right - a.left), w: r.height, h: r.width };
+    }
+    const f = fr.getBoundingClientRect();
+    return { x: r.left - f.left, y: r.top - f.top, w: r.width, h: r.height };
   }
   function clear() {
     if (!mark) return;
@@ -88,7 +93,7 @@ const Guide = (() => {
   }
   function battleEnd() { fight = null; clear(); }
   // Between battles on a trip that keeps going.
-  function between() { setTimeout(() => coach('c:walk', '.between .bt-acts', 'The party walks on to the next stage. Come home whenever you like.', { place: 'above', ms: 6000 }), 500); }
+  function between() { setTimeout(() => coach('c:walk', '.between .bt-acts .btn:last-child', 'The party walks on to the next stage by itself. Come home whenever you like.', { place: 'below', ms: 6000 }), 500); }
 
   // ── screens: the first visit that matters
   function onScreen(name) {
