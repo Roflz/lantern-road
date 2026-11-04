@@ -14,11 +14,16 @@
 // to the next, until something sends it home: a lost battle, a between-battle party rule, a boss falling, every hero
 // Spent, the player calling them home, or the app closing.
 //
-// Hooks for build step 5: Campaign.onUnlock(fn(id, state)) fires for every unlock (buildings become blueprints);
-// Campaign.onFirstClear(fn(stage, state)) fires on each first clear (Renown).
+// Hooks for build step 5:
+//   Campaign.onUnlock(fn(id, state))          every unlock (buildings become blueprints)
+//   Campaign.onFirstClear(fn(stage, state))   each first clear
+//   Campaign.onSettle(fn(r, stage, res, state))  the end of every battle's settling: r is what it earned (gold, xpLv,
+//                                             xp, mats, items, gear, fatigue, turns { charId: turns }, unlocks, first)
+//   Campaign.onHome(fn(lastTrip, state))      a trip is over and the party is home
+// Fatigue.battle(res, state), when the home base defines it, replaces the plain fatigue count (same result shape).
 
 const Campaign = (() => {
-  const unlockHooks = [], clearHooks = [];
+  const unlockHooks = [], clearHooks = [], settleHooks = [], homeHooks = [];
   const store = () => (typeof Save !== 'undefined' && Save.state ? Save.state : null);
 
   // ── the save's campaign fields, filled in where an older save lacks them
@@ -32,10 +37,9 @@ const Campaign = (() => {
     if (c.trip === undefined) c.trip = null;
     if (c.lastTrip === undefined) c.lastTrip = null;
     if (!s.unlocks || typeof s.unlocks !== 'object') s.unlocks = {};
-    // A region opened before its buildings were recorded (a save from build step 6 that beat the Sexton) gets them now,
-    // and Tactician I's Move action, which step 6 hadn't built.
+    // A region opened before its records existed (a save from build step 6 that beat the Sexton) gets them now. (The
+    // home base's Base.teach gives an older save Tactician I's Move action.)
     for (const id in REGION_OPENS) if (s.unlocks[id]) for (const k of REGION_OPENS[id]) if (!s.unlocks[k]) unlock(k, s);
-    if (s.unlocks.tactician && typeof Tactics !== 'undefined' && s === store()) try { Tactics.learn('act:move'); } catch (e) { }
     return s;
   }
 
@@ -53,7 +57,8 @@ const Campaign = (() => {
 
   // ── the party
   const chars = (s = store()) => (s ? s.party.map(id => s.roster.find(c => c.id === id)).filter(Boolean) : []);
-  const spent = c => (c.fatigue || 0) >= FATIGUE.SPENT;
+  // Spent at 100, until fatigue falls below 50: the home base keeps c.spent for that (home-base spec §6).
+  const spent = c => !!c.spent || (c.fatigue || 0) >= FATIGUE.SPENT;
   // The heroes who can set out: in the formation, and not Spent or sent home on this trip.
   function fit(s = store()) {
     const out = (s && s.campaign.trip && s.campaign.trip.out) || [];
@@ -142,8 +147,10 @@ const Campaign = (() => {
     return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp: Math.round(xpLv * Hero.xpToNext(stage.level)), xpLv, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
   }
 
-  // ── fatigue (home-base spec §6): +1 for each turn a hero took, times their gear's multiplier
+  // ── fatigue (home-base spec §6): +1 for each turn a hero took, times their gear's multiplier. The home base's
+  // Fatigue.battle (js/base.js, build step 5) takes over when it is loaded: same shape, with the skills that change it.
   function fatigue(res, s) {
+    if (typeof Fatigue !== 'undefined' && Fatigue.battle) return Fatigue.battle(res, s);
     const out = {};
     for (const u of res.start) {
       if (u.side !== 0 || u.thrall || !u.char) continue;
@@ -171,14 +178,11 @@ const Campaign = (() => {
       Tactics.grantPartyRule({ if: 'ally_hp_lt', n: 50, do: 'draught' });
     },
     keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE); },
+    // Tactician I, with the Move action. The home base's Tactician builds on it: party rule and loadout slots, then
+    // Lessons II (with the Gather action) and III.
     tactician: () => {
       for (const id of TACTICIAN_I.concat(HP_MP)) for (const k of variantKeys(id)) Tactics.learn(k);
       Tactics.learn('act:move');
-    },
-    // Lesson II arrives in Region II (content spec §5), and the Gather action with it.
-    tactician2: () => {
-      for (const id of TACTICIAN_II) for (const k of variantKeys(id)) Tactics.learn(k);
-      Tactics.learn('act:gather');
     },
   };
   // Records an unlock (once), applies what it does now, and tells step 5. Returns true if it was new.
@@ -226,6 +230,10 @@ const Campaign = (() => {
     if (fell && unlock('cond:ally_fallen', s)) r.unlocks.push('cond:ally_fallen');
     if (first) for (const fn of clearHooks) { try { fn(stage, s); } catch (e) { } }
     r.fell = fell;
+    // Each hero's turns, for whoever listens (Renown, buildings): r.turns { charId: turns }.
+    r.turns = {};
+    for (const u of res.start) if (u.side === 0 && !u.thrall && u.char) r.turns[u.char] = res.stats[u.id].turns;
+    for (const fn of settleHooks) { try { fn(r, stage, res, s); } catch (e) { } }
     return r;
   }
 
@@ -258,7 +266,7 @@ const Campaign = (() => {
     tt.unlocks.push(...r.unlocks);
     // A hero who reached Spent walks home alone; the rest carry on (campaign spec §7.4).
     const left = [];
-    for (const c of chars(s)) if (r.fatigue[c.id] && !T.out.includes(c.id) && c.fatigue >= FATIGUE.SPENT) { T.out.push(c.id); left.push(c.id); }
+    for (const c of chars(s)) if (r.fatigue[c.id] && !T.out.includes(c.id) && spent(c)) { T.out.push(c.id); left.push(c.id); }
     const on = fit(s);
     let next = null, why = null;
     const nm = c => c.name;
@@ -274,7 +282,7 @@ const Campaign = (() => {
     }
     // The between-battle party rules, from the top: the first Return to base that holds sends everyone home.
     if (next != null) {
-      const x = { chars: on, fell: r.fell, next: STAGES[next] };
+      const x = { chars: on, fell: r.fell, next: STAGES[next], bag: s.inventory ? s.inventory.potions : null };
       const rules = (Tactics.owner('party').rules || []).filter(rr => rr.on && PARTY_ACTIONS[rr.do] && PARTY_ACTIONS[rr.do].kind === 'home');
       for (const rr of rules) {
         const C = CONDITIONS[rr.if];
@@ -283,6 +291,7 @@ const Campaign = (() => {
         if (rr.if === 'bb_fatigue') { const c = on.filter(c => c.fatigue >= rr.n).sort((a, b) => b.fatigue - a.fatigue)[0]; text = `${nm(c)} reached ${Math.floor(c.fatigue)} fatigue.`; }
         else if (rr.if === 'bb_fell') text = 'An ally fell, and a party rule called everyone home.';
         else if (rr.if === 'bb_next_boss') text = `Next on the road is ${STAGES[next].name}, and a party rule called everyone home first.`;
+        else if (rr.if === 'bb_out') text = `The Bag is out of ${ITEMS_MANY[rr.s] || rr.s}, and a party rule called everyone home.`;
         why = { k: 'rule', text, rule: rr };
         next = null;
         break;
@@ -297,9 +306,12 @@ const Campaign = (() => {
     const T = s.campaign.trip;
     if (!T) return null;
     const heroes = Object.keys(T.fatigue).map(id => { const c = s.roster.find(x => x.id === id); return c ? { id, name: c.name, before: T.fatigue[id], after: c.fatigue || 0, out: T.out.includes(id) } : null; }).filter(Boolean);
-    s.campaign.lastTrip = Object.assign({ at: Date.now(), battles: T.battles, why: why || { k: 'called', text: 'The party came home.' }, heroes, seen: false }, T.totals);
+    // Closed while out: home from the moment the app closed, so resting counts from then (home-base spec §4).
+    const away = why && why.k === 'closed' && typeof Save !== 'undefined' && Save.info && Save.info.awayMs > 0 ? Save.info.awayMs : 0;
+    s.campaign.lastTrip = Object.assign({ at: Date.now() - away, battles: T.battles, why: why || { k: 'called', text: 'The party came home.' }, heroes, seen: false }, T.totals);
     s.campaign.trip = null;
     s.campaign.current = null;
+    for (const fn of homeHooks) { try { fn(s.campaign.lastTrip, s); } catch (e) { } }
     return s.campaign.lastTrip;
   }
   // Call the party home: the battle under way finishes first.
@@ -320,13 +332,13 @@ const Campaign = (() => {
   // ── first-time tips (campaign spec §8.3): each shows once
   function tip(key, s = store()) { if (!s || s.campaign.tips[key]) return false; s.campaign.tips[key] = Date.now(); return true; }
 
-  // Prototype: until the home base (step 5) brings rest at the fire and the Infirmary, a button rests everyone.
+  // Rests everyone at once, for the tests. In the game, rest takes time at camp (js/rest.js).
   function restAll(s = store()) { for (const c of s.roster) c.fatigue = 0; return true; }
 
   return {
     ensure, has, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
     earn, preview, defeated, fatigue, unlock, settle, setOut, afterBattle, end, callHome, trip, setFor, chooseSet, tip, restAll,
-    onUnlock: fn => unlockHooks.push(fn), onFirstClear: fn => clearHooks.push(fn),
+    onUnlock: fn => unlockHooks.push(fn), onFirstClear: fn => clearHooks.push(fn), onSettle: fn => settleHooks.push(fn), onHome: fn => homeHooks.push(fn),
   };
 })();
 

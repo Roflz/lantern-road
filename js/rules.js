@@ -10,7 +10,8 @@
 //
 // Rules are { if, n?, s?, do, on } (see CONDITIONS and PARTY_ACTIONS in js/data.js). An "owner" is a character's id
 // (Save.state.roster) or 'party' for the party rules. A character's rule slots come from the character (js/hero.js):
-// every character starts with 3, and the Masters' Hall teaches more up to their class's maximum.
+// every character starts with 3, and the Masters' Hall teaches more up to their class's maximum. The party's rule slots
+// and loadout slots come from the Tactician (js/base.js calls setSlots).
 
 const Tactics = (() => {
   const MAX_SETS = 8;
@@ -69,7 +70,7 @@ const Tactics = (() => {
   // ── owners
   const isParty = o => o === 'party';
   const ownerOk = o => isParty(o) || !!charOf(o);
-  const slotRange = o => (isParty(o) ? PARTY_RULES.slots : [HERO.RULE_SLOTS, CLASSES[charOf(o).cls].slots[1]]);
+  const slotRange = o => (isParty(o) ? PARTY_RULES.slots : [HERO.RULE_SLOTS, Hero.ruleMax(charOf(o))]);
   const slotsOf = o => (isParty(o) ? S.party.slots : Hero.ruleSlots(charOf(o)));
   const book = o => (isParty(o) ? S.party : S.heroes[o]);
   // The actions an owner's rules can take: a character's basic attack, Defend and the actives they know (only the
@@ -118,7 +119,7 @@ const Tactics = (() => {
       heroes[c.id] = { rules: startRules(c) };
       heroes[c.id].rules.forEach(r => known.add(condKey(r)));
     }
-    const party = { slots: clamp(PARTY_RULES.rules.length, PARTY_RULES.slots[0], PARTY_RULES.slots[1]), rules: PARTY_RULES.rules.map(norm) };
+    const party = { slots: clamp(PARTY_RULES.rules.length, PARTY_RULES.slots[0], PARTY_RULES.slots[1]), rules: PARTY_RULES.rules.map(norm), granted: 0 };
     party.rules.forEach(r => known.add(condKey(r)));
     const loadout = { slots: LOADOUT.slots[0], items: cleanItems(LOADOUT.items, LOADOUT.slots[0]) };
     return { v: 1, heroes, party, loadout, known: [...known], sets: [] };
@@ -135,7 +136,7 @@ const Tactics = (() => {
       const slots = isParty(o) ? (b && Number.isInteger(b.slots) ? clamp(b.slots, lo, hi) : def.slots) : slotsOf(o);
       let rules = b && Array.isArray(b.rules) ? b.rules.filter(r => valid(o, r)).map(norm).slice(0, slots) : def.rules;
       if (!isParty(o) && !rules.length) rules = def.rules;
-      return isParty(o) ? { slots, rules } : { rules };
+      return isParty(o) ? { slots, rules, granted: b && Number.isInteger(b.granted) ? clamp(b.granted, 0, PARTY_RULES.slots[1]) : 0 } : { rules };
     };
     const heroes = {};
     for (const c of roster()) heroes[c.id] = fix(c.id, data.heroes && data.heroes[c.id], base.heroes[c.id]);
@@ -186,17 +187,20 @@ const Tactics = (() => {
     return changed();
   }
   // Whether another rule slot can still be learned; null when the owner has them all. Characters learn them at the
-  // Masters' Hall and the party at the Tactician (build step 5); both are free in this prototype.
+  // Masters' Hall and the party gets them from the Tactician (js/base.js): neither is bought here any more.
   function slotCost(o) {
     const [, hi] = slotRange(o);
-    return slotsOf(o) >= hi ? null : 0;
+    return slotsOf(o) >= hi ? null : isParty(o) ? 'tactician' : 'mastershall';
   }
-  // Prototype: a lesson for free. The Masters' Hall will charge idle time for it (build step 5).
-  function unlockSlot(o) {
-    if (slotCost(o) == null) return false;
-    if (isParty(o)) S.party.slots++;
-    else charOf(o).lessons.rule++;
-    return changed();
+  // The Tactician's slots (js/base.js): party rule slots and loadout slots. Party rules past the slots are kept but
+  // switched off; loadout slots past them are dropped (an item is only drawn from the Bag when used).
+  function setSlots(party, loadout) {
+    const p = clamp(party + (S.party.granted || 0), PARTY_RULES.slots[0], PARTY_RULES.slots[1]), l = clamp(loadout, LOADOUT.slots[0], LOADOUT.slots[1]);
+    let any = false;
+    if (S.party.slots !== p) { S.party.slots = p; any = true; }
+    S.party.rules.forEach((r, i) => { if (i >= p && r.on) { r.on = false; any = true; } });
+    if (S.loadout.slots !== l) { S.loadout.slots = l; S.loadout.items = cleanItems(S.loadout.items, l); any = true; }
+    return any ? changed() : false;
   }
   // Prototype: conditions are free until the Tactician and battle rewards teach them.
   function learn(key) {
@@ -204,13 +208,19 @@ const Tactics = (() => {
     S.known.push(key);
     return changed();
   }
+  // Several at once (the Tactician's lessons), with one save.
+  function learnMany(keys) {
+    let any = false;
+    for (const k of keys) if (typeof k === 'string' && !S.known.includes(k)) { S.known.push(k); any = true; }
+    return any ? changed() : false;
+  }
   // A rule an unlock gives the party (the draught rule at 1-3, the come-home rule at 1-6). If the party already has a
   // rule doing the same, it is left alone; if the list is full, a slot opens for it.
   function grantPartyRule(rule) {
     const b = S.party;
     if (!S.known.includes(condKey(rule))) S.known.push(condKey(rule));
     if (b.rules.some(r => r.do === rule.do && r.if === rule.if)) return false;
-    if (b.rules.length >= b.slots) { if (b.slots >= PARTY_RULES.slots[1]) return false; b.slots++; }
+    if (b.rules.length >= b.slots) { if (b.slots >= PARTY_RULES.slots[1]) return false; b.slots++; b.granted = (b.granted || 0) + 1; } // kept on top of the Tactician's slots
     b.rules.push(norm(rule));
     return changed();
   }
@@ -226,13 +236,6 @@ const Tactics = (() => {
     const L = S.loadout;
     if (!Number.isInteger(i) || i < 0 || i >= L.slots || (id != null && !ITEMS[id]) || L.items[i] === (id || null)) return false;
     L.items[i] = id || null;
-    return changed();
-  }
-  // Prototype: free until a home base building opens more.
-  function unlockItemSlot() {
-    const L = S.loadout;
-    if (L.slots >= LOADOUT.slots[1]) return false;
-    L.slots++; L.items.push(null);
     return changed();
   }
 
@@ -309,7 +312,7 @@ const Tactics = (() => {
   // reads them (Hero.spec), with their rules.
   function setup() {
     const party = formation().map(id => { const c = id && charOf(id); return c ? Hero.spec(c, clone(S.heroes[c.id].rules).slice(0, slotsOf(c.id))) : null; });
-    return { party, partyRules: clone(S.party.rules), loadout: S.loadout.items.filter(Boolean) };
+    return { party, partyRules: clone(S.party.rules.slice(0, S.party.slots)), loadout: S.loadout.items.filter(Boolean) };
   }
 
   // Every call makes sure the state is current first.
@@ -322,7 +325,7 @@ const Tactics = (() => {
     owner, loadout, actions, conditionMenu, explain, isKnown, setup, equipped,
     sets: () => S.sets.map(x => ({ name: x.name, count: roster().reduce((n, c) => n + (x.heroes[c.id] || []).length, x.party.length) })),
     // editing
-    add, replace, toggle, remove, move, unlockSlot, slotCost, learn, learnAll, setItem, unlockItemSlot, saveSet, loadSet, deleteSet, grantPartyRule,
+    add, replace, toggle, remove, move, slotCost, setSlots, learn, learnMany, learnAll, setItem, saveSet, loadSet, deleteSet, grantPartyRule,
     // a copy of everything, and loading one (it is checked first)
     dump: () => clone(S),
     load: data => { S = sanitize(data); return changed(); },
@@ -423,8 +426,8 @@ const TacticsEditor = (() => {
       rows.push(h('li', { class: 'tx-slot locked' },
         h('span', { class: 'tx-lock' }, ico('lock')),
         h('div', { class: 'tx-lk' }, h('b', { text: 'Locked slot' }),
-          h('span', { text: party ? 'More party slots come from the Tactician' : next ? 'The Masters’ Hall teaches more · free in this prototype' : 'Unlock the one above first' })),
-        next ? h('button', { class: 'small tx-unlock', onclick: () => { click(); Tactics.unlockSlot(o); render(); } }, 'Unlock') : null));
+          h('span', { text: party ? 'The Tactician adds more party rule slots' : next ? 'A Masters’ Hall lesson teaches it' : 'Learn the one above first' })),
+        next && App.actions.building ? h('button', { class: 'small tx-unlock', onclick: () => { click(); App.actions.building(party ? 'tactician' : 'mastershall'); } }, party ? 'Tactician' : 'Hall') : null));
     }
     const C = party ? null : CLASSES[clsOf(o)];
     const foot = party
@@ -451,14 +454,12 @@ const TacticsEditor = (() => {
     });
     for (let i = L.slots; i < L.max; i++) {
       const next = i === L.slots;
-      cells.push(next
-        ? h('button', { class: 'tx-item locked', 'aria-label': 'Locked item slot. Unlock it', onclick: () => { click(); Tactics.unlockItemSlot(); render(); } }, ico('lock'), h('b', { text: 'Unlock' }))
-        : h('div', { class: 'tx-item locked' }, ico('lock'), h('b', { text: 'Locked' })));
+      cells.push(h('div', { class: 'tx-item locked', title: 'The Tactician adds it' }, ico('lock'), h('b', { text: next ? 'Tactician' : 'Locked' })));
     }
     return h('div', { class: 'tx-load' },
       h('h4', {}, 'Bring into battle', h('span', { text: `${L.slots} of ${L.max} slots` })),
       h('div', { class: 'tx-items' }, cells),
-      h('p', { class: 'tx-note', text: 'Each item is used once per battle. Tap it in battle to use it yourself, at any moment, or let an item rule above use it. Either way it takes no one’s turn. More slots will come from a home base building; free in this prototype.' }));
+      h('p', { class: 'tx-note', text: 'Each item is used once per battle. Tap it in battle to use it yourself, at any moment, or let an item rule above use it. Either way it takes no one’s turn. Each use draws one from the Bag. The Tactician adds a 3rd and a 4th slot.' }));
   }
 
   function sets() {

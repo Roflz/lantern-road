@@ -305,10 +305,11 @@ const CONDITIONS = {
   allies_lt: { group: 'battle', n: [2, 3, 4, 5], from: 'a battle reward', when: (r, c) => c.allies.length < r.n, label: r => `Fewer than ${r.n} allies standing` },
   // Between battles: only party rules use these, with the Return to base action. They are checked after each win on a
   // trip (js/campaign.js), never in battle. x: { chars (the heroes on the trip), fell (someone fell in that battle),
-  // next (the stage the party would walk on to) }.
+  // next (the stage the party would walk on to), bag (the party items left in the Bag) }.
   bb_fatigue: { group: 'between', between: true, n: [50, 75, 90], start: [75], when: () => false, bb: (r, x) => x.chars.some(c => c.fatigue >= r.n), label: r => `Between battles: any character at ${r.n}+ fatigue`, tip: 'Checked after each win on the road.' },
   bb_fell: { group: 'between', between: true, when: () => false, bb: (r, x) => !!x.fell, label: () => 'Between battles: an ally fell', tip: 'Someone was knocked out in the battle just won.' },
   bb_next_boss: { group: 'between', between: true, from: 'a battle reward', when: () => false, bb: (r, x) => !!(x.next && (x.next.boss || x.next.elite)), label: () => 'Between battles: next stage has a boss or elite' },
+  bb_out: { group: 'between', between: true, s: ['draught', 'salts', 'lampoil', 'tincture'], when: () => false, bb: (r, x) => !!x.bag && !(x.bag[r.s] > 0), label: r => `Between battles: out of ${ITEMS_MANY[r.s] || r.s}`, tip: 'The Bag has none left, so its loadout slots go into the next battle empty.' },
 };
 for (const id in CONDITIONS) CONDITIONS[id].id = id;
 
@@ -323,6 +324,8 @@ const ITEMS = {
   lampoil: { name: 'Lamp Oil', icon: 'oil', skill: 'lampoil', tip: 'Every ally gains 20 mana.' },
   tincture: { name: 'Bitter Tincture', icon: 'tincture', skill: 'tincture', tip: 'Removes all harmful statuses from one ally.' },
 };
+// Party items by the many, for “out of Healing Draughts”.
+const ITEMS_MANY = { draught: 'Healing Draughts', salts: 'Smelling Salts', lampoil: 'Lamp Oil', tincture: 'Bitter Tinctures' };
 // Loadout slots: how many a party starts with and the most it can open (from a home base building later), and the
 // starting loadout (tune).
 const LOADOUT = { slots: [2, 4], items: ['draught', 'salts'] };
@@ -501,8 +504,7 @@ const UNLOCKS = {
   // Region II opens with the Masters' Hall and the Shrine (home-base spec §3)
   mastershall: { kind: 'building', name: 'Masters’ Hall blueprint', icon: 'book', line: 'Trains skill slots and rule slots while a hero is away.', step: 5 },
   shrine: { kind: 'building', name: 'Shrine blueprint', icon: 'holy', line: 'Respecs a hero’s skill trees for gold.', step: 5 },
-  // Region II: the Drowned Chapel
-  tactician2: { kind: 'feature', name: 'Tactician II', icon: 'book', line: 'Self: health above, Ally: mana below, Foe: highest health, Foe: has, Battle start, N or more allies hurt, and the Gather action. The Tactician’s levels come with the home base.' },
+  // Region II: the Drowned Chapel (its classes join as it opens, after the Sexton)
   'cond:foe_tag:spirit': { kind: 'condition', name: 'Foe: spirit', icon: 'scroll', cond: ['foe_tag:spirit'] },
   surgeon: { kind: 'class', name: 'The Barber-Surgeon joins the recruit board', icon: 'cross', line: 'A healer who cleanses: Silence, poison and fire.', step: 5 },
   bellringer: { kind: 'class', name: 'The Bellringer joins the recruit board', icon: 'bell', line: 'Turn delays, slows and stuns: the Toll, done to them.', step: 5 },
@@ -532,13 +534,13 @@ const UNLOCKS = {
   roadlit: { kind: 'feature', name: 'Every lantern on the road burns', icon: 'lantern', line: 'The Hollow King has fallen. Every stage stays open to farm.' },
 };
 for (const id in UNLOCKS) UNLOCKS[id].id = id;
-// What opening a region also unlocks (home-base spec §3): a save that crossed into a region before these existed gets
-// them the next time the campaign loads (js/campaign.js, ensure).
-const REGION_OPENS = { 'region:1': ['mastershall', 'shrine'], 'region:2': ['whetstone', 'ossuary'], 'region:3': ['hexingstone', 'belltower'] };
+// What opening a region also brings (home-base spec §3): its buildings' blueprints and the classes that join the recruit
+// board (the home base acts on the region's own unlock: BUILDINGS and CLASS_JOINS in js/base.js). These are the records
+// the road shows; a save that crossed into a region before they existed gets them the next time the campaign loads.
+const REGION_OPENS = { 'region:1': ['mastershall', 'shrine', 'surgeon', 'bellringer'], 'region:2': ['whetstone', 'ossuary', 'duellist', 'cutpurse'], 'region:3': ['hexingstone', 'belltower', 'alchemist'] };
 // The conditions Tactician I teaches (content spec §5), besides every threshold.
-const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell'];
-// And Tactician II, in Region II (content spec §5): with the Gather action.
-const TACTICIAN_II = ['self_hp_gt', 'ally_mp_lt', 'foe_highest', 'foe_has', 'battle_start', 'allies_hurt'];
+const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_without', 'self_thralls_lt', 'ally_has', 'ally_without', 'foe_hp_lt', 'leader_target', 'foe_without', 'one_foe', 'bb_fell', 'bb_out'];
+// Lesson II comes with the home base's Tactician at level 3 (TACTICIAN_LESSONS in js/base.js), and the Gather action with it.
 
 // ── Stages (campaign spec §5.2–5.3)
 // foes: the foe in each slot (null for an empty one): front F1 F2, then back B1–B4, as the party's slots. A slot is a
@@ -586,21 +588,21 @@ const STAGES = [
     teaches: 'Two Mourners: support that stacks.', hint: 'Two Mourners keep every foe kindled. Hit the back row first.' },
   { id: '1-17', name: 'The Sexton’s Yard', kind: 'road', level: 9, party: 6, tier: 'rich', foes: ['digger', 'digger', 'mourner', 'crows', 'bones', 'crows'], first: [],
     teaches: 'The Sexton’s men: diggers, crows and a Mourner.', hint: 'If the yard is hard, the Sexton is harder. Farm here first.' },
-  { id: '1-18', name: 'The Sexton’s Grave', kind: 'boss', boss: true, level: 10, party: 6, tier: 'boss', foes: ['sexton', 'digger', null, 'mourner', 'bones', null], first: ['cond:boss_present', 'relic:gravediggersspade', 'gravecaller', 'region:1', 'mastershall', 'shrine'],
+  { id: '1-18', name: 'The Sexton’s Grave', kind: 'boss', boss: true, level: 10, party: 6, tier: 'boss', foes: ['sexton', 'digger', null, 'mourner', 'bones', null], first: ['cond:boss_present', 'relic:gravediggersspade', 'gravecaller', 'region:1', 'mastershall', 'shrine', 'surgeon', 'bellringer'],
     teaches: 'A boss: the Sexton digs graves, throws grave dirt, and digs two graves below half health.', hint: 'When the Sexton digs, Guard the Marked hero. Below half health he digs two graves.' },
 
   // ── Region II: the Drowned Chapel, levels 11–30 (campaign spec §6). threat: a stage that brings a new threat, so its
   // target is 85%+ instead of 90%+, as the rich ones are. Gravefields dead who followed the road down fill its front row
   // at first.
-  { id: '2-1', name: 'The Chapel Steps', kind: 'road', level: 11, party: 6, tier: 'standard', foes: ['ghoul', 'ghoul', 'bones', 'acolyte', null, 'bones'], first: ['tactician2'],
+  { id: '2-1', name: 'The Chapel Steps', kind: 'road', level: 11, party: 6, tier: 'standard', foes: ['ghoul', 'ghoul', 'bones', 'acolyte', null, 'bones'], first: [],
     teaches: 'Foes that heal: the Drowned Acolyte’s hymn heals every foe.', hint: 'The Acolyte heals the rest. Ranged and magic reach it in the back row: kill it first.' },
   { id: '2-2', name: 'The Bell-Drowned Nave', kind: 'road', level: 12, party: 6, tier: 'standard', threat: true, foes: ['ghoul', 'glutton', 'bellwraith', 'acolyte', null, 'bellwraith'], first: ['cond:foe_tag:spirit'],
     teaches: 'Spirits: the Bell Wraiths dodge, barely bleed, and their Toll pushes your turns back.', hint: 'Spirits dodge and shrug off Bleeding, but curses like Doom bite them harder.' },
   { id: '2-3', name: 'The Swollen Pews', kind: 'road', level: 13, party: 6, tier: 'standard', threat: true, foes: ['bloat', 'bloat', null, 'acolyte', 'bones', null], first: [],
     teaches: 'Bursting corpses: a Bloated Corpse bursts below a third of its health, hitting every hero.', hint: 'Hit a corpse hard, all at once, so it never gets the chance to burst. A Ward soaks the blast.' },
-  { id: '2-4', name: 'The Silent Cloister', kind: 'road', level: 14, party: 6, tier: 'standard', threat: true, foes: ['bloat', 'ghoul', 'sister', 'acolyte', null, 'bones'], first: ['surgeon'],
+  { id: '2-4', name: 'The Silent Cloister', kind: 'road', level: 14, party: 6, tier: 'standard', threat: true, foes: ['bloat', 'ghoul', 'sister', 'acolyte', null, 'bones'], first: [],
     teaches: 'Silence: the Silent Sister’s vow leaves your healer only a basic attack for 2 turns.', hint: 'The Sister goes for your healer. A Bitter Tincture breaks the silence, or kill her first.' },
-  { id: '2-5', name: 'The Belfry Stair', kind: 'road', level: 15, party: 6, tier: 'standard', foes: ['bloat', 'bellwraith', 'bellwraith', 'acolyte', null, 'bellwraith'], first: ['bellringer'],
+  { id: '2-5', name: 'The Belfry Stair', kind: 'road', level: 15, party: 6, tier: 'standard', foes: ['bloat', 'bellwraith', 'bellwraith', 'acolyte', null, 'bellwraith'], first: [],
     teaches: 'Toll after Toll: three Bell Wraiths keep pushing your turns back.', hint: 'Three wraiths toll in turn. They’re fragile, if you can hit them: sure hits and area skills find them.' },
   { id: '2-6', name: 'The Choir Stalls', kind: 'road', level: 16, party: 6, tier: 'standard', foes: ['bloat', 'ghoul', 'acolyte', 'sister', 'acolyte', null], first: [],
     teaches: 'Two healers: they heal each other, so kill them one at a time.', hint: 'Two Acolytes keep each other standing. Focus one until it falls, then the other.' },
@@ -624,7 +626,7 @@ const STAGES = [
     teaches: 'The choir that stayed: two healers behind two tolling wraiths.', hint: 'Kill the Acolytes first. “Foe: healer” finds them.' },
   { id: '2-16', name: 'The Bishop’s Antechamber', kind: 'road', level: 27, party: 6, tier: 'rich', foes: ['bloat', 'ghoul', 'acolyte', 'sister', 'bellwraith', null], first: [],
     teaches: 'The Bishop’s own: everything the chapel has, at once.', hint: 'If the antechamber is hard, the Bishop is harder. Farm here first.' },
-  { id: '2-17', name: 'The Black Font', kind: 'boss', boss: true, level: 30, party: 6, tier: 'boss', foes: ['bishop', 'bloat', null, 'acolyte', 'sister', null], first: ['relic:bishopscrozier', 'duellist', 'region:2', 'whetstone', 'ossuary'],
+  { id: '2-17', name: 'The Black Font', kind: 'boss', boss: true, level: 30, party: 6, tier: 'boss', foes: ['bishop', 'bloat', null, 'acolyte', 'sister', null], first: ['relic:bishopscrozier', 'region:2', 'whetstone', 'ossuary', 'duellist', 'cutpurse'],
     teaches: 'A boss: the Drowned Bishop raises the fallen, baptises a Marked hero, and floods the nave. Below half health the font overflows.', hint: 'Kill the Acolyte before the Bishop raises the rest. When he Marks a hero, Guard them.' },
 
   // ── Region III: Thornwood, levels 31–50. Mostly beasts.
@@ -644,7 +646,7 @@ const STAGES = [
     teaches: 'Everything the wood has shown, before Mother Bramble.', hint: 'If the heart of the wood is hard, Mother Bramble is harder. Farm here first.' },
   { id: '3-8', name: 'Mother Bramble’s Hollow', kind: 'elite', elite: true, level: 38, party: 6, tier: 'elite', foes: ['bramble', 'briarwolf', 'thornwitch', null, null, 'thornwitch'], first: ['cond:ally_top_pow'],
     teaches: 'An elite: Mother Bramble’s thorns hurt whoever hits her while they’re up.', hint: 'While her thorns are up, every hit on her hurts you back. Hit the others until they drop: “Foe: not Retaliating”.' },
-  { id: '3-9', name: 'The Thorn Path', kind: 'road', level: 38, party: 6, tier: 'standard', foes: ['briarwolf', 'briarwolf', 'thornwitch', 'marshlantern', null, null], first: ['cutpurse'],
+  { id: '3-9', name: 'The Thorn Path', kind: 'road', level: 38, party: 6, tier: 'standard', foes: ['briarwolf', 'briarwolf', 'thornwitch', 'marshlantern', null, null], first: [],
     teaches: '“Ally: highest Power”: put a Haste or a Cover on your hardest hitter.', hint: 'The Lantern lures; the wolves wait for whoever comes forward.' },
   { id: '3-10', name: 'The Rotting Bower', kind: 'road', level: 39, party: 6, tier: 'standard', foes: ['briarwolf', 'thornwitch', 'thornwitch', 'hanged', null, 'thornwitch'], first: [],
     teaches: 'A bower of witches: poison on everyone.', hint: 'Three witches poison three heroes. Blight resistance and cleansing keep up.' },
@@ -660,7 +662,7 @@ const STAGES = [
     teaches: '“Foe: acts next”: push back whoever is about to act, before they do.', hint: 'Witches, a Lantern and a Hanged Man behind two wolves. Kill order matters.' },
   { id: '3-16', name: 'The Old God’s Threshold', kind: 'road', level: 47, party: 6, tier: 'rich', foes: ['briarwolf', 'briarwolf', 'thornwitch', 'hanged', 'marshlantern', null], first: [],
     teaches: 'The last of the wood before its god.', hint: 'If the threshold is hard, the Antlered One is harder. Farm here first.' },
-  { id: '3-17', name: 'The Heart of the Wood', kind: 'boss', boss: true, level: 50, party: 6, tier: 'boss', foes: ['antlered', 'briarwolf', null, 'thornwitch', null, null], first: ['relic:barkofoldgod', 'alchemist', 'region:3', 'hexingstone', 'belltower'],
+  { id: '3-17', name: 'The Heart of the Wood', kind: 'boss', boss: true, level: 50, party: 6, tier: 'boss', foes: ['antlered', 'briarwolf', null, 'thornwitch', null, null], first: ['relic:barkofoldgod', 'region:3', 'hexingstone', 'belltower', 'alchemist'],
     teaches: 'A boss: the Antlered One heals every turn, gores and stuns your hardest hitter, and calls the Wild Hunt below 60% health.', hint: 'It heals every turn: Festering halves that. When it Marks your hardest hitter, Guard them.' },
 
   // ── Region IV: the Ashen Keep, levels 51–75. Undead knights, beasts of coal and fire-priests.

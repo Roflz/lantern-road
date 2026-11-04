@@ -756,14 +756,7 @@ const UI_ICONS = {
   poison: { map: ["...g...", "..ggg..", ".ggggg.", "gkgggkg", "ggggggg", ".gkkkg.", "..ggg.."], pal: { g: '#7ac46a', k: '#1a2a10' } },
   hidden: { map: ["..ddd..", ".ddddd.", "ddkkkdd", "dkekekd", "dkkkkkd", ".ddddd.", "ddddddd"], pal: { d: '#4a3f55', k: '#1a1220', e: '#bb96ee' } },
   fester: { map: [".g...g.", "..g.g..", ".bbbbb.", "bbgbbbb", "bbbbgbb", "bgbbbbb", ".bbbbb."], pal: { b: '#7a6a3a', g: '#a8c85a' } },
-  // each region's material (MATERIALS in js/save.js): Bone Dust, Chapel Wax, Heartwood, Cinder Iron and Throne Tallow
-  wax: { map: ["...w...", "..wWw..", ".wwWww.", ".wwwww.", "wwwwwww", ".wwwwd.", "..ddd.."], pal: { w: '#6ab8b0', W: '#c8f0e8', d: '#3a7a74' } },
-  heartwood: { map: ["..ttt..", ".tbbbt.", "tbrrrbt", "tbrbrbt", "tbrrrbt", ".tbbbt.", "..ttt.."], pal: { t: '#5a3a22', b: '#a8784a', r: '#7a4a2a' } },
-  ingot: { map: [".......", "..ooooo", ".oyyyyo", "oyyyyo.", "ooooo..", ".......", "......."], pal: { o: '#7a3a1a', y: '#ff8a3a' } },
-  tallow: { map: ["...f...", "...y...", "..www..", "..wWw..", "..www..", ".wwwww.", "ddddddd"], pal: { f: '#ff9a3a', y: '#fff0a0', w: '#e8dcc0', W: '#fffbe8', d: '#8a7a5a' } },
 };
-// A material's icon, by its id.
-const MAT_ICON = { bone_dust: 'bone', chapel_wax: 'wax', heartwood: 'heartwood', cinder_iron: 'ingot', throne_tallow: 'tallow' };
 const iconURLs = new Map();
 function iconURL(name) {
   if (iconURLs.has(name)) return iconURLs.get(name);

@@ -2,12 +2,13 @@
 // Headless battle test: simulates many battles per stage and reports win rates, battle length, which skills
 // and rules fire, and any broken invariants. Then it runs rules experiments (the same battles with different rules),
 // battles with characters at several levels, a fuzz of random builds across all twelve classes, and tests the Tactics
-// and Hero models and the save migration, and gear: every item's effect, weapons by rarity, loot and the Bag, the road's
-// five regions and their engine pieces, and the reference party on every stage.
+// and Hero models and the save migration, gear (every item's effect, weapons by rarity, loot and the Bag), the home base (the
+// economy over Region I's first clears, rest, idle buildings and time away, battle fatigue, Renown, the board and the
+// Hall), the road's five regions and their engine pieces, and the reference party on every stage.
 // Run: node tools/simtest.js [battles per stage, default 300]
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'save.js', 'rules.js', 'campaign.js', 'art.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
+for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'base.js', 'rest.js', 'save.js', 'rules.js', 'campaign.js', 'art.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, 'reference.js'), 'utf8'), { filename: 'reference.js' });
 
 // node tools/simtest.js [battles] [--ref] [--regions=2,3]: --ref runs only the reference-party balance report, for the
@@ -83,6 +84,8 @@ function check(res, stage) {
 }
 
 const pad = (s, n) => String(s).padEnd(n), lpad = (s, n) => String(s).padStart(n);
+// The prototype's state: the party of six that saves before build step 5 started with.
+const protoState = () => { const st = defaultState(); st.roster = PARTY.map((cls, i) => Hero.create(cls, 'c' + (i + 1))); st.party = st.roster.map(c => c.id); st.nextId = 7; return st; };
 const avg = a => (a.reduce((s, x) => s + x, 0) / Math.max(1, a.length));
 const ok = (cond, msg) => { if (!cond) problems.push('test: ' + msg); };
 let totalStalls = 0;
@@ -486,7 +489,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(Math.abs(tb.common / 6000 - 0.5) < 0.03 && Math.abs(tb.rare / 6000 - 0.25) < 0.03, `a Region I boss rolls 50/25/25 (${JSON.stringify(tb)})`);
   ok(Math.abs(t4.common / 6000 - 0.15) < 0.03 && Math.abs(t4.rare / 6000 - 0.35) < 0.03, `a Region V elite rolls 15/50/35 (${JSON.stringify(t4)})`);
   for (let i = 0; i < 300; i++) { const x = Items.roll(1 + i, i % 5, rr, { classes: ['pilgrim', 'warden'] }); const D = Items.def(x); ok(D.rarity !== 'relic' && x.lv === 1 + i && (D.slot !== 'weapon' || ['censer', 'mace'].includes(D.type)) && (!D.cls || ['pilgrim', 'warden'].includes(D.cls)), 'a roll follows the roster: ' + x.id); }
-  const S0 = defaultState();
+  const S0 = protoState();
   ok(S0.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && Items.rarity(c.gear.weapon) === 'common'), 'every recruit carries a Common weapon of their type');
   const g0 = S0.currencies.gold;
   for (let i = 0; i < ITEM.BAG; i++) ok(Items.add(S0, Items.roll(3, 0, rr)).added, 'the Bag takes 60');
@@ -565,7 +568,8 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   c.lessons.skill = 1; Hero.fixEquip(c);
   ok(Hero.activeSlots(c) === 3, 'a Masters’ Hall lesson adds an active slot');
   c.lessons.rule = 9;
-  ok(Hero.ruleSlots(c) === CLASSES.sellsword.slots[1], 'rule slots stop at the class maximum');
+  ok(Hero.ruleSlots(c) === Math.max(...c.classes.map(k => CLASSES[k].slots[1])), `rule slots stop at the highest maximum among the classes (${c.classes.join(' + ')})`);
+  { const x = Hero.create('sellsword', 'rx', { rng }); x.classes.push('pilgrim'); x.lessons.rule = 9; ok(CLASSES.sellsword.slots[1] === 4 && Hero.ruleMax(x) === 6 && Hero.ruleSlots(x) === 6, 'a Sellsword combined with a Pilgrim can train up to 6 rule slots (decided overnight)'); }
   const round = Hero.sanitize(JSON.parse(JSON.stringify(c)));
   ok(JSON.stringify(round) === JSON.stringify(c), 'a character survives a save round-trip');
   const bad = Hero.sanitize({ id: 'x', cls: 'warden', level: 3, skills: { rend: 5, bash: 9, shieldwall: 2 }, alloc: { hp: 999 } });
@@ -582,7 +586,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 4, 'save version 4');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 5, 'save version 5');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -591,17 +595,17 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(s.roster[0].lessons.rule === 1 && Hero.ruleSlots(s.roster[0]) === 4, 'a rule slot bought in step 2 becomes a lesson');
   const v0 = upgrade({ cleared: ['1-1'], best: { '1-1': 4 }, speed: 2 });
   ok(v0.v === SAVE_VERSION && v0.campaign.cleared.length === 0 && v0.campaign.rebuilt && v0.roster.length === 6 && v0.settings.speed === 2, 'a step 1 save still upgrades, and the rebuilt road starts at 1-1');
-  const v2 = JSON.parse(JSON.stringify(defaultState()));
+  const v2 = JSON.parse(JSON.stringify(protoState()));
   v2.v = 2; v2.roster.forEach(c => { c.gear = { weapon: null, armor: null, accessory: null }; c.level = 7; });
   v2.roster[1].gear = { weapon: 'Rusty sword', armor: null, accessory: null };
   v2.inventory.items = [{ id: 'bonecharm', lv: 2, uid: 'x1' }, { id: 'nope' }, 'junk', { id: 'gravecutter', lv: 9 }];
   const s3 = upgrade(v2);
-  ok(s3.v === 4 && s3.roster.every(c => c.gear.weapon && c.gear.weapon.lv === 7) && s3.inventory.items.map(x => x.id).join() === 'bonecharm,gravecutter' && s3.inventory.items[1].uid, `version 2 → 3: weapons at the character's level, the Bag cleaned (${JSON.stringify(s3.inventory.items)})`);
-  const v3 = JSON.parse(JSON.stringify(defaultState()));
+  ok(s3.v === SAVE_VERSION && s3.roster.every(c => c.gear.weapon && c.gear.weapon.lv === 7) && s3.inventory.items.map(x => x.id).join() === 'bonecharm,gravecutter' && s3.inventory.items[1].uid, `version 2 → 3: weapons at the character's level, the Bag cleaned (${JSON.stringify(s3.inventory.items)})`);
+  const v3 = JSON.parse(JSON.stringify(protoState()));
   v3.v = 3; delete v3.unlocks; v3.campaign = { cleared: ['1-1', '1-2', '2-3'], best: { '2-3': 9 }, current: { stage: 5, seed: 3 } }; v3.roster[0].level = 9; v3.roster[0].fatigue = 40;
   const s4 = upgrade(v3);
-  ok(s4.v === 4 && !s4.campaign.cleared.length && !Object.keys(s4.campaign.best).length && !s4.campaign.current && s4.campaign.trip === null && s4.campaign.road.keepGoing === true && s4.campaign.rebuilt && isObj(s4.unlocks) && s4.roster[0].level === 9 && s4.roster[0].fatigue === 0, 'version 3 → 4: the rebuilt road starts at 1-1, and heroes keep their levels');
-  console.log('Save migration checked: version 1 → 4 (characters, their rules, gear, the road), 2 → 4, 3 → 4, and 0 → 4.');
+  ok(s4.v === SAVE_VERSION && !s4.campaign.cleared.length && !Object.keys(s4.campaign.best).length && !s4.campaign.current && s4.campaign.trip === null && s4.campaign.road.keepGoing === true && s4.campaign.rebuilt && isObj(s4.unlocks) && s4.roster[0].level === 9 && s4.roster[0].fatigue === 0, 'version 3 → 4: the rebuilt road starts at 1-1, and heroes keep their levels');
+  console.log('Save migration checked: version 1 → 5 (characters, their rules, gear, the road, the camp), 2 → 5, 3 → 5, and 0 → 5.');
 }
 
 // ── The Tactics model
@@ -613,7 +617,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(w.slots === 3 && w.max === 5 && w.rules.length === CLASSES.warden.rules.length, `the warden starts with its starter rules in 3 of 5 slots (${JSON.stringify(w)})`);
   ok(Tactics.add(W, { if: 'always', do: 'mace' }) && Tactics.owner(W).rules.length === 3, 'adding into the free third slot');
   ok(!Tactics.add(W, { if: 'always', do: 'mace' }), 'adding past the open slots must fail');
-  ok(Tactics.slotCost(W) === 0 && Tactics.unlockSlot(W) && Tactics.owner(W).slots === 4 && Tactics.charOf(W).lessons.rule === 1, 'a free rule-slot lesson (the Masters’ Hall hook)');
+  ok(Tactics.slotCost(W) === 'mastershall' && Tactics.slotCost('party') === 'tactician', 'rule slots come from the Masters’ Hall and the Tactician, not for free');
+  Tactics.charOf(W).lessons.rule = 1;
+  ok(Tactics.owner(W).slots === 4, 'a Masters’ Hall lesson opens a rule slot');
   ok(!Tactics.add(W, { if: 'boss_present', do: 'mace' }), 'a locked condition must not be addable');
   ok(!Tactics.add(W, { if: 'always', do: 'smite' }), 'another class’s skill must not be addable');
   ok(Tactics.add(W, { if: 'always', do: 'bash' }) && Tactics.explain(W, Tactics.owner(W).rules[3]).warn, 'a rule for a skill not yet learned is kept and flagged');
@@ -630,7 +636,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(L0.slots === LOADOUT.slots[0] && L0.items.join() === LOADOUT.items.join(), 'the starting loadout');
   ok(Tactics.setItem(1, 'lampoil') && Tactics.setup().loadout.join() === 'draught,lampoil', 'packing an item');
   ok(!Tactics.setItem(2, 'draught') && !Tactics.setItem(0, 'nope'), 'no packing past the open slots, or unknown items');
-  ok(Tactics.unlockItemSlot() && Tactics.setItem(2, 'tincture') && Tactics.setup().loadout.length === 3, 'opening an item slot');
+  ok(Tactics.setSlots(3, 3) && Tactics.setItem(2, 'tincture') && Tactics.setup().loadout.length === 3, 'the Tactician opens an item slot');
   ok(Tactics.setItem(0, null) && Tactics.setup().loadout.join() === 'lampoil,tincture', 'emptying a slot');
   ok(Tactics.explain('party', Tactics.owner('party').rules[0]).warn, 'an item rule for an item not packed is flagged');
   Tactics.setItem(0, 'draught');
@@ -659,6 +665,312 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   console.log(`Tactics model checked. Conditions: ${Object.keys(CONDITIONS).length} (${Object.values(CONDITIONS).reduce((n, C) => n + Tactics.variants(C.id).length, 0)} variants).`);
 }
 
+// ── The home base (build step 5): the economy over Region I's first clears, rest, idle buildings and time away,
+// fatigue from battles, Renown, the Recruit Board, the Masters' Hall, the Shop, the Tactician and the save migration.
+{
+  const HOUR = BASE.HOUR;
+  const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
+  const fresh = () => { const st = defaultState(); Base.ensure(st); st.base.clock = Date.now(); return st; };
+
+  // ── a new game: one hero picked from three, and 100 gold
+  {
+    const st = fresh();
+    ok(st.roster.length === 0 && st.currencies.gold === 100, 'a new game starts with nobody and 100 gold');
+    const c = Base.newGame('pilgrim', st, { rng: makeRng(5) });
+    ok(c && st.roster.length === 1 && st.party[2] === c.id && st.party.filter(Boolean).length === 1, 'the first pick stands in the back row');
+    ok(st.board.first.includes('sellsword') && st.board.first.includes('hexblade') && st.board.first.length === 3 && !st.board.first.includes('pilgrim'), 'the first board shows the other two starters and one more');
+    ok(!Base.boardOpen(st), 'the Recruit Board waits for 1-2');
+    st.campaign.cleared.push('1-1', '1-2');
+    Base.tickTo(Date.now(), st);
+    const b = st.board.recruits;
+    ok(Base.boardOpen(st) && b.length === 3 && b[0].cls === 'sellsword' && b[1].cls === 'hexblade' && Base.recruitPrice(b[0], st) === 0, 'it opens at 1-2: the first board, and the first recruit is free');
+    const h1 = Base.hire(b[0].id, st);
+    ok(h1 && st.roster.length === 2 && st.party.includes(h1.id) && st.currencies.gold === 100 && !st.board.free && st.board.picks === 0, 'the free hire joins the formation; one pick per board');
+    ok(!Base.hire(st.board.recruits[0].id, st), 'no second hire from the same board');
+    Base.rollBoard(st, 'home');
+    const p = Base.recruitPrice(st.board.recruits[0], st);
+    ok(p >= 162 && p <= 225, `a level-1 recruit costs 162–225 gold (${p})`);
+    const counts = {};
+    for (let i = 0; i < 40; i++) { Base.rollBoard(st); const k = {}; for (const r of st.board.recruits) k[r.cls] = (k[r.cls] || 0) + 1; counts.max = Math.max(counts.max || 0, ...Object.values(k)); }
+    ok(counts.max <= 2, 'at most 2 of one class on a board');
+    st.board.ranks.notices = 3; Base.rollBoard(st);
+    ok(st.board.recruits.length === 6, 'Notices rank 3 shows 6 recruits');
+  }
+
+  // ── the economy: Region I's first clears (campaign spec §5.2) with the home-base spec's rewards (§5), buying buildings
+  // as they unlock and a plot is free, and hiring to the campaign's party sizes (§5.4)
+  {
+    // [stage, level, tier, normal foes, elite, boss, party size]; summoned foes give nothing
+    const R1 = [['1-1', 1, 'light', 1, 0, 0, 1], ['1-2', 1, 'light', 2, 0, 0, 1], ['1-3', 2, 'light', 3, 0, 0, 2], ['1-4', 2, 'standard', 3, 0, 0, 2],
+      ['1-5', 3, 'standard', 3, 0, 0, 2], ['1-6', 3, 'standard', 4, 0, 0, 3], ['1-7', 4, 'standard', 4, 0, 0, 3], ['1-8', 4, 'rich', 4, 0, 0, 3],
+      ['1-9', 5, 'elite', 4, 1, 0, 4], ['1-10', 5, 'standard', 5, 0, 0, 4], ['1-11', 6, 'standard', 4, 0, 0, 4], ['1-12', 6, 'standard', 5, 0, 0, 4],
+      ['1-13', 7, 'standard', 5, 0, 0, 5], ['1-14', 7, 'rich', 5, 0, 0, 5], ['1-15', 8, 'elite', 3, 1, 0, 5], ['1-16', 8, 'standard', 6, 0, 0, 6],
+      ['1-17', 9, 'rich', 6, 0, 0, 6], ['1-18', 10, 'boss', 3, 0, 1, 6]];
+    const CLEAR_GOLD = { light: 12, standard: 20, rich: 40, elite: 60, boss: 200 }, CLEAR_XP = { light: 0.09, standard: 0.15, rich: 0.22, elite: 0.38, boss: 0.9 };
+    const UNLOCK = { '1-2': 'recruitboard', '1-3': 'items', '1-5': 'tollhouse', '1-7': 'infirmary', '1-8': 'trainingyard', '1-10': 'shop', '1-11': 'tactician', '1-13': 'scavengercamp', '1-15': 'barracks', '1-16': 'salvagepit' };
+    const WANT = ['tollhouse', 'infirmary', 'trainingyard', 'tactician', 'shop', 'scavengercamp', 'barracks', 'salvagepit'];
+    const run = q => {
+      const st = fresh();
+      Base.newGame('sellsword', st, { rng: makeRng(9) });
+      let earned = 100, low = Infinity;
+      const rows = [];
+      let late = 0;
+      for (const [id, L, tier, n, el, boss, party] of R1) {
+        // hire first: the party the stage needs (campaign spec §5.4)
+        while (st.roster.length < party) {
+          if (!st.board.recruits.length || st.board.picks <= 0) Base.rollBoard(st, 'home');
+          const r = st.board.recruits[0]; r.q = q;
+          if (!Base.hire(r.id, st)) { late++; break; }
+          low = Math.min(low, st.currencies.gold);
+        }
+        const S = BASE_S(L), xpLv = n * 0.06 + el * 0.18 + boss * 0.6 + CLEAR_XP[tier];
+        const g = Math.round((n * 8 + el * 24 + boss * 80) * S) + Math.round(CLEAR_GOLD[tier] * S * 2);
+        st.currencies.gold += g; earned += g;
+        st.currencies.mats.bone_dust += { light: 2, standard: 3, rich: 5, elite: 8, boss: 20 }[tier] * 2;
+        st.campaign.cleared.push(id);
+        if (UNLOCK[id]) st.unlocks[UNLOCK[id]] = 1;
+        Base.afterBattle({ log: [] }, { id, kind: tier === 'elite' ? 'elite' : tier === 'boss' ? 'boss' : 'road', boss: tier === 'boss' }, { won: true, first: true, xpLv, heroes: st.roster.length }, st);
+        Base.ensure(st);
+        // build what has unlocked, while a plot is free, keeping back the price of a recruit the next stage needs
+        const nxt = R1[R1.findIndex(x => x[0] === id) + 1], need = nxt ? Math.max(0, nxt[6] - st.roster.length) : 0;
+        const reserve = need * Math.round(BASE.RECRUIT * BASE_S(1) * (0.9 + 0.35 * q));
+        for (const b of WANT) {
+          const plot = st.base.plots.indexOf(null), c = Base.cost(b, 1);
+          if (plot < 0 || Base.built(b, st) || !Base.blueprint(b, st) || !Base.canPay(c, st) || st.currencies.gold - c.gold < reserve) continue;
+          Base.build(b, plot, st);
+          low = Math.min(low, st.currencies.gold);
+        }
+        if (['1-6', '1-10', '1-13', '1-16', '1-18'].includes(id)) rows.push({ id, party: st.roster.length, earned, left: st.currencies.gold, renown: Base.renown(st).level, plots: Base.plotsCleared(st), built: WANT.filter(b => Base.built(b, st)).length });
+      }
+      return { rows, low, late };
+    };
+    const cheap = run(0), dear = run(1);
+    ok(cheap.low >= 0 && dear.low >= 0, `the gold never runs out on Region I’s first clears (lowest ${cheap.low}–${dear.low})`);
+    const at = (r, id) => r.rows.find(x => x.id === id);
+    ok(!cheap.late && !dear.late && at(dear, '1-6').party === 3 && at(dear, '1-10').party === 4 && at(dear, '1-13').party === 5 && at(dear, '1-16').party === 6, 'the campaign’s party sizes are affordable on time, even with the dearest recruits');
+    ok(at(cheap, '1-18').plots >= 4, 'by the Sexton, Renown has cleared plot 4, even on first clears alone');
+    console.log('\nThe economy over Region I’s first clears (home-base spec §10; recruits at their cheapest / dearest)');
+    console.log('   by     party  earned   gold left     Renown  plots  built');
+    for (let i = 0; i < cheap.rows.length; i++) { const a = cheap.rows[i], b = dear.rows[i]; console.log(`   ${pad(a.id, 6)} ${lpad(a.party, 5)}  ${lpad(fmt(a.earned), 6)}  ${lpad(fmt(b.left), 5)}–${pad(fmt(a.left), 6)}  ${lpad(a.renown, 6)}  ${lpad(a.plots, 5)}  ${lpad(a.built, 5)}`); }
+  }
+
+  // ── rest: the fire, beds, the yard and the Hall, with beds changing hands as heroes reach 0
+  {
+    const st = fresh(), t0 = 1.7e12;
+    st.base.clock = t0;
+    ['warden', 'pilgrim', 'hexblade'].forEach((k, i) => { const c = Hero.create(k, 'r' + i, { rng: makeRng(i + 1) }); st.roster.push(c); });
+    const [a, b, c] = st.roster;
+    a.fatigue = 100; a.spent = true; b.fatigue = 60; c.fatigue = 30;
+    st.unlocks.infirmary = 1; st.currencies.gold = 1e6; st.currencies.mats.bone_dust = 999;
+    ok(Base.build('infirmary', 0, st), 'the Infirmary stands');
+    Fatigue.fillBeds(st);
+    ok(st.base.beds[0] === a.id && st.base.beds[1] === b.id && Fatigue.where(c, st) === 'fire', 'the two most tired heroes take the two beds');
+    Base.tickTo(t0 + 2 * HOUR, st);
+    ok(near(a.fatigue, 60) && near(b.fatigue, 20) && near(c.fatigue, 10) && a.spent, `two hours: beds rest 20 an hour, the fire 10, and Spent holds above 50 (${[a, b, c].map(x => x.fatigue.toFixed(2))})`);
+    // b reaches 0 an hour later and frees the bed for c, who then rests at 20
+    Base.tickTo(t0 + 3.25 * HOUR, st);
+    ok(near(b.fatigue, 0) && near(c.fatigue, 0) && near(a.fatigue, 35) && !a.spent, `beds change hands at 0, and Spent ends below 50 (${[a, b, c].map(x => x.fatigue.toFixed(2))})`);
+    ok(Fatigue.state(a) === 'fresh' && Fatigue.penalty({ fatigue: 60, skills: {} }) === 0.05 && Fatigue.penalty({ fatigue: 80, skills: {} }) === 0.15, 'Weary costs 5%, Exhausted 15%');
+    const iw = { fatigue: 60, skills: { ironwill: 5 }, awakened: ['ironwill'] };
+    ok(Fatigue.penalty(iw) === 0 && Fatigue.penalty(Object.assign({}, iw, { fatigue: 80 })) === 0.15, 'awakened Iron Will: Weary no longer weakens the Warden, Exhausted still does');
+    const w = Hero.create('warden', 'pw', { rng: makeRng(3) }), base = Hero.spec(w).stats;
+    w.fatigue = 80;
+    const tired = Hero.spec(w).stats;
+    ok(near(tired.pow, base.pow * 0.85) && near(tired.def, base.def * 0.85) && near(tired.spd, base.spd * 0.85) && tired.hp === base.hp, 'Exhausted takes 15% off Power, Defense and Speed in battle');
+    // spending one hour on the road (a battle under way) rests nobody in the party
+    const st2 = fresh(); st2.base.clock = t0;
+    const d = Hero.create('sellsword', 'd1', { rng: makeRng(4) }); d.fatigue = 40; st2.roster.push(d); st2.party[0] = d.id;
+    st2.campaign.current = { stage: 0, seed: 1 };
+    Base.tickTo(t0 + HOUR, st2);
+    ok(near(d.fatigue, 40) && Fatigue.where(d, st2) === 'road', 'out on the road, nobody rests');
+    Base.tickTo(t0 + 2 * HOUR, st2, { offline: true });
+    ok(near(d.fatigue, 30), 'with the app closed, the party counts as home and rests');
+    ok(Fatigue.spent({ fatigue: 70, spent: true }) && !Fatigue.spent({ fatigue: 99 }), 'Spent lasts until fatigue falls below 50');
+  }
+
+  // ── a battle's fatigue: +1 a turn, and the skills and gear that change it
+  {
+    const st = fresh();
+    const ks = ['warden', 'sellsword', 'pilgrim', 'surgeon', 'lamplighter', 'hexblade'];
+    ks.forEach((k, i) => { const c = Hero.create(k, 'b' + i, { rng: makeRng(i + 7) }); Hero.gainXp(c, Hero.xpBetween(1, 30)); st.roster.push(c); st.party[i] = c.id; });
+    const setupOf = () => ({ party: st.party.map(id => Hero.spec(st.roster.find(c => c.id === id))), partyRules: [], loadout: [] });
+    const battleOnce = () => { const r = simulate(Object.assign(stageSetup(STAGES[2], 77, setupOf()))); st.roster.forEach(c => { c.fatigue = 0; c.spent = false; }); return r; };
+    const r0 = battleOnce();
+    const plain = Fatigue.battle(r0, st);
+    ok(Object.keys(plain).length === 6 && st.roster.every((c, i) => near(plain[c.id].gain, r0.stats['p' + i].turns, 0.051)), 'with no fatigue skills, a hero gains one fatigue for each turn they took');
+    const [W, SW, P, BS] = st.roster;
+    W.skills.ironwill = 5; P.skills.comfort = 5; BS.skills.housecalls = 5;
+    st.roster.forEach(c => { c.fatigue = 0; });
+    const out = Fatigue.battle(r0, st);
+    const tW = r0.stats.p0.turns, tS = r0.stats.p1.turns;
+    ok(near(out[W.id].gain, Math.round(tW * 0.65 * 0.8 * 10) / 10, 0.051) && near(out[SW.id].gain, Math.round(tS * 0.8 * 10) / 10, 0.051), `Iron Will (−35%) and Comfort (−20%) cut the fatigue of every turn (${out[W.id].gain}, ${out[SW.id].gain})`);
+    ok(out[SW.id].rec === 2 && near(out[SW.id].after, Math.max(0, out[SW.id].gain - 2), 0.051), 'House Calls recovers 2 after the battle');
+    SW.gear.accessory = Items.make('mournersveil', 1);
+    SW.fatigue = 0;
+    const veil = Fatigue.battle(r0, st);
+    ok(GEAR.mournersveil && near(veil[SW.id].gain, Math.round(tS * 0.8 * 0.7 * 10) / 10, 0.051), 'the Mourner’s Veil cuts it by 30% more');
+    // Laudanum's turns build half; a transfused hero builds none; Peaceful Rest after a raise
+    const log = [{ t: 'turn', who: 'p1' }, { t: 'status', who: 'p1', key: 'laudanum', on: true }, { t: 'turn', who: 'p1' }, { t: 'turn', who: 'p1' }, { t: 'status', who: 'p1', key: 'laudanum', on: false }, { t: 'turn', who: 'p1' },
+      { t: 'turn', who: 'p0' }, { t: 'act', who: 'p3', skill: 'transfusion', targets: ['p0'] }, { t: 'turn', who: 'p0' },
+      { t: 'revive', src: 'p2', tgt: 'p5' }, { t: 'turn', who: 'p5' }, { t: 'turn', who: 'p5' }];
+    st.roster.forEach(c => { c.fatigue = 0; c.skills = Object.fromEntries(Object.entries(c.skills).filter(([k]) => !['ironwill', 'comfort', 'housecalls'].includes(k))); c.gear.accessory = null; });
+    P.skills.peacefulrest = 1;
+    const fake = { start: r0.start, log, stats: r0.stats };
+    const f = Fatigue.battle(fake, st);
+    ok(near(f[SW.id].gain, 3) && near(f[W.id].gain, 0) && near(f[st.roster[5].id].gain, 1), `Laudanum halves its turns, Transfusion wipes the battle, Peaceful Rest halves after a raise (${f[SW.id].gain}, ${f[W.id].gain}, ${f[st.roster[5].id].gain})`);
+    SW.fatigue = 99;
+    Fatigue.battle({ start: r0.start, log: [{ t: 'turn', who: 'p1' }, { t: 'turn', who: 'p1' }], stats: r0.stats }, st);
+    ok(SW.fatigue === 100 && SW.spent, 'reaching 100 makes a hero Spent, and fatigue stops at 100');
+    const t = Base.limitLoadout({ party: setupOf().party, loadout: ['draught', 'draught', 'salts'] }, Object.assign(st, { inventory: { items: [], potions: { draught: 1, salts: 0 } } }));
+    ok(t.loadout.join() === 'draught' && t.party[1] === null, 'the loadout draws only what the Bag holds, and a Spent hero stays home');
+    const used = Base.spendItems({ log: [{ t: 'item', slot: 0, item: 'draught' }, { t: 'refill', slot: 0 }, { t: 'item', slot: 0, item: 'draught' }, { t: 'item', slot: 1, item: 'lampoil' }] }, Object.assign(st, { inventory: { items: [], potions: { draught: 3, lampoil: 1 } } }));
+    ok(used.draught === 1 && used.lampoil === 1 && st.inventory.potions.draught === 2 && st.inventory.potions.lampoil === 0, 'items used come out of the Bag, and a refilled slot draws nothing');
+  }
+
+  // ── idle buildings and time away: the same on a reload, and the same in one step or many
+  {
+    const t0 = Date.now(), make = () => {
+      const st = fresh(); st.created = 12345; st.base.clock = t0;
+      for (const k of ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard', 'region:1', 'region:2', 'region:3']) st.unlocks[k] = 1;
+      st.campaign.cleared.push('1-1', '1-2', '1-3');
+      st.currencies.gold = 1e6; st.currencies.mats.bone_dust = 999;
+      st.renown.points = 4200; Base.ensure(st);
+      const c = Hero.create('crossbowman', 'y1', { rng: makeRng(2) }); st.roster.push(c);
+      ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard'].forEach((b, i) => Base.build(b, i, st));
+      return st;
+    };
+    const A = make();
+    ok(Base.setTrainee('y1', true, A), 'a trainee in the yard');
+    Base.tickTo(t0 + 7 * HOUR, A, { offline: true });
+    const B = JSON.parse(JSON.stringify(A));
+    const pa = ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard'].map(b => JSON.stringify(Base.preview(b, A).map(x => [x.kind, x.n, x.piece && x.piece.id, x.mat, x.item])));
+    const pb = ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard'].map(b => JSON.stringify(Base.preview(b, B).map(x => [x.kind, x.n, x.piece && x.piece.id, x.mat, x.item])));
+    ok(pa.join() === pb.join(), 'time away comes out the same after a reload');
+    const ga = Base.collect('salvagepit', A).map(x => x.piece.id).join(), gb = Base.collect('salvagepit', B).map(x => x.piece.id).join();
+    ok(ga === gb && ga.split(',').length === 2, `the Salvage Pit’s rolls are seeded: 7 hours at one every 3 gives 2, the same twice (${ga})`);
+    const steps = make();
+    for (let k = 1; k <= 28; k++) Base.tickTo(t0 + k * 0.25 * HOUR, steps, { offline: true });
+    const gold1 = make(); Base.tickTo(t0 + 7 * HOUR, gold1, { offline: true });
+    const S7 = BASE_S(Base.frontier(gold1).level);
+    ok(Base.preview('tollhouse', steps)[0].n === Base.preview('tollhouse', gold1)[0].n && Base.preview('tollhouse', gold1)[0].n === Math.floor(50 * S7 * 7), `the Toll House earns the same in one step or many: 50 × S an hour (${Base.preview('tollhouse', gold1)[0].n})`);
+    Base.tickTo(t0 + 30 * HOUR, gold1, { offline: true });
+    const sto = Base.storage('tollhouse', gold1);
+    ok(sto.pct === 1 && Base.preview('tollhouse', gold1)[0].n === Math.floor(50 * S7 * 8), 'storage stops at 8 hours');
+    const y = A.roster[0], top = Math.max(...STAGES.filter(x => A.campaign.cleared.includes(x.id)).map(x => x.level));
+    ok(Base.yardCeiling(A) === top, 'the yard’s ceiling is the highest lit stage’s level');
+    const xp = Base.collect('trainingyard', A);
+    ok(xp.length === 1 && xp[0].n > 0 && Base.preview('trainingyard', A).length === 0, `7 hours in the yard: XP, collected into the trainee (${xp[0] && xp[0].n})`);
+    A.campaign.cleared = ['1-1']; Base.tickTo(t0 + 15 * HOUR, A, { offline: true });
+    ok(Base.yardCeiling(A) === 1 && Base.collect('trainingyard', A).every(g => g.n === 0) && y.level === Math.max(1, y.level), 'at the ceiling a trainee gains nothing');
+    // the free draught by the fire: one every 4 hours, up to 3
+    const F = make(); F.unlocks.items = 1; Base.tickTo(t0, F); Base.tickTo(t0 + 9 * HOUR, F);
+    ok(F.freePotion.waiting === 2, `two free draughts in 9 hours (${F.freePotion.waiting})`);
+    Base.tickTo(t0 + 30 * HOUR, F);
+    ok(F.freePotion.waiting === 3 && Base.collectPotions(F) === 3 && F.inventory.potions.draught === 3, 'up to 3 wait by the fire');
+  }
+
+  // ── buildings: costs, levels, choices, tearing down
+  {
+    const st = fresh();
+    st.unlocks.tollhouse = 1; st.unlocks['region:2'] = 1; st.currencies.gold = 1e6; for (const m of MATERIALS) st.currencies.mats[m.id] = 999;
+    ok(JSON.stringify(Base.cost('tollhouse', 1)) === JSON.stringify({ gold: 240, mat: 'bone_dust', n: 8 }) && Base.cost('tollhouse', 3).mat === 'chapel_wax' && Base.cost('salvagepit', 5).n === 72 && Base.cost('mastershall', 3).n === 40, 'standard costs × each building’s factor; level 3 and up in its home material');
+    ok(Base.build('tollhouse', 0, st) && !Base.build('tollhouse', 1, st) && !Base.build('barracks', 1, st), 'a blueprint builds once, and only once unlocked');
+    ok(st.renown.points === 60, 'a building built: +60 Renown');
+    ok(Base.upgrade('tollhouse', null, st) && !Base.upgrade('tollhouse', 'nope', st) && Base.upgrade('tollhouse', 'strongbox', st) && Base.storeHours('tollhouse', st) === 12 && st.renown.points === 60 + 60 + 90, 'levels 2 and 3, with the Strongbox choice: 12 hours, and Renown for each level');
+    ok(Base.rechoose('tollhouse', 3, 'busyroad', st) && Base.storeHours('tollhouse', st) === 8 && Base.rates('tollhouse', st).gold > 0, 'a choice can be switched for that level’s cost again');
+    ok(Base.tearDown('tollhouse', st) && !Base.built('tollhouse', st) && st.base.plots[0] === null && Base.build('tollhouse', 0, st) && Base.level('tollhouse', st) === 1 && st.renown.points === 60 + 60 + 90, 'tearing down gives nothing back; raised again it starts at level 1, and its Renown came once');
+    ok(Base.build('whetstone', 1, st) && Base.bonuses(st).pow === 0.02 && Base.setFocus('whetstone', 'point', st) && Base.bonuses(st).crit === 1, 'the Whetstone: +2% Power, or +1% Crit');
+    st.unlocks['region:3'] = 1; st.renown.points += 3000; Base.ensure(st);
+    ok(Base.build('belltower', 2, st) && Base.setFocus('belltower', 'deep:stun', st) && Base.bonuses(st).res.stun === 4 && Base.build('hexingstone', 3, st) && Base.bonuses(st).land.all === 2, 'the Bell Tower’s Deep focus and the Hexing Stone’s Wide focus');
+    ok(!Base.tearDown('recruitboard', st), 'the Recruit Board can’t be torn down');
+  }
+
+  // ── Renown and plots
+  {
+    const st = fresh();
+    ok(Base.renown(st).level === 1 && Base.plotsCleared(st) === 3, 'Renown 1, three plots');
+    Base.award(null, 1199, st);
+    ok(Base.plotsCleared(st) === 3 && (Base.award(null, 1, st), Base.renown(st).level === 4) && Base.plotsCleared(st) === 4, 'Renown 4 (1,200) clears plot 4');
+    ok(Base.award('k', 50, st) === 50 && Base.award('k', 50, st) === 0, 'a keyed award counts once');
+    const boss = { id: '1-18', kind: 'boss', boss: true };
+    const a1 = Base.afterBattle({ log: [] }, boss, { won: true, first: true, xpLv: 1, heroes: 6 }, st).renown, a2 = Base.afterBattle({ log: [] }, boss, { won: true, first: false }, st).renown;
+    ok(a1 === 40 + 90 + 250 && a2 === 20, `a boss: +250 the first time, +20 after, and battle XP at 15 a level’s worth (${a1}, ${a2})`);
+    let pts = 0; for (let n = 1; n < 25; n++) pts += 100 * (n + 2);
+    st.renown.points = pts; Base.ensure(st);
+    ok(Base.renown(st).level === 25 && Base.plotsCleared(st) === 14, 'every plot by Renown 25: 14 in all');
+  }
+
+  // ── Tactician I belongs to the 1-11 clear. A save that recorded the clear without it (made while the building taught
+  // it, or before “out of an item” joined it) learns it when it loads.
+  {
+    const keep = Tactics.dump(), st = fresh();
+    Tactics.reset();
+    ok(!Tactics.isKnown({ if: 'bb_fell' }) && !Tactics.isKnown({ if: 'bb_out', s: 'draught' }) && !Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }), 'new rules know nothing of Tactician I');
+    Base.prepare(st);
+    ok(!Tactics.isKnown({ if: 'bb_fell' }), 'without the 1-11 clear, loading teaches nothing');
+    st.unlocks.tactician = 1;
+    Base.prepare(st);
+    ok(Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'bb_out', s: 'lampoil' }) && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }), 'with it, loading catches up Tactician I');
+    ok(!Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && !Tactics.isKnown({ if: 'battle_start' }), 'Lesson II still waits for the Tactician’s level 3');
+    Tactics.load(keep);
+  }
+  // ── the Masters' Hall, the Shrine, the Tactician, the Shop and dismissing
+  {
+    const st = fresh();
+    st.unlocks['region:1'] = 1; st.unlocks.tactician = 1; st.unlocks.shop = 1; st.currencies.gold = 1e6; for (const m of MATERIALS) st.currencies.mats[m.id] = 999;
+    st.renown.points = 4200; Base.ensure(st);
+    Base.newGame('sellsword', st, { rng: makeRng(3) });
+    const c = st.roster[0];
+    Hero.gainXp(c, Hero.xpBetween(1, 16));
+    ok(Base.build('mastershall', 0, st) && Base.lessonsFor(c, st).some(o => o.L.id === 'rule4' && !o.why), 'Rule slot IV from level 15');
+    const g0 = st.currencies.gold;
+    ok(Base.startLesson(c.id, 'rule4', st) && st.party.every(x => x !== c.id) && st.currencies.gold === g0 - 600, 'a lesson takes the hero out of the party, for 600 gold');
+    st.base.hall[c.id].since -= 2 * HOUR;
+    ok(Base.cancelLesson(c.id, st) && st.party.includes(c.id) && st.base.done[c.id + ':rule4'] >= 2 * HOUR - 1000, 'cancel brings them home, keeping two hours of progress');
+    ok(Base.startLesson(c.id, 'rule4', st) && st.currencies.gold === g0 - 600, 'starting it again costs nothing more');
+    Base.tickTo(Date.now() + 3 * HOUR, st);
+    ok(!st.base.hall[c.id] && c.lessons.rule === 1 && Hero.ruleSlots(c) === 4 && st.party.includes(c.id), 'two hours more and it’s done: a 4th rule slot, and back in the party');
+    ok(!Base.lessonsFor(c, st).some(o => o.L.kind === 'rule'), 'the Sellsword’s maximum is 4: no more rule lessons');
+    ok(Base.build('shrine', 1, st) && Base.respecPrice(c, st) === Math.round(150 * BASE_S(c.level)), 'a respec costs 150 × S at the hero’s level');
+    Hero.learn(c, 'lunge');
+    const g1 = st.currencies.gold;
+    ok(Base.respec(c.id, st) && !c.skills.lunge && st.currencies.gold === g1 - Base.respecPrice(c, st), 'the Shrine respecs for gold');
+    ok(Base.build('tactician', 2, st) && Base.partySlots(st) === 3 && Base.loadoutSlots(st) === 2 && Tactics.owner('party').slots === 3, 'the Tactician builds on Tactician I: level 1 is a 3rd party rule slot');
+    Base.upgrade('tactician', null, st);
+    ok(Base.partySlots(st) === 3 && Base.loadoutSlots(st) === 3 && Tactics.loadout().slots === 3 && Tactics.owner('party').slots === 3, 'level 2: a 3rd loadout slot');
+    ok(Base.build('shop', 3, st) && Base.itemPrice('draught', st) === Math.round(25 * 2.5) && (st.unlocks['region:3'] = 1, Base.itemPrice('draught', st) === 25 * 7), 'a Healing Draught costs 25 in Region I, ×2.5 in Region II and ×7 in Region IV');
+    ok(Base.buyItem('draught', 2, st) && st.inventory.potions.draught === 2 && Base.sellItem('draught', st) === Math.round(25 * 7 * 0.3), 'buying, and selling for 30%');
+    ok(st.shop.stall.length === 2 && Base.stallPrice(st.shop.stall[0], st) === 4 * Items.sellPrice(st.shop.stall[0]), 'the gear stall: 2 pieces at 4 times their sell price');
+    ok(Items.sellPrice(Items.make('notchedsword', 5)) === 20 && Items.sellPrice(Items.make('gravecutter', 10)) === 180, 'gear sells for 10 (Common) and 60 (Rare) × S');
+    const hire = Hero.create('warden', 'c99', { rng: makeRng(4) }); hire.gear.armor = Items.make('rustedplate', 3); st.roster.push(hire);
+    const bag = st.inventory.items.length;
+    ok(Base.dismiss('c99', st) && !st.roster.some(x => x.id === 'c99') && st.inventory.items.length === bag + 2, 'dismissing gives back only their gear');
+    ok(!Base.dismiss(c.id, st), 'not your last hero');
+  }
+
+  // ── the save: version 4 → 5 keeps the roster, the prototype's free slots, and counts Renown already earned
+  {
+    const v4 = JSON.parse(JSON.stringify(protoState()));
+    v4.v = 4; delete v4.renown; delete v4.board; v4.base = { buildings: {} };
+    v4.campaign.cleared = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8', '1-9'];
+    v4.unlocks = { recruitboard: 1, items: 1, tollhouse: 1 };
+    v4.currencies.gold = 777;
+    v4.tactics = { v: 1, heroes: {}, party: { slots: 4, rules: [] }, loadout: { slots: 3, items: [] }, known: [], sets: [] };
+    v4.roster[0].lessons = { skill: 0, rule: 1 };
+    const s5 = upgrade(v4);
+    const elite = STAGES.find(x => x.id === '1-9').kind === 'elite';
+    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 5 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
+    ok(s5.base.legacySlots.party === 4 && s5.base.legacySlots.loadout === 3 && s5.roster[0].lessons.rule === 1, 'slots opened in the prototype stay');
+    ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !s5.board.free && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
+    const n = JSON.parse(JSON.stringify(s5));
+    ok(JSON.stringify(upgrade(n).renown) === JSON.stringify(s5.renown), 'a version 5 save loads unchanged');
+    const v3 = JSON.parse(JSON.stringify(protoState())); v3.v = 3; v3.campaign.cleared = ['1-1', '2-3'];
+    const r3 = upgrade(v3);
+    ok(r3.v === 5 && r3.renown.points === 0 && r3.roster.length === 6, 'a version 3 save passes through the rebuilt road to the camp, with no Renown for the old road');
+  }
+  console.log('Home base checked: a new game, the board, Region I’s gold, rest and beds, battle fatigue, idle buildings and time away, costs, choices, tearing down, Renown, the Hall, the Shrine, the Tactician, the Shop, dismissing, and the save.');
+}
+
 // ── The campaign (js/campaign.js): Region I's engine pieces, rewards, fatigue, unlocks and trips
 {
   const st = id => STAGES.find(x => x.id === id);
@@ -675,8 +987,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     if (r < REGIONS.length - 1) ok(b.first.includes('region:' + (r + 1)) && (REGION_OPENS['region:' + (r + 1)] || []).every(k => b.first.includes(k)), `Region ${R.num}: its boss opens the next region and its buildings`);
     ok(list.filter(x => x.tier === 'rich').length === 3, `Region ${R.num}: a rich stage before each wall`);
   });
-  for (const [id, at] of [['cond:foe_tag:spirit', '2-2'], ['cond:foe_healer', '2-8'], ['cond:enraged', '2-14'], ['cond:foe_tag:beast', '3-2'], ['cond:ally_top_pow', '3-8'], ['cond:foe_next', '3-14'], ['cond:allies_lt', '4-8'], ['tactician2', '2-1']]) ok(st(at).first.includes(id), `${at} teaches ${id}`);
-  for (const [id, at] of [['surgeon', '2-4'], ['bellringer', '2-5'], ['duellist', '2-17'], ['cutpurse', '3-9'], ['alchemist', '3-17']]) ok(st(at).first.includes(id) && UNLOCKS[id].kind === 'class' && CLASSES[id], `${at}: the ${CLASSES[id] ? CLASSES[id].name : id} joins the recruit board`);
+  for (const [id, at] of [['cond:foe_tag:spirit', '2-2'], ['cond:foe_healer', '2-8'], ['cond:enraged', '2-14'], ['cond:foe_tag:beast', '3-2'], ['cond:ally_top_pow', '3-8'], ['cond:foe_next', '3-14'], ['cond:allies_lt', '4-8']]) ok(st(at).first.includes(id), `${at} teaches ${id}`);
+  // classes join the recruit board as their region opens (the home base's CLASS_JOINS): the road records them on that boss
+  for (const [id, at] of [['surgeon', '1-18'], ['bellringer', '1-18'], ['duellist', '2-17'], ['cutpurse', '2-17'], ['alchemist', '3-17']]) ok(st(at).first.includes(id) && st(at).first.includes(CLASS_JOINS[id]) && UNLOCKS[id].kind === 'class' && CLASSES[id], `${at}: the ${CLASSES[id] ? CLASSES[id].name : id} joins the recruit board`);
   ok(STAGES.every(x => x.first.every(id => UNLOCKS[id])), 'every first-clear unlock is known');
   ok(STAGES.every(x => x.foes.every(f => !f || FOES[foeKey(f)])), 'every stage foe exists');
   // every foe's sprite: a known template and accessories, and a palette that colours every letter they use
@@ -848,7 +1161,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(eb.gear.filter(g => g.why === 'loot').length + Object.values(eb.items).reduce((a, b) => a + b, 0) >= 2 && eb.mats.bone_dust >= 40, 'the boss drops 2 loot rolls, and its first clear 40 Bone Dust');
 
   // a save of its own: unlocks, fatigue and trips
-  const S = defaultState();
+  const S = protoState(); S.currencies.gold = 0; // the prototype's six, with no gold yet
   Campaign.ensure(S);
   Tactics.useRoster(S.roster, S.party);
   Tactics.load({ party: { slots: 2, rules: [] }, loadout: { slots: 2, items: [] } });
@@ -894,23 +1207,68 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   Campaign.setOut(17, S);
   out = Campaign.afterBattle(rb, S);
   ok(out.why.k === 'boss' && S.unlocks['region:1'] && S.unlocks['relic:gravediggersspade'] && Items.owns(S, 'gravediggersspade') && Tactics.isKnown({ if: 'boss_present' }), 'the boss: home, the Relic, Boss present and Region II opens');
-  ok(Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }), 'Tactician I teaches the thresholds and its conditions');
-  ok(S.unlocks.mastershall && S.unlocks.shrine && /Gravefields are lit/.test(out.why.text), 'Region II opens with the Masters’ Hall and the Shrine');
-  ok(Tactics.actions(c0.id).includes('move') && !Tactics.actions(c0.id).includes('gather'), 'Tactician I teaches the Move action, and Gather waits for Tactician II');
-  ok(!Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && Campaign.unlock('tactician2', S) && Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && Tactics.isKnown({ if: 'battle_start' }) && Tactics.actions(c0.id).includes('gather'), 'Tactician II teaches its conditions and the Gather action');
-  // a save from build step 6 that beat the Sexton gets the buildings Region II opens with
+  // 1-11 teaches Tactician I and brings the Tactician's blueprint. The building builds on it: a 3rd party rule slot.
+  ok(S.unlocks.tactician && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }) && Tactics.isKnown({ if: 'bb_out', s: 'draught' }), '1-11 teaches Tactician I (the thresholds, its conditions and “out of an item”) and brings the Tactician’s blueprint');
+  // Region II opens with the Sexton: its buildings and its classes; and Tactician I brings the Move action
+  ok(S.unlocks.mastershall && S.unlocks.shrine && S.unlocks.surgeon && S.unlocks.bellringer && /Gravefields are lit/.test(out.why.text), 'Region II opens with the Masters’ Hall, the Shrine, the Barber-Surgeon and the Bellringer');
+  ok(Tactics.actions(c0.id).includes('move') && !Tactics.actions(c0.id).includes('gather'), 'Tactician I teaches the Move action, and Gather waits for Lesson II');
+  Base.ensure(S); S.currencies.gold += 1000; S.currencies.mats.bone_dust += 50;
+  const slots0 = Tactics.owner('party').slots;
+  ok(Base.build('tactician', S.base.plots.indexOf(null), S) && Tactics.owner('party').slots === Math.min(5, slots0 + 1), `the Tactician stands, with a 3rd party rule slot (${slots0} → ${Tactics.owner('party').slots})`);
+  // “Out of [item]” (Tactician I): a between-battle rule that sends the party home once the Bag has none left
+  const outRule = { if: 'bb_out', s: 'draught', do: 'home' };
+  ok(CONDITIONS.bb_out.bb(outRule, { bag: { draught: 0, salts: 3 } }) && !CONDITIONS.bb_out.bb(outRule, { bag: { draught: 2 } }) && ruleCond(outRule) === 'Between battles: out of Healing Draughts', 'out of Healing Draughts holds only when the Bag has none');
+  ok(Tactics.add('party', outRule) && Tactics.owner('party').rules.length <= Tactics.owner('party').slots, 'the new slot takes the rule');
+  Campaign.restAll(S); S.campaign.road.keepGoing = true; S.inventory.potions.draught = 20;
+  Campaign.setOut(st('1-8').index, S);
+  out = Campaign.afterBattle(won(st('1-8'), 8), S);
+  ok(out.next != null && S.campaign.trip && S.inventory.potions.draught > 0, 'with draughts in the Bag, the trip goes on');
+  S.inventory.potions.draught = 0;
+  out = Campaign.afterBattle(won(st('1-8'), 8, 7), S);
+  const dry = !(S.inventory.potions.draught > 0);
+  ok(dry && out.why && out.why.k === 'rule' && /out of Healing Draughts/.test(out.why.text) && !S.campaign.trip, `with none left, the party comes home (${out.why ? out.why.text : 'no reason'})`);
+  if (S.campaign.trip) Campaign.end(null, S);
+  Tactics.remove('party', Tactics.owner('party').rules.findIndex(r => r.if === 'bb_out'));
+  // Lesson II (the Tactician's level 3) teaches its conditions and the Gather action
+  Base.rec('tactician', S).level = 3; Base.teach(S);
+  ok(Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && Tactics.isKnown({ if: 'battle_start' }) && Tactics.actions(c0.id).includes('gather'), 'Lesson II teaches its conditions and the Gather action');
+  // a save from build step 6 that beat the Sexton gets the records Region II opens with
   const S6 = defaultState();
   S6.unlocks['region:1'] = Date.now();
   Campaign.ensure(S6);
-  ok(S6.unlocks.mastershall && S6.unlocks.shrine && !S6.unlocks.whetstone, 'an older save past the Sexton gets the Masters’ Hall and the Shrine');
-  // the last boss lights the whole road
-  for (const x of STAGES) if (!S.campaign.cleared.includes(x.id)) S.campaign.cleared.push(x.id);
-  ok(Campaign.frontier(S) === STAGES.length && Campaign.litIn(4, S) === 18, 'every lantern lit: the frontier is past the end of the road');
+  ok(S6.unlocks.mastershall && S6.unlocks.shrine && S6.unlocks.surgeon && !S6.unlocks.whetstone, 'an older save past the Sexton gets the Masters’ Hall, the Shrine and the classes');
   const hooked = [];
   Campaign.onUnlock(id => hooked.push(id));
   Campaign.unlock('cond:ally_fallen', S);
   ok(hooked.includes('cond:ally_fallen') || S.unlocks['cond:ally_fallen'], 'unlocks fire the hook for step 5');
-  console.log('Campaign checked: the five regions\' data and art, foe growth, stepping up, summons, phases, fleeing, wanderers, Hidden, Lure and Move, thorns, mana drain, regeneration, splash, auras, row charges, raising, Gather, rewards, fatigue, unlocks and trips.');
+  // the hooks step 5 hangs on: onSettle (with each hero's turns), onHome, the Spent flag, Fatigue.battle and closed trips
+  const settled = [], homes = [];
+  Campaign.onSettle((r, stage, res, st) => settled.push({ r, stage, res }));
+  Campaign.onHome((last, st) => homes.push(last));
+  Campaign.restAll(S);
+  const flagged = S.roster.find(c => S.party.includes(c.id));
+  flagged.spent = true;
+  ok(!Campaign.fit(S).includes(flagged), 'a hero flagged Spent stays home until the flag clears, whatever their fatigue');
+  flagged.spent = false;
+  S.campaign.road.keepGoing = false;
+  Campaign.setOut(st('1-1').index, S);
+  const rh = won(st('1-1'), 3);
+  Campaign.afterBattle(rh, S);
+  const sh = settled[settled.length - 1];
+  ok(sh && sh.stage.id === '1-1' && Object.keys(sh.r.turns).length === rh.start.filter(u => u.side === 0).length && Object.entries(sh.r.turns).every(([id, n]) => n === rh.stats[rh.start.find(u => u.char === id).id].turns), 'onSettle carries the stage, the rewards and each hero’s turns');
+  ok(homes.length === 1 && homes[0] === S.campaign.lastTrip, 'onHome fires once when the party is home');
+  Campaign.setOut(st('1-1').index, S);
+  const rf = Campaign.afterBattle(won(st('1-1'), 3), S);
+  ok(Object.keys(rf.r.fatigue).length && Object.values(rf.r.fatigue).every(x => 'rec' in x), 'the home base’s Fatigue.battle settles the fatigue');
+  Save.info.awayMs = 3600000;
+  Campaign.setOut(st('1-1').index, S);
+  Campaign.afterBattle(won(st('1-1'), 3), S, { closed: true });
+  Save.info.awayMs = 0;
+  ok(Math.abs(Date.now() - 3600000 - S.campaign.lastTrip.at) < 5000, 'a trip ended by the app closing is home from the moment it closed');
+  // the last boss lights the whole road
+  for (const x of STAGES) if (!S.campaign.cleared.includes(x.id)) S.campaign.cleared.push(x.id);
+  ok(Campaign.frontier(S) === STAGES.length && Campaign.litIn(4, S) === 18, 'every lantern lit: the frontier is past the end of the road');
+  console.log('Campaign checked: the five regions\' data and art, foe growth, stepping up, summons, phases, fleeing, wanderers, Hidden, Lure and Move, thorns, mana drain, regeneration, splash, auras, row charges, raising, Gather, rewards, fatigue, unlocks, trips and the hooks for step 5.');
 }
 
 // ── The reference party, every stage of every region against its target (campaign spec §5.6). Off-target stages are

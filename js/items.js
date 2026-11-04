@@ -23,7 +23,7 @@
 const ITEM = {
   BAG: 60,                     // the Bag holds 60 pieces; equipped gear doesn't count (home-base spec, decided overnight)
   GROWTH: 15,                  // plain stats × (1 + (level − 1) ÷ 15): a level-1 drop matches the tables (tune)
-  SELL: { common: 5, fine: 12, rare: 30, relic: 0 }, // gold × S, with S = 1 + level ÷ 5 (home-base spec's scale) (tune)
+  SELL: { common: 10, fine: 25, rare: 60, relic: 0 }, // gold × S, with S = 1 + level ÷ 5 (home-base spec §5) (tune)
   SLOT_ODDS: { weapon: 40, armor: 30, accessory: 30 }, // a gear roll's slot (home-base spec)
   // Rarity by region (content spec §6): Common, Fine, Rare. Elite stages move 10 points from Common to Rare, bosses 20.
   RATES: [[70, 25, 5], [55, 35, 10], [45, 40, 15], [35, 45, 20], [25, 50, 25]],
@@ -84,7 +84,7 @@ const X = (text, icon, o) => Object.assign(['-', text, icon], { o });
 const W = (when, text, icon, test, o) => Object.assign(['?', when, text, icon, test], { o });
 const FRONT = w => (w && w.row ? w.row === 'front' : undefined);
 const BACK = w => (w && w.row ? w.row === 'back' : undefined);
-const LATER_FATIGUE = { later: 'fatigue' };
+const LATER_FATIGUE = {}; // fatigue works since build step 5 (js/rest.js reads Items.fatigueMul)
 
 // Small helpers the effects share.
 const isHealSkill = sk => !!(sk && (sk.heal || sk.healPct || sk.fx === 'mend'));
@@ -651,7 +651,7 @@ const Items = (() => {
   const effects = c => worn(c).map(x => x.id).filter(id => GEAR[id].fx);
   // How the sprite looks: [weapon id, armour id, accessory id], each or null.
   const look = c => SLOTS.map(k => (c.gear && c.gear[k] && GEAR[c.gear[k].id] ? c.gear[k].id : null));
-  // Fatigue gained × this, from what is worn (build step 5).
+  // Fatigue gained × this, from what is worn (js/rest.js).
   const fatigueMul = c => worn(c).reduce((m, x) => m * (def(x).fatigue || 1), 1);
   // The Oathbound Gorget keeps its wearer in the front row (the formation and the Move action, build step 5).
   const fixedFront = c => worn(c).some(x => x.id === 'oathboundgorget');

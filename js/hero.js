@@ -8,7 +8,8 @@
 //   { id, cls, name, level, xp, base: { hp, mp, pow, def, spd, crit, dodge }, alloc: { hp.., res: { stun.. } },
 //     classes: [first class, second?, third?], tiers: { cls: highest open tier }, skills: { id: level 1–5 },
 //     awakened: [ids], awakenSlots, equip: [active ids or null], picks: { threshold level: choice }, respecs,
-//     lessons: { skill, rule }, fatigue, gear: { weapon, armor, accessory } (pieces worn, js/items.js), rules, joined }
+//     lessons: { skill, rule }, fatigue, spent (true from 100 fatigue until it falls below 50, js/rest.js),
+//     gear: { weapon, armor, accessory } (pieces worn, js/items.js), rules, joined }
 // Every recruit carries a Common weapon of their class's type (content spec §2).
 
 const HERO = {
@@ -139,7 +140,10 @@ const Hero = (() => {
 
   // ── equipped skills: 1 active slot, +1 at 50 and +1 at 200, plus up to 2 from the Masters' Hall (step 5)
   const activeSlots = c => 1 + (c.level >= 50 ? 1 : 0) + (c.level >= 200 ? 1 : 0) + Math.min(HERO.LESSONS, c.lessons.skill || 0);
-  const ruleSlots = c => Math.min(CLASSES[c.cls].slots[1], HERO.RULE_SLOTS + (c.lessons.rule || 0));
+  // Rule slots: 3, plus Masters' Hall lessons, up to the class's maximum. A combined character uses the highest maximum
+  // among their classes (decided overnight, review).
+  const ruleMax = c => Math.max(...(c.classes && c.classes.length ? c.classes : [c.cls]).map(k => CLASSES[k].slots[1]));
+  const ruleSlots = c => Math.min(ruleMax(c), HERO.RULE_SLOTS + (c.lessons.rule || 0));
   const actives = c => Object.keys(c.skills).filter(id => SKILLS[id] && SKILLS[id].kind === 'active');
   function fixEquip(c) {
     const n = activeSlots(c), have = new Set();
@@ -188,8 +192,8 @@ const Hero = (() => {
     return true;
   }
   // A respec refunds every stat and skill point. Opened tiers, combined classes and open awakenings stay.
-  // useFree: spend one of the free respecs the thresholds gave (otherwise it is the Shrine's, which costs gold in
-  // step 5 and is free in this prototype).
+  // useFree: spend one of the free respecs the thresholds gave (otherwise it is the Shrine's, which charges gold:
+  // js/base.js, Base.respec).
   function respec(c, useFree) {
     if (useFree) { if (c.respecs <= 0) return false; c.respecs--; }
     c.alloc = zeroAlloc();
@@ -242,14 +246,18 @@ const Hero = (() => {
     return c;
   }
 
-  // ── what the battle reads (js/sim.js)
+  // ── what the battle reads (js/sim.js). Hero.mods change it on the way: fatigue (js/rest.js) and the passive-bonus
+  // buildings (js/base.js). Each is (c, spec) => void.
+  const mods = [];
   function spec(c, rules) {
     const s = geared(c);
-    return {
+    const out = {
       key: c.cls, name: c.name, char: c.id, lv: c.level, stats: s, res: res(c),
       equip: fixEquip(c).filter(Boolean), sl: clone(c.skills), awk: c.awakened.slice(), rules: rules || CLASSES[c.cls].rules,
       gear: Items.effects(c), look: Items.look(c),
     };
+    for (const m of mods) { try { m(c, out); } catch (e) { } }
+    return out;
   }
 
   // ── from a save made before characters grew (version 1): the prototype's stats are the level-1 averages
@@ -292,6 +300,8 @@ const Hero = (() => {
     if (p.stat < 0) c.alloc = zeroAlloc();
     if (p.skill < 0) { const keep = {}; for (const k of c.classes) keep[CLASSES[k].starter] = 1; c.skills = keep; c.awakened = []; fixEquip(c); }
     for (const k of ['fatigue', 'joined']) if (Number.isFinite(d[k])) c[k] = d[k];
+    c.fatigue = clamp(c.fatigue || 0, 0, 100);
+    if (d.spent === true && c.fatigue >= 50) c.spent = true;
     // Gear: only real pieces, each in its own slot and usable by this character.
     if (d.gear && typeof d.gear === 'object') for (const k of SLOTS) { const x = Items.valid(d.gear[k], k); c.gear[k] = x && Items.canUse(c, x) ? x : null; }
     if (d.rules !== undefined) c.rules = d.rules;
@@ -300,6 +310,6 @@ const Hero = (() => {
 
   return {
     xpToNext, xpBetween, roll, create, stats, res, sheet, points, allocate, placed, capOf, skill, learn, awaken, awakenOpen,
-    activeSlots, ruleSlots, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, geared,
+    activeSlots, ruleSlots, ruleMax, mods, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, geared,
   };
 })();

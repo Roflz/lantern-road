@@ -244,7 +244,7 @@ const RoadMap = (() => {
         h('div', { class: 'row' }, h('span', { class: 'nm', text: R.name }), h('span', { class: 'sp' }), here ? h('span', { class: 'tag e', text: 'You are here' }) : h('span', { class: 'k', text: R.num })),
         list.length ? h('div', { class: 'pips' }, list.map(st => h('i', { class: (Campaign.isLit(st.id) ? 'f' : '') + (st.elite ? ' el' : '') + (st.boss ? ' bs' : '') }))) : null,
         h('span', { class: 'kv', text: list.length && open ? `${Campaign.litIn(r)}/${list.length} lit · ${list.filter(x => x.elite).length} elites · boss: ${R.boss}` : `${R.stages} stages · ${R.opens}` }),
-        h('span', { class: 'kv' }, ico(MAT_ICON[R.mat] || 'bone'), ` Drops ${MATERIALS.find(m => m.id === R.mat).name.toLowerCase()} most`));
+        h('span', { class: 'kv' }, ico(typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone'), ` Drops ${MATERIALS.find(m => m.id === R.mat).name.toLowerCase()} most`));
     }).reverse();
     openSheet(h('div', { class: 'box roadbox' },
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
@@ -322,7 +322,7 @@ const RoadMap = (() => {
       h('span', { class: 'k', text: p.tier }),
       tag('y', 'coin', `~${fmt(p.gold)}`, 'Gold for clearing it, every foe defeated'),
       tag('', 'star', `~${fmt(p.xp)} XP`, `About ${Math.round(p.xpLv * 100)}% of a level at level ${st.level}`),
-      tag('', MAT_ICON[R.mat] || 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
+      tag('', typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
       tag('w', 'bag', p.gear >= 1 ? 'Gear' : `Gear ${Math.round(p.gear * 100)}%`, st.kind === 'boss' ? 'Boss rarity: up to Rare' : st.kind === 'elite' ? 'Elite rarity' : `${REGIONS[st.region].name} rarity`),
     ];
     const unl = first && st.first.length ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' }), st.first.map(id => tag('e', UNLOCKS[id].icon, UNLOCKS[id].kind === 'condition' ? 'Condition: ' + UNLOCKS[id].name : UNLOCKS[id].name, UNLOCKS[id].line || ''))) : first ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' })) : null;
@@ -334,18 +334,19 @@ const RoadMap = (() => {
     { rule: HOME_RULE, label: 'Fatigue 75+', icon: 'fatigue', need: 'keepgoing', at: '1-6' },
     { rule: { if: 'bb_fell', do: 'home' }, label: 'An ally fell', icon: 'skull', need: 'tactician', at: '1-11' },
     { rule: { if: 'bb_next_boss', do: 'home' }, label: 'Before a boss or elite', icon: 'boss', need: 'cond:bb_next_boss', at: '1-15' },
+    { rule: { if: 'bb_out', s: 'draught', do: 'home' }, label: 'Out of draughts', icon: 'flask', need: 'tactician', at: '1-11' },
   ];
   function roadSettings(i) {
     const s = Save.state, road = s.campaign.road, kg = Campaign.has('keepgoing');
     const prules = Tactics.owner('party').rules;
-    const idxOf = r => prules.findIndex(x => x.if === r.if && x.do === r.do && (r.n == null || x.n === r.n));
+    const idxOf = r => prules.findIndex(x => x.if === r.if && x.do === r.do && (r.n == null || x.n === r.n) && (r.s == null || x.s === r.s));
     const chip = c => {
       const open = Campaign.has(c.need), k = idxOf(c.rule), on = open && k >= 0 && prules[k].on;
       return h('button', { class: 'chip' + (on ? ' on' : '') + (open ? '' : ' locked'), 'aria-pressed': on ? 'true' : 'false', disabled: !open, title: open ? `Party rule: ${ruleText(c.rule)}` : `Opens at ${c.at}`,
         onclick: () => {
           click();
           if (k >= 0) Tactics.toggle('party', k);
-          else if (!Tactics.grantPartyRule(c.rule)) { toast('The party rules are full. Make room on the Tactics screen.'); return; }
+          else if (!Tactics.add('party', c.rule)) { toast(prules.length >= Tactics.owner('party').slots ? 'The party rules are full. Make room on the Tactics screen, or the Tactician adds slots.' : 'That rule isn’t taught yet.'); return; }
           Save.commit(); stageSheet(i);
         } }, ico(open ? (UI_ICONS[c.icon] ? c.icon : 'lantern') : 'lock'), c.label);
     };
@@ -361,20 +362,34 @@ const RoadMap = (() => {
       h('div', { class: 'row wrap' }, h('span', { class: 'k', text: 'Come home when' }), h('span', { class: 'sp' }), h('div', { class: 'chips' }, CHIPS.map(chip))),
       h('div', { class: 'row' }, h('span', { class: 'k', text: 'Rule set' }), h('span', { class: 'sp' }), setRow));
   }
-  // The party: each hero's sprite, level and fatigue sliver, tired heroes flagged. Edit opens the Party board.
+  // The party: each hero's sprite, level and fatigue sliver, tired heroes flagged. A Spent hero rests at camp until
+  // fit again (below 50): the strip says when, and leads to the beds. Edit opens the Party board.
+  const timeStr = ms => (typeof Camp !== 'undefined' ? Camp.timeStr(ms) : `${Math.max(1, Math.ceil(ms / 60000))}m`);
+  const fitIn = (c, s) => (typeof Fatigue !== 'undefined' ? Fatigue.timeTo(c, REST.FIT - 0.01, s) : null);
   function partyStrip(st) {
     const s = Save.state, list = s.party.map(id => Save.char(id)).filter(Boolean);
-    const tired = list.some(c => (c.fatigue || 0) > 0);
+    const out = list.filter(c => Campaign.spent(c));
     return h('div', { class: 'pstrip' },
       h('div', { class: 'ps-list' }, list.map(c => {
-        const f = c.fatigue || 0, cls = f >= FATIGUE.SPENT ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
+        const f = c.fatigue || 0, cls = Campaign.spent(c) ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
         const low = c.level < st.level;
-        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${f >= FATIGUE.SPENT ? ' · Spent: can’t set out' : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
+        const t = Campaign.spent(c) ? fitIn(c, s) : null;
+        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? (t != null ? ` · Spent: fit in ${timeStr(t)}` : ' · Spent: can’t set out') : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
           h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
       })),
       h('div', { class: 'ps-acts' },
-        tired ? h('button', { class: 'textbtn proto', title: 'Rest and the Infirmary arrive with the home base (step 5)', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : h('span'),
+        out.length ? restNote(out, s) : h('span'),
         h('button', { class: 'small', onclick: () => { click(); closeSheet(); App.go('party'); } }, 'Edit party')));
+  }
+  // Spent heroes rest at camp: when the last of them is fit again. It opens the Infirmary, whose beds rest faster, or
+  // the camp's fire before the Infirmary stands.
+  function restNote(list, s) {
+    const times = list.map(c => fitIn(c, s)), t = times.every(x => x != null) ? Math.max(...times) : null;
+    const beds = typeof Base !== 'undefined' && Base.built('infirmary', s);
+    const each = list.map((c, k) => `${c.name}: ${times[k] != null ? 'fit in ' + timeStr(times[k]) : 'Spent'}`).join(' · ');
+    return h('button', { class: 'textbtn rest', title: `${each}. Spent heroes rest at camp, ${beds ? 'by the fire or faster in the Infirmary’s beds' : 'by the fire'}.`,
+      onclick: () => { click(); closeSheet(); if (beds && App.actions.building) App.actions.building('infirmary'); else App.go('home'); } },
+      ico('fatigue'), t != null ? `${list.length > 1 ? 'All fit' : 'Fit'} in ${timeStr(t)}` : 'Spent: resting');
   }
   // Set out (or farm): the party walks the lit road and the battle starts where they stop.
   function setOut(i) {
