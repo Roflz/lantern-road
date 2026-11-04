@@ -182,7 +182,7 @@ function showReport(res, opts = {}) {
     res.gains = awardXp(res);
     Save.commit();
     // Level-ups are celebrated after the battle, before the report.
-    if (res.xp > 0 && res.gains.length && !opts.report) { LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }); return; }
+    if (res.gains.some(x => x.g.to > x.g.from) && !opts.report) { LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); return; }
   }
   const again = reportView && reportView.res === res && !sheet.hidden;
   const v = reportView = Object.assign(again ? reportView : { res, side: 0, stat: 'dealt', sel: null }, opts);
@@ -214,7 +214,7 @@ function showReport(res, opts = {}) {
         h('div', { class: 'kicker ' + (won ? 'won' : 'lost'), text: `${won ? 'Victory' : 'Defeat'} · ${REGION_NAMES[stage.region].name} ${stage.id}` }),
         h('h2', { text: won ? `${stage.name} is clear` : `Driven back at ${stage.name}` }),
         h('p', { class: 'flavor', text: flavorLine(res, won) }),
-        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }); } }, ico('star'), `+${fmt(res.xp)} XP`, (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null, res.loot && res.loot.gold ? badge(`+${res.loot.gold} gold`, 'good', 'coin') : null,
+        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); } }, ico('star'), `+${fmt(res.xp)} XP`, (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null, res.loot && res.loot.gold ? badge(`+${res.loot.gold} gold`, 'good', 'coin') : null,
           badge(kos ? plural(kos, 'knockout') : 'No knockouts', kos ? 'bad' : 'good'), res.rounds >= SIM.ENRAGE_ROUND ? badge('Enraged', 'bad', 'rage') : null,
           h('div', { class: 'sides', role: 'tablist', 'aria-label': 'Whose fight to show' }, [[0, 'Your party'], [1, 'Foes']].map(([id, label]) => h('button', { class: v.side === id ? 'on' : '', role: 'tab', 'aria-selected': v.side === id ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { side: id, sel: null }); } }, label))))),
       h('div', { class: 'actions' }, actions)),

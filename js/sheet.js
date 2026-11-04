@@ -386,7 +386,7 @@ App.actions.hero = (id, tab) => HeroSheet.open(id, tab);
 // ── the level-up moment after a battle: XP fills, levels ring, and new points and choices are named
 const LevelUp = (() => {
   // gains: [{ c, g (Hero.gainXp's result), before: { level, xp } }]
-  function show(gains, xp, done) {
+  function show(gains, xp, done, won = true) {
     const ups = gains.filter(x => x.g.to > x.g.from);
     const card = x => {
       const c = x.c, up = x.g.to > x.g.from, need = Hero.xpToNext(c.level);
@@ -406,7 +406,7 @@ const LevelUp = (() => {
           chips.length ? h('div', { class: 'lu-chips' }, chips) : null));
     };
     const box = h('div', { class: 'box lu-box' },
-      h('div', { class: 'lu-head' }, h('div', { class: 'kicker', text: `Victory · +${fmt(xp)} XP each` }), h('h2', { class: 'lu-title', text: ups.length ? (ups.length === 1 ? `${ups[0].c.name} levels up` : 'Level up') : 'Experience' })),
+      h('div', { class: 'lu-head' }, h('div', { class: 'kicker', text: `${won ? 'Victory' : 'Driven back'} · +${fmt(xp)} XP each` }), h('h2', { class: 'lu-title', text: ups.length ? (ups.length === 1 ? `${ups[0].c.name} levels up` : 'Level up') : 'Experience' })),
       h('div', { class: 'lu-list' }, gains.map(card)),
       h('div', { class: 'lu-actions' },
         h('button', { class: 'btn primary', onclick: () => { sfx('click'); done(); } }, 'The battle report'),
