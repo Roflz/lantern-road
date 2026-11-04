@@ -9,6 +9,8 @@ from the cloud, knows S2 is yours, and opens it too. The stand-in keeps its docu
 import functools, http.server, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
+sys.stdout.reconfigure(encoding='utf-8')  # the checks quote the game's text (’), which a Windows console can't always print
+
 MOCK = """
 (() => {
   const KEY = p => 'mockdb:' + p;

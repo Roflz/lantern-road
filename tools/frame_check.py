@@ -17,6 +17,8 @@ saves a few screenshots.
 import argparse, functools, http.server, json, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
+sys.stdout.reconfigure(encoding='utf-8')  # the checks quote the game's text (→, ’), which a Windows console can't print
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # The test's own inverse of the frame's transform (design pixels to the window), so Frame.point is checked against it.
