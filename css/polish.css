@@ -113,3 +113,6 @@ body.no-proto .proto-only{display:none!important}
 .small:active:not(:disabled),.chip:active:not(:disabled),.textbtn:active{transform:scale(.96)}
 .small,.chip{transition:transform .08s,border-color .15s,color .15s,background .15s}
 .tab:active .ico{transform:scale(.88)}
+
+/* A sheet redrawn in place (a switch flipped in Settings, a tool used in the Prototype panel) doesn't rise again. */
+#sheet .box.quiet{animation:none}
