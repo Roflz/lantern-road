@@ -1,12 +1,12 @@
 'use strict';
-// End-to-end play-through (build step 7b): from a new game through Region I, using only the game's own mechanics, as a
+// End-to-end play-through (build step 7b): from a new game through Regions I and II (--to=N for more), using only the game's own mechanics, as a
 // sensible player would. No prototype tools: time passes on a simulated clock (rest, idle buildings, the board), and
 // the player picks a hero, sets out, fights, hires from the Recruit Board, builds what the road unlocks, spends points,
 // wears better gear, buys draughts, rests, and farms the stage before a wall when it loses.
 //
 // It looks for dead ends, stalls, errors and softlocks (the road stops moving, every hero Spent for good, gold below 0),
 // and checks that every unlock, building and first-time tip comes when the campaign spec says (§5.3, §5.4, §8).
-// Run: node tools/playthrough.js [runs per starting hero, default 2] [--verbose]
+// Run: node tools/playthrough.js [runs per starting hero, default 2] [--to=regions, default 2] [--verbose]
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
 
@@ -17,10 +17,12 @@ Date.now = () => CLOCK;
 for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'base.js', 'rest.js', 'save.js', 'rules.js', 'campaign.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
 
 const ARGS = process.argv.slice(2), RUNS = Number(ARGS.find(x => /^\d+$/.test(x))) || 2, VERBOSE = ARGS.includes('--verbose');
+const TO = Math.max(1, Math.min(5, Number((ARGS.find(x => x.startsWith('--to=')) || '--to=2').slice(5)) || 2));
 const MIN = 60000, HOUR = 60 * MIN;
 // What a battle costs in play time, watched at 1× with the rewards and the walk (campaign spec §8.2: 1–2 minutes a stage).
 const BATTLE_MS = res => (25 + res.rounds * 6) * 1000, WALK_MS = 3000;
-const REGION_I = STAGES.filter(st => st.region === 0);
+const REGION_I = STAGES.filter(st => st.region === 0), ROAD = STAGES.filter(st => st.region < TO);
+const ROMAN = ['I', 'II', 'III', 'IV', 'V'], THROUGH = TO === 1 ? 'Region I' : `Regions I–${ROMAN[TO - 1]}`;
 const pad = (s, n) => String(s).padEnd(n), lpad = (s, n) => String(s).padStart(n);
 const hm = ms => { const m = Math.round(ms / MIN); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 
@@ -117,7 +119,7 @@ function play(cls, seed) {
 
   // ── the road
   let lostAt = -1, lostRun = 0, stuck = 0, lastFrontier = -1;
-  while (Campaign.frontier(s) < REGION_I.length && trips < 900) {
+  while (Campaign.frontier(s) < ROAD.length && trips < 400 * TO) {
     camp(); rest();
     const fr = Campaign.frontier(s);
     if (fr === lastFrontier) stuck++; else { stuck = 0; lastFrontier = fr; }
@@ -146,6 +148,7 @@ function play(cls, seed) {
       if (before.some(x => x.f < FATIGUE.WEARY && (x.c.fatigue || 0) >= FATIGUE.WEARY)) seen.weary = seen.weary || 1;
       if (out.r.gains.some(x => x.g.to > x.g.from)) seen.stat = seen.stat || 1;
       if (out.r.gains.some(x => x.g.skillPts > 0)) seen.skill = seen.skill || 1;
+      if (out.r.gains.some(x => x.g.thresholds && x.g.thresholds.length)) seen.threshold = seen.threshold || 1;
       for (const k in seen) if (seen[k] === 1) { seen[k] = 2; tipAt[k] = { stage: stage.id, at: playMs }; }
       if (out.r.first) { firstAt[stage.id] = { at: playMs, wait: waitMs, party: s.roster.length, levels: Campaign.chars(s).map(c => c.level), gold: s.currencies.gold, battles }; lostRun = 0; }
       if (!out.r.won) { losses++; if (lostAt === at) lostRun++; else { lostAt = at; lostRun = 1; } }
@@ -158,24 +161,26 @@ function play(cls, seed) {
   }
 
   // ── what should have happened (campaign spec §5.3, §5.4, §8)
-  const done = Campaign.frontier(s) >= REGION_I.length;
+  const done = Campaign.frontier(s) >= ROAD.length;
   if (!done) note('end', `stopped at ${STAGES[Campaign.frontier(s)].id} after ${trips} trips`);
-  for (const st of REGION_I) for (const id of st.first) {
+  for (const st of ROAD) for (const id of st.first) {
     if (!UNLOCKS[id]) continue;
     if (!s.unlocks[id]) note('unlock', `${id} never unlocked (${st.id})`);
     else if (unlockAt[id] && unlockAt[id].stage !== st.id) note('unlock', `${id} unlocked at ${unlockAt[id].stage}, not ${st.id}`);
   }
   if (!s.unlocks['cond:ally_fallen'] && seen.fell) note('unlock', 'a hero fell but “Ally: fallen” never unlocked');
-  for (const k of ['bleed', 'marked', 'guarded', 'fell', 'step', 'called', 'stat', 'skill']) if (!seen[k]) note('tip', `the “${k}” tip never had its moment in Region I`);
+  for (const k of ['bleed', 'marked', 'guarded', 'fell', 'step', 'called', 'stat', 'skill']) if (!seen[k]) note('tip', `the “${k}” tip never had its moment`);
   const recruit1 = hires[0];
   if (!recruit1) note('recruit', 'no recruit in Region I');
   else if (recruit1.at > 12 * MIN) note('pace', `the first recruit came at ${hm(recruit1.at)} of play (the design asks for about 10 minutes)`);
-  if (s.roster.length < 6) note('party', `only ${s.roster.length} heroes by the end of Region I`);
+  if (firstAt['1-18'] && firstAt['1-18'].party < 6) note('party', `only ${firstAt['1-18'].party} heroes at the end of Region I`);
+  if (s.roster.some(c => c.level >= 30) && !seen.threshold) note('tip', 'a hero passed level 30 without the threshold tip');
   // Plots are scarce (every plot is a choice): by the Sexton, Renown has cleared four, and four should stand.
   const standing = BUILDING_ORDER.filter(id => BUILDINGS[id].plot !== false && Base.built(id, s));
   if (standing.length < Math.min(4, Base.plotsCleared(s))) note('build', `only ${standing.length} buildings stand on ${Base.plotsCleared(s)} plots`);
   for (const id of ['tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit']) if (!Base.blueprint(id, s)) note('build', `the ${id} blueprint never came`);
-  if (!s.inventory.items.concat(s.roster.flatMap(c => SLOTS.map(k => c.gear[k]).filter(Boolean))).some(x => x.id === 'gravediggersspade')) note('relic', 'the Sexton’s Relic never arrived');
+  const owned = s.inventory.items.concat(s.roster.flatMap(c => SLOTS.map(k => c.gear[k]).filter(Boolean)));
+  for (const st of ROAD.filter(x => x.boss)) for (const id of st.first.filter(u => UNLOCKS[u] && UNLOCKS[u].relic)) if (!owned.some(x => x.id === UNLOCKS[id].relic)) note('relic', `${UNLOCKS[id].name} never arrived (${st.id})`);
   Date.now = () => CLOCK;
   return { cls, seed, done, problems, firstAt, unlockAt, tipAt, hires, builds, trips, battles, losses, farms, playMs, waitMs, lowGold, roster: s.roster.map(c => `${CLASSES[c.cls].name} ${c.level}`), gold: s.currencies.gold, renown: Base.renown(s).level };
 }
@@ -185,7 +190,7 @@ const results = [];
 for (const cls of STARTERS) for (let k = 1; k <= RUNS; k++) results.push(play(cls, k));
 Date.now = realNow;
 
-console.log('Play-through: a new game through Region I, real mechanics only (no prototype tools)\n');
+console.log(`Play-through: a new game through ${THROUGH}, real mechanics only (no prototype tools)\n`);
 console.log('   start       seed  done  trips battles lost farms   play   rested  1st hire   6th hire  low gold  Renown  party at the end');
 for (const r of results) {
   console.log(`   ${pad(CLASSES[r.cls].name, 11)} ${lpad(r.seed, 4)}  ${pad(r.done ? 'yes' : 'NO', 4)}  ${lpad(r.trips, 5)} ${lpad(r.battles, 7)} ${lpad(r.losses, 4)} ${lpad(r.farms, 5)}  ${lpad(hm(r.playMs), 5)}  ${lpad(hm(r.waitMs), 7)}  ${lpad(r.hires[0] ? hm(r.hires[0].at) + ' ' + r.hires[0].stage : '—', 9)}  ${lpad(r.hires[4] ? r.hires[4].stage : '—', 8)}  ${lpad(r.lowGold, 8)}  ${lpad(r.renown, 6)}  ${r.roster.join(', ')}`);
@@ -193,7 +198,7 @@ for (const r of results) {
 // the first run's timeline, stage by stage
 const R = results[0];
 console.log(`\nTimeline (${CLASSES[R.cls].name}, seed ${R.seed}): play time at each first clear, the party, and what it unlocked`);
-for (const st of REGION_I) {
+for (const st of ROAD) {
   const f = R.firstAt[st.id];
   if (!f) { console.log(`   ${pad(st.id, 5)} not lit`); continue; }
   const unl = st.first.filter(id => UNLOCKS[id]).map(id => UNLOCKS[id].name).join(' · ');
@@ -202,7 +207,7 @@ for (const st of REGION_I) {
 console.log('\nBuildings built (first run): ' + R.builds.map(b => `${BUILDINGS[b.id].name} at ${b.stage} (${hm(b.at)})`).join(', '));
 console.log('Tips had their moment (first run): ' + Object.entries(R.tipAt).map(([k, v]) => `${k} ${v.stage}`).join(', '));
 const all = results.flatMap(r => r.problems);
-console.log(`\n${all.length ? all.length + ' problem(s):' : 'No problems: every run reached the end of Region I, with every unlock, building and tip on time.'}`);
+console.log(`\n${all.length ? all.length + ' problem(s):' : `No problems: every run reached the end of ${THROUGH}, with every unlock, building and tip on time.`}`);
 for (const p of all) console.log('   ' + p);
 if (VERBOSE) console.log(JSON.stringify(results.map(r => ({ cls: r.cls, seed: r.seed, unlockAt: r.unlockAt, hires: r.hires })), null, 1));
 process.exitCode = all.length ? 1 : 0;

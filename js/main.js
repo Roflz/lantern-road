@@ -433,6 +433,14 @@ const TIPS = {
   weary: 'Weary: rest at camp. The Infirmary will speed it up.',
   stat: 'A stat point: spend it on the hero’s Stats tab.',
   skill: 'A skill point: learn a tier-1 skill, then choose which one to equip.',
+  // Regions II–V (build step 7b): their new foes, the first time each trick is played
+  hidden: 'Hidden: single-target attacks can’t aim at it until it attacks. Hits on a whole row still reach it.',
+  lured: 'Lured: a foe pulled a hero out of the back row. Move resistance holds them in place.',
+  thorns: 'Thorns: this foe hurts whoever strikes it. Ranged and magic attacks take the sting too.',
+  drain: 'Mana drain: the foe steals a hero’s mana and heals itself with it.',
+  regen: 'Regenerating: this foe heals at the start of every turn. Hit it hard and fast.',
+  splash: 'Splash: a heavy blow on the front row spills onto the hero behind.',
+  threshold: 'A threshold: choose what it opens on the hero’s Skills tab, the next tier or more.',
 };
 function showTip(k, text) { Guide.tip(k, text || TIPS[k]); }
 const isHeroId = id => /^p\d$/.test(id);
@@ -447,12 +455,18 @@ function battleTip(e) {
   else if (e.t === 'die' && isHeroId(e.who)) showTip('fell');
   else if (e.t === 'step') showTip('step');
   else if (e.t === 'summon' && e.unit.side === 1) showTip('called');
+  else if (e.t === 'miss' && e.why === 'hidden') showTip('hidden');
+  else if (e.t === 'swap' && e.why === 'lure' && [e.a, e.b].some(id => id && isHeroId(id))) showTip('lured');
+  else if (e.t === 'counter' && e.why === 'thorns' && isHeroId(e.tgt)) showTip('thorns');
+  else if (e.t === 'heal' && (e.how === 'drain' || e.how === 'regen') && e.tgt && e.tgt[0] === 'f') showTip(e.how);
+  else if (e.t === 'hit' && e.splash && isHeroId(e.tgt)) showTip('splash');
 }
 function afterTips(res) {
   const f = res.camp.r.fatigue;
   if (Object.values(f).some(x => x.before < FATIGUE.WEARY && x.after >= FATIGUE.WEARY)) showTip('weary');
   if (res.gains.some(x => x.g.to > x.g.from)) showTip('stat');
   if (res.gains.some(x => x.g.skillPts > 0)) showTip('skill');
+  if (res.gains.some(x => x.g.thresholds && x.g.thresholds.length)) showTip('threshold');
 }
 try {
   const hot = window.claude && window.claude.hot;
