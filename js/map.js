@@ -321,9 +321,9 @@ const RoadMap = (() => {
     const tired = list.some(c => (c.fatigue || 0) > 0);
     return h('div', { class: 'pstrip' },
       h('div', { class: 'ps-list' }, list.map(c => {
-        const f = c.fatigue || 0, cls = f >= FATIGUE.SPENT ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
+        const f = c.fatigue || 0, cls = Campaign.spent(c) ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
         const low = c.level < st.level;
-        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${f >= FATIGUE.SPENT ? ' · Spent: can’t set out' : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
+        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? ' · Spent: can’t set out' : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
           h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
       })),
       h('div', { class: 'ps-acts' },

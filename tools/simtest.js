@@ -785,7 +785,33 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   Campaign.onUnlock(id => hooked.push(id));
   Campaign.unlock('cond:ally_fallen', S);
   ok(hooked.includes('cond:ally_fallen') || S.unlocks['cond:ally_fallen'], 'unlocks fire the hook for step 5');
-  console.log('Campaign checked: Region I data, foe growth, stepping up, summons, the phase, fleeing, wanderers, rewards, fatigue, unlocks and trips.');
+  // the hooks step 5 hangs on: onSettle (with each hero's turns), onHome, the Spent flag, Fatigue.battle and closed trips
+  const settled = [], homes = [];
+  Campaign.onSettle((r, stage, res, st) => settled.push({ r, stage, res }));
+  Campaign.onHome((last, st) => homes.push(last));
+  Campaign.restAll(S);
+  const flagged = S.roster.find(c => S.party.includes(c.id));
+  flagged.spent = true;
+  ok(!Campaign.fit(S).includes(flagged), 'a hero flagged Spent stays home until the flag clears, whatever their fatigue');
+  flagged.spent = false;
+  S.campaign.road.keepGoing = false;
+  Campaign.setOut(st('1-1').index, S);
+  const rh = won(st('1-1'), 3);
+  Campaign.afterBattle(rh, S);
+  const sh = settled[settled.length - 1];
+  ok(sh && sh.stage.id === '1-1' && Object.keys(sh.r.turns).length === rh.start.filter(u => u.side === 0).length && Object.entries(sh.r.turns).every(([id, n]) => n === rh.stats[rh.start.find(u => u.char === id).id].turns), 'onSettle carries the stage, the rewards and each hero’s turns');
+  ok(homes.length === 1 && homes[0] === S.campaign.lastTrip, 'onHome fires once when the party is home');
+  global.Fatigue = { battle: (res, st2) => ({ hooked: { before: 0, gain: 0, after: 0 } }) };
+  Campaign.setOut(st('1-1').index, S);
+  const rf = Campaign.afterBattle(won(st('1-1'), 3), S);
+  delete global.Fatigue;
+  ok(rf.r.fatigue.hooked, 'Fatigue.battle replaces the plain count when the home base defines it');
+  Save.info.awayMs = 3600000;
+  Campaign.setOut(st('1-1').index, S);
+  Campaign.afterBattle(won(st('1-1'), 3), S, { closed: true });
+  Save.info.awayMs = 0;
+  ok(Math.abs(Date.now() - 3600000 - S.campaign.lastTrip.at) < 5000, 'a trip ended by the app closing is home from the moment it closed');
+  console.log('Campaign checked: Region I data, foe growth, stepping up, summons, the phase, fleeing, wanderers, rewards, fatigue, unlocks, trips and the hooks for step 5.');
 }
 
 // ── The reference party, every Region I stage against its target (campaign spec §5.6). Off-target stages are listed
