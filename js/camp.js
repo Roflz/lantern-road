@@ -1,11 +1,13 @@
 'use strict';
-// Lantern Road · the camp (build step 5; design §8; the screen mockups' "Hearth"). The party sits at a fire in the middle,
-// with the building plots in a ring around it, plus the road out of camp and the Recruit Board. Drag sideways, or use
-// ‹ › and the arrow keys, to walk round the fire: on release it eases to the nearest building, whose card offers its
-// main action. Plots Renown hasn't cleared are gaps in the ring. The ring is the only way into buildings.
-// Also here: the first pick of a new game, "While you were away", the Renown track, the roster rows and formation
-// picker on the Party screen, and the chip that opens the prototype tools (js/proto.js). Building screens are
-// js/buildings.js; the model is js/base.js.
+// Lantern Road · the camp (screen 2; play-test notes 1.18–1.20; the design is docs/mockups/camp-views.html). The camp is
+// views around one fire, drawn by js/campscene.js: the party view, close on the fire, with the Recruit Board, Wick and
+// the amber road to the boss's chapel; and the buildings view, turned 180° and further back, with the plots. Drag
+// sideways (or press ← and →) to turn; let go and the camera settles on the nearer view. Over the scene, as in the
+// mockup: you and your Renown, the next goal, gold and bone dust, help and settings, the formation, plaques and chips
+// on what's in the scene, and the corner's ribbon and big button (Set out, or Collect). Taps in the scene open what
+// was tapped. Until the first blueprint the camera stays with the party.
+// Also here: the first pick of a new game, "While you were away", the Renown track, the roster rows on the Party
+// screen, and the building art. Building screens are js/buildings.js; the model is js/base.js.
 
 // ── building art: pixel maps in one palette. Most come from the screen mockups; the Shop, the Masters' Hall and the
 // four passive-bonus buildings are new, in the same style.
@@ -56,413 +58,391 @@ const CAMP_LINES = {
   cutpurse: ['Didn’t take anything. Promise.', 'Pockets are for emptying.', 'Shh. Listen.'],
 };
 const CAMP_TIRED = ['I could sleep for a week.', 'My feet are lead.', 'Give me an hour by the fire.'];
-// Each class's small habit at the fire: sparks off a blade, motes, censer smoke, a glint, lamplight, a nod.
-const CAMP_HABITS = { sellsword: ['sharpen', 2300], hexblade: ['motes', 900], pilgrim: ['smoke', 700], warden: ['glint', 3800], lamplighter: ['lamp', 1e9], crossbowman: ['nod', 4600], duellist: ['nod', 3600], alchemist: ['bubbles', 1200], surgeon: ['nod', 5000], bellringer: ['nod', 4200], gravecaller: ['motes', 1100], cutpurse: ['nod', 3000] };
+// What Wick says when tapped, until the guide comes (onboarding spec §6): placeholders, tune.
+const WICK_LINES = ['Keep the fire fed. The road remembers who lit it.', 'Every lantern lit pushes the dark back a step.', 'Rest them well. The road is long.', 'Mind the graves past the posts. They listen.', 'I’ve tended this fire longer than I’ve had a name.'];
 
 const Camp = (() => {
   const click = () => sfx('click');
-  const cam = { face: null, pick: -1, hinted: false };   // kept across visits: which building faces you
   const timeStr = ms => { const m = Math.max(1, Math.ceil(ms / 60000)), hh = Math.floor(m / 60); return hh ? `${hh}h ${String(m % 60).padStart(2, '0')}m` : `${m}m`; };
   const noun = (n, a, b) => `${n} ${n === 1 ? a : b || a + 's'}`;
-  const frontierStage = s => { const i = STAGES.findIndex(st => !s.campaign.cleared.includes(st.id)); return STAGES[i < 0 ? STAGES.length - 1 : i]; };
+  const K = 2;                    // design pixels per scene pixel
+  const IDLE = ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard'];
+  const cam = { yaw: 0 };         // which view the camera faces, kept across visits
+  const firstOpenPlot = s => { const open = Base.plotsCleared(s); return s.base.plots.findIndex((p, i) => i < open && !p); };
 
-  // ── the ring: the road out of camp in front, then the Recruit Board and every plot, alternating right and left from
-  // the front, so the plots Renown hasn't cleared (gaps) fall at the back. Returns the ring by position.
-  function entries(s) {
-    const list = [{ k: 'road', kind: 'road' }, { k: 'board', kind: 'building', id: 'recruitboard' }];
+  // ── what the camp shows, read from the save
+  // The road: the frontier stage, its region's stages, and where it stands among them (-1 once every stage is lit).
+  function road(s) {
+    const fi = Campaign.frontier(s), done = fi >= STAGES.length, st = STAGES[Math.min(fi, STAGES.length - 1)];
+    const list = STAGES.filter(x => x.region === st.region);
+    return { st, done, list, front: done ? -1 : list.indexOf(st) };
+  }
+  // What the scene draws (js/campscene.js): the party at the fire, the road's stages, the plots and the board.
+  function sceneState(s) {
+    const R = road(s);
+    const heroes = s.party.map(id => Save.char(id)).filter(Boolean).slice(0, 6).map(c => ({ c, spent: Fatigue.spent(c) }));
+    const stages = R.list.map(st => ({ kind: st.boss ? 'boss' : st.elite ? 'elite' : 'road', lit: Campaign.isLit(st.id, s) }));
     const total = BASE.START_PLOTS + BASE.PLOT_RENOWN.length, open = Base.plotsCleared(s);
-    for (let i = 0; i < total; i++) {
-      if (i >= open) { list.push({ gap: true, plot: i }); continue; }
-      const id = s.base.plots[i];
-      list.push(id ? { k: BUILDINGS[id].art, kind: 'building', id, plot: i } : { k: 'plot', kind: 'plot', plot: i });
-    }
-    const N = list.length, ring = new Array(N);
-    list.forEach((e, k) => { ring[k === 0 ? 0 : k % 2 ? (k + 1) / 2 : N - k / 2] = e; });
-    return ring;
+    const plots = Array.from({ length: total }, (_, i) => (i >= open ? null : s.base.plots[i] ? { id: s.base.plots[i], art: BUILDINGS[s.base.plots[i]].art } : { empty: true }));
+    const board = { open: Base.boardOpen(s) };
+    const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open].join('|');
+    return { heroes, stages, front: R.front, plots, board, sig };
   }
-  // A building's badge: something waiting for you.
-  function badge(e, s) {
-    if (e.kind === 'plot') return Base.available(s).length ? 'plus' : null;
-    if (e.kind !== 'building') return null;
-    if (e.id === 'recruitboard') return Base.boardOpen(s) && s.board.picks > 0 && s.board.recruits.length && s.board.fresh ? 'star' : null;
-    if (BUILDINGS[e.id].idle) { const st = Base.storage(e.id, s); if (st && st.pct >= 1) return { tollhouse: 'coin', scavengercamp: Base.matIcon(MATERIALS[Base.scavRegions(s)[0] || 0].id), salvagepit: 'bag', trainingyard: 'star' }[e.id]; }
-    if (e.id === 'infirmary' && Base.brewWaiting(s).length) return 'flask';
-    return null;
-  }
-  // The card for what faces you: { icon (url), name, status, tag: [text, cls], meter: [pct, colour], btns: [[label, fn, cls]] }.
-  function card(e, s) {
-    if (e.kind === 'hero') {
-      const c = e.c, st = Fatigue.state(c), f = Math.floor(c.fatigue || 0);
-      return { icon: heroImgURL(c.cls, Items.look(c)), name: c.name, status: `${CLASSES[c.cls].name} · Lv ${c.level} · fatigue ${f}`, tag: [FATIGUE_NAMES[st], st === 'fresh' ? 'g' : st === 'weary' ? 'y' : 'b'], btns: [['Sheet', () => App.showCharacter(c.id), 'primary']] };
-    }
-    if (e.kind === 'road') {
-      const st = frontierStage(s), done = s.campaign.cleared.length >= STAGES.length;
-      return { icon: iconURL('lantern'), name: 'The Road', status: done ? 'Every lantern is lit, for now' : `Next · ${st.id} ${st.name}`, tag: ['Gate', ''],
-        btns: [['Map', () => App.go('map'), ''], ['Set out', () => setOut(), 'primary']] };
-    }
-    if (e.kind === 'plot') {
-      const r = Base.renownFor(e.plot), any = Base.available(s).length;
-      return { icon: iconURL('plus'), name: 'Empty Plot', status: any ? (r ? `Cleared at Renown ${r} · build here` : 'Build here') : 'No blueprints yet: the road brings them', tag: [`Plot ${e.plot + 1}`, 'e'],
-        btns: [['Build', () => Buildings.buildSheet(e.plot), 'primary']] };
-    }
-    const id = e.id, D = BUILDINGS[id], L = Base.level(id, s), out = { icon: iconURL(D.icon), name: D.name, tag: [id === 'recruitboard' ? 'Board' : 'Lv ' + L, ''], btns: [['Open', () => Buildings.open(id), 'primary']] };
-    const st = D.idle ? Base.storage(id, s) : null;
-    if (st) {
-      out.meter = [Math.round(st.pct * 100), { tollhouse: 'var(--gold)', scavengercamp: 'var(--bone)', salvagepit: 'var(--ward)', trainingyard: 'var(--good)' }[id]];
+  // The buildings view opens with the first blueprint: until then the camera stays with the party.
+  const locked = s => !BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (Base.built(id, s) || Base.blueprint(id, s)));
+  // What waits at camp: a chip over each place with something to collect, and everything together for Collect.
+  // chips: { board | fire | <building id>: [icon, n] }. all: [[icon, n], …]. full: the idle buildings at least half full.
+  function waiting(s) {
+    const chips = {}, sum = { gold: 0, mats: {}, items: 0, gear: 0, xp: 0 }, full = [];
+    for (const id of [...IDLE, 'infirmary']) {
+      if (!Base.built(id, s)) continue;
       const got = Base.preview(id, s);
-      out.btns = [['Open', () => Buildings.open(id), ''], ['Collect', () => collect(id), 'primary']];
-      if (!got.length && id === 'trainingyard' && !Base.trainees(s).length) out.btns = [['Choose trainees', () => Buildings.open(id), 'primary']];
-      const full = st.pct >= 1 ? 'full · collect' : `full in ${timeStr(st.fullIn)}`;
-      if (id === 'tollhouse') { const g = got.find(x => x.kind === 'gold'), it = got.filter(x => x.kind === 'item').reduce((n, x) => n + x.n, 0); out.status = `${g ? fmt(g.n) + ' gold' : it ? noun(it, 'party item') : 'Nothing yet'} · ${full}`; }
-      if (id === 'scavengercamp') { const m = got.find(x => x.kind === 'mat'); out.status = `${Base.regionName(Base.scavRegions(s)[0] || 0)} · ${m ? m.n + ' ' + Base.matName(m.mat).toLowerCase() : 'nothing yet'} · ${full}`; }
-      if (id === 'salvagepit') { const n = got.filter(x => x.kind === 'gear').length; out.status = `${n ? noun(n, 'gear roll') : 'Digging'} · ${full}`; }
-      if (id === 'trainingyard') { const ts = Base.trainees(s).map(cid => Save.char(cid)).filter(Boolean); out.status = ts.length ? `${ts.map(c => c.name).join(', ')} · ${full}` : 'Nobody training'; }
-      out.tag = ['Idle', id === 'tollhouse' ? 'y' : 'g'];
-      return out;
+      if (!got.length) continue;
+      for (const g of got) {
+        if (g.kind === 'gold') sum.gold += g.n;
+        else if (g.kind === 'mat') sum.mats[g.mat] = (sum.mats[g.mat] || 0) + g.n;
+        else if (g.kind === 'item') sum.items += g.n;
+        else if (g.kind === 'gear') sum.gear++;
+        else if (g.kind === 'xp') sum.xp++;
+      }
+      const gold = got.find(g => g.kind === 'gold'), mat = got.find(g => g.kind === 'mat'), items = got.filter(g => g.kind === 'item');
+      chips[id] = gold ? ['coin', fmt(gold.n)] : mat ? [Base.matIcon(mat.mat), fmt(mat.n)] : items.length ? [ITEMS[items[0].item].icon, items.reduce((n, g) => n + g.n, 0)] : id === 'salvagepit' ? ['bag', got.length] : ['star', got.length];
+      const st = Base.storage(id, s);
+      if (id === 'infirmary' || (st && st.pct >= 0.5)) full.push(id);
     }
-    if (id === 'recruitboard') {
-      if (!Base.boardOpen(s)) { out.status = 'Opens when 1-2 is cleared'; out.tag = ['Closed', '']; return out; }
-      const n = s.board.recruits.length, p = s.board.picks;
-      out.status = n && p ? `${noun(n, 'new face')} · ${noun(p, 'pick')}${s.board.free ? ' · first one free' : ''}` : `New board in ${timeStr(Base.boardIn(s))}`;
-      out.tag = s.board.fresh && n && p ? ['New', 'e'] : [`${s.roster.length}/${Base.rosterCap(s)}`, ''];
-      return out;
-    }
-    if (id === 'infirmary') {
-      const beds = s.base.beds, used = beds.filter(Boolean), c = used.length ? Save.char(used[0]) : null, t = c ? Fatigue.timeTo(c, 0, s) : null;
-      out.status = `${used.length}/${beds.length} beds${c ? ` · ${c.name} rested in ${timeStr(t || 0)}` : ''}`;
-      if (Base.brewWaiting(s).length) out.btns = [['Open', () => Buildings.open(id), ''], ['Collect', () => collect(id), 'primary']];
-      out.tag = [used.length ? 'Resting' : 'Lv ' + L, used.length ? 'w' : ''];
-      return out;
-    }
-    if (id === 'tactician') out.status = `${Base.partySlots(s)} party rule slots · ${Base.loadoutSlots(s)} loadout slots`;
-    if (id === 'barracks') out.status = `Roster ${s.roster.length}/${Base.rosterCap(s)}`;
-    if (id === 'shop') { const n = s.shop.stall.length; out.status = `${Base.shopItems(s).length} party items · ${noun(n, 'piece')} of gear`; }
-    if (id === 'mastershall') { const ids = Base.inHall(s); out.status = ids.length ? ids.map(cid => `${Save.char(cid).name} ${timeStr(Base.lessonOf(cid, s).left)}`).join(' · ') : `${Base.rooms(s)} ${Base.rooms(s) === 1 ? 'room' : 'rooms'} free`; }
-    if (id === 'shrine') out.status = `Respecs from ${fmt(Math.min(...s.roster.map(c => Base.respecPrice(c, s))))} gold`;
-    if (D.passive) out.status = Buildings.bonusText(id, s);
-    return out;
+    if (s.freePotion.waiting) { chips.fire = ['flask', s.freePotion.waiting]; sum.items += s.freePotion.waiting; }
+    if (Base.boardOpen(s) && s.board.picks > 0 && s.board.recruits.length && (s.board.fresh || s.board.free)) chips.board = ['scroll', s.board.recruits.length];
+    const all = [];
+    if (sum.gold) all.push(['coin', fmt(sum.gold)]);
+    for (const m in sum.mats) all.push([Base.matIcon(m), fmt(sum.mats[m])]);
+    if (sum.items) all.push(['flask', sum.items]);
+    if (sum.gear) all.push(['bag', sum.gear]);
+    if (sum.xp) all.push(['star', sum.xp]);
+    return { chips, all, full };
   }
+  // The next goal, from today's state (onboarding spec §6.3, without its rewards yet): the first of these that applies.
+  function goal(s, W) {
+    if (Base.boardOpen(s) && s.board.free && s.board.picks > 0 && s.board.recruits.length) return { text: 'Hire a free recruit', go: () => Buildings.open('recruitboard') };
+    const team = [...s.party.map(id => Save.char(id)).filter(Boolean), ...s.roster.filter(c => !s.party.includes(c.id))];
+    for (const c of team) {
+      const P = Hero.points(c);
+      if (P.stat > 0) return { text: `Spend ${noun(P.stat, 'stat point')}`, go: () => App.showCharacter(c.id, 'stats') };
+      if (P.skill > 0) return { text: `Spend ${noun(P.skill, 'skill point')}`, go: () => App.showCharacter(c.id, 'skills') };
+    }
+    const plot = firstOpenPlot(s), bp = plot >= 0 && Base.available(s).find(id => Base.canPay(Base.cost(id, 1), s));
+    if (bp) return { text: `Build the ${BUILDINGS[bp].name}`, go: () => Buildings.buildSheet(plot, bp) };
+    if (W.full.length) return { text: W.full.length === 1 ? `Collect at the ${BUILDINGS[W.full[0]].name}` : `Collect from ${W.full.length} buildings`, go: () => ui && ui.turnTo('build') };
+    const R = road(s);
+    return R.done ? { text: 'Every lantern is lit', go: setOut } : { text: `Clear ${R.st.id}`, go: setOut };
+  }
+  // Anything waiting at camp: the Camp tab's dot (js/guide.js).
+  const anyWaiting = s => Object.keys(waiting(s).chips).length > 0;
 
-  // ── actions from the card
+  // ── actions
+  // Set out: today's Road map, with the frontier stage's sheet open. (The road view replaces this later.)
   function setOut() {
-    if (App.actions.setOut) return App.actions.setOut();
     const s = Save.state;
-    // The road's own sheet: readiness, rewards and the trip settings (js/map.js).
-    if (typeof RoadMap !== 'undefined' && typeof Campaign !== 'undefined') { App.go('map'); RoadMap.stageSheet(Math.min(Campaign.frontier(s), STAGES.length - 1)); return; }
-    if (!s.party.some(Boolean)) { toast('Nobody in the party: add a hero on the Party tab', 'bad'); return; }
-    const i = STAGES.findIndex(st => !s.campaign.cleared.includes(st.id));
-    App.go('battle', { stage: i < 0 ? STAGES.length - 1 : i });
+    App.go('map');
+    if (typeof RoadMap !== 'undefined') RoadMap.stageSheet(Math.min(Campaign.frontier(s), STAGES.length - 1));
   }
-  function collect(id) {
-    const s = Save.state;
-    Base.tick(s);
-    const got = Base.collect(id, s);
+  // Collect: every idle building's store, the still-room and the fire's draughts, as "Gather it all" does.
+  function gatherAll() {
+    const got = Base.collectAll(Save.state);
     Save.commit();
-    if (!got.length) { toast('Nothing to collect yet'); return; }
-    sfx('coin');
-    toast(got.map(g => g.text).join(' · '));
+    if (got.length) { sfx('coin'); toast(got.slice(0, 4).map(g => g.text).join(' · ') + (got.length > 4 ? ' …' : '')); } else toast('Nothing to collect yet');
     for (const g of got) if (g.kind === 'xp' && g.to > g.from) LevelUp.toast(g.c, { from: g.from, to: g.to });
     App.refresh();
   }
-
-  // ── the camp scene: canvas drawing, after the screen mockups
-  const BASE_PAL = REGION_ART[0].pc;
-  const prop = k => sprite(PROPS[k].map, BASE_PAL, 'camp:' + k);
-  const art = k => sprite(BUILD_ART[k], BP, 'b:' + k);
-  const lightsOf = k => { const key = 'bl:' + k; if (!art.cache) art.cache = {}; if (!art.cache[key]) { const L = []; BUILD_ART[k].forEach((r, y) => [...r].forEach((ch, x) => { if (ch === 'Y') L.push([x, y, 'y']); else if (ch === 'V') L.push([x, y, 'v']); })); art.cache[key] = L; } return art.cache[key]; };
-  const seatCache = new Map();
-  // A hero sitting: their side sprite without the last two rows (the legs fold under them).
-  function seated(c) {
-    const look = Items.look(c), key = c.cls + '|' + lookKey(look);
-    if (seatCache.has(key)) return seatCache.get(key);
-    const full = heroSide(c.cls, 0, look), cut = 2;
-    const cv = document.createElement('canvas'); cv.width = full.width; cv.height = full.height - cut;
-    cv.getContext('2d').drawImage(full, 0, 0, full.width, full.height - cut, 0, 0, full.width, full.height - cut);
-    cv.ax = full.ax; cv.lamp = full.lamp; cv.smoke = full.smoke; cv.top = full.top; cv.bh = full.bh;
-    seatCache.set(key, cv);
-    return cv;
+  // The + by gold and bone dust: where you earn more. The building if it stands, its blueprint's build sheet if you
+  // have one, or where it comes from.
+  function earnMore(id) {
+    const s = Save.state;
+    if (Base.built(id, s)) { Buildings.open(id); return; }
+    if (Base.blueprint(id, s)) { const plot = firstOpenPlot(s); if (plot >= 0) Buildings.buildSheet(plot, id); else toast('Every plot is taken. Renown clears more of them.'); return; }
+    toast(`${BUILDINGS[id].name}: a blueprint from ${BASE_UNLOCK_STAGE[BUILDINGS[id].unlock]}`);
   }
+  function tapFire() {
+    const n = Base.collectPotions(Save.state);
+    if (n) { Save.commit(); sfx('coin'); toast(`+${n} Healing Draught${n === 1 ? '' : 's'} from the fire`); if (ui) ui.sync(); }
+    else { const t = Base.potionIn(Save.state); toast(t == null ? 'The fire crackles.' : `A free Healing Draught in ${timeStr(t)}`); }
+  }
+  const leader = s => s.party.map(id => Save.char(id)).find(Boolean) || s.roster[0] || null;
 
-  function scene(el) {
-    const S = 2, cv = el.querySelector('canvas'), x = cv.getContext('2d');
-    let W = 0, H = 0, cx = 0, cy = 0, RX = 0, RY = 0;
-    const fit = () => { W = Math.max(60, Math.floor(el.clientWidth / S)); H = Math.max(80, Math.floor(el.clientHeight / S)); cv.width = W; cv.height = H; x.imageSmoothingEnabled = false; cx = Math.round(W / 2); cy = Math.round(H * 0.5); RX = W * 0.44; RY = Math.min(H * 0.22, W * 0.46); };
-    fit();
-    const reduce = () => noMotion();
-    const s = () => Save.state;
-    let ring = entries(s()), N = ring.length, step = Math.PI * 2 / N;
-    const snapRot = i => Math.PI / 2 - i * step;
-    const firstFace = () => { if (cam.face != null && ring[cam.face] && !ring[cam.face].gap) return cam.face; return Base.boardOpen(s()) && s().board.recruits.length ? ring.findIndex(e => e && e.id === 'recruitboard') : 0; };
-    let rot = snapRot(firstFace()), vel = 0, target = rot, dragging = false, lastX = 0, lastT = 0, downX = 0, moved = 0, hits = [], pick = cam.pick, shown = '', cardAt = 0;
-    const R = makeRng(41), stars = Array.from({ length: 60 }, () => [Math.floor(R() * 400), Math.floor(R() * 400) * 0.2, R()]);
-    const trees = Array.from({ length: 12 }, (_, i) => [i / 12, R()]);
-    const parts = [];
-    const angDist = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d < -Math.PI) d += Math.PI * 2; if (d > Math.PI) d -= Math.PI * 2; return Math.abs(d); };
-    const nearest = () => { let best = 0, bd = Infinity; ring.forEach((b, i) => { if (b.gap) return; const d = angDist(i * step + rot, Math.PI / 2); if (d < bd) { bd = d; best = i; } }); return best; };
-    const stepFrom = (i, d) => { let j = i; do { j = (j + d + N) % N; } while (ring[j].gap); return j; };
-    function goTo(i) { const base = snapRot(i); let best = base, d = Infinity; for (let k = -3; k <= 3; k++) { const c = base + k * Math.PI * 2; if (Math.abs(c - rot) < d) { d = Math.abs(c - rot); best = c; } } target = best; vel = 0; cam.face = i; }
-    // the heroes at the fire: the formation
-    let seats = [], react = [], fired = [], nextFx = [];
-    function seatParty() {
-      seats = s().party.map(id => Save.char(id)).filter(Boolean).slice(0, 6);
-      react = seats.map(() => -1e9); fired = seats.map(() => -1e9); nextFx = seats.map((_, j) => performance.now() + 600 + j * 450);
+  // ── the camp screen: the scene, and the HUD over it
+  const pxImg = (src, size, cls = '') => h('img', { class: 'px ' + cls, src, alt: '', width: size, height: size, draggable: 'false' });
+  const icon = (name, size) => pxImg(iconURL(name), size);
+  const fatCol = c => ({ fresh: 'var(--good)', weary: 'var(--gold)', exhausted: 'var(--bad)', spent: 'var(--blood)' }[Fatigue.state(c)]);
+  const FORM = [2, 3, 0, 4, 5, 1]; // the formation as it stands in battle: two columns behind, the front on the right
+  let ui = null;
+  function screen() {
+    const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The camp. Drag sideways, or use the arrow keys, to turn between the party and the buildings.' });
+    const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
+    const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
+    const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');
+    const me = h('button', { class: 'cv-pnl cv-me', onclick: () => { click(); showRenown(); } }, face, h('span', { class: 'cv-t' }, h('span', { class: 'cv-nm', text: 'Traveller' }), h('span', { class: 'cv-meter' }, bar)));
+    face.append(lvl);
+    const goalText = h('span', { class: 'cv-gt' });
+    const goalBtn = h('button', { class: 'cv-pnl cv-goal' }, h('span', { class: 'cv-gk', text: 'Next' }), goalText, h('span', { class: 'cv-go', text: 'Go' }));
+    const gold = h('span', { class: 'cv-cv gold' }), bone = h('span', { class: 'cv-cv' });
+    const purse = h('div', { class: 'cv-purse' },
+      h('div', { class: 'cv-cur', title: 'Gold' }, h('span', { class: 'cv-ci' }, icon('coin', 22)), gold, h('button', { class: 'cv-plus', 'aria-label': 'Earn more gold', onclick: () => { click(); earnMore('tollhouse'); } }, '+')),
+      h('div', { class: 'cv-cur', title: 'Bone Dust' }, h('span', { class: 'cv-ci' }, icon('bone', 22)), bone, h('button', { class: 'cv-plus', 'aria-label': 'Earn more bone dust', onclick: () => { click(); earnMore('scavengercamp'); } }, '+')));
+    const corner = h('div', { class: 'cv-corner' },
+      h('button', { class: 'cv-round', 'aria-label': 'Help', onclick: () => { click(); showHow(() => closeScreen()); } }, '?'),
+      h('button', { class: 'cv-round', 'aria-label': 'Settings', onclick: () => { click(); App.openSettings(); } }, icon('gear', 18)));
+    const proto = h('button', { class: 'chip proto proto-only cv-proto', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
+    const rb = (ic, label, fn) => h('button', { class: 'cv-rb', onclick: () => { click(); fn(); } }, h('span', { class: 'cv-orb' }, icon(ic, 26), h('i', { class: 'cv-dot', hidden: true })), h('span', { text: label }));
+    const heroesB = rb('helm', 'Heroes', () => App.go('party'));
+    const tacticsB = rb('scroll', 'Tactics', () => { const c = leader(Save.state); App.actions.tactics(c ? c.id : 'party', 'home'); });
+    const bagB = rb('bag', 'Bag', () => App.go('bag'));
+    const goTag = h('span', { class: 'cv-tag' }), colTag = h('span', { class: 'cv-tag' });
+    const go = h('button', { class: 'cv-big' }, goTag, h('span', { class: 'cv-orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
+    const collect = h('button', { class: 'cv-big collect', hidden: true }, colTag, h('span', { class: 'cv-orb' }, icon('coin', 34)), h('span', { text: 'Collect' }));
+    go.addEventListener('click', () => { click(); setOut(); });
+    collect.addEventListener('click', () => { click(); gatherAll(); });
+    const form = h('div', { class: 'cv-form cv-nodrag', role: 'group', 'aria-label': 'The formation' });
+    camp.append(canvas, marks, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, h('div', { class: 'cv-dock' }, heroesB, tacticsB, bagB, go, collect), me, goalBtn, purse, corner, proto);
+    const el = h('div', { class: 'camp-view' }, camp);
+
+    let live = null, chips = {}, goalNow = null, placed = { v: -1, w: -1, sig: '' }, alive = true;
+    const pool = new Map();
+    // ── from the save into the HUD and the scene
+    function sync() {
+      const s = Save.state;
+      if (!s || !alive) return;
+      const R = Base.renown(s), lead = leader(s), W = waiting(s);
+      face.replaceChildren(lead ? pxImg(heroPortrait(lead), 32) : icon('lantern', 22), lvl);
+      lvl.textContent = String(R.level);
+      bar.style.width = Math.round(100 * R.into / R.need) + '%';
+      me.setAttribute('aria-label', `Renown ${R.level}: open the Renown track`);
+      goalNow = goal(s, W);
+      goalText.textContent = goalNow.text;
+      goalBtn.onclick = () => { click(); goalNow.go(); };
+      gold.textContent = fmt(s.currencies.gold);
+      bone.textContent = fmt(s.currencies.mats.bone_dust || 0);
+      const dots = (App.actions.dots && App.actions.dots()) || {};
+      heroesB.querySelector('.cv-dot').hidden = !dots.party;
+      bagB.querySelector('.cv-dot').hidden = !dots.bag;
+      const Rd = road(s);
+      goTag.hidden = Rd.done;
+      goTag.replaceChildren(...(Rd.st.kind !== 'road' ? [h('i', { class: 'cv-el' })] : []), Rd.st.id);
+      go.setAttribute('aria-label', Rd.done ? 'Set out' : `Set out for ${Rd.st.id}`);
+      colTag.hidden = !W.all.length;
+      colTag.replaceChildren(...W.all.slice(0, 3).flatMap(([ic, n]) => [icon(ic, 12), String(n)]));
+      chips = W.chips;
+      // the formation, as it stands in battle, with level and fatigue
+      form.replaceChildren(...FORM.map(slot => {
+        const c = Save.char(s.party[slot]), front = slot < 2;
+        const tile = h('button', { class: 'cv-tile' + (front ? ' front' : '') + (c ? '' : ' empty') + (c && Fatigue.spent(c) ? ' spent' : ''), 'data-slot': String(slot), 'aria-label': c ? `${c.name}, level ${c.level}` : 'Empty slot: add a hero' },
+          h('span', { class: 'cv-fc' }, c ? [pxImg(heroPortrait(c), 34), h('em', { text: String(c.level) })] : '+'),
+          c ? h('span', { class: 'cv-ft' }, h('i', { style: `width:${Math.min(100, Math.round(c.fatigue || 0))}%;background:${fatCol(c)}` })) : null);
+        return tile;
+      }));
+      if (live) { live.state = sceneState(s); live.locked = locked(s); }
+      placed.sig = '';
     }
-    seatParty();
-    const cardEl = el.querySelector('.bcard'), hint = el.querySelector('.hintbar');
-    // the card: refreshed when what faces you changes, and every half second for the numbers
-    function setCard(force) {
-      const t = performance.now(), i = nearest();
-      const key = pick >= 0 ? 'h' + pick : 'b' + i;
-      if (!force && key === shown && t - cardAt < 500) return;
-      shown = key; cardAt = t;
-      const e = pick >= 0 && seats[pick] ? { kind: 'hero', c: seats[pick] } : ring[i];
-      const c = card(e, s());
-      cardEl.querySelector('[data-role=icon]').src = c.icon;
-      cardEl.querySelector('[data-role=name]').textContent = c.name;
-      cardEl.querySelector('[data-role=status]').textContent = c.status;
-      const tg = cardEl.querySelector('[data-role=tag]');
-      tg.textContent = c.tag[0]; tg.className = 'tag ' + (c.tag[1] || '');
-      const m = cardEl.querySelector('[data-role=meter]');
-      m.hidden = !c.meter;
-      if (c.meter) { m.firstChild.style.width = c.meter[0] + '%'; m.firstChild.style.background = c.meter[1]; }
-      const bt = cardEl.querySelector('[data-role=btns]'), sig = c.btns.map(b => b[0] + b[2]).join('|');
-      if (bt.dataset.sig !== sig) {
-        bt.dataset.sig = sig;
-        bt.replaceChildren(...c.btns.map(([label, fn, cls]) => h('button', { class: 'btn sm ' + (cls || ''), onclick: ev => { ev.stopPropagation(); click(); fn(); } }, label)));
-      } else [...bt.children].forEach((b, k) => { b.onclick = ev => { ev.stopPropagation(); click(); c.btns[k][1](); }; });
+    // ── plaques, chips and Wick's word, following the scene
+    function mark(key, cls, id, make) {
+      let node = pool.get(key);
+      if (!node) { node = make(); node.dataset.id = id; node.classList.add(cls); node._at = {}; pool.set(key, node); marks.append(node); }
+      return node;
     }
-    function flashCard() { cardEl.classList.remove('flash'); void cardEl.offsetWidth; cardEl.classList.add('flash'); }
-    function say(j, px, py) {
-      el.querySelectorAll('.bubble').forEach(b => b.remove());
-      const c = seats[j], tired = Fatigue.state(c) !== 'fresh', lines = tired ? CAMP_TIRED : (CAMP_LINES[c.cls] || CAMP_LINES.sellsword);
-      const d = h('div', { class: 'bubble', text: lines[Math.floor(Math.random() * lines.length)] });
-      d.style.left = clamp(px, 90, el.clientWidth - 90) + 'px'; d.style.top = py + 'px';
+    // Moves a mark (left and top as its centre-top, for taps; a transform on screen) and fades it, writing only what changed.
+    function put(n, x, y, op, z) {
+      const A = n._at, o = Math.round(op * 50) / 50;
+      if (A.x !== x || A.y !== y) { A.x = x; A.y = y; n.style.transform = `translate(${x}px,${y}px) translateX(-50%)`; }
+      if (A.o !== o) { A.o = o; n.style.opacity = o; }
+      if (z != null && A.z !== z) { A.z = z; n.style.zIndex = z; }
+    }
+    const fade = (el, v, key) => { const o = Math.round(v * 50) / 50; if (el._o === o) return; el._o = o; el.style.opacity = o; if (key) el.style.visibility = o < 0.02 ? 'hidden' : 'visible'; };
+    const nameOf = a => (a.id === 'board' ? 'Recruit Board' : a.plot != null ? (live.state.plots[a.plot].empty ? 'Empty plot' : BUILDINGS[live.state.plots[a.plot].id].name) : null);
+    const chipOf = a => (a.id === 'board' ? chips.board : a.id === 'fire' ? chips.fire : a.plot != null && !live.state.plots[a.plot].empty ? chips[live.state.plots[a.plot].id] : null);
+    function place(out) {
+      const w = out.cam.w, sig = Object.entries(chips).map(([k, v]) => k + v.join('')).join(',');
+      if (out.v === placed.v && w === placed.w && sig === placed.sig) return;
+      placed.v = out.v; placed.w = w; placed.sig = sig;
+      const wp = Math.max(0, 1 - 2 * w), wb = Math.max(0, 2 * w - 1);
+      fade(form, wp, true);
+      if (go.hidden !== (w >= 0.5)) { go.hidden = w >= 0.5; collect.hidden = w < 0.5; }
+      fade(go, Math.max(wp, 0.02)); fade(collect, Math.max(wb, 0.02));
+      const seen = new Set();
+      for (const a of out.anchors) {
+        // nearer things' plaques and chips lie over farther ones'
+        const op = CampScene.opacityOf(a, w), x = Math.round(a.x * K), y = Math.round(a.y * K), top = Math.round(a.top * K), z = Math.max(1, Math.round(4000 - a.d) * 2);
+        if (op <= 0.02) continue;
+        const nm = nameOf(a);
+        if (nm) {
+          const n = mark('p:' + a.id, 'cv-plq', a.id, () => h('span'));
+          if (n.textContent !== nm) n.textContent = nm;
+          n.classList.toggle('empty', !!(a.plot != null && live.state.plots[a.plot].empty));
+          put(n, x, y + 4, op, z); seen.add('p:' + a.id);
+        }
+        // the fire's draughts show in the party view; in the buildings view Collect's tag counts them
+        const ch = chipOf(a), cop = a.id === 'fire' ? wp : op;
+        if (ch && cop > 0.02) {
+          const n = mark('c:' + a.id, 'cv-wait', a.id, () => h('span'));
+          const want = ch.join('|');
+          if (n.dataset.sig !== want) { n.dataset.sig = want; n.replaceChildren(icon(ch[0], 13), String(ch[1])); }
+          put(n, x, top - 30, cop, z + 1); seen.add('c:' + a.id);
+        }
+        if (a.id === 'wick') {
+          const n = mark('s:wick', 'cv-say', 'wick', () => h('span', {}, h('i'), h('i'), h('i')));
+          put(n, x + 4, top - 26, wp); seen.add('s:wick');
+        }
+      }
+      for (const [key, node] of pool) if (!seen.has(key) && node._at.o !== 0) { node._at.o = 0; node.style.opacity = 0; }
+    }
+    // ── a line from a hero at the fire, or from Wick
+    function say(text, a) {
+      marks.querySelectorAll('.cv-line').forEach(b => b.remove());
+      const d = h('div', { class: 'cv-line', text });
+      d.style.left = clamp(Math.round(a.x * K), 110, camp.clientWidth - 110) + 'px'; d.style.top = Math.round(a.top * K - 8) + 'px';
       d.addEventListener('animationend', () => d.remove());
-      el.append(d);
+      marks.append(d);
+      if (noMotion()) setTimeout(() => d.remove(), 2800);
     }
-    // ── input: drag to turn, tap a building or hero, tap the fire for free draughts
-    cardEl.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); click(); pick = -1; cam.pick = -1; goTo(stepFrom(nearest(), +b.dataset.step)); hideHint(); }));
-    el.querySelectorAll('.bcard,.renown,.camp-chips').forEach(n => n.addEventListener('pointerdown', ev => ev.stopPropagation()));
-    const hideHint = () => { if (hint) hint.style.opacity = 0; cam.hinted = true; };
-    // Pointer positions in the landscape frame's design pixels (js/frame.js), so a drag follows the finger when the frame
-    // is scaled or turned.
-    el.addEventListener('pointerdown', ev => { dragging = true; downX = lastX = Frame.point(ev).x; lastT = performance.now(); moved = 0; vel = 0; target = null; try { el.setPointerCapture(ev.pointerId); } catch (e) { } });
-    el.addEventListener('pointermove', ev => { if (!dragging) return; const px = Frame.point(ev).x, dx = px - lastX, t = performance.now(); rot -= dx / 150; vel = -dx / 150 / Math.max(8, t - lastT) * 16; lastX = px; lastT = t; moved = Math.max(moved, Math.abs(px - downX)); if (moved > 6) { pick = -1; cam.pick = -1; hideHint(); } });
-    const up = ev => {
-      if (!dragging) return;
-      dragging = false;
-      if (moved < 6) {
-        const p = Frame.point(ev, cv), px = p.x / S, py = p.y / S;
-        const hit = hits.slice().reverse().find(q => px >= q[0] && px <= q[2] && py >= q[1] && py <= q[3]);
-        if (hit && hit[4].fire) { tapFire(); goTo(nearest()); return; }
-        if (hit && hit[4].h != null) { pick = cam.pick = hit[4].h; react[pick] = performance.now(); click(); say(pick, hit[4].x * S, hit[4].y * S - 8); setCard(true); goTo(nearest()); return; }
-        pick = cam.pick = -1;
-        if (hit) { if (hit[4].b === nearest()) { flashCard(); setCard(true); } else click(); goTo(hit[4].b); return; }
-        goTo(nearest());
+    function act(a) {
+      if (a.id === 'road') { click(); App.go('map'); return; }
+      if (a.id === 'board') { click(); Buildings.open('recruitboard'); return; }
+      if (a.id === 'fire') { click(); tapFire(); return; }
+      if (a.id === 'wick') { click(); say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
+      if (a.hero != null) {
+        const c = live.state.heroes[a.hero] && live.state.heroes[a.hero].c;
+        if (!c) return;
+        click(); live.hop(a.hero);
+        const lines = Fatigue.state(c) !== 'fresh' ? CAMP_TIRED : (CAMP_LINES[c.cls] || CAMP_LINES.sellsword);
+        say(lines[Math.floor(Math.random() * lines.length)], a);
         return;
       }
-      target = null;
+      if (a.plot != null) { const pl = live.state.plots[a.plot]; click(); if (pl.empty) Buildings.buildSheet(a.plot); else Buildings.open(pl.id); }
+    }
+    // What a tap at a point (design pixels in the camp) reaches: the plaque or chip drawn on top there (they're bigger
+    // than far buildings), else what the scene draws there.
+    function at(x, y) {
+      let best = null;
+      for (const node of pool.values()) {
+        if (!(node._at.o > 0.5) || !node.dataset.id || node.classList.contains('cv-say')) continue;
+        const l = node._at.x - node.offsetWidth / 2, t = node._at.y, inside = x >= l - 4 && x <= l + node.offsetWidth + 4 && y >= t - 4 && y <= t + node.offsetHeight + 4;
+        if (inside && (!best || (node._at.z || 0) > (best._at.z || 0))) best = node;
+      }
+      if (best) { const a = (live.out ? live.out.anchors : []).find(q => q.id === best.dataset.id); if (a) return a; }
+      return live.hit(x / K, y / K);
+    }
+    function tapAt(x, y) { const a = at(x, y); if (a) act(a); }
+    // ── input: drag to turn, tap the scene
+    let down = null;
+    camp.addEventListener('pointerdown', ev => {
+      if (ev.button > 0 || down || ev.target.closest('button, .cv-nodrag')) return;
+      const p = Frame.point(ev, camp);
+      down = { x: p.x, y: p.y, id: ev.pointerId };
+      live.dragStart(p.x);
+      try { camp.setPointerCapture(ev.pointerId); } catch (e) { }
+    });
+    camp.addEventListener('pointermove', ev => { if (down && ev.pointerId === down.id) live.dragMove(Frame.point(ev, camp).x); });
+    const up = ev => {
+      if (!down || ev.pointerId !== down.id) return;
+      const p = Frame.point(ev, camp), far = Math.hypot(p.x - down.x, p.y - down.y);
+      down = null;
+      live.dragEnd();
+      if (far < 8 && ev.type === 'pointerup') tapAt(p.x, p.y);
     };
-    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('keydown', ev => { if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') { ev.preventDefault(); pick = cam.pick = -1; goTo(stepFrom(nearest(), ev.key === 'ArrowRight' ? 1 : -1)); hideHint(); } });
-    function tapFire() {
-      const n = Base.collectPotions(Save.state);
-      if (n) { Save.commit(); sfx('coin'); toast(`+${n} Healing Draught${n === 1 ? '' : 's'} from the fire`); App.syncTop && App.syncTop(); }
-      else { const t = Base.potionIn(Save.state); toast(t == null ? 'The fire crackles.' : `A free Healing Draught in ${timeStr(t)}`); }
-    }
-    // Rebuild the ring when the model changes (a building rises, a plot clears).
-    function refresh() { ring = entries(s()); N = ring.length; step = Math.PI * 2 / N; seatParty(); setCard(true); }
+    camp.addEventListener('pointerup', up); camp.addEventListener('pointercancel', up);
+    // ── the formation: tap a face for the hero, drag to swap places, tap an empty slot to add someone
+    let fd = null;
+    form.addEventListener('pointerdown', ev => {
+      const tile = ev.target.closest('.cv-tile');
+      if (!tile || ev.button > 0) return;
+      const p = Frame.point(ev, camp);
+      fd = { slot: +tile.dataset.slot, x: p.x, y: p.y, id: ev.pointerId, ghost: null, over: null, moved: false };
+      try { tile.setPointerCapture(ev.pointerId); } catch (e) { }
+    });
+    form.addEventListener('pointermove', ev => {
+      if (!fd || ev.pointerId !== fd.id) return;
+      const p = Frame.point(ev, camp);
+      if (!fd.ghost && Math.hypot(p.x - fd.x, p.y - fd.y) > 6 && Save.state.party[fd.slot]) {
+        fd.moved = true;
+        const src = form.querySelector(`.cv-tile[data-slot="${fd.slot}"]`);
+        fd.ghost = h('span', { class: 'cv-ghost' }, src.querySelector('.cv-fc').cloneNode(true));
+        src.classList.add('lift');
+        camp.append(fd.ghost);
+      }
+      if (!fd.ghost) return;
+      fd.ghost.style.left = Math.round(p.x - 20) + 'px'; fd.ghost.style.top = Math.round(p.y - 20) + 'px';
+      fd.over = null;
+      for (const t of form.querySelectorAll('.cv-tile')) {
+        const b = Frame.box(t, camp), on = p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom;
+        t.classList.toggle('over', on && +t.dataset.slot !== fd.slot);
+        if (on) fd.over = +t.dataset.slot;
+      }
+    });
+    const fup = ev => {
+      if (!fd || ev.pointerId !== fd.id) return;
+      const d = fd;
+      fd = null;
+      if (d.ghost) {
+        d.ghost.remove();
+        form.querySelectorAll('.cv-tile').forEach(t => t.classList.remove('over', 'lift'));
+        if (ev.type === 'pointerup' && d.over != null && d.over !== d.slot && App.swapSlots(d.slot, d.over)) { sfx('click'); sync(); }
+      }
+      // a tap: the click that follows opens the hero (or Party, for an empty slot)
+      form.dataset.dragged = d.moved ? '1' : '';
+    };
+    form.addEventListener('pointerup', fup); form.addEventListener('pointercancel', fup);
+    form.addEventListener('click', ev => {
+      const tile = ev.target.closest('.cv-tile');
+      if (!tile) return;
+      if (form.dataset.dragged) { form.dataset.dragged = ''; return; }
+      const slot = +tile.dataset.slot, id = Save.state.party[slot];
+      click();
+      if (id) App.showCharacter(id); else App.go('party', { arrange: slot });
+    });
 
-    // ── drawing
-    let alive = true, last = performance.now();
-    const blit = (img, X, Y, k) => x.drawImage(img, Math.round(X), Math.round(Y), Math.round(img.width * k), Math.round(img.height * k));
-    function frame(t) {
-      if (!alive) return;
-      if (!el.isConnected) { alive = false; return; }
-      if (cv.width !== Math.floor(el.clientWidth / S) || cv.height !== Math.floor(el.clientHeight / S)) fit();
-      last = t;
-      if (!dragging) {
-        if (target == null) { rot += vel; vel *= 0.9; if (Math.abs(vel) < 0.004) goTo(nearest()); }
-        else { rot += (target - rot) * (reduce() ? 1 : 0.14); if (Math.abs(target - rot) < 0.001) rot = target; }
-      }
-      setCard();
-      const scaleAt = a => 1.05 + ((Math.sin(a) + 1) / 2) * 1.3;
-      // sky, moon and the dead wood on the horizon
-      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#07050b'); g.addColorStop(0.25, '#120d1a'); g.addColorStop(1, '#130e19');
-      x.fillStyle = g; x.fillRect(0, 0, W, H);
-      for (const [sx, sy, b] of stars) { x.fillStyle = b > 0.8 ? '#f2e7d0' : '#4a3e58'; x.fillRect(sx % W, Math.round(sy * H / 400), 1, 1); }
-      x.fillStyle = '#e8dcc4'; x.fillRect(W - 22, 8, 5, 5); x.fillRect(W - 23, 9, 7, 3); x.fillStyle = '#120d1a'; x.fillRect(W - 20, 8, 4, 4);
-      const horizon = Math.round(cy - RY - 26);
-      const shift = ((Math.round(-rot * 12) % W) + W) % W;
-      const tree = prop('deadtree');
-      x.globalAlpha = 0.55;
-      for (const [tx, b] of trees) x.drawImage(tree, ((Math.round(tx * W) + shift) % (W + 10)) - 5, horizon - tree.height + 3 + Math.round(b * 3));
-      x.globalAlpha = 1;
-      x.fillStyle = '#100c15'; x.fillRect(0, horizon, W, H - horizon);
-      for (let yy = horizon; yy < H; yy++) { const dy = (yy - cy) / (RY + 18); const half = Math.sqrt(Math.max(0, 1 - dy * dy)) * (RX + 20); if (half > 0) { x.fillStyle = '#1a1420'; x.fillRect(Math.round(cx - half), yy, Math.round(half * 2), 1); } }
-      for (let a = 0; a < Math.PI * 2; a += 0.03) { const px = Math.round(cx + Math.cos(a) * RX), py = Math.round(cy + Math.sin(a) * RY); x.fillStyle = '#2a2026'; x.fillRect(px - 1, py, 3, 1); }
-      // what to draw, back to front
-      const items = [], lamps = [];
-      ring.forEach((b, i) => { if (b.gap) return; const a = i * step + rot; items.push({ t: 'b', b, i, a, x: cx + Math.cos(a) * RX, y: cy + Math.sin(a) * RY }); });
-      seats.forEach((c, j) => { const a = (j * Math.PI * 2) / Math.max(seats.length, 3) + rot + Math.PI / 6; items.push({ t: 'h', c, j, a, x: cx + Math.cos(a) * 50, y: cy + Math.sin(a) * 20 }); });
-      for (let j = 0; j < 5; j++) { const a = (j * Math.PI * 2) / 5 + rot + step / 2; items.push({ t: 'p', a, x: cx + Math.cos(a) * (RX * 0.72), y: cy + Math.sin(a) * (RY * 0.72) }); }
-      items.push({ t: 'f', x: cx, y: cy + 0.5 });
-      items.sort((p, q) => p.y - q.y);
-      hits = [];
-      const fi = nearest();
-      for (const it of items) {
-        const ix = Math.round(it.x), iy = Math.round(it.y);
-        if (it.t === 'b') {
-          const img = art(it.b.k), k = scaleAt(it.a), w = img.width * k, hh = img.height * k, bx = ix - w / 2, by = iy - hh + 2 * k;
-          if (it.i === fi && pick < 0) { const o = tinted(img, '#f4a646'); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) blit(o, bx + ox, by + oy, k); }
-          blit(img, bx, by, k);
-          // a building the road hasn't opened yet (the Recruit Board before 1-2) stands dark
-          const shut = it.b.id === 'recruitboard' && !Base.boardOpen(s());
-          const depth = (Math.sin(it.a) + 1) / 2, dark = (shut ? 0.75 : 0.5) - depth * 0.45;
-          if (dark > 0) { x.globalAlpha = dark; blit(tinted(img, '#07050b'), bx, by, k); x.globalAlpha = 1; }
-          it.bx = bx; it.by = by; it.k = k; it.shut = shut;
-          hits.push([bx - 2, by - 2, bx + w + 2, by + hh + 2, { b: it.i }]);
-        } else if (it.t === 'h') {
-          const c = it.c, j = it.j, sp = seated(c), k = 1.25 + ((Math.sin(it.a) + 1) / 2) * 0.55, w = sp.width * k, hh = sp.height * k, flip = it.x > cx;
-          const habit = CAMP_HABITS[c.cls] || ['nod', 4000], tired = Fatigue.state(c) !== 'fresh', down = Fatigue.spent(c);
-          if (!reduce() && t > nextFx[j]) { nextFx[j] = t + habit[1] * vrand(0.8, 1.3) * (tired ? 1.6 : 1); fired[j] = t; if (habit[0] === 'nod') react[j] = t; }
-          const q = (t - react[j]) / 420, hop = q < 1 ? Math.round(Math.sin(Math.PI * q) * (habit[0] === 'nod' && pick !== j ? 1.5 : 3) * k) : 0;
-          const breathe = !reduce() && Math.sin(t / 600 + j * 1.7) > 0.7 ? k : 0;
-          const hy = iy - hh + 2 - hop - breathe + (down ? 2 * k : 0);
-          // the log they sit on
-          x.fillStyle = '#4a3424'; x.fillRect(Math.round(ix - 6 * k), iy, Math.round(12 * k), Math.round(2 * k)); x.fillStyle = '#2e2219'; x.fillRect(Math.round(ix - 6 * k), Math.round(iy + k), Math.round(12 * k), Math.round(k));
-          const left = ix - (flip ? w - sp.ax * k : sp.ax * k);
-          x.save();
-          if (flip) { x.translate(ix * 2, 0); x.scale(-1, 1); }
-          const dx = flip ? ix - sp.ax * k : left;
-          if (pick === j) { const o = tinted(sp, '#f4a646'); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) blit(o, dx + ox, hy + oy, k); }
-          if (down) x.globalAlpha = 0.6;
-          blit(sp, dx, hy, k);
-          x.globalAlpha = 1;
-          if (it.y < cy) { x.globalAlpha = 0.3; blit(tinted(sp, '#07050b'), dx, hy, k); x.globalAlpha = 1; }
-          x.restore();
-          // where the habit shows: the lantern, the censer's smoke, or the hand
-          const at = (px, py) => [flip ? ix * 2 - (dx + px * k) : dx + px * k, hy + py * k];
-          if (!reduce()) {
-            const hand = at(sp.ax + 3, Math.round(sp.height * 0.5));
-            if (habit[0] === 'sharpen' && t - fired[j] < 70) for (let n = 0; n < 4; n++) parts.push({ x: hand[0], y: hand[1], vx: vrand(-14, 14), vy: vrand(-18, -4), t0: t, life: vrand(250, 450), c1: '#fff3c8', c2: '#f7b34a' });
-            if (habit[0] === 'motes' && Math.random() < 0.06) parts.push({ x: hand[0] + vrand(-2, 2), y: hand[1], vx: vrand(-2, 2), vy: -vrand(6, 12), t0: t, life: vrand(900, 1500), c1: c.cls === 'gravecaller' ? '#d8f0c8' : '#e8d8ff', c2: c.cls === 'gravecaller' ? '#8ac46a' : '#bb96ee' });
-            if (habit[0] === 'bubbles' && Math.random() < 0.05) parts.push({ x: hand[0], y: hand[1], vx: vrand(-1, 1), vy: -vrand(4, 8), t0: t, life: 1200, c1: '#c8f0a0', c2: '#7ac46a' });
-            if (habit[0] === 'smoke' && Math.random() < 0.05) { const sm = sp.smoke ? at(sp.smoke[0], sp.smoke[1]) : hand; parts.push({ x: sm[0], y: sm[1], vx: vrand(1, 5), vy: -vrand(5, 9), t0: t, life: 1600, smoke: true }); }
-            if (habit[0] === 'lamp' && sp.lamp) { const l = at(sp.lamp[0], sp.lamp[1]); lamps.push([l[0], l[1], 0.45 + Math.sin(t / 160 + j) * 0.1, 12]); }
-            if (habit[0] === 'glint' && t - fired[j] < 160) lamps.push([hand[0], hand[1] - 4, 0.9, 4]);
-          }
-          hits.push([ix - w / 2, hy, ix + w / 2, iy + 2, { h: j, x: ix, y: hy }]);
-        } else if (it.t === 'p') {
-          const p = prop('post'), k = scaleAt(it.a) * 0.9;
-          blit(p, ix - 2.5 * k, iy - p.height * k + k, k);
-          lamps.push([ix, iy - p.height * k + 3 * k, 0.4, 14]);
-        } else if (it.t === 'f') {
-          drawFire(t, cx, cy);
-          hits.push([cx - 12, cy - 22, cx + 12, cy + 6, { fire: true }]);
-        }
-      }
-      // smoke under the light; the dark closing in; then firelight, lamps and windows glowing
-      for (const p of parts) if (p.smoke) { const q = (t - p.t0) / p.life, sec = (t - p.t0) / 1000; x.globalAlpha = 0.35 * (1 - q); x.fillStyle = '#9a8ea4'; x.fillRect(Math.round(p.x + p.vx * sec), Math.round(p.y + p.vy * sec), 2, 2); x.globalAlpha = 1; }
-      const dk = x.createRadialGradient(cx, cy, 10, cx, cy, Math.max(W, H) * 0.75);
-      dk.addColorStop(0, 'rgba(7,5,11,0)'); dk.addColorStop(0.35, 'rgba(7,5,11,.15)'); dk.addColorStop(1, 'rgba(7,5,11,.78)');
-      x.fillStyle = dk; x.fillRect(0, 0, W, H);
-      x.globalCompositeOperation = 'lighter';
-      const fk = 0.42 + Math.sin(t / 110) * 0.04 + Math.sin(t / 37) * 0.03;
-      const lg = x.createRadialGradient(cx, cy - 6, 1, cx, cy - 6, 85); lg.addColorStop(0, `rgba(244,150,60,${fk})`); lg.addColorStop(1, 'rgba(244,150,60,0)');
-      x.fillStyle = lg; x.fillRect(0, 0, W, H);
-      for (const [lx, ly, a, r] of lamps) { const g2 = x.createRadialGradient(lx, ly, 0, lx, ly, r); g2.addColorStop(0, `rgba(255,190,100,${a})`); g2.addColorStop(1, 'rgba(255,190,100,0)'); x.fillStyle = g2; x.fillRect(lx - r, ly - r, r * 2, r * 2); }
-      for (const it of items) {
-        if (it.t !== 'b' || it.shut) continue;
-        for (const [px, py, kind] of lightsOf(it.b.k)) {
-          const lx = it.bx + (px + 0.5) * it.k, ly = it.by + (py + 0.5) * it.k, r = 4 * it.k, g2 = x.createRadialGradient(lx, ly, 0, lx, ly, r);
-          const col = kind === 'v' ? '190,140,255' : '255,200,110';
-          g2.addColorStop(0, `rgba(${col},.45)`); g2.addColorStop(1, `rgba(${col},0)`); x.fillStyle = g2; x.fillRect(lx - r, ly - r, r * 2, r * 2);
-        }
-      }
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const p = parts[i], q = (t - p.t0) / p.life;
-        if (q >= 1) { parts.splice(i, 1); continue; }
-        if (p.smoke) continue;
-        const sec = (t - p.t0) / 1000;
-        x.fillStyle = q < 0.5 ? p.c1 : p.c2; x.globalAlpha = 1 - q;
-        x.fillRect(Math.round(p.x + p.vx * sec + (p.wave ? Math.sin(sec * 6) * 1.5 : 0)), Math.round(p.y + p.vy * sec), 1, 1); x.globalAlpha = 1;
-      }
-      x.globalCompositeOperation = 'source-over';
-      // badges: something waiting at a building, and free draughts by the fire
-      for (const it of items) {
-        if (it.t !== 'b') continue;
-        const bd = badge(it.b, s());
-        if (bd) drawBadge(bd, Math.round(it.x) - 5, Math.round(it.by) - 15 + (reduce() ? 0 : Math.round(Math.sin(t / 300 + it.i))));
-      }
-      if (s().freePotion.waiting) drawBadge('flask', cx - 5, cy - 40 + (reduce() ? 0 : Math.round(Math.sin(t / 280))), s().freePotion.waiting);
-      requestAnimationFrame(frame);
+    function start() {
+      const s = Save.state;
+      live = CampScene.live(canvas, { yaw: cam.yaw, reduce: noMotion, width: () => Frame.W, state: sceneState(s), locked: locked(s) });
+      sync();
+      live.onFrame = place;
+      if (live.out) place(live.out);
     }
-    const fireCv = document.createElement('canvas'); fireCv.width = 16; fireCv.height = 14;
-    const fx = fireCv.getContext('2d');
-    function drawFire(t) {
-      fx.clearRect(0, 0, 16, 14);
-      for (let a = 0; a < Math.PI * 2; a += 0.7) { fx.fillStyle = '#5f6266'; fx.fillRect(Math.round(8 + Math.cos(a) * 6), Math.round(11 + Math.sin(a) * 2.5), 2, 1); }
-      fx.fillStyle = '#4a3424'; fx.fillRect(4, 10, 9, 2); fx.fillStyle = '#6b4a2e'; fx.fillRect(5, 9, 7, 1);
-      const fl = Math.floor(t / 90);
-      for (let i = -3; i <= 3; i++) {
-        const hgt = Math.max(1, Math.round((8 - Math.abs(i) * 1.8) * (0.7 + ((Math.sin(fl * 1.7 + i * 2.3) + 1) / 2) * 0.6)));
-        for (let k = 0; k < hgt; k++) { fx.fillStyle = k >= hgt - 1 ? '#e2582e' : k > hgt * 0.45 ? '#f7b34a' : '#fff0c0'; if (Math.abs(i) >= 2 && k < 2) fx.fillStyle = '#e2582e'; fx.fillRect(8 + i, 9 - k, 1, 1); }
-      }
-      blit(fireCv, cx - 16, cy - 22, 2);
-      if (!reduce() && Math.random() < 0.3) parts.push({ x: cx + vrand(-4, 4), y: cy - 14, vx: vrand(-5, 5), vy: -vrand(14, 26), t0: t, life: vrand(700, 1300), c1: '#ffd27a', c2: '#e2582e', wave: 1 });
+    function stop() {
+      alive = false;
+      if (live) { cam.yaw = live.view === 'build' ? 180 : 0; live.stop(); live = null; }
     }
-    function drawBadge(name, bx, by, n) {
-      x.fillStyle = '#0d0911'; x.fillRect(bx - 1, by - 1, 11, 11); x.fillStyle = '#2a1a0e'; x.fillRect(bx, by, 9, 9);
-      x.fillStyle = '#f4a646'; x.fillRect(bx, by, 9, 1); x.fillRect(bx, by + 8, 9, 1); x.fillRect(bx, by, 1, 9); x.fillRect(bx + 8, by, 1, 9);
-      const ic = UI_ICONS[name] || UI_ICONS.star;
-      x.drawImage(sprite(ic.map, ic.pal, 'i:' + name), bx + 1, by + 1);
-      x.fillStyle = '#f4a646'; x.fillRect(bx + 3, by + 9, 3, 1); x.fillRect(bx + 4, by + 10, 1, 1);
-    }
-    requestAnimationFrame(frame);
-    if (hint && cam.hinted) hint.style.opacity = 0;
-    return { refresh, stop: () => { alive = false; } };
+    return { el, camp, start, stop, sync, at, turnTo: v => live && live.go(v), turn: d => live && live.turn(d), get live() { return live; } };
   }
 
-  // ── the home screen
-  let live = null;
   App.screen('home', {
-    tab: true,
+    tab: true, full: true, bare: true,
     render() {
       const s = Save.state;
       Base.tick(s);
       Base.settleHome(s);
-      const R = Base.renown(s);
-      const el = h('div', { class: 'camp-view' },
-        h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The camp. Drag left or right, or use the arrow keys, to walk around the fire.' },
-          h('canvas', { 'aria-hidden': 'true' }),
-          h('button', { class: 'renown', 'aria-label': `Renown ${R.level}. Open the Renown track`, onclick: () => { click(); showRenown(); } },
-            ico('lantern', 'm'), h('div', {}, h('span', { class: 'k', text: `Renown ${R.level}` }), h('span', { class: 'meter' }, h('i', { style: `width:${Math.round(100 * R.into / R.need)}%` })))),
-          h('div', { class: 'camp-chips' },
-            s.away.last >= 5 * 60000 && Base.lastReport() ? h('button', { class: 'chip', onclick: () => { click(); showAway(s.away.last); } }, ico('hourglass'), 'Away') : null,
-            h('button', { class: 'chip proto proto-only', onclick: () => { click(); App.actions.proto(); } }, 'Prototype')),
-          h('div', { class: 'hintbar' }, h('span', { text: '◂ Drag to walk around the fire ▸' })),
-          h('div', { class: 'bcard' },
-            h('button', { class: 'sq', 'data-step': '-1', 'aria-label': 'Previous building' }, '‹'),
-            h('div', { class: 'mid' },
-              h('div', { class: 'row' }, h('img', { class: 'ico l', 'data-role': 'icon', alt: '' }), h('div', { class: 'who' }, h('span', { class: 'nm', 'data-role': 'name' }), h('span', { class: 'kv', 'data-role': 'status' })), h('span', { class: 'tag', 'data-role': 'tag' })),
-              h('span', { class: 'meter', 'data-role': 'meter' }, h('i')),
-              h('div', { class: 'row btns', 'data-role': 'btns' })),
-            h('button', { class: 'sq', 'data-step': '1', 'aria-label': 'Next building' }, '›'))));
-      // the scene starts once the page has laid it out
-      requestAnimationFrame(() => { if (live) live.stop(); live = scene(el.querySelector('.camp')); });
-      return el;
+      if (ui) ui.stop();
+      ui = screen();
+      return ui.el;
     },
+    // The scene starts once the page holds it, and draws its first frame at once.
     enter() {
       const s = Save.state;
+      if (typeof Battle !== 'undefined' && Battle.hold) Battle.hold(true); // the camp covers the battle's field
+      if (ui) ui.start();
       if (!s.roster.length) { showPick(); return; }
       if (s.renown.newPlot) { toast(`Renown cleared plot ${s.renown.newPlot}: build on it`); s.renown.newPlot = 0; s.renown.up = 0; Save.commit(); }
       else if (s.renown.up) { toast(`Renown ${s.renown.up}`); s.renown.up = 0; Save.commit(); }
     },
-    leave() { if (live) { live.stop(); live = null; } },
+    leave() { if (ui) { ui.stop(); ui = null; } if (typeof Battle !== 'undefined' && Battle.hold) Battle.hold(false); },
+    // App.refresh() updates the camp in place: the scene keeps turning, and nothing is built again.
+    refresh() { if (ui) ui.sync(); },
   });
-  Base.onChange(() => { if (live) live.refresh(); });
-
+  Base.onChange(() => { if (ui) ui.sync(); });
+  // The numbers keep moving while the camp is open: what the buildings hold, the goal, the board.
+  setInterval(() => { if (ui && !document.hidden && App.current === 'home') ui.sync(); }, 2000);
+  // ← and → turn between the views.
+  document.addEventListener('keydown', e => {
+    if (!ui || App.current !== 'home' || (typeof Title !== 'undefined' && Title.up)) return;
+    if (!document.getElementById('sheet').hidden || !document.getElementById('screen').hidden) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); ui.turn(e.key === 'ArrowRight' ? 1 : -1); }
+  });
   // ── the first pick: a new game starts with one of three
   const PICK_LINES = {
     sellsword: 'A mercenary who fights for the kill: the hardest single blows in melee.',
@@ -617,5 +597,7 @@ const Camp = (() => {
 
   // The prototype tools (gold, materials, blueprints, Renown and time) are in the one panel in Settings: js/proto.js.
 
-  return { entries, card, badge, showPick, showAway, showRenown, statusOf, timeStr };
+  // scene: the camp's live scene while it shows (js/campscene.js), and at(x, y): the anchor a tap at that point in the
+  // camp (design pixels) would reach, both for the tools
+  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null) };
 })();

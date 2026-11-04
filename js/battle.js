@@ -20,6 +20,7 @@ const Battle = (() => {
   const FLAG_N = 7, FLAG_W = 56;                // upcoming turn flags shown, and the width of their column (CSS px)
   let B = null;                                 // the battle being shown
   let last = 0, realT = 0;
+  let held = false; // a screen covers the whole stage (the camp, js/camp.js): the field goes undrawn until it leaves
 
   // ── layout: logical pixels, scaled by a whole number so the pixel art stays crisp. #frame is in the landscape frame's
   // design pixels (js/frame.js): the whole stage in battle, 390 tall, which makes the art 3×.
@@ -1444,7 +1445,7 @@ const Battle = (() => {
     runDue();
     step();
     updParts(dt);
-    render();
+    if (!held) render();
     requestAnimationFrame(loop);
   }
 
@@ -1499,6 +1500,7 @@ const Battle = (() => {
   }
   return {
     init, run, skip, idle, walk, travel, setSpeed, setPaused, play, stepOnce, resize, FX,
+    hold(on) { held = !!on; },
     set onEvent(fn) { onEvent = fn; },
     // items: use the item in a loadout slot (on a hero's id, for an item that needs one), as the player does
     useItem, tapItem,

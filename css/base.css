@@ -36,37 +36,6 @@
 .ico.m{width:16px;height:16px}
 .ico.xl{width:30px;height:30px}
 
-/* ── the camp */
-.view.camp-view{padding:0;overflow:hidden;display:block}
-.camp{position:absolute;inset:0;overflow:hidden;background:#07050b;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;outline:none}
-.camp:active{cursor:grabbing}
-.camp canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
-.camp .renown{position:absolute;left:10px;top:10px;z-index:3;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 8px;background:rgba(13,10,18,.9);border:2px solid var(--ember);box-shadow:0 0 14px rgba(244,166,70,.25);cursor:pointer;color:var(--ember);min-height:44px}
-.camp .renown>div{display:grid;gap:4px}
-.camp .renown .k{color:var(--ember)}
-.camp .renown .meter{width:64px;height:4px}
-.camp-chips{position:absolute;right:10px;top:10px;z-index:3;display:flex;gap:6px}
-.camp-chips .chip{display:inline-flex;align-items:center;gap:5px;min-height:36px;padding:0 9px;background:rgba(13,10,18,.85);border:1px solid var(--rule);color:var(--ash);font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
-.camp-chips .chip.proto{border-style:dashed;color:var(--dim)}
-.camp-chips .chip .ico{width:12px;height:12px}
-.camp .hintbar{position:absolute;left:0;right:0;top:64px;z-index:2;display:flex;justify-content:center;pointer-events:none;transition:opacity .6s}
-.camp .hintbar span{font:9px var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);padding:5px 9px;background:rgba(7,5,11,.72);border:1px solid var(--rule)}
-.bcard{position:absolute;left:8px;right:8px;bottom:10px;z-index:3;display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:center}
-.bcard .mid{background:linear-gradient(180deg,rgba(35,27,44,.96),rgba(24,18,31,.96));border:2px solid var(--ember);box-shadow:0 0 22px rgba(244,166,70,.25),0 14px 30px rgba(0,0,0,.6);padding:10px 11px;display:grid;gap:7px;min-width:0}
-.bcard .sq{width:36px;height:56px;padding:0;background:rgba(35,27,44,.92);border:2px solid var(--rule);color:var(--ash);font:22px/1 var(--f-display);cursor:pointer}
-.bcard .sq:hover{border-color:var(--ember);color:var(--bone)}
-.bcard .who{display:grid;gap:4px;min-width:0;flex:1}
-.bcard .nm{font:25px/1 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bcard .kv{font-size:9px;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bcard .ico.l{width:24px;height:24px;flex:none;image-rendering:pixelated}
-.bcard .meter{height:6px}
-.bcard .btns{gap:6px}
-.bcard.flash .mid{animation:cardflash .5s}
-@keyframes cardflash{40%{box-shadow:0 0 34px rgba(244,166,70,.7),0 14px 30px rgba(0,0,0,.6)}}
-.camp .bubble{position:absolute;z-index:4;max-width:200px;padding:6px 9px;background:rgba(18,13,24,.96);border:2px solid var(--rule);font:italic 400 14px/1.3 var(--f-body);color:var(--bone);pointer-events:none;transform:translate(-50%,-100%);animation:bub 2.8s ease forwards;white-space:nowrap}
-.camp .bubble::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--rule)}
-@keyframes bub{0%{opacity:0;transform:translate(-50%,-85%)}10%{opacity:1;transform:translate(-50%,-100%)}80%{opacity:1}100%{opacity:0}}
-
 /* ── the first pick */
 .page.pick{display:grid;gap:12px;align-content:start;padding:24px 16px 28px;background:radial-gradient(ellipse at 50% 30%,#2a1a14 0%,var(--night) 60%)}
 .page.pick h1{font-size:38px;line-height:1}
@@ -226,9 +195,8 @@ button.rost:hover:not(:disabled){border-color:var(--ember)}
 .later .k{display:flex;align-items:center;gap:6px;color:var(--dim)}
 .later .k .ico{width:10px;height:10px;opacity:.7}
 
-@media (prefers-reduced-motion:reduce){.camp .bubble{animation:none}.bcard.flash .mid{animation:none}.rwrap .rrow{transition:none}}
+@media (prefers-reduced-motion:reduce){.rwrap .rrow{transition:none}}
 #screen:has(> .pick){padding:0;background:var(--night)}
-#frame:has(.view.camp-view:not(.out)) #toasts{bottom:auto;top:132px}
 .page.pick{min-height:100%}
 /* The stage sheet's party strip: when Spent heroes are fit again (it opens the Infirmary). */
 .pstrip .textbtn.rest{min-height:28px;font-size:7px;color:var(--bone);gap:4px}
