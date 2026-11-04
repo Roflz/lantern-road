@@ -1,6 +1,11 @@
 # Lantern Road: Game Design
 
-Agreed 2026-11-03, updated 2026-11-04 with decisions from the screen mockups, the content spec and play-testing. The full class, skill, condition, item and status details live in `docs/content-spec.md`. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. Numbers marked *(tune)* are starting values to adjust in play-testing.
+Agreed 2026-11-03, updated 2026-11-04 with decisions from the screen mockups, the three specs, play-testing and the overnight build. This document is the source of truth for the game. Where older code or notes disagree with it, this document wins. The details live in three specs:
+- `docs/content-spec.md`: classes, skills, conditions, items and statuses.
+- `docs/campaign-spec.md`: regions, stages, foes, the map and the first hour.
+- `docs/home-base-spec.md`: the buildings, recruiting, Renown, fatigue and recovery, offline gains and the item economy.
+
+Numbers marked *(tune)* are starting values to adjust in play-testing. *(Decided overnight, review)* marks a decision the coordinator made overnight on 2026-11-04, for your review.
 
 ## 1. Pillars
 
@@ -14,12 +19,15 @@ Agreed 2026-11-03, updated 2026-11-04 with decisions from the screen mockups, th
 
 Home base → campaign map → stage → idle battle → rewards (XP, gold, gear, materials) → next stage.
 
-Stages chain on their own until one of these happens:
+A **trip** is one outing from camp. The party sets out, fights a stage and, with "Keep going after a win" on, walks on to the next. It comes home when:
 - the party loses
-- a party rule sends it home
-- characters become too fatigued to continue
+- a party rule sends it home, such as "any character at 75+ fatigue → Return to base"
+- a boss falls, so the region's ending gets its moment *(decided overnight, review)*
+- you call it home
+- the app closes, after the battle under way *(decided overnight, review)*
+- every character is Spent
 
-You then strengthen the party and push further. Cleared stages can be replayed to farm XP, gear and materials.
+You then strengthen the party and set out again. Cleared stages can be replayed to farm XP, gear and materials.
 
 ## 3. Battles
 
@@ -63,7 +71,7 @@ You then strengthen the party and push further. Cleared stages can be replayed t
 
 ### How a battle ends
 - A battle ends when one side has no one standing.
-- After a turn limit *(tune)*, foes become enraged and hit harder every turn, so no battle can stall.
+- From round 15 *(tune)*, foes become enraged and hit 25% harder every round, so no battle can stall.
 
 ### Watching
 - **Speed and skipping:** battles run at 1×, 2× or 4×, and Skip resolves a battle instantly.
@@ -80,7 +88,7 @@ Gambit-style behaviour rules, after Final Fantasy XII.
 - You drag rules to reorder them and toggle each one on or off without deleting it.
 
 ### Rule slots
-- Every character starts with 3 rule slots. Each class has its own maximum *(tune)*.
+- Every character starts with 3 rule slots. Each class has its own maximum *(tune)*, and a combined character uses the highest among their classes *(decided overnight, review)*.
 - More slots are learned by training at a home base building (the Masters' Hall), where the character is away for idle time.
 
 ### Party rules
@@ -89,7 +97,8 @@ Gambit-style behaviour rules, after Final Fantasy XII.
   - "Everyone attacks the leader's target"
   - "Return to base when any character reaches X fatigue"
 - Party rules are checked between every turn.
-- Extra party rule slots come from home base buildings.
+- Between-battle party rules decide when a trip comes home. The stage sheet's "Come home when" chips are the same rules, so toggling one there edits the party rules *(decided overnight, review)*.
+- Extra party rule slots come from the Tactician, a home base building.
 
 ### Unlocking conditions
 You start with a few useful conditions:
@@ -109,8 +118,10 @@ More conditions come from the home base and from battle rewards:
 - 3 or more foes present
 - and more
 
+The campaign spec sets which stage's first clear teaches each reward condition, and the Tactician teaches the rest.
+
 ### Saved rule sets
-- You can save sets of rules and switch between them for different stages.
+- You can save sets of rules and switch between them for different stages. They come with the Tactician's first lesson, and the stage sheet remembers the set you last chose for each stage.
 
 ## 5. Characters
 
@@ -141,7 +152,7 @@ Twelve classes to start. The later six join the recruit board region by region. 
 - Home base upgrades bring recruits at higher levels, with their points already spent to match.
 
 ### Levels and points
-- XP comes from battles. The level cap is 200.
+- XP comes from battles and the Training Yard. Battle XP is a share of a level at the stage's level, so a recruit below the stage's level catches up fast *(tune)*. The level cap is 200.
 - Each level gives 1 **stat point**, and every 5 levels give 1 **skill point**.
 - **Thresholds** at levels 30, 50, 80, 100, 120, 150, 180 and 200 open the next tier of the skill tree and offer a free respec. The respec refunds stat and skill points; a class combination stays.
 - **Combining classes:** at level 50 a character can combine with a second class instead of opening a tier, gaining that class's first tier. At 200 they can combine with a third. From then on, later thresholds can open tiers in any of their trees.
@@ -161,12 +172,14 @@ Twelve classes to start. The later six join the recruit board region by region. 
 ### Fatigue
 Fatigue runs from 0 to 100 and plays the role of Darkest Dungeon's stress.
 
-- **How it rises:** fatigue builds from the damage a character takes, measured against their maximum health *(tune)*. Being knocked out adds a large amount *(tune)*.
+- **How it rises:** +1 for each turn a character takes *(tune)*, and nothing else adds any for now: not damage, and not being knocked out. This is your rule, from 2026-11-04.
+  - **A stage costs the turns its battle takes.** Weak foes fall fast, so easy stages are cheap, and walls take longest. There are no fatigue discounts or multipliers by stage, and no cap per battle. If fatigue rises too fast, the lever is battle length, through foe health.
+  - Faster characters take more turns, so they tire sooner. Using an item takes no one's turn, and a knocked-out character takes none.
 - **Thresholds:**
-  - **Weary (50+):** a small stat penalty *(tune)*.
-  - **Exhausted (75+):** a larger stat penalty *(tune)*.
-  - **Spent (100):** the character can't be used until fatigue falls below a recovery threshold *(tune)*. If they hit 100 mid-push, they leave the party after that battle.
-- **Recovery:** fatigue falls over real time while the character rests at the home base. Buildings speed this up.
+  - **Weary (50+):** −5% Power, Defense and Speed *(tune)*.
+  - **Exhausted (75+):** −15% Power, Defense and Speed *(tune)*.
+  - **Spent (100):** the character can't fight until fatigue falls below 50 *(tune)*. If they reach 100 during a trip, they walk home alone after that battle, and the rest carry on *(decided overnight, review)*.
+- **Recovery:** fatigue falls over real time while the character rests at the home base, including while the app is closed. That's about one road battle's worth an hour at the fire, and faster in an Infirmary bed *(tune)*.
 
 ### Death
 - Characters don't die in the main mode. A mode with permanent death may come later as a separate mode.
@@ -179,15 +192,16 @@ The recruiting system follows Darkest Dungeon's stagecoach.
 - You start by choosing 1 character from 3 options: Sellsword, Hexblade or Pilgrim.
 
 ### The recruit board
-- The recruit board shows a few recruits with randomised stats.
-- It refreshes each time you return to the home base, and also slowly over real time *(tune)*. The board shows a timer for its next refresh.
+- The recruit board stands in camp from the start, outside the building plots, and can't be torn down. It opens when stage 1-2 is cleared, and the first recruit is free.
+- It shows a few recruits with randomised stats.
+- It refreshes each time the party comes home from a trip, and also every 4 hours of real time *(tune)*. The board shows a timer for its next refresh.
 - Recruits cost gold.
 
 ### Upgrades
 Home base upgrades improve recruiting:
 - **More recruits on the board** to choose from.
 - **More picks per refresh:** you start able to take only 1 from each board, and upgrades raise that.
-- **A larger roster cap.** When the roster is full, you dismiss someone to make room.
+- **A larger roster cap.** When the roster is full, you dismiss someone to make room. A dismissed character's gear comes back to the Bag, and nothing else does *(decided overnight, review)*.
 
 ### Pacing
 - The first recruit should come within about 10 minutes of play.
@@ -218,7 +232,8 @@ Home base upgrades improve recruiting:
 - Common, Fine, Rare and Relic. A Relic is unique: you can only own one copy.
 - Drops get stronger in later regions.
 - Stage rewards can include a random gear roll; higher stages roll better. Gear progression beyond that is deliberately undecided for now.
-- Unwanted items sell for gold.
+- Unwanted items sell for gold. There's no salvage for now.
+- The Bag holds 60 pieces of gear for now. When it's full, new gear sells where it drops, so a full Bag never sends the party home *(decided overnight, review)*.
 
 ### Party items
 - Items come from timed free potions, loot drops at rarity rates, stage rewards, the home base shop and buildings that brew them.
@@ -238,19 +253,19 @@ Home base upgrades improve recruiting:
 - Heroes at the fire have small idle animations and react when tapped.
 
 ### Building plots
-- You start with 3 building plots *(tune after play-testing)* and choose what to build on each one.
+- You start with 3 building plots *(tune after play-testing)* and choose what to build on each one. Building and upgrading are instant.
 - More plots unlock as your Renown rises. Plots you haven't unlocked are left as gaps in the ring until they open.
-- For now, the most plots you can have is the number of building types, one plot for each. Until then there are more buildings on offer than plots, so every plot is a choice.
-- You can tear a building down to free its plot. You get nothing back, so a building you raise again starts from scratch.
+- The recruit board stands outside the plots, so the most plots you can have is 14, one for each other building type. Until then there are more buildings on offer than plots, so every plot is a choice.
+- You can tear a building down to free its plot. You get nothing back, so a building you raise again starts from scratch. What it taught stays, such as conditions and trained slots; what it provides goes, such as beds, slots and bonuses.
 
 ### Renown (account level)
 - Renown is an account level, separate from the heroes' levels.
-- It rises with your overall progress through the game *(tune)*, for example new stages lit, bosses beaten, hero levels gained and buildings built.
+- It rises with your overall progress through the game *(tune)*: new stages lit, XP earned in battle, bosses beaten, level thresholds passed, new classes joining the roster, and buildings built and upgraded.
 - Certain Renown levels unlock another building plot. For now, plots are all Renown unlocks; other rewards may come later.
 - Recruiting upgrades, such as more picks and a bigger roster, come from buildings, not from Renown.
 
 ### Materials
-You build the home base with gold and with materials earned in battle. Each region drops one material more often than others, so particular buildings send you back to particular regions. Material names are placeholders:
+You build the home base with gold and with materials earned in battle, and you start with 100 gold *(tune)*. Each region drops one material more often than others. A building's first two levels cost Bone Dust and its later levels its home material, so particular buildings send you back to particular regions. Material names are placeholders:
 
 | Region | Material |
 |---|---|
@@ -263,19 +278,23 @@ You build the home base with gold and with materials earned in battle. Each regi
 ### Buildings
 | Building | What it does |
 |---|---|
-| Recruit board | Recruits; upgrades add more recruits and more picks |
+| Recruit board | Recruits; upgrades add more recruits, more picks and higher-level recruits. Stands outside the plots. |
 | Barracks | Raises the roster cap |
 | Infirmary | Speeds up fatigue recovery and adds beds for resting characters |
-| Tactician | Teaches new rule conditions and adds party rule slots |
+| Tactician | Teaches new rule conditions, and adds party rule slots and loadout slots |
 | Shrine | Respecs skill trees |
 | Masters' Hall | Trains a character, away for idle time, to gain a skill slot or a rule slot |
 | Shop | Sells party items |
-| Passive-bonus buildings | Small permanent bonuses for the party, e.g. +5% health |
+| Passive-bonus buildings | Small permanent bonuses for the party, each with a focus: the Whetstone (Power or Crit), Ossuary (Health or Defense), Hexing Stone (harmful effects land more often) and Bell Tower (resistances) |
 | Idle buildings | Gains while the app is closed (section 9) |
 
-Buildings unlock gradually, so the first half hour introduces one system at a time.
+Buildings unlock gradually, so the first half hour introduces one system at a time. In Region I, first clears bring them in this order: the recruit board opens at 1-2, then come the Toll House (1-5), Infirmary (1-7), Training Yard (1-8), Shop (1-10), Tactician (1-11), Scavenger Camp (1-13), Barracks (1-15) and Salvage Pit (1-16). The Masters' Hall and Shrine come with Region II, the Whetstone and Ossuary with Region III, and the Hexing Stone and Bell Tower with Region IV.
 
 ## 9. Offline gains
+
+### While the app is closed
+- Offline gains come only from home base buildings. Battles don't run while the app is closed: closing it brings the party home after the battle under way, which resolves when you return *(decided overnight, review)*.
+- Characters at camp keep resting, so their fatigue keeps falling.
 
 ### Idle buildings
 Idle buildings keep producing while the app is closed. Basic versions unlock early in Region I.
@@ -283,8 +302,8 @@ Idle buildings keep producing while the app is closed. Basic versions unlock ear
 | Idle building | What it produces |
 |---|---|
 | Scavenger camp | Materials; you choose the region to scavenge |
-| Training yard | XP for resting characters; you choose who trains |
-| Toll house | Gold |
+| Training yard | XP for resting characters, up to the level of your highest lit stage; you choose who trains |
+| Toll house | Gold, or party items |
 | Salvage pit | A chance of gear; you choose the slot type |
 
 ### Customising upgrades
@@ -298,16 +317,20 @@ Idle buildings keep producing while the app is closed. Basic versions unlock ear
 ## 10. Campaign map and content
 
 ### The map
-- The map is the Lantern Road through five regions: Gravefields, Drowned Chapel, Thornwood, Ashen Keep and Hollow Throne.
-- Each region has about 15–20 stages, plus elite stages and a boss.
+- The map is the Lantern Road through five regions: Gravefields (levels 1–10), Drowned Chapel (11–30), Thornwood (31–50), Ashen Keep (51–75) and Hollow Throne (76–100).
+- Each region has 17 or 18 stages: road stages, two elite stages and a boss. Elites are stages on the road itself, so in Region I each one is a teaching gate *(decided overnight, review)*.
 - Cleared stages are lit, so the map shows how far your light reaches.
 
+### Difficulty
+- The curve is a sawtooth: easy road stages, a wall at each elite and boss, then a breather. Each wall gives way to the rule it teaches, or to a level or two.
+- Strategy should count for more than levels. A good lineup with good rules should be able to win a wall a level or two under its recommended level. Around that level, one level should move a wall's win chance by about 15–25 points *(decided overnight, review)*.
+
 ### Content for a first release *(tune)*
-- about 80–100 stages
-- about 40 foe types (about 30 already have art)
-- 6 classes, each with about 8 skills
-- about 60 items
-- about 40 rule conditions
+- 88 stages
+- 41 foe types (27 already have art)
+- 12 classes, each with 28 skills
+- 92 items
+- 42 rule conditions
 
 Stages and foes are defined in data tables so content can grow quickly.
 
@@ -326,10 +349,10 @@ Each step ends with something you can play-test.
 
 1. **Battle engine and battle screen.** A fixed party of 6 fights a few stages. The test: is it fun to watch? *(done)*
 2. **Rules:** character and party rules, with unlocks. *(done, plus the app shell and saves)*
-3. **Characters:** classes, stats, levels, stat and skill points, thresholds, skill trees, passives and equipped skills.
-4. **Equipment** loot.
-5. **Home base:** the camp, building plots and Renown, recruiting, the roster, fatigue and recovery, the first buildings, materials, idle buildings and offline gains.
-6. **Campaign map** and a fully built Region I.
+3. **Characters:** classes, stats, levels, stat and skill points, thresholds, skill trees, passives and equipped skills. *(done)*
+4. **Equipment** loot. *(done)*
+5. **Home base:** the camp, building plots and Renown, recruiting, the roster, fatigue and recovery, the first buildings, materials, idle buildings and offline gains. Spec: `docs/home-base-spec.md`.
+6. **Campaign map** and a fully built Region I. Spec: `docs/campaign-spec.md`.
 7. **Regions II–V**, onboarding and polish.
 
 ### Technical approach

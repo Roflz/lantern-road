@@ -1,19 +1,25 @@
 # Lantern Road: Content Spec
 
-Draft 4 for review, 2026-11-03. It follows `docs/design.md`, which stays the source of truth, plus your answers to drafts 1 to 3. It covers the content for build steps 2–4: rules, characters and equipment. Nothing here is built yet, except where it says step 2 already built it.
+Draft 5 for review, 2026-11-04. It follows `docs/design.md`, which stays the source of truth, plus your answers to drafts 1 to 4. It covers the content for build steps 2–4: rules, characters and equipment. Two later specs own the rest: `docs/campaign-spec.md` the stages, foes and what each first clear teaches, and `docs/home-base-spec.md` fatigue, recovery, the item economy and the buildings. Steps 2–4 have built most of it. The fatigue and gold effects wait for step 5.
 
 ## 1. How to read this
 
 - Every number is a starting value to adjust in play-testing. A table whose heading carries *(tune)* means every number in it; a number in running text carries its own mark.
 - Where a decision is still open, this spec proposes an answer and lists it in section 8.
+- *(Decided overnight, review)* marks a decision the coordinator made overnight on 2026-11-04, for your review. Section 8 lists them.
 - Numbers use the same scale as the battle engine (`js/sim.js`), so they can go straight into data tables.
 
-### What changed in draft 4
-- **All 12 classes** now have three build paths, with one skill per path in every tier, keystones and builds to try: 28 skills each, 336 in all.
-- **Thralls** are limited to 2 at once, and the Gravecaller's Legion keystone lifts the limit.
-- **Resistances have no floor.** A landing chance of 0% or less never lands, and 100% or more always does.
+### What changed in draft 5
+It brings in your fatigue rule, the campaign spec, the home-base spec and step 4's item decisions.
+- **Fatigue is +1 for each turn a character takes,** and nothing else adds any, as you decided. Section 7 is rewritten for it. The skills written for fatigue from damage are reworded, each marked *(tune)*, and section 7 lists them with the items checked.
+- **Blood Price** gets a new cost, since its health payments no longer build fatigue.
+- **Stage numbers** come from the campaign spec. Four reward conditions move, and Tactician I opens at 1-11 (section 5).
+- **Foe families** now cover the campaign spec's whole roster (section 5).
+- **Settled:** a combined character's rule-slot maximum, the Masters' Hall's lessons and item growth (section 8).
+- **Wording:** a run of stages is a trip, as in the campaign spec.
 
 Earlier drafts:
+- **Draft 4** gave all 12 classes three build paths, with one skill per path in every tier, keystones and builds to try: 28 skills each, 336 in all. Thralls were limited to 2 at once, and resistances lost their floor.
 - **Draft 3** brought the three-path trees (first for four classes), resistances in place of boss immunity, and reach skills that work from the back row.
 - **Draft 2** brought 12 classes, the level-200 progression with thresholds, class combining and awakenings, passive skills that need no slot, and Bleeding that stacks without limit.
 
@@ -68,17 +74,20 @@ At levels 30, 50, 80, 100, 120, 150, 180 and 200 a character gets a **free respe
 
 - **Tiers:** each class tree has 9 tiers. Tier 1 is open from level 1, and each threshold choice opens the next tier of one tree. A single-class character who never awakens opens all 9 by level 200.
 - **Combining classes:** the new class's tier 1 opens and its starter skill is learned free. From then on each threshold can open the next tier of any of the character's trees. Skill points are one pool shared by all of them.
-- **Combined characters** keep their first class's stats, growth, resistances and basic attack, and can use every one of their classes' weapon types. Their rule-slot maximum is still open.
+- **Combined characters** keep their first class's stats, growth, resistances and basic attack, and can use every one of their classes' weapon types. Their rule-slot maximum is the highest among their classes. *(Decided overnight, review.)*
 - **Awakenings:** at each threshold that offers one, the character may awaken one skill instead of opening a tier.
 - Outside thresholds, a respec costs gold at the Shrine *(tune)*.
 
 ### The Masters' Hall
-A home-base building where a master teaches a character one more active skill slot, or one more rule slot, up to their class's rule-slot maximum. The character is away while they train. Placeholder until you settle it: two lessons at most, 8 hours for the first from level 20, and 24 hours for the second from level 100 *(tune)*.
+A home-base building where a master teaches a character one more active skill slot, or one more rule slot, up to their class's rule-slot maximum. The character is away while they train, resting at the fire's rate. The home-base spec (section 9) sets the lessons *(tune)*:
+- **Skill slots:** two at most, 8 hours for the first from level 20, and 24 hours for the second from level 100.
+- **Rule slots:** a 4th from level 15 (4 hours), a 5th from level 45 (10 hours) and a 6th from level 90 (20 hours), each only up to the class's maximum.
 
 ### Recruits
 - A recruit's level-1 stats roll within their class's ranges. Growth per level is fixed by class.
 - Recruit-board upgrades bring recruits who start at higher levels, with stats and skills to match. They arrive with their points already spent to match their level, and a free respec.
-- Every recruit knows their basic attack and starter skill, carries a Common weapon of their type and comes with the class's starter rules.
+- The board's top rank also brings storied recruits (home-base spec): from level 50 some arrive combined, and from level 100 some arrive with a skill awakened.
+- Every recruit knows their basic attack and starter skill, carries a Common weapon of their type at their own level and comes with the class's starter rules.
 
 ### Shapes, range and rows
 - **Shapes** are the design's eight: one foe, front row, back row, 3 random foes, all foes, one ally, all allies and self.
@@ -87,6 +96,7 @@ A home-base building where a master teaches a character one more active skill sl
 - **Melee from the back row:** melee skills without reach can't be used from the back row without the Halberdier's Hook accessory. A character stuck there with no other options Defends instead.
 - **Charged skills:** the user spends a turn gathering and Marks its target, and the hit lands on its next turn. Foes do this already; the Crossbowman's Heavy Draw is the hero version.
 - **Summons:** the Gravecaller raises thralls into empty party slots. A thrall fights for the party and blocks the front row like anyone else, but it isn't a character: rules ignore it, it builds no fatigue, and it's gone when the battle ends.
+- **Foes summon too,** into empty foe slots (campaign spec). Summoned foes drop no spoils, no gold, XP or loot, so drawing out a fight against a summoner never pays (home-base spec). Pickpocket steals nothing from them either. *(Decided overnight, review.)*
 
 ## 3. Status effects
 
@@ -119,7 +129,7 @@ Every character and every foe has six resistances, one for each kind of harmful 
 - **Damage always lands.** Resistance only stops the effect that comes with a hit.
 - **Helpful statuses** always land on allies.
 - **Characters** start with their class's resistances (listed with each class), gain +0.1% to each per level, and can raise them with gear and stat points. Built far enough, that's immunity too: at 100% Stun resistance, a plain 100% stun never lands.
-- **Foes** get resistances in the foe tables (step 6). As a guide, before family shifts: normal foes 10–40%, elites 30–60%, bosses 50–90%. Families shift them:
+- **Foes** get resistances in the campaign spec's foe tables. As a guide, before family shifts: normal foes 10–40%, elites 30–60%, bosses 50–90%. Families shift them:
 
 | Family | Typical shift |
 |---|---|
@@ -159,7 +169,7 @@ The Lamplighter's Snuff and the Alchemist's Transmute strip these from foes, and
 | Covered | The covering Warden takes every attack aimed at this ally, area hits included, at −30% damage. | Cover |
 | Kindled | Deals 30% more damage. | Kindle, Adrenaline |
 | Hasted | Speed +30%. | Haste, Adrenaline |
-| Warded | Absorbs damage up to an amount set when given, then breaks. Lasts up to 3 turns. Absorbed damage builds no fatigue. | Shelter, Sanctuary |
+| Warded | Absorbs damage up to an amount set when given, then breaks. Lasts up to 3 turns. | Shelter, Sanctuary |
 | Blessed | Heals at the start of each turn. | Benediction |
 | Braced | Takes less damage: 30% from Defend, 40% from Brace. | Defend, Brace |
 | Fortified | Takes 20% less damage. | Stand Fast, Vesper Chime, Splint |
@@ -212,7 +222,7 @@ The Lamplighter's Snuff and the Alchemist's Transmute strip these from foes, and
 | Lamplighter + Crossbowman | Heavy Draw, then Light the Way on the Crossbowman: the charged shot lands almost at once. | Lamplighter: "Ally: has Charging → Light the Way" |
 | Crossbowman + Sellsword | Mark Quarry on a big foe, then Headsman's Swing or Reckless Swing for the crit. | Sellsword: "Foe: has Quarry → Reckless Swing" |
 | Sellsword + Hexblade | Bloodcurse: Doom ticks harder on Bleeding foes, so every Rend feeds the Hexblade. | Hexblade: "Foe: has Bleeding → Doom" |
-| Pilgrim + Warden | Shelter on the Warden while it Guards. Warded damage builds no fatigue, so the party pushes further. | Pilgrim: "Ally: has Guarding → Shelter" |
+| Pilgrim + Warden | Shelter on the Warden while it Guards. The Ward soaks the hits it takes for everyone, so the wall holds on little healing. | Pilgrim: "Ally: has Guarding → Shelter" |
 | Duellist + Alchemist | Smoke Pot on a taunting Duellist: +20% Dodge on top of theirs means more misses, and every miss is a counter. | Alchemist: "Ally: has Riposte → Smoke Pot" |
 | Bellringer + Cutpurse | Stunned and Slowed foes take more from the Cutpurse's Opportunist passive. | Cutpurse: "Foe: has Stunned → Ambush" |
 | Bellringer + Crossbowman | Toll pushes every foe back, so Heavy Draw lands before they act. | Bellringer: "Ally: has Charging → Toll" |
@@ -256,8 +266,8 @@ Some pairings for one character who combines classes at level 50, with the first
 | Party | Front | Back | How it wins, and where it fails |
 |---|---|---|---|
 | The Lantern Wall | Warden, Sellsword | Pilgrim, Lamplighter, Hexblade, Crossbowman | Balanced. The Warden soaks, the Lamplighter kindles, and the damage dealers finish what Doom starts. |
-| Slow Death | Warden, Hexblade (Blade-Hex) | Hexblade, Pilgrim, Barber-Surgeon, Bellringer | Everything is Doomed and delayed, and two healers outlast it. Little burst, so enrage is the risk. |
-| Firing Line | Sellsword, Duellist | Crossbowman, Cutpurse, Lamplighter, Pilgrim | Fast kills with Kindle and crits. Fragile, so it builds fatigue quickly. |
+| Slow Death | Warden, Hexblade (Blade-Hex) | Hexblade, Pilgrim, Barber-Surgeon, Bellringer | Everything is Doomed and delayed, and two healers outlast it. Little burst, so battles run long: enrage is the risk, and every extra turn costs fatigue. |
+| Firing Line | Sellsword, Duellist | Crossbowman, Cutpurse, Lamplighter, Pilgrim | Fast kills with Kindle and crits keep battles short. Fragile against walls, and the quick Cutpurse and Lamplighter tire soonest. |
 | Bone and Bell | Warden, a thrall | Gravecaller, Bellringer, Alchemist, Barber-Surgeon | Five characters and a thrall. Foes are delayed and burned while the thrall soaks; weak against single tough bosses. |
 
 ### How to read a class
@@ -416,7 +426,7 @@ A cursed duellist who wins slowly. Lays Doom, spreads it across the foe line and
 | 5 | Crimson Pact | Active · self · 15% of max health, no mana | Restores 30 → 50 mana and Kindles the Hexblade for 1 turn | Also Hastes them for 1 turn |
 | 6 | Hexed Blood | Passive | +5% → +15% max health | Harmful statuses on the Hexblade last 1 turn less |
 | 7 | Sanguine Lash | Active · front row, melee · 25 | 0.8× → 1.1× to each, Doomed for 1 turn, healing the Hexblade for 30% of the damage | Also a Bleeding stack (2 turns, 0.2×) on each |
-| 8 | Blood Price ★ | Keystone | When mana runs short, skills are paid with health: 1 mana costs 1.5% → 0.7% of max health. That health loss builds fatigue. | Paying with health also Kindles the Hexblade for 1 turn |
+| 8 | Blood Price ★ | Keystone | When mana runs short, skills are paid with health: 1 mana costs 1.5% → 0.7% of max health, but healing the Hexblade receives is 25% weaker *(tune)* | Paying with health also Kindles the Hexblade for 1 turn |
 | 9 | Exsanguinate | Active · one foe, melee with reach · 45 | 2.0× → 2.8×, plus 0.3× for each harmful status on the target, healing the Hexblade for all of it | Healing beyond full becomes a Ward on the Hexblade |
 
 #### Builds to try
@@ -451,7 +461,7 @@ A healer who walks the road on faith. Heals and raises the fallen, prevents dama
 
 #### Build paths
 - **Mercy:** direct healing, and raising the fallen.
-- **Vigil:** prevents damage with Wards, cleanses, and keeps fatigue down over a long push.
+- **Vigil:** prevents damage with Wards, cleanses, and keeps fatigue down over a long trip.
 - **Zeal:** holy fire against the undead, healing through the damage it deals.
 
 #### Skill tree *(tune)*
@@ -476,11 +486,11 @@ A healer who walks the road on faith. Heals and raises the fallen, prevents dama
 | Tier | Skill | Kind | Level 1 → 5 | Awakened |
 |---|---|---|---|---|
 | 1 | Shelter | Active · one ally · 20 | Warded: absorbs up to 3× → 4.5× damage, for up to 3 turns | When the Ward breaks, the ally heals 1.0× |
-| 2 | Comfort | Passive | While the Pilgrim is in the party, everyone gains 5% → 20% less fatigue | Every character also recovers 2 fatigue after each battle |
+| 2 | Comfort | Passive | While the Pilgrim is in the party, everyone gains 5% → 20% less fatigue | Every character also recovers 1 fatigue after each battle *(tune)* |
 | 3 | Purify | Active · one ally · 10 | Removes all harmful statuses and heals 0.6× → 1.2× | Immune to new harmful statuses until its next turn |
 | 4 | Steadfast Faith | Passive | Allies the Pilgrim Wards also take 5% → 15% less damage while Warded | The Pilgrim's Wards last a turn longer |
 | 5 | Prayer of Fortitude | Active · all allies · 35 | +10% → +20% max health for the rest of the battle, healing by the same amount | Also Fortified for 2 turns |
-| 6 | Peaceful Rest | Passive | Allies the Pilgrim raises lose 50% → 100% of that fall's knock-out fatigue | Last Rites costs 15 less |
+| 6 | Peaceful Rest | Passive | Allies the Pilgrim raises gain 50% → 100% less fatigue for the rest of that battle *(tune)* | Last Rites costs 15 less |
 | 7 | Absolution | Active · all allies · 40 | Clears Doomed, Festering and Silenced from every ally, healing each 0.4× → 0.8× | Clears every harmful status |
 | 8 | Aegis of Faith ★ | Keystone | Every battle starts with every ally Warded for 1.0× → 2.0×, but the Pilgrim's healing is 20% weaker | No healing penalty |
 | 9 | Sanctuary | Active · all allies · 50 | Warded (absorbs 1.5× → 2.5×) and Blessed (0.6× per turn) for 3 turns | Also raises one fallen ally with 30% health |
@@ -511,7 +521,7 @@ A healer who walks the road on faith. Heals and raises the fallen, prevents dama
 ### Warden
 *Front row · mace and shield · mana gain 10 · rule slots 3 → 5*
 
-The wall. Takes the hits meant for others, outlasts what it can't stop, or makes every blow cost the foe dearly. Fatigue is measured against max health, so the Warden's huge health pool lets it carry the party's damage, and its fatigue, further than anyone.
+The wall. Takes the hits meant for others, outlasts what it can't stop, or makes every blow cost the foe dearly. It's the slowest class, so it takes the fewest turns and tires least of all.
 
 #### Stats *(tune)*
 | Stat | Recruit range (level 1) | Growth per level | Level 200 average |
@@ -558,7 +568,7 @@ The wall. Takes the hits meant for others, outlasts what it can't stop, or makes
 | 2 | Stalwart | Passive | +5% → +15% max health | Also +15% Defense |
 | 3 | Plate-born | Passive | Heavy armour's Speed penalty is 1 → 2 lower | Heavy armour also gives 10% more health |
 | 4 | Unbroken | Active · self · 30 | Unbroken for 2 → 3 turns: can't fall below 1 health | Also −20% damage taken |
-| 5 | Iron Will | Passive | The Warden gains 10% → 35% less fatigue | Knock-out fatigue is halved too |
+| 5 | Iron Will | Passive | The Warden gains 10% → 35% less fatigue | Weary no longer weakens the Warden *(tune)* |
 | 6 | Second Breath | Active · self · 25 | Heals 20% → 35% of max health | Also Fortified for 2 turns |
 | 7 | Hardened | Passive | +5% → +20% Defense | Immune to Corroded |
 | 8 | Immovable ★ | Keystone | In the front row, the Warden takes 8% → 20% less damage and can't be pushed back or Stunned, but its Dodge is always 0 | Dodge works again |
@@ -579,7 +589,7 @@ The wall. Takes the hits meant for others, outlasts what it can't stop, or makes
 
 #### Builds to try
 - **The Wall** (Bulwark): Cover, Interpose, Aegis, Oath of the Shield. Never attacks and never lets anyone else get hit, which keeps a Crossbowman's Steady Aim switched on.
-- **The Anvil** (Bastion): Brace, Unbroken, Iron Will, Immovable, Unyielding. Outlasts a long push on very little healing, especially beside a Barber-Surgeon's House Calls.
+- **The Anvil** (Bastion): Brace, Unbroken, Iron Will, Immovable, Unyielding. Outlasts a long trip on very little healing, especially beside a Barber-Surgeon's House Calls.
 - **The Hammer** (Reprisal): Retaliate, Spiked Rim, Iron Retribution, Reckoning. Kills by being hit. A Hexblade's Hex Ward on the Warden also Dooms every attacker.
 - **Guard and punish** (two paths): Guard, Shieldbearer and Spiked Rim. Protects everyone and charges a price for each hit it takes.
 
@@ -963,19 +973,19 @@ The field doctor. Stops bleeding, cures afflictions and patches the worst wounds
 | Tier | Skill | Kind | Level 1 → 5 | Awakened |
 |---|---|---|---|---|
 | 1 | Adrenaline | Active · one ally · 20 | Hasted and Kindled for 2 → 3 turns, then Weak for 1 turn | No Weak afterwards |
-| 2 | House Calls | Passive | After each battle, every character recovers 1 → 4 fatigue | Recovers 6 |
+| 2 | House Calls | Passive | After each battle, every character recovers 0.5 → 2 fatigue *(tune)* | Recovers 3 *(tune)* |
 | 3 | Leeches | Active · one foe, ranged · 20 | Bleeding for 3 turns at 0.3× → 0.5× per tick, and each tick heals the most hurt ally by the same amount | Applies 2 stacks |
 | 4 | Anatomy | Passive | +3% → +10% crit chance, and the Surgeon's crits cause Bleeding (2 turns, 0.2×) | Crits apply 2 stacks |
-| 5 | Laudanum | Active · one ally · 20 | For 3 turns the ally takes 10% → 20% less damage, and damage they take builds half the fatigue | Every ally |
+| 5 | Laudanum | Active · one ally · 20 | For 3 turns the ally takes 10% → 20% less damage, and those turns build half the fatigue *(tune)* | Every ally |
 | 6 | Cupping | Active · one ally · 15 | Draws out every Bleeding stack on the ally, turning each into 0.4× → 0.7× healing | Also gives 5 mana per stack |
-| 7 | Cold Compress | Passive | Allies the Surgeon heals gain 5% → 15% less fatigue from that battle | 25% less |
+| 7 | Cold Compress | Passive | Allies the Surgeon heals gain 5% → 15% less fatigue from that whole battle *(tune)* | 25% less |
 | 8 | Cure-all ★ | Keystone | Adrenaline and Laudanum reach every ally, but each use costs the Surgeon 10% → 5% of max health | No health cost |
-| 9 | Transfusion | Active · one ally, not self · 40 | The Surgeon gives 20% of its max health to heal the ally for 40% → 70% of theirs, and the ally's fatigue from this battle is wiped | No health cost to the Surgeon |
+| 9 | Transfusion | Active · one ally, not self · 40 | The Surgeon gives 20% of its max health to heal the ally for 40% → 70% of theirs, and the ally's fatigue from this whole battle is wiped *(tune)* | No health cost to the Surgeon |
 
 #### Builds to try
 - **Physician:** Tonic, Clean the Wound, Preventive Care, Sterile Field. No curse or poison lasts. Strong in the Drowned Chapel, where the choirs Doom the party.
 - **Field Surgeon** (Surgeon): Field Surgery, Splint, Rough Surgery, Second Opinion. Huge heals and quick raises, ideal behind a Warden.
-- **Leech-doctor** (Leechcraft): Adrenaline, House Calls, Laudanum, Cure-all, Transfusion. Keeps fatigue low so pushes go on, and pairs well with a Pilgrim Shepherd.
+- **Leech-doctor** (Leechcraft): Adrenaline, House Calls, Laudanum, Cure-all, Transfusion. Keeps fatigue low so trips go on, and pairs well with a Pilgrim Shepherd.
 - **Bleed them, mend us** (two paths): Stitch, Leeches and Anatomy. Heals the party while its leeches drain the foes.
 
 **Starter rules:** 1. Ally: health below 50% → Stitch. 2. Foe: lowest health → Lancet Throw.
@@ -1238,7 +1248,7 @@ A thief who strikes from the shadows. Hides from attacks, stabs the foes nobody 
 - **Status conditions** ("has" and "without") can name any status the party has already seen in battle, so the list grows as you meet new foes.
 
 ### Conditions
-42 conditions in four groups, using step 2's group names. Step 2 already built 20 of them, with one tag condition covering undead, spirit and beast. "Reward" means the first clear of a stage teaches it, shown on the rewards screen. The stage numbers are placeholders until the campaign map is designed in step 6.
+42 conditions in four groups, using step 2's group names. Step 2 already built 20 of them, with one tag condition covering undead, spirit and beast. "Reward" means the first clear of a stage teaches it, shown on the rewards screen. The stage numbers come from the campaign spec (section 5.3).
 
 #### Self
 | Condition | Picks | Unlocks | Use it for |
@@ -1255,12 +1265,12 @@ A thief who strikes from the shadows. Hides from attacks, stabs the foes nobody 
 | Condition | Picks | Unlocks | Use it for |
 |---|---|---|---|
 | Ally: health below X% | The most hurt such ally | Start, at 50% | Mend, Guard |
-| Ally: most hurt | That ally | Reward, I-10 | Benediction on whoever needs it most |
+| Ally: most hurt | That ally | Reward, 1-10 | Benediction on whoever needs it most |
 | Ally: fallen | The first fallen ally | Event: the first time a character falls | Last Rites |
 | Ally: has [status] | That ally | Tactician I | Purify on Doomed, Shelter on Guarding, Cover on Marked |
 | Ally: without [status] | That ally | Tactician I | "Ally: without Hasted → Haste" |
 | Ally: mana below X% | The lowest such ally | Tactician II | Share the Flame |
-| Ally: highest Power | That ally | Reward, Region III | Haste, Light the Way or Cover on the hardest hitter |
+| Ally: highest Power | That ally | Reward, 3-8, Mother Bramble | Haste, Light the Way or Cover on the hardest hitter |
 
 #### Foe
 | Condition | Picks | Unlocks | Use it for |
@@ -1269,50 +1279,50 @@ A thief who strikes from the shadows. Hides from attacks, stabs the foes nobody 
 | Foe: lowest health | That foe | Start | Finishing a foe off |
 | Foe: health below X% | The lowest such foe | Tactician I | Finishing Blow |
 | Foe: highest health | That foe | Tactician II | Doom, where it has time to tick |
-| Foe: highest attack | That foe | Reward, I-8 | Wither, Pinning Shot |
-| Foe: charging a big attack | The charger | Reward, the Sexton | Shield Toss, Dazzle, Lunge |
-| Foe: undead | The nearest | Reward, I-2 | Judgement |
-| Foe: spirit | The nearest | Reward, Region II | Sunburst, Flare with Moth-Light |
-| Foe: beast | The nearest | Reward, Region III | Barbed Bolt with Hunter |
-| Foe: in the back row | The nearest | Reward, I-6 | Lunge, Drag Out |
-| Foe: boss or elite | That foe | Reward, the Gravewarden | Mark Quarry, Wither |
-| Foe: healer | The nearest | Reward, Region II | Hush, Drag Out, Pinning Shot |
-| Foe: acts next | The foe first on the turn strip | Reward, Region III | Shield Bash, Pinning Shot |
+| Foe: highest attack | That foe | Reward, 1-8 | Wither, Pinning Shot |
+| Foe: charging a big attack | The charger | Reward, 1-12 | Shield Toss, Dazzle, Lunge |
+| Foe: undead | The nearest | Reward, 1-7 | Judgement |
+| Foe: spirit | The nearest | Reward, 2-2 | Sunburst, Flare with Moth-Light |
+| Foe: beast | The nearest | Reward, 3-2 | Barbed Bolt with Hunter |
+| Foe: in the back row | The nearest | Reward, 1-5 | Lunge, Drag Out |
+| Foe: boss or elite | That foe | Reward, 1-9, the Gravewarden | Mark Quarry, Wither |
+| Foe: healer | The nearest | Reward, 2-8, the Choir of Silt | Hush, Drag Out, Pinning Shot |
+| Foe: acts next | The foe first on the turn strip | Reward, 3-14, the Thornback | Shield Bash, Pinning Shot |
 | Foe: the leader's target | The foe the party leader (the first hero still standing) last attacked | Tactician I | Everyone hitting the same foe, as in the design's example |
 | Foe: has [status] | That foe | Tactician II | "Foe: has Exposed → Reckless Swing" |
 | Foe: without [status] | That foe | Tactician I | "Foe: without Doomed → Doom" |
 
 #### Battle
-These describe the whole battle or the push, so they only decide whether a rule fires. Character rules and party rules can both use them, except the four "between battles" conditions, which only party rules use.
+These describe the whole battle or the trip, so they only decide whether a rule fires. Character rules and party rules can both use them, except the four "between battles" conditions, which only party rules use.
 
 | Condition | Unlocks | Use it for |
 |---|---|---|
 | Always | Start | Kindle, or any skill that should fire whenever it can |
-| N or more foes present | Reward, I-4 | Cleave, Hex Swarm, Scatter Shot |
+| N or more foes present | Reward, 1-4 | Cleave, Hex Swarm, Scatter Shot |
 | One foe left | Tactician I | Going all in on the last foe |
-| Boss present | Reward, the Sexton | Saving big skills for the boss |
+| Boss present | Reward, 1-18, the Sexton | Saving big skills for the boss |
 | Battle start | Tactician II | Opening buffs: Kindle, Stand Fast |
-| Foes enraged | Reward, Region II | Spending everything once foes start hitting harder |
+| Foes enraged | Reward, 2-14, the Font Leech | Spending everything once foes start hitting harder |
 | N or more allies below X% health | Tactician II | Hymn of Rest, Stand Fast |
-| Fewer than N allies standing | Reward, Region IV | Last stands: Unbroken, Martyrdom |
-| Between battles: any character at X+ fatigue | Start, with party rules | Return to base |
-| Between battles: an ally fell | Tactician I | Return to base before knock-out fatigue piles up |
+| Fewer than N allies standing | Reward, 4-8, the Kiln Warden | Last stands: Unbroken, Martyrdom |
+| Between battles: any character at X+ fatigue | Start, with party rules. The default rule, at 75+, comes with chaining at 1-6. | Return to base |
+| Between battles: an ally fell | Tactician I | Return to base once a stage starts going wrong |
 | Between battles: out of [item] | Tactician I | Return to base, once items are drawn from the Bag |
-| Between battles: next stage has a boss or elite | Reward, I-12 | Switch rule set, or return to base |
+| Between battles: next stage has a boss or elite | Reward, 1-15, the Rat King | Switch rule set, or return to base |
 
 #### Unlock pacing
 | Source | Conditions taught |
 |---|---|
 | Start | Always (agreed in step 2), Self: health below 50%, Ally: health below 50%, Front foe, Foe: lowest health, and for party rules, any character at X+ fatigue |
-| Tactician I (early Region I) | Thresholds, Self: mana below, Self: row, Self: has / without, Self: fewer than N thralls, Ally: has / without, Foe: health below, Foe: the leader's target, Foe: without, One foe left, an ally fell, out of an item |
+| Tactician I (from 1-11) | Thresholds, Self: mana below, Self: row, Self: has / without, Self: fewer than N thralls, Ally: has / without, Foe: health below, Foe: the leader's target, Foe: without, One foe left, an ally fell, out of an item |
 | Tactician II (Region II) | Self: health above, Ally: mana below, Foe: highest health, Foe: has, Battle start, N or more allies below X% |
-| Region I | Foe: undead, N or more foes, Foe: in the back row, Foe: highest attack, Ally: most hurt, next stage has a boss, Foe: boss or elite (the Gravewarden), Foe: charging and Boss present (the Sexton), Ally: fallen (first knock-out) |
-| Region II | Foe: spirit, Foe: healer, Foes enraged |
-| Region III | Foe: beast, Foe: acts next, Ally: highest Power |
-| Region IV | Fewer than N allies standing |
+| Region I | N or more foes (1-4), Foe: in the back row (1-5), Foe: undead (1-7), Foe: highest attack (1-8), Foe: boss or elite (1-9), Ally: most hurt (1-10), Foe: charging (1-12), next stage has a boss or elite (1-15), Boss present (1-18), Ally: fallen (the first knock-out) |
+| Region II | Foe: spirit (2-2), Foe: healer (2-8), Foes enraged (2-14) |
+| Region III | Foe: beast (3-2), Ally: highest Power (3-8), Foe: acts next (3-14) |
+| Region IV | Fewer than N allies standing (4-8) |
 | Region V | Nothing new: the last region tests what you've built |
 
-Each Tactician lesson costs gold and the region's material *(tune)*.
+The home-base spec (section 3) prices each Tactician lesson in gold and a region's material *(tune)*.
 
 ### Actions
 #### Character rule actions *(tune)*
@@ -1326,7 +1336,9 @@ Each Tactician lesson costs gold and the region's material *(tune)*.
 
 #### Party rules
 - **When they act:** between turns, as step 2 built them. Using an item takes no one's turn.
-- **Between-battle rules** are checked after each battle. If one fires, the push ends and the party walks home.
+- **Between-battle rules** are checked after each battle. If one fires, the trip ends and the party walks home.
+- **The stage sheet's "Come home when" chips** are these same rules, so toggling a chip there edits the party rules: one list, seen from two places. *(Decided overnight, review.)*
+- **Other things end a trip too** (campaign spec, section 7.5): a lost battle, a boss falling, calling the party home, and closing the app, which brings the party home after the battle under way. A character who reaches Spent walks home alone after that battle, and the rest carry on. *(Decided overnight, review.)*
 - **Slots:** 2 to start, rising to 5 with Tactician upgrades, as built *(tune)*.
 - Party rules use Ally, Foe and Battle conditions, never Self.
 
@@ -1334,11 +1346,11 @@ Each Tactician lesson costs gold and the region's material *(tune)*.
 |---|---|---|
 | Use an item | On the ally the condition picked, else the most hurt ally (the first fallen ally for Smelling Salts). | With party rules |
 | Focus fire | The foe the condition picked becomes everyone's target until it falls, for every single-target rule whose own condition doesn't pick a foe. | Tactician I |
-| Return to base | Ends the push after this battle. | With party rules |
+| Return to base | Ends the trip after this battle. | With party rules |
 | Switch rule set | Every character loads their saved rule set with that name. | Tactician III |
 
 #### Party items *(tune)*
-As step 2 built them, the party brings a **loadout** into each battle: 2 slots to start, up to 4. Each slot holds one use per battle, drawn from the party's Bag. Nothing refills for free. You can use an item by hand at any moment, even while paused, by tapping it and then a hero, and party rules can use items automatically.
+As step 2 built them, the party brings a **loadout** into each battle: 2 slots to start, and the Tactician adds a 3rd and a 4th at its levels 2 and 4 (home-base spec). Each slot holds one use per battle, drawn from the party's Bag. Nothing refills for free. You can use an item by hand at any moment, even while paused, by tapping it and then a hero, and party rules can use items automatically.
 
 | Item | Effect |
 |---|---|
@@ -1348,25 +1360,25 @@ As step 2 built them, the party brings a **loadout** into each battle: 2 slots t
 | Bitter Tincture | Removes all harmful statuses from one ally. New in this draft. |
 
 Items reach the Bag from five sources:
-- **Timed free potions:** a free Healing Draught every so often *(tune)*.
+- **Timed free potions:** a free Healing Draught every 4 hours, up to 3 waiting *(tune)*.
 - **Loot drops** in battle, at rarity rates *(tune)*.
 - **Stage rewards**, which sometimes include items.
 - **The home base shop.**
 - **Building upgrades** that brew them.
 
 #### Saved rule sets
-Each character can save up to 3 named rule sets *(tune)*, and the party can save its own. "Switch rule set" lets a push change tactics on its own, for example before a boss.
+Saved rule sets come with Tactician I, from 1-11. Each character can save up to 3 named rule sets *(tune)*, and the party can save its own. The stage sheet remembers the set last chosen for each stage. "Switch rule set" lets a trip change tactics on its own, for example before a boss.
 
 ### Foe families
-Three conditions and several skills care whether a foe is undead, a spirit or a beast. Proposed families for the foes that already have art:
+Three conditions and several skills care whether a foe is undead, a spirit or a beast. The campaign spec (section 4) gives every foe's family, and all 41 are here:
 
 | Region | Undead | Spirit | Beast | None of these |
 |---|---|---|---|---|
-| I Gravefields | Ghoul, Restless Bones, the Gravewarden | | Grave Rats | The Sexton |
-| II Drowned Chapel | Drowned Acolyte, Bloated Corpse, the Drowned Bishop | Bell Wraith, Choir of Silt | | |
-| III Thornwood | The Hanged Man | | Briar Wolf, the Antlered One | Thorn Witch, Mother Bramble |
-| IV Ashen Keep | Ash Knight, Flayed Squire, the Burnt Marshal | | Cinder Hound | The Kiln Warden |
-| V Hollow Throne | Bone Herald, Kingsguard Revenant | Hollow Courtier, Crowned Shade, the Hollow King | | |
+| I Gravefields | Shambler, Ghoul, Restless Bones, Grave Glutton, the Gravewarden | | Grave Rats, Carrion Crows, the Rat King | Mourner, Gravedigger, the Sexton |
+| II Drowned Chapel | Drowned Acolyte, Bloated Corpse, Silent Sister, the Drowned Bishop | Bell Wraith, Choir of Silt | The Font Leech | |
+| III Thornwood | The Hanged Man | Marsh Lantern | Briar Wolf, the Thornback, the Antlered One | Thorn Witch, Mother Bramble |
+| IV Ashen Keep | Ash Knight, Flayed Squire, Ashen Arbalist, the Burnt Marshal | | Cinder Hound | The Kiln Warden, the Pyre Priest |
+| V Hollow Throne | Bone Herald, Kingsguard Revenant | Hollow Courtier, Crowned Shade, Wick Wraith, the Lord Chamberlain, the Hollow King | | |
 | Anywhere | | | Moth Swarm | Cage Mimic |
 
 Each region leans one way, so the best party shifts as you travel: the Pilgrim shines in I, II and IV, the Lamplighter's light in II and V, and the Crossbowman's Hunter passive in III.
@@ -1380,8 +1392,11 @@ Each region leans one way, so the best party shifts as you travel: the Pilgrim s
 - **Weapons** are tied to classes: each class uses one weapon type. A combined character can use the weapon types of all its classes.
 - **Armour:** any class can wear any weight, and the weight's trade-off is the only limit. Each piece still leans toward some classes through its effects: Bastion Plate's Guard bonus suits a Warden, Penitent's Rags a healer.
 - **Accessories** suit anyone, except the 12 class-only ones.
-- **Item strength (placeholder, still open):** the same item can drop anywhere. Its plain stats (Power, Health, Defense, Mana) grow with the level of the stage it dropped from: × (1 + item level ÷ 15) *(tune)*, which keeps pace with characters all the way to level 200. Its special effect stays the same. The tables show a level-1 drop.
-- **Unwanted items** sell for gold.
+- **Item strength:** the same item can drop anywhere. Its plain stats grow with the level of the stage it dropped from: × (1 + (item level − 1) ÷ 15) *(tune)*, which keeps pace with characters all the way to level 200. The tables show a level-1 drop. *(Decided overnight, review: step 4 built it this way.)*
+  - Only positive Health, Mana, Power and Defense grow, the Bone Charm's and the Prayer Beads' included.
+  - Crit, Dodge and costs such as −1 Speed stay fixed, and so does the special effect.
+- **Unwanted items** sell for gold, at the home-base spec's prices. There's no salvage for now, as you decided.
+- **The Bag** holds 60 pieces of gear, not counting what's worn. When it's full, new gear sells where it drops, and a Relic always fits. *(Decided overnight, review.)*
 - **Rarity:**
   - **Common** items have plain stats.
   - **Fine** items add a small conditional bonus.
@@ -1563,30 +1578,72 @@ The first five Fine accessories are the design's own examples.
 
 ## 7. Fatigue and content
 
-The design builds fatigue from the damage a character takes, measured against their max health. That one rule shapes how classes and items play over a long push.
+Fatigue is **+1 for each turn a character takes**, and nothing else adds any for now *(tune)*. That's your rule, from 2026-11-04. The home-base spec (section 6) sets the thresholds and recovery, and the campaign spec (section 5.8) what each stage costs. A stage costs the turns its battle takes, so over a long trip two things decide how tired a character gets: how many turns they take, and how quickly the party ends its battles.
 
-- **What counts:** every point of health lost, including Bleeding, Doom, Burning, Poisoned and self-inflicted costs such as Martyrdom, Blood Price, Bloodlust and Elixir of Fury. Being knocked out adds a large amount on top.
-- **What doesn't count:** damage a Ward absorbs, and hits that are dodged or miss. Guard and Cover move damage, and so fatigue, onto the Warden. Thralls build none.
-- **Healing doesn't remove fatigue.** Avoiding damage beats healing it, so Dazzle, Shelter, Guard and Dodge matter more the longer a push runs.
-- **Scale, as an example:** a battle adds 20 fatigue per full max-health of damage taken, and a knock-out adds 15 *(tune)*.
+- **What counts:** every turn a character takes, extra turns included. A turn lost to Stunned counts too. In Region I that comes to about 3–9 a character per road battle and 9–13 against an elite, at the recommended level *(tune)*.
+- **What costs nothing:** using a party item, which takes no one's turn. A knocked-out character takes no turns, and thralls aren't characters, so they build none.
+- **What no longer matters:** damage taken, health costs and knock-outs. Wards, Dodge, Guard, Cover and Brace still keep the party standing, but they don't save fatigue.
+- **Healing doesn't remove fatigue,** as before.
+- **The thresholds** come from the home-base spec: Weary at 50 (−5% Power, Defense and Speed), Exhausted at 75 (−15%) and Spent at 100, fit again below 50 *(tune)*.
 
 | Effect on fatigue | Content |
 |---|---|
-| Lowers it | Iron Will (Warden), Comfort and Peaceful Rest (Pilgrim), Laudanum and House Calls (Barber-Surgeon), Gravewarden's Plate, Mourner's Veil |
-| Prevents the damage | Shelter and Sanctuary (Warded), Dazzle, Smoke Pot, Guard, Cover, Brace, Stand Fast, Parry, Dodge, a thrall in the front row |
-| Raises it, as a cost | Blood Price, Martyrdom, Bloodlust, Elixir of Fury, Ember Heart, Gravedigger's Spade, Marshal's Ashen Blade, the Hollow Crown |
+| Lowers it: fewer turns | **Slow characters:** the Warden is the slowest class, and heavy armour costs Speed. **Shorter battles:** burst, area damage on crowds, Kindle, crits, Exposed, Corroded and the right kill order. **Damage that needs no turn:** counters (Riposte), Retaliate, Spiked Rim, Thornmail, Hex Ward and thralls. |
+| Lowers it: less per turn | Iron Will (Warden), Comfort and Peaceful Rest (Pilgrim), Laudanum and Cold Compress (Barber-Surgeon), Gravewarden's Plate, Mourner's Veil |
+| Takes it away | House Calls and awakened Comfort, after each battle. Transfusion, for one ally's whole battle. |
+| Raises it: more turns | **Speed:** Haste, Adrenaline, Bloodlust, Elixir of Fury, Ardour, Courier's Spur, the Moth-silk Robe and Speed points. **Turn jumps and extra turns:** Light the Way, Guiding Light, awakened Lunge, Deathblow, Miracle and First Light. **Long battles:** little burst, stalling and enrage. |
+| Raises it: more per turn | Gravedigger's Spade (+20%), the Hollow Crown (×2) |
 
-The Warden carries fatigue best, with the largest health pool and Iron Will. The Pilgrim and Barber-Surgeon lower everyone's, and the Surgeon's House Calls even lowers it in the middle of a push. The Duellist avoids it by dodging. The Sellsword and Hexblade trade fatigue for damage.
+### Reworded for turns *(decided overnight, review)*
+Each one carries *(tune)* in its skill tree.
+
+| Skill or status | Before | Now |
+|---|---|---|
+| House Calls (Barber-Surgeon) | Every character recovers 1 → 4 fatigue after each battle, 6 awakened | 0.5 → 2, and 3 awakened. At level 5 that's about a fifth of a road battle's fatigue, level with Comfort. |
+| Comfort, awakened (Pilgrim) | Every character also recovers 2 after each battle | 1, re-sized the same way |
+| Laudanum (Barber-Surgeon) | Damage the ally takes for 3 turns builds half the fatigue | Those 3 turns build half the fatigue |
+| Peaceful Rest (Pilgrim) | Raised allies lose 50% → 100% of that fall's knock-out fatigue | Raised allies gain 50% → 100% less fatigue for the rest of that battle |
+| Iron Will, awakened (Warden) | Knock-out fatigue is halved too | Weary no longer weakens the Warden |
+| Cold Compress (Barber-Surgeon) | 5% → 15% less fatigue from that battle | The same, now said to cover the whole battle, before and after the heal |
+| Transfusion (Barber-Surgeon) | The ally's fatigue from this battle is wiped | The same, for the whole battle |
+| Blood Price ★ (Hexblade) | Its health payments built fatigue | A new cost: healing the Hexblade receives is 25% weaker. Without it, the Blood-hex path heals its own payments back, and the keystone would cost almost nothing. |
+| Warded (status) | Absorbed damage built no fatigue | That line is gone |
+
+### Unchanged, and why
+- **Health costs stay as they are:** Martyrdom, Bloodlust, Crimson Pact, Elixir of Fury, Cure-all, Eternal Flame, Borrowed Time, Ember Heart and the Marshal's Ashen Blade.
+  - They no longer build fatigue, but health is still a real cost. It can knock the user out, and many foes aim at the hero with the lowest health.
+  - Bloodlust and Elixir of Fury also cost fatigue now, through Haste's extra turns.
+- **Percentages work as written:**
+  - Iron Will's 10% → 35% and Comfort's 5% → 20%.
+  - The Gravewarden's Plate: −15%, and its −1 Speed saves a few turns more.
+  - The Mourner's Veil: −30%, though its −10% damage makes battles a little longer.
+  - The Gravedigger's Spade: +20%, and its Haste adds turns.
+  - The Hollow Crown: ×2, and its +10% Speed adds turns.
+
+The Warden still tires least, now because it's the slowest class, with Iron Will on top. The fastest classes, the Lamplighter and the Cutpurse, tire soonest. The Pilgrim and Barber-Surgeon lower everyone's fatigue, and the Duellist's counters and the Warden's thorns deal damage without spending turns. Haste is a trade: a Hasted damage dealer may end the battle soon enough to pay for its extra turns, but a Hasted healer only tires faster. Slow, grinding parties win long battles and pay for them in fatigue.
 
 ## 8. Open questions
 
 ### Still open
-You passed on these for now, so the spec keeps a placeholder for each:
-- The rule-slot maximum for a combined character.
-- Whether an item's plain stats grow with the level of the stage it drops from (section 6).
-- The Masters' Hall's lesson times and level requirements.
+None. The three you passed on are settled below: the combined rule-slot maximum and item growth overnight, and the Masters' Hall's lessons by the home-base spec.
+
+### Settled overnight by the coordinator, for your review
+Each one is marked *(decided overnight, review)* where it appears in the spec.
+- **A combined character's rule-slot maximum** is the highest among their classes (section 2). Step 3 uses the first class's maximum, and step 5 changes it.
+- **Item growth:** plain stats × (1 + (item level − 1) ÷ 15), so a level-1 drop matches the tables. Only positive Health, Mana, Power and Defense grow (section 6). Step 4 built it this way.
+- **The Bag** holds 60 pieces of gear, and when it's full, new gear sells where it drops (section 6).
+- **The fatigue rewording** in section 7, including Blood Price's new cost.
+- **Ending a trip** (section 5):
+  - After a boss falls, the party always comes home.
+  - A Spent character walks home alone, and the rest carry on.
+  - Closing the app brings the party home after the battle under way.
+- **"Come home when" chips** on the stage sheet edit the between-battle party rules (section 5).
+- **Summoned foes** drop no spoils, and Pickpocket steals nothing from them (section 2).
 
 ### Settled
+- **Fatigue:** +1 for each turn a character takes, and nothing else adds any for now, as you decided on 2026-11-04 (section 7).
+- **The Masters' Hall's lessons:** the home-base spec sets them (section 2).
+- **Stage numbers and foe families** come from the campaign spec (section 5).
 - **Skill trees:** three build paths per class, one skill per path in every tier, keystones with a cost, and builds to try.
 - **Levels:**
   - The cap is 200, with 1 stat point per level and 1 skill point every 5 levels.
@@ -1607,7 +1664,6 @@ You passed on these for now, so the spec keeps a placeholder for each:
 - **Rule slots:** every character starts with 3, and more come from training at a home base building.
 - **Higher-level recruits** arrive with their points already spent to match their level.
 - **Small decisions:**
-  - Fatigue counting and foe families stay as proposed for now.
   - Two of one class can share a party.
   - Health resets before every battle.
 - **Retired:** capstones are gone, and Defense scales with the attacker's level.
@@ -1617,7 +1673,11 @@ You passed on these for now, so the spec keeps a placeholder for each:
 - **`docs/design.md`** has been updated to match the levels, points, thresholds, combining, awakenings, rule slots and item sources here.
 - **Skills:** each prototype class's two skills become its starter and its second tier-1 active, with the same numbers at level 1.
 - **Stats:** the prototype's stats are the level-1 averages here. Only the Warden's Dodge moves, from 0 to a 0–2% range.
-- **Rule slots:** every character starts with 3. More are learned by training at a home base building, which takes idle time away, like extra skill-slot lessons. Each class keeps its own maximum.
+- **Rule slots:** every character starts with 3. More are learned by training at a home base building, which takes idle time away, like extra skill-slot lessons. Each class keeps its own maximum, and a combined character uses the highest among their classes. Step 3 uses the first class's maximum, so step 5 changes it.
+- **Fatigue (step 5):** +1 for each turn a character takes, read from the battle's `stats[id].turns`, then the percentage effects in section 7. Nothing else adds fatigue.
+  - Step 3 left the fatigue effects marked `later: 'fatigue'`. Step 5 builds them and brings their in-game texts into line with section 7's wording.
+  - Blood Price's new cost, 25% weaker healing on the Hexblade, comes with them.
+- **Item effects without a number** in the tables got one in step 4, such as the Witchfire Satchel's self-Burning at 0.2× a tick, and the Gravedigger's Spade firing once per battle, on the first ally to fall. Step 4's pull request lists them all.
 - **Statuses:** Doom, Dazzled, Kindled, Guarding, Charging and Marked keep their prototype numbers. Bleeding now stacks without limit, and healing no longer stops it. The rest are new.
 - **Conditions:** step 2 built 20 of the 42. Add the rest to `CONDITIONS`.
 - **Items:** keep step 2's Healing Draught, Smelling Salts and Lamp Oil, and add the Bitter Tincture.
