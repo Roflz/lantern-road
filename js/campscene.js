@@ -19,9 +19,11 @@
 //   board    { open }: the Recruit Board stands dark until the road opens it
 //   sig      a string that changes whenever any of the above does
 //
-// Speed: while the camera rests, everything that doesn't move (the sky, the ground, the road, the scenery and their
-// lights) is drawn once into a cache. Each frame then adds only what moves: the party, the fire and the flickering
-// lights. While it turns, every frame is drawn whole, with glows from pre-drawn sprites and the road in three strips.
+// Speed (tools/camp_perf.py measures it): while the camera rests, everything that doesn't move (the sky, the ground,
+// the road, the scenery and their lights) is drawn once into a cache, and each frame, thirty a second, adds only what
+// moves: the party, the fire and the flickering lights. While it turns, every frame is drawn whole, but cheaply: glows
+// from pre-drawn sprites, the road in strips, the ground's heights and the hills' outline worked out once, and small
+// things filled a colour at a time.
 
 const CampScene = (() => {
   const K = 2, IH = 195, REF = 422, RAD = Math.PI / 180;
