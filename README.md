@@ -1,8 +1,47 @@
 # Lantern Road
 
-A dark-fantasy roguelike in a single HTML file. Your lantern-bearer walks a cursed road on their own. You steer between lanes to choose forks, fight turn-based battles, and try to end the Hollow King.
+A dark-fantasy idle party battler, built for phones in portrait. Six lantern-bearers fight on their own, by the rules you give them. The design lives in [docs/design.md](docs/design.md).
 
-## Play
+## The idle battle prototype (build step 1)
+
+Open `index.html` in a browser. It needs no build step and no internet connection; the fonts ship in `fonts/`. A fixed party of six fights six stages in the Gravefields and the Drowned Chapel, ending with the Drowned Bishop.
+
+- **Landscape battles:** battles and the report are played in landscape: turn your phone sideways. Held upright, the battle is drawn on its side. The camp stays in portrait.
+- **The party:** the Warden and the Sellsword stand in front, nearest the foes. The Crossbowman, Pilgrim, Lamplighter and Hexblade stand behind. Each has a basic attack, two skills and a short list of rules.
+- **Rules:** on each turn a character reads its rules from the top and uses the first one that is true and that it has the mana for. If none applies, it uses its basic attack.
+- **Turn flags:** banners along the top show who acts next and the skill each will use. The first is the turn being played, with the rule that chose it.
+- **The back row:** melee attacks must hit the front row while anyone stands there. Lunge and the Reaping Hook leap past it, and a Guard pulls single-target attacks onto the tank.
+- **Mana and enrage:** skills cost mana, and basic attacks restore some. From round 15 the foes are enraged and hit harder every round, so no battle can stall.
+- **Watching:** battles play on their own, at 1×, 2× or 4×. Pause, then tap Turn to play one turn at a time, or skip to the result. The next stage waits until you choose it.
+- **The report:** damage dealt and taken, and healing done and received, for every character. Tap a character to see how often each of its rules fired and its best moments.
+- **Sound:** sound effects only; the music is off until it is reworked.
+- **Keys:** Space or P plays and pauses, N plays one turn, F changes the speed, S skips, and Esc opens the menu.
+
+### Code
+
+| File | What it holds |
+|---|---|
+| `js/core.js` | Seeded random numbers and small helpers |
+| `js/data.js` | Classes, foes, skills, statuses, rule conditions and stages |
+| `js/sim.js` | The battle simulation: a seed and a setup in, an event log out |
+| `js/art.js` | Pixel sprites, icons and scenery |
+| `js/audio.js` | Settings, sound effects and procedural music |
+| `js/battle.js` | The battle screen, which animates the event log |
+| `js/main.js` | The camp, the battle report, settings and saving |
+
+The simulation never touches the page, so the same code runs the battle on screen, the Skip button and the headless tests.
+
+### Tests
+
+- `node tools/simtest.js [battles per stage]` simulates hundreds of battles per stage. It reports win rates, battle length and which skills fire, and checks every event log for broken rules.
+- `python tools/shot.py index.html out.png` takes phone-sized screenshots in headless Chromium and prints console errors (needs Playwright).
+- `tools/sprites.html` shows every sprite and icon at a large size.
+
+## The first version: a roguelike
+
+A dark-fantasy roguelike in a single HTML file, `lantern-road.html`, kept in the repository for now. Your lantern-bearer walks a cursed road on their own. You steer between lanes to choose forks, fight turn-based battles, and try to end the Hollow King.
+
+### Play
 
 Open `lantern-road.html` in a browser. It needs no build step, no server and no internet connection: the fonts ship in `fonts/`.
 
@@ -20,7 +59,7 @@ Speed, auto play, settings and the chosen Darkness level are remembered on the d
 
 Tap the **Lantern Road** title seven times, or open the page with `#dev` at the end of the address. Developer mode adds 3×, 5× and 10× speeds; with Auto on at 10×, a full walk takes about a minute and a half. Settings has a button to leave developer mode.
 
-## Rules
+### Rules
 
 - **The run:** 5 regions (Gravefields, Drowned Chapel, Thornwood, Ashen Keep, Hollow Throne), each with 10 events and a boss.
 - **Events:** Fight, Elite, Mystery, Campfire, Merchant, Shrine, Treasure.
@@ -39,7 +78,7 @@ Tap the **Lantern Road** title seven times, or open the page with `#dev` at the 
   | Victory | +500, then the total ×1.5 |
   | Darkness level | the final total ×(1 + 0.25 per level) |
 
-## Progression
+### Progression
 
 - **Embers:** every run earns 1 ember per 100 points. Spend them at the Pyre to unlock classes (Hexblade, Pilgrim), relics, mystery events, and a starting-relic choice.
 - **Achievements:** 21 achievements, each worth a few embers. They are listed in the Codex.
@@ -47,7 +86,7 @@ Tap the **Lantern Road** title seven times, or open the page with `#dev` at the 
 - **Darkness:** winning unlocks the next Darkness level, up to V. Levels stack: more foe HP, a hungrier lantern, harder elites and bosses, pricier merchants.
 - **Daily Road:** one shared road per calendar day, with the same class, foes and forks for every player. One walk per day, double embers, and a streak for playing on consecutive days. It ignores Pyre unlocks so everyone draws from the same pool.
 
-## Look and sound
+### Look and sound
 
 - **Cozy gothic:** a violet night with warm amber light. The lantern swings as the hero walks, wayside lanterns and grave candles glow along the road, and a soft vignette frames the scene.
 - **Icons instead of words:** the HUD, enemy intents, statuses, combat actions, prices and rewards all use pixel icons with numbers.
@@ -55,11 +94,11 @@ Tap the **Lantern Road** title seven times, or open the page with `#dev` at the 
 - **The Pyre:** a campfire scene. Each unlock lights one of the ten lanterns around it.
 - **Music and sound:** each region has its own procedural ambient tune with a drone, a soft plucked melody, lantern crackle, and rain in the Drowned Chapel. All sounds pass through a soft filter and a short echo.
 
-## Saving
+### Saving
 
 - **The walk in progress** is saved before each event and every few seconds while walking. If the game closes, Continue on the title screen picks it up. If it closed during an event, that event starts again.
 - **Embers, unlocks, records, achievements and the Daily Road streak:** when the page runs as a Claude artifact, they save to the viewer's account. Opened anywhere else, they save to the browser's local storage.
 
-## Fonts
+### Fonts
 
 Pirata One, Silkscreen and Spectral are bundled in `fonts/` under the SIL Open Font License 1.1. The license texts are in `fonts/OFL-*.txt`.
