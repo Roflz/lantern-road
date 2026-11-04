@@ -1054,6 +1054,14 @@ const Base = (() => {
     return { ms, rows, rested, learned, board };
   }
   const lastReport = () => report;
+  // Back to a tab that was hidden a while: bring everything up to date and report it, like a return after closing.
+  function catchUp(s = store()) {
+    if (!s) return null;
+    const before = snapshot(s), from = s.base.clock || now(s);
+    tick(s);
+    report = makeReport(s, before, now(s) - from);
+    return report;
+  }
   // Gather it all: every building, the still-room and the fire.
   function collectAll(s = store()) {
     tick(s);
@@ -1107,7 +1115,7 @@ const Base = (() => {
     whyNotDismiss, dismiss,
     rooms, inHall, lessonsFor, whyNotStudy, startLesson, lessonOf, lessonEnd, cancelLesson, finishLesson,
     shrine, respecPrice, freeRespecIn, respec, unlearnPrice, unlearn,
-    newGame, afterBattle, settleHome, spendItems, limitLoadout, tickTo, tick, prepare, start, lastReport, collectAll, wrapSetup, proto,
+    newGame, afterBattle, settleHome, spendItems, limitLoadout, tickTo, tick, prepare, start, lastReport, catchUp, collectAll, wrapSetup, proto,
     onChange: fn => listeners.push(fn), changed,
   };
 })();

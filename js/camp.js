@@ -492,8 +492,8 @@ const Camp = (() => {
   function showAway(ms) {
     const s = Save.state;
     if (!s.roster.length) return;
-    Base.tick(s);
-    const rep = Base.lastReport() || { rows: [], rested: [], learned: [], board: false };
+    // Back to a tab left hidden: catch up now, so the rows describe this time away.
+    const rep = (Base.now(s) - s.base.clock > 60000 ? Base.catchUp(s) : (Base.tick(s), Base.lastReport())) || { rows: [], rested: [], learned: [], board: false };
     const rows = [];
     const row = (iconEl, name, sub, value, cls) => rows.push(h('div', { class: 'gain' }, iconEl, h('div', {}, h('span', { class: 'nm', text: name }), sub ? h('span', { class: 'k ' + (cls || ''), text: sub }) : null), value));
     const order = ['tollhouse', 'scavengercamp', 'salvagepit', 'infirmary', 'fire', 'trainingyard'];
@@ -534,6 +534,8 @@ const Camp = (() => {
       }, 'primary')), 'sheet-bottom');
   }
   App.actions.away = showAway;
+  // The camp's clock keeps moving while the game is open: rest, idle buildings, lessons, the board and the free draught.
+  setInterval(() => { const s = Save.state; if (s && !document.hidden && s.roster.length) Base.tick(s); }, 10000);
 
   // ── the Renown track (home-base spec §8)
   function showRenown() {
