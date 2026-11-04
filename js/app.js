@@ -1,7 +1,7 @@
 'use strict';
 // Lantern Road · the app shell: screens, the tab bar, the purse, settings and the "while you were away" note.
-// Home Base and the Party are placeholders in the game's look until their designs land. The Road tab is js/map.js,
-// and the battle is a screen too; js/main.js registers it.
+// The Home Base (the camp around the fire) is js/camp.js. The Road tab is js/map.js, and the battle is a screen too;
+// js/main.js registers it.
 //
 // A screen is registered with App.screen(name, def):
 //   def.tab     true to show the top bar and tab bar (and to slide between tabs)
@@ -70,7 +70,7 @@ const App = (() => {
     const s = Save.state, reached = Math.max(0, ...s.campaign.cleared.map(id => (STAGES.find(x => x.id === id) || { region: 0 }).region));
     purse.replaceChildren(
       h('span', { class: 'coin', title: 'Gold' }, h('i', { class: 'goldpip' }), h('b', { text: fmt(s.currencies.gold) })),
-      ...MATERIALS.filter(m => m.region <= reached).map(m => h('span', { class: 'coin mat', title: m.name }, ico('bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
+      ...MATERIALS.filter(m => m.region <= reached || (s.currencies.mats[m.id] || 0) > 0).map(m => h('span', { class: 'coin mat', title: m.name }, ico(typeof Base !== 'undefined' ? Base.matIcon(m.id) : 'bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
   }
 
   TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));
@@ -93,32 +93,7 @@ const App = (() => {
     resting = true;
   }
 
-  // ── Home Base: the party rests on the road; buildings will rise around them in step 5
-  const BUILDINGS = [
-    ['Recruit board', 'New faces for the road', 'heart'],
-    ['Barracks', 'Room for more of them', 'shield'],
-    ['Infirmary', 'Rest away the fatigue', 'cross'],
-    ['Tactician', 'New rules to give', 'book'],
-    ['Shrine', 'Unlearn and relearn', 'holy'],
-    ['Toll house', 'Gold while you sleep', 'bell'],
-  ];
-  screen('home', {
-    tab: true,
-    render() {
-      const s = Save.state, next = STAGES[stageIndex()], R = REGION_NAMES[next.region];
-      const a = s.away;
-      return h('div', { class: 'home' },
-        h('div', { class: 'kicker', text: `${R.num} · ${R.name}` }),
-        h('h1', { class: 'title', text: 'Lantern Road' }),
-        h('p', { class: 'tagline', text: 'The party rests by the lantern. Build here, then take the road.' }),
-        h('button', { class: 'btn play', onclick: () => { sfx('click'); go('map'); } }, 'Take the road', h('span', { class: 'sub', text: Campaign.frontier() >= STAGES.length ? 'Every lantern in the Gravefields burns' : `Next: ${next.id} · ${next.name}` })),
-        a.last >= AWAY_MIN ? h('button', { class: 'away-chip', onclick: () => { sfx('click'); showAway(a.last); } }, ico('lantern'), `Away ${duration(a.last)} · see what came in`) : null,
-        h('h3', { class: 'sect', text: 'Buildings' }),
-        h('div', { class: 'blds' }, BUILDINGS.map(([n, d, i]) => h('div', { class: 'bld locked' }, ico(i), h('b', { text: n }), h('span', { text: d }), h('em', {}, ico('lock'), 'Soon')))),
-        placeholder('Home base arrives in step 5.'));
-    },
-    enter: restScene,
-  });
+  // ── Home Base: the camp around the fire is js/camp.js (build step 5), which registers the 'home' screen.
 
   // ── Party: the formation and the roster
   let arrange = null; // the formation slot picked while arranging, or -1 when arranging with none picked
@@ -151,30 +126,35 @@ const App = (() => {
         if (arrange != null) return h('button', { class: 'pslot arr' + (c ? '' : ' empty') + (arrange === i ? ' sel' : ''), 'aria-pressed': arrange === i ? 'true' : 'false', onclick: () => pickSlot(i) },
           c ? [h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })), h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level })] : h('span', { text: arrange === i ? 'Pick a hero' : 'Empty' }));
         if (!c) return h('div', { class: 'pslot empty' }, h('span', { text: 'Empty' }));
-        return h('button', { class: 'pslot', onclick: () => { sfx('click'); showCharacter(c.id); } },
+        return h('button', { class: 'pslot' + (typeof Fatigue !== 'undefined' && Fatigue.spent(c) ? ' spent' : ''), onclick: () => { sfx('click'); showCharacter(c.id); } },
           h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })),
           h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }), flags(c),
-          h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })));
+          h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })), fat(c));
       };
+      // Fatigue under each hero in the formation (js/rest.js): Weary, Exhausted and Spent show in their colours.
+      const fat = c => (typeof Fatigue !== 'undefined' ? h('span', { class: 'fat ' + Fatigue.state(c), title: `Fatigue ${Math.floor(c.fatigue || 0)}` }, h('i', { style: `width:${Math.min(100, c.fatigue || 0)}%` })) : null);
       const n = s.party.filter(Boolean).length;
       const arrTools = arrange != null
         ? h('div', { class: 'arrbar' }, h('span', { text: arrange >= 0 ? 'Tap another slot to swap, or a hero below to put them here.' : 'Tap a slot to move a hero.' }),
           arrange >= 0 && s.party[arrange] && n > 1 ? h('button', { class: 'small', onclick: () => { sfx('click'); s.party[arrange] = null; arrange = -1; Save.commit(); refresh(); } }, 'Leave out') : null,
           h('button', { class: 'small on', onclick: () => { sfx('click'); arrange = null; refresh(); } }, 'Done'))
         : h('div', { class: 'arrbar' }, h('span', { text: `${n} of 6 set out · 2 in front, 4 behind` }), h('button', { class: 'small', onclick: () => { sfx('click'); arrange = -1; refresh(); } }, 'Arrange'));
+      const cap = typeof Base !== 'undefined' ? Base.rosterCap(s) : null;
       return h('div', { class: 'party' },
-        h('div', { class: 'kicker', text: `${s.roster.length} in the roster` }), h('h1', { text: 'The Party' }),
+        h('div', { class: 'kicker', text: cap ? `${s.roster.length} of ${cap} in the roster` : `${s.roster.length} in the roster` }), h('h1', { text: 'The Party' }),
         arrTools,
         h('h3', { class: 'sect', text: 'Front row' }), h('div', { class: 'prow front' }, [0, 1].map(slot)),
         h('h3', { class: 'sect', text: 'Back row' }), h('div', { class: 'prow back' }, [2, 3, 4, 5].map(slot)),
         h('h3', { class: 'sect', text: 'Roster' }),
-        h('div', { class: 'roster' }, s.roster.map(c => h('button', { class: 'rrow' + (s.party.includes(c.id) ? '' : ' bench'), onclick: () => { sfx('click'); if (arrange != null && arrange >= 0) { placeIn(arrange, c.id); arrange = -1; refresh(); } else showCharacter(c.id); } },
+        // The camp's rows (js/camp.js): where each hero is, their fatigue, and a swipe left to dismiss. While arranging,
+        // a tap puts the hero in the slot picked.
+        h('div', { class: 'roster' }, s.roster.map(c => actions.rosterRow && !(arrange != null && arrange >= 0) ? actions.rosterRow(c) : h('button', { class: 'rrow' + (s.party.includes(c.id) ? '' : ' bench'), onclick: () => { sfx('click'); if (arrange != null && arrange >= 0) { placeIn(arrange, c.id); arrange = -1; refresh(); } else showCharacter(c.id); } },
           h('img', { src: heroPortrait(c), alt: '' }),
           h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: c.classes.length > 1 ? c.classes.map(k => CLASSES[k].name).join(' + ') : CLASSES[c.cls].role })),
           h('span', { class: 'lv' }, flags(c), s.party.includes(c.id) ? '' : h('em', { class: 'benched', text: 'resting' }), 'Lv ' + c.level),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })),
           h('span', { class: 'chev', 'aria-hidden': 'true' })))),
-        placeholder('Recruiting arrives in step 5.'));
+        actions.recruitLink ? actions.recruitLink() : null);
     },
     enter: restScene,
   });
@@ -186,7 +166,7 @@ const App = (() => {
   }
 
   // ── time away
-  const AWAY_MIN = 2 * 60 * 1000; // shorter absences pass without a note (tune)
+  const AWAY_MIN = 5 * 60 * 1000; // shorter absences pass without a note (home-base spec §4, tune)
   function duration(ms) {
     const m = Math.floor(ms / 60000), hh = Math.floor(m / 60), d = Math.floor(hh / 24);
     if (d) return `${d}d ${hh % 24}h`;
@@ -194,6 +174,7 @@ const App = (() => {
     return `${Math.max(1, m)}m`;
   }
   function showAway(ms) {
+    if (actions.away) return actions.away(ms);
     const gains = awayGains.flatMap(fn => { try { return fn(ms, Save.state) || []; } catch (e) { return []; } });
     openSheet(sheetBox([
       h('div', { class: 'kicker', text: 'While you were away' }),

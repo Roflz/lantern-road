@@ -364,10 +364,14 @@ document.addEventListener('keydown', e => {
 function boot(data) {
   Save.load();
   Campaign.ensure();
+  // The camp listens to the road from the start, so a battle resolved below still counts for Renown and items.
+  if (typeof Base !== 'undefined') Base.prepare();
   // Republished while a battle played: the same seed replays it. Back after closing the app: the battle that was
   // under way is resolved now, and the party comes home (campaign spec §7.5). Nothing played while the app was closed.
   if (data && Number.isInteger(data.stage) && STAGES[data.stage] && Number.isFinite(data.seed)) progress().current = { stage: data.stage, seed: data.seed };
   else if (progress().current) resolveClosed();
+  // The camp catches up on the time away (js/base.js): rest, lessons, idle buildings, the board and the free draught.
+  if (typeof Base !== 'undefined') Base.start();
   Battle.init();
   Battle.onPause = () => syncControls();
   Battle.onEvent = battleTip;

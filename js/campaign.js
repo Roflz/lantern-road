@@ -42,6 +42,8 @@ const Campaign = (() => {
 
   // ── where the road stands
   const has = (id, s = store()) => !s || !!(s.unlocks && s.unlocks[id]);
+  // Tactician I: Focus fire and saved rule sets. With the home base, the building teaches it; without, the 1-11 clear.
+  const taught = (s = store()) => (typeof Base !== 'undefined' && s ? Base.built('tactician', s) : has('tactician', s));
   const isLit = (id, s = store()) => !!s && s.campaign.cleared.includes(id);
   // The next stage to light: the first one not yet cleared, or past the end when Region I is all lit.
   const frontier = (s = store()) => { const i = STAGES.findIndex(st => !isLit(st.id, s)); return i < 0 ? STAGES.length : i; };
@@ -78,7 +80,7 @@ const Campaign = (() => {
     const out = (s.campaign.trip && s.campaign.trip.out) || [];
     t.party = t.party.map(p => (p && (out.includes(p.char) || spent(s.roster.find(c => c.id === p.char) || {})) ? null : p));
     if (!has('items')) { t.loadout = []; t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'item'); }
-    if (!has('tactician')) t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'focus');
+    if (!taught(s)) t.partyRules = t.partyRules.filter(r => PARTY_ACTIONS[r.do] && PARTY_ACTIONS[r.do].kind !== 'focus');
     return t;
   }
   // The battle for a stage: lit stages are replays, where wandering foes can appear.
@@ -175,7 +177,9 @@ const Campaign = (() => {
       Tactics.grantPartyRule({ if: 'ally_hp_lt', n: 50, do: 'draught' });
     },
     keepgoing: s => { s.campaign.road.keepGoing = true; Tactics.grantPartyRule(HOME_RULE); },
+    // With the home base (build step 5), 1-11 only brings the Tactician's blueprint, and building it teaches Lesson I.
     tactician: () => {
+      if (typeof Base !== 'undefined') return;
       for (const id of TACTICIAN_I.concat(HP_MP)) for (const k of variantKeys(id)) Tactics.learn(k);
     },
   };
@@ -329,7 +333,7 @@ const Campaign = (() => {
   function restAll(s = store()) { for (const c of s.roster) c.fatigue = 0; return true; }
 
   return {
-    ensure, has, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
+    ensure, has, taught, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
     earn, preview, defeated, fatigue, unlock, settle, setOut, afterBattle, end, callHome, trip, setFor, chooseSet, tip, restAll,
     onUnlock: fn => unlockHooks.push(fn), onFirstClear: fn => clearHooks.push(fn), onSettle: fn => settleHooks.push(fn), onHome: fn => homeHooks.push(fn),
   };

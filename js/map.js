@@ -304,10 +304,10 @@ const RoadMap = (() => {
         } }, ico(open ? (UI_ICONS[c.icon] ? c.icon : 'lantern') : 'lock'), c.label);
     };
     const sets = Tactics.sets(), cur = Campaign.setFor(i);
-    const setRow = Campaign.has('tactician') && sets.length
+    const setRow = Campaign.taught() && sets.length
       ? h('select', { class: 'setpick', 'aria-label': 'Rule set for this stage', onchange: e => { const v = e.target.value; if (v) { Campaign.chooseSet(i, v); toast(`“${v}” loaded`); } else Campaign.chooseSet(i, null); Save.commit(); } },
         h('option', { value: '' }, 'As they are'), sets.map(x => h('option', { value: x.name, selected: cur === x.name ? 'selected' : null }, x.name)))
-      : h('span', { class: 'chip locked' }, ico('lock'), Campaign.has('tactician') ? 'Save a set on Tactics' : 'Opens at 1-11');
+      : h('span', { class: 'chip locked' }, ico('lock'), Campaign.taught() ? 'Save a set on Tactics' : typeof Base !== 'undefined' ? 'The Tactician teaches them' : 'Opens at 1-11');
     return h('div', { class: 'panel roadset' },
       h('div', { class: 'row' }, h('span', { class: 'k', text: 'Keep going after a win' }), h('span', { class: 'sp' }),
         kg ? h('button', { class: 'tg' + (road.keepGoing ? ' on' : ''), role: 'switch', 'aria-checked': road.keepGoing ? 'true' : 'false', 'aria-label': 'Keep going after a win', onclick: () => { click(); road.keepGoing = !road.keepGoing; Save.commit(); stageSheet(i); } }, h('i'))
@@ -327,7 +327,7 @@ const RoadMap = (() => {
           h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
       })),
       h('div', { class: 'ps-acts' },
-        tired ? h('button', { class: 'textbtn proto', title: 'Rest and the Infirmary arrive with the home base (step 5)', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : h('span'),
+        tired ? h('button', { class: 'textbtn proto', title: 'Prototype: everyone rests at once. At camp, rest takes time: the fire, and the Infirmary’s beds', onclick: () => { click(); Campaign.restAll(); Save.commit(); toast('Everyone rests by the fire'); stageSheet(st.index); } }, 'Rest all (prototype)') : h('span'),
         h('button', { class: 'small', onclick: () => { click(); closeSheet(); App.go('party'); } }, 'Edit party')));
   }
   // Set out (or farm): the party walks the lit road and the battle starts where they stop.
