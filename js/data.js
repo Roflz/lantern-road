@@ -490,7 +490,7 @@ const UNLOCKS = {
   'cond:foe_boss': { kind: 'condition', name: 'Foe: boss or elite', icon: 'scroll', cond: ['foe_boss'] },
   'cond:ally_hurt': { kind: 'condition', name: 'Ally: most hurt', icon: 'scroll', cond: ['ally_hurt'] },
   shop: { kind: 'building', name: 'Shop blueprint', icon: 'coin', line: 'Party items and a small gear stall.', step: 5 },
-  tactician: { kind: 'feature', name: 'Tactician I', icon: 'book', line: 'Thresholds, Focus fire, saved rule sets and a dozen conditions. The building itself comes with the home base.' },
+  tactician: { kind: 'feature', name: 'Tactician I', icon: 'book', line: 'Thresholds, Focus fire, saved rule sets and a dozen conditions, and the Tactician’s blueprint.' },
   'cond:foe_charging': { kind: 'condition', name: 'Foe: charging a big attack', icon: 'scroll', cond: ['foe_charging'] },
   scavengercamp: { kind: 'building', name: 'Scavenger Camp blueprint', icon: 'bag', line: 'Gear and materials while you are away.', step: 5 },
   'cond:bb_next_boss': { kind: 'condition', name: 'Between battles: next stage has a boss or elite', icon: 'scroll', cond: ['bb_next_boss'] },

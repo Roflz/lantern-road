@@ -17,8 +17,18 @@ function toast(text, cls = '') {
 }
 function setScreen(el) { scr.replaceChildren(el); scr.hidden = false; scr.scrollTop = 0; }
 function closeScreen() { scr.hidden = true; scr.replaceChildren(); }
-function openSheet(el, cls = '') { sheet.className = cls; sheet.replaceChildren(el); sheet.hidden = false; }
-function closeSheet() { sheet.hidden = true; sheet.replaceChildren(); reportRes = null; reportView = null; }
+function openSheet(el, cls = '') { const was = sheet.hidden; sheet.className = cls; sheet.replaceChildren(el); sheet.hidden = false; if (was && !cls.includes('report')) sfx('sheet'); }
+// A sheet closes at once (the game moves on), and a copy of it slides away so the eye can follow it out.
+function closeSheet() {
+  const box = !sheet.hidden && sheet.firstElementChild;
+  if (box && !noMotion() && sheet.className.includes('sheet-bottom')) {
+    const ghost = h('div', { class: 'sheet-ghost ' + sheet.className, 'aria-hidden': 'true' }, box.cloneNode(true));
+    ghost.inert = true;
+    $('#frame').append(ghost);
+    setTimeout(() => ghost.remove(), 240);
+  }
+  sheet.hidden = true; sheet.replaceChildren(); reportRes = null; reportView = null;
+}
 const btn = (label, fn, cls = '', sub) => h('button', { class: 'btn ' + cls, onclick: () => { sfx('click'); fn(); } }, label, sub ? h('span', { class: 'sub', text: sub }) : null);
 
 // Leave the battle for the road (the Campaign Map).
@@ -41,6 +51,7 @@ function startStage(i, seed) {
   current = { index: i, stage, seed, res: null };
   progress().current = { stage: i, seed };
   Save.commit();
+  Guide.battleStart(i);
   current.res = Battle.run(stage, seed, { onEnd: res => afterBattle(res), first: true, setup: Campaign.setup(i, seed) });
   syncControls();
 }
@@ -52,6 +63,7 @@ function afterBattle(res) {
   res.camp = out; res.xp = out.r.xp; res.gains = out.r.gains; res.saved = true;
   if (out.next == null) progress().current = null;
   Save.commit();
+  Guide.battleEnd();
   afterTips(res);
   if (out.next != null) betweenBattles(res);
   else if (res.gains.some(x => x.g.to > x.g.from)) LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, res.winner === 0);
@@ -79,6 +91,8 @@ function betweenBattles(res) {
       h('button', { class: 'btn', onclick: () => { sfx('click'); comeHomeNow(res); } }, 'Come home')));
   $('#frame').append(betweenEl);
   if (ups.length) sfx('win');
+  if (c.r.unlocks.length) sfx('unlock');
+  Guide.between();
   walkOn(res, bar);
 }
 // The party walks on to the next stage; the next battle starts where they stop.
@@ -273,14 +287,20 @@ function showReport(res, opts = {}) {
   // home to the road, or set out again.
   const going = camp && camp.next != null && Campaign.trip();
   const nextI = Campaign.frontier();
+  const farmI = !won && current.index === nextI && nextI > 0 && Campaign.isLit(STAGES[nextI - 1].id) ? nextI - 1 : -1;
   const again2 = () => { sfx('click'); if (Campaign.setOut(current.index)) { Save.commit(); startStage(current.index); } else toast('No one is fit to set out.'); };
   const actions = going
     ? [h('button', { class: 'btn primary', onclick: () => { sfx('click'); closeSheet(); betweenBattles(res); } }, 'Walk on', h('span', { class: 'sub', text: `${STAGES[camp.next].id} · ${STAGES[camp.next].name}` })), btn('Come home', () => comeHomeNow(null))]
     : [h('button', { class: 'btn primary', onclick: () => { sfx('click'); showCamp(); } }, 'Home', h('span', { class: 'sub', text: camp && camp.why ? 'The party walks back to camp' : 'Back to the road' })),
       won && nextI < STAGES.length && nextI !== current.index && !stage.boss ? btn('Set out', () => { sfx('click'); if (Campaign.setOut(nextI)) { Save.commit(); startStage(nextI); } }, '', `${STAGES[nextI].id} · ${STAGES[nextI].name}`) : null,
+      // Lost at the frontier: farming the stage before it is the way through a wall (campaign spec §8.2, 1-9).
+      !won && farmI >= 0 ? btn(`Farm ${STAGES[farmI].id}`, () => { if (Campaign.setOut(farmI)) { Save.commit(); startStage(farmI); } else toast('No one is fit to set out.'); }, '', 'XP and gear, then try again') : null,
       btn(won ? 'Farm again' : 'Try again', again2)];
-  // Why the trip ended, and after a loss, the stage's hint first (campaign spec §8.1).
-  const why = camp && camp.why && !going ? h('div', { class: 'why ' + camp.why.k }, camp.why.hint ? h('p', { class: 'hint' }, ico('book'), camp.why.hint) : null, h('span', { text: camp.why.text })) : null;
+  // Why the trip ended, and after a loss, the stage's hint first (campaign spec §8.1). The first loss also says what
+  // a loss costs.
+  if (!won && res.firstLoss == null) res.firstLoss = Guide.once('lossnote');
+  const why = camp && camp.why && !going ? h('div', { class: 'why ' + camp.why.k }, camp.why.hint ? h('p', { class: 'hint' }, ico('book'), camp.why.hint) : null, h('span', { text: camp.why.text }),
+    !won && res.firstLoss ? h('span', { class: 'note', text: 'A loss costs only time and fatigue. Farm a lit stage for XP and gear, then try again.' }) : null) : null;
   const box = h('div', { class: 'box report-box wide' },
     h('div', { class: 'rhead' },
       h('div', { class: 'rtitle' },
@@ -300,7 +320,13 @@ function showReport(res, opts = {}) {
       h('div', { class: 'seed', text: `Battle seed ${res.seed}` })),
     h('div', { class: 'side' }, characterCard(units.find(u => u.id === v.sel), res)));
   if (again) { box.classList.add('quiet'); sheet.replaceChildren(box); }
-  else openSheet(box, 'report');
+  else {
+    // A battle tip still showing would sit over the report: it has had its moment.
+    for (const t of $('#toasts').querySelectorAll('.toast.tip')) t.remove();
+    Guide.clear();
+    openSheet(box, 'report');
+    if (camp && camp.r.unlocks.length && !going) setTimeout(() => sfx('unlock'), 350);
+  }
   reportRes = res;
   syncControls();
 }
@@ -317,7 +343,7 @@ function settingRows(redraw) {
 }
 function showHow(back) {
   setScreen(h('div', { class: 'page how' },
-    h('button', { class: 'btn back', onclick: () => { sfx('click'); back(); } }, '← Back'),
+    h('button', { class: 'btn back', onclick: () => { sfx('click'); back(); } }, '‹ Back'),
     h('div', { class: 'kicker', text: 'Learn the road' }), h('h1', { text: 'How Battles Work' }),
     h('div', { class: 'rules-help' },
       h('h3', { text: 'Formation' }),
@@ -330,10 +356,14 @@ function showHow(back) {
       h('p', { text: 'Skills cost mana (the blue bar). Basic attacks restore some, so skills come around on their own.' }),
       h('h3', { text: 'Enrage' }),
       h('p', { text: `From round ${SIM.ENRAGE_ROUND}, foes are enraged and hit harder every round, so no battle can stall.` }),
+      h('h3', { text: 'Party items' }),
+      h('p', { text: 'From 1-3 the party packs items, like Healing Draughts. A party rule can use them, or tap one beside the controls to use it at once.' }),
       h('h3', { text: 'Watching' }),
       h('p', { text: 'Battles are played in landscape: turn your phone sideways. They play on their own. Pause, then tap Turn to play one turn at a time; tap play to carry on. Change the speed between 1×, 2× and 4×, or skip to the result.' }),
+      h('h3', { text: 'The road' }),
+      h('p', { text: 'With Keep going on, the party walks on after a win to the next stage, until a party rule, a loss, a boss or fatigue brings it home. Every turn a hero takes adds a point of fatigue; they rest at camp.' }),
       h('h3', { text: 'The report' }),
-      h('p', { text: 'After each battle, pick a stat from the tabs to rank everyone by damage dealt or taken, or healing done or received. Tap a character to see every turn they took, how often each of their tactics fired, and their best moments. The next stage waits until you choose to march on.' }))));
+      h('p', { text: 'After each battle, pick a stat from the tabs to rank everyone by damage dealt or taken, or healing done or received. Tap a character to see every turn they took, how often each of their tactics fired, and their best moments.' }))));
 }
 
 // ── input
@@ -376,6 +406,7 @@ function boot(data) {
   Battle.onPause = () => syncControls();
   Battle.onEvent = battleTip;
   App.start();
+  Guide.boot();
   if (progress().rebuilt) { delete progress().rebuilt; Save.commit(); setTimeout(() => toast('The road was rebuilt: Region I has 18 stages now. Your heroes keep their levels and gear.', 'tip'), 600); }
 }
 // The battle under way when the app closed: resolved from its seed, its rewards settled, and the trip over.
@@ -402,11 +433,25 @@ const TIPS = {
   weary: 'Weary: rest at camp. The Infirmary will speed it up.',
   stat: 'A stat point: spend it on the hero’s Stats tab.',
   skill: 'A skill point: learn a tier-1 skill, then choose which one to equip.',
+  // Regions II–V (build step 7b): their new foes, the first time each trick is played
+  hidden: 'Hidden: single-target attacks can’t aim at it until it attacks. Hits on a whole row still reach it.',
+  lured: 'Lured: a foe pulled a hero out of the back row. Move resistance holds them in place.',
+  thorns: 'Thorns: this foe hurts whoever strikes it. Ranged and magic attacks take the sting too.',
+  drain: 'Mana drain: the foe steals a hero’s mana and heals itself with it.',
+  regen: 'Regenerating: this foe heals at the start of every turn. Hit it hard and fast.',
+  splash: 'Splash: a heavy blow on the front row spills onto the hero behind.',
+  threshold: 'A threshold: choose what it opens on the hero’s Skills tab, the next tier or more.',
+  move: 'Move: a rule sent this hero to the other row. It costs the turn.',
+  gather: 'Gather: no attack this turn, but twice the mana back.',
 };
-function showTip(k, text) { if (Campaign.tip(k)) toast(text || TIPS[k], 'tip'); }
+function showTip(k, text) { Guide.tip(k, text || TIPS[k]); }
 const isHeroId = id => /^p\d$/.test(id);
 function battleTip(e) {
   if (!current) return;
+  Guide.battleEvent(e);
+  // A foe that starts the battle Hidden (Region III's Hanged Man): said at the first turn, before anyone misses it.
+  if (e.t === 'turn' && current.res && current.res.start.some(u => u.side === 1 && u.st && u.st.hidden)) showTip('hidden');
+  if (e.t === 'act' && isHeroId(e.who) && (e.skill === 'move' || e.skill === 'gather')) showTip(e.skill);
   if (e.t === 'status' && e.on && isHeroId(e.who) && (e.key === 'bleed' || e.key === 'marked')) showTip(e.key);
   else if (e.t === 'hit' && e.guard && e.tgt[0] === 'f') {
     const g = current.res && current.res.start.find(u => u.id === e.tgt);
@@ -415,12 +460,18 @@ function battleTip(e) {
   else if (e.t === 'die' && isHeroId(e.who)) showTip('fell');
   else if (e.t === 'step') showTip('step');
   else if (e.t === 'summon' && e.unit.side === 1) showTip('called');
+  else if (e.t === 'miss' && e.why === 'hidden') showTip('hidden');
+  else if (e.t === 'swap' && e.why === 'lure' && [e.a, e.b].some(id => id && isHeroId(id))) showTip('lured');
+  else if (e.t === 'counter' && e.why === 'thorns' && isHeroId(e.tgt)) showTip('thorns');
+  else if (e.t === 'heal' && (e.how === 'drain' || e.how === 'regen') && e.tgt && e.tgt[0] === 'f') showTip(e.how);
+  else if (e.t === 'hit' && e.splash && isHeroId(e.tgt)) showTip('splash');
 }
 function afterTips(res) {
   const f = res.camp.r.fatigue;
   if (Object.values(f).some(x => x.before < FATIGUE.WEARY && x.after >= FATIGUE.WEARY)) showTip('weary');
   if (res.gains.some(x => x.g.to > x.g.from)) showTip('stat');
   if (res.gains.some(x => x.g.skillPts > 0)) showTip('skill');
+  if (res.gains.some(x => x.g.thresholds && x.g.thresholds.length)) showTip('threshold');
 }
 try {
   const hot = window.claude && window.claude.hot;

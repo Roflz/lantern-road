@@ -52,7 +52,7 @@ function defaultState() {
     board: { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, free: true, seq: 0 },
     freePotion: { waiting: 0, since: 0 },
     shop: { stall: [], refreshedAt: 0, n: 0 },
-    settings: { sfx: true, music: true, motion: true, speed: 1 },
+    settings: { sfx: true, music: true, motion: true, speed: 1, tips: true, proto: true }, // tips: first-time tips; proto: show the prototype tools
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
   };
 }
@@ -96,7 +96,7 @@ function normalize(d) {
   for (const k of Object.keys(s.unlocks)) if (!UNLOCKS[k] || !Number.isFinite(s.unlocks[k])) delete s.unlocks[k];
   for (const c of s.roster) c.fatigue = clamp(Number(c.fatigue) || 0, 0, 100);
   if (![1, 2, 4].includes(s.settings.speed)) s.settings.speed = 1;
-  for (const k of ['sfx', 'music', 'motion']) s.settings[k] = s.settings[k] !== false;
+  for (const k of ['sfx', 'music', 'motion', 'tips', 'proto']) s.settings[k] = s.settings[k] !== false;
   s.nextId = Math.max(s.nextId, ...s.roster.map(c => (parseInt(c.id.slice(1), 10) || 0) + 1));
   // The Bag: real pieces only, each once (a piece worn by someone isn't in the Bag too).
   const uids = new Set(s.roster.flatMap(c => SLOTS.map(k => c.gear[k] && c.gear[k].uid).filter(Boolean)));

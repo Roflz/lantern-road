@@ -6,7 +6,7 @@ Serves the repository on a free local port, opens a page at phone size, runs opt
   python tools/shot.py index.html out.png --steps "wait:1500; shot:a.png; js:Battle.setSpeed(4); wait:4000; shot:b.png"
 
 Steps: wait:<ms>, shot:<file>, js:<expression>, until:<expression> (waits, up to 3 minutes, for it to be true),
-click:<css selector>, tap:<x>,<y>
+click:<css selector>, tap:<x>,<y>, size:<w>,<h> (turn the phone)
 With --steps-file, steps are read one per line, so JavaScript may contain semicolons.
 With --artifact, the page is served inside the document skeleton the Claude artifact host adds.
 """
@@ -100,6 +100,9 @@ def main():
             elif kind == 'tap':
                 x, y = arg.split(',')
                 page.mouse.click(float(x), float(y))
+            elif kind == 'size':
+                w, h = arg.split(',')
+                page.set_viewport_size({'width': int(w), 'height': int(h)})
         if not shots or a.out != '-':
             page.screenshot(path=a.out)
             print('saved', a.out)

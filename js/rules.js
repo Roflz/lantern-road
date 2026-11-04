@@ -486,7 +486,7 @@ const TacticsEditor = (() => {
 
   function screen() {
     return h('div', { class: 'page tx' },
-      h('button', { class: 'btn back', onclick: () => { click(); close(); } }, '← Back'),
+      h('button', { class: 'btn back', onclick: () => { click(); close(); } }, '‹ Back'),
       h('div', { class: 'kicker', text: 'Tactics' }),
       h('h1', { text: 'Rules' }),
       h('p', { class: 'tx-lede', text: 'On each turn, a hero reads their rules from the top and uses the first one that is true and possible. If none is, they use their basic attack.' }),
@@ -579,8 +579,8 @@ const TacticsEditor = (() => {
     return h('div', { class: 'box tx-sheet', role: 'dialog', 'aria-label': 'Choose a condition' },
       sheetHead('When…', p.i < 0 ? 'Step 1 of 2: when should this rule fire?' : null),
       groups,
-      locked ? h('div', { class: 'tx-proto' }, h('span', { text: `${locked} locked. In the full game the Tactician and battle rewards teach these.` }),
-        h('button', { class: 'textbtn', onclick: () => { click(); Tactics.learnAll(); render(); } }, ico('book'), 'Learn all (prototype)')) : null);
+      locked ? h('div', { class: 'tx-proto' }, h('span', { text: `${locked} locked: the road and the Tactician teach these.` }),
+        h('button', { class: 'textbtn proto-only', onclick: () => { click(); Tactics.learnAll(); render(); } }, ico('book'), 'Learn all (prototype)')) : null);
   }
   function chooseCond(cond) {
     const o = ui.owner, p = ui.pick;

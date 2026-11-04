@@ -308,7 +308,7 @@ const Buildings = (() => {
   function page(id) {
     const st = s(), D = BUILDINGS[id];
     Base.tick(st);
-    if (!D || !Base.built(id, st)) return [h('button', { class: 'btn back', onclick: () => { click(); App.go('home'); } }, '‹ The Hearth'), h('p', { class: 'flavor', text: 'It isn’t standing.' })];
+    if (!D || !Base.built(id, st)) return [h('button', { class: 'btn back', onclick: () => { click(); App.go('home'); } }, '‹ Camp'), h('p', { class: 'flavor', text: 'It isn’t standing.' })];
     const x = Base.rec(id, st), L = x.level;
     const body = [];
     if (D.idle) body.push(storedPanel(id, st));
@@ -326,7 +326,7 @@ const Buildings = (() => {
     const plot = D.plot === false ? 'Outside the plots' : `Plot ${x.plot + 1}`;
     return flat([
       h('div', { class: 'bhead' },
-        h('button', { class: 'btn back', onclick: () => { click(); App.go('home'); } }, '‹ The Hearth'),
+        h('button', { class: 'btn back', onclick: () => { click(); App.go('home'); } }, '‹ Camp'),
         h('div', { class: 'bwell' }, art(D.art, 3)),
         h('div', { class: 'kicker', text: id === 'recruitboard' ? plot : `${plot} · level ${L}` }),
         h('h1', { text: D.name }),

@@ -23,6 +23,7 @@ const App = (() => {
   let cur = null, curParams = {};
   const actions = {}; // hooks other modules fill in, e.g. actions.tactics(charId) opens the rules editor
   const awayGains = []; // (ms, state) => [{ icon, text }]: what idle buildings made while the player was away
+  const G = () => (typeof Guide !== 'undefined' ? Guide : null); // the first hour's teaching (js/guide.js)
   const fast = () => noMotion();
 
   function screen(name, def) { screens[name] = def; }
@@ -51,18 +52,22 @@ const App = (() => {
       syncPurse();
       Save.touch();
     } else showShell(false);
+    if (G()) { if (from !== name) G().clear(); G().visit(name); }
     if (def.enter) def.enter(params);
+    if (G()) { if (from !== name) G().onScreen(name); syncTabs(); }
   }
-  function refresh() { if (cur && screens[cur].tab) go(cur, curParams, { instant: true }); else syncPurse(); }
+  function refresh() { if (cur && screens[cur].tab) go(cur, curParams, { instant: true }); else { syncPurse(); syncTabs(); } }
   function showShell(on) {
     if (on) { shell.hidden = false; shell.classList.remove('gone'); }
     else { shell.classList.add('gone'); views.replaceChildren(); shell.hidden = true; }
   }
   function syncTabs() {
     const lit = cur && screens[cur] && screens[cur].parent ? screens[cur].parent : cur;
+    const dots = actions.dots ? actions.dots() : {};
     for (const b of tabbar.children) {
       const on = b.dataset.tab === lit;
       b.classList.toggle('on', on);
+      b.classList.toggle('dot', !on && !!dots[b.dataset.tab]);
       b.setAttribute('aria-current', on ? 'page' : 'false');
     }
   }
@@ -97,8 +102,14 @@ const App = (() => {
 
   // ── Party: the formation and the roster
   let arrange = null; // the formation slot picked while arranging, or -1 when arranging with none picked
+  // The Oathbound Gorget keeps its wearer in the front row (js/items.js): a move that would put them behind is refused.
+  function frontLocked(moves) {
+    for (const [id, slot] of moves) { const c = id && Save.char(id); if (c && slot >= 2 && Items.fixedFront(c)) { toast(`${c.name} wears the Oathbound Gorget: front row only`); return true; } }
+    return false;
+  }
   function placeIn(slot, id) {
     const p = Save.state.party, was = p.indexOf(id);
+    if (frontLocked([[id, slot], [p[slot], was]])) return;
     if (was >= 0) p[was] = p[slot];
     p[slot] = id;
     Save.commit();
@@ -119,6 +130,7 @@ const App = (() => {
         if (arrange == null || arrange < 0) { arrange = i; refresh(); return; }
         if (arrange === i) { arrange = -1; refresh(); return; }
         const a = s.party[arrange], b = s.party[i];
+        if (frontLocked([[a, i], [b, arrange]])) return;
         s.party[arrange] = b; s.party[i] = a; arrange = -1; Save.commit(); refresh();
       };
       const slot = i => {
@@ -187,20 +199,27 @@ const App = (() => {
   }
 
   // ── settings
-  function openSettings() {
+  function openSettings(again) {
     const s = Save.state.settings;
     const row = (name, desc, on, fn) => h('div', { class: 'setting' }, h('div', { class: 'nm', text: name }), h('div', { class: 'ds', text: desc }),
-      h('button', { class: 'small' + (on ? ' on' : ''), role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': name, onclick: () => { fn(); applySettings(true); Save.commit(); sfx('click'); openSettings(); } }, on ? 'On' : 'Off'));
+      h('button', { class: 'small' + (on ? ' on' : ''), role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': name, onclick: () => { fn(); applySettings(true); Save.commit(); sfx('click'); openSettings(true); } }, on ? 'On' : 'Off'));
     const ago = Save.info.savedAt ? Math.max(0, Math.round((Date.now() - Save.info.savedAt) / 1000)) : null;
-    openSheet(sheetBox([
+    const box = sheetBox([
       h('div', { class: 'kicker', text: 'Make it yours' }), h('h2', { text: 'Settings' }),
       row('Sound effects', 'Swords, spells and footfalls.', s.sfx, () => { s.sfx = !s.sfx; }),
-      row('Music', MUSIC_ON ? 'A low drone and a sparse melody.' : 'Music returns in a later build.', s.music, () => { s.music = !s.music; }),
+      // The music was switched off on 2026-11-03 (the drone sounded broken) until it is reworked: no switch until then.
+      MUSIC_ON ? row('Music', 'A low drone and a sparse melody.', s.music, () => { s.music = !s.music; })
+        : h('div', { class: 'setting off' }, h('div', { class: 'nm', text: 'Music' }), h('div', { class: 'ds', text: 'Being reworked: it comes back in a later build.' }), h('span', { class: 'ph-tag', text: 'Later' })),
       row('Reduced motion', 'No screen shake or flashes, and no sliding between screens.', !s.motion, () => { s.motion = !s.motion; }),
+      row('First-time tips', 'A one-line tip the first time something happens, and a pointer to each new thing the road unlocks.', s.tips, () => { s.tips = !s.tips; }),
       h('div', { class: 'savewhere', text: `Saved ${ago == null ? 'never' : ago < 5 ? 'just now' : ago < 60 ? ago + 's ago' : duration(ago * 1000) + ' ago'} · ${Save.info.cloud === 'off' ? 'this device only' : 'synced to your account'}` }),
       btn('How battles work', () => { closeSheet(); showHow(() => closeScreen()); }),
+      actions.proto ? h('button', { class: 'btn pt-open', onclick: () => { sfx('click'); actions.proto(); } }, h('span', { class: 'ph-tag', text: 'Prototype' }), ' Prototype tools', h('span', { class: 'sub', text: 'Light the road, add gold and materials, train the party. For play-testing.' })) : null,
       btn('Start over', confirmReset, 'danger', 'Erase this save and begin again'),
-    ], 'setbox'), 'sheet-bottom');
+    ], 'setbox' + (again ? ' quiet' : ''));
+    const prev = again && $('#sheet .setbox'), y = prev ? prev.scrollTop : 0;
+    openSheet(box, 'sheet-bottom');
+    if (y) box.scrollTop = y;
   }
   function confirmReset() {
     openSheet(sheetBox([
@@ -216,6 +235,7 @@ const App = (() => {
     const s = Save.state.settings;
     Object.assign(settings, { sfx: s.sfx, music: s.music, motion: s.motion });
     saveSettings();
+    document.body.classList.toggle('no-proto', s.proto === false); // hides every .proto-only control (js/proto.js)
     if (!settings.music) stopMusic(); else if (byPlayer) startMusic();
     Battle.setSpeed(s.speed);
   }
@@ -256,7 +276,7 @@ const App = (() => {
   }
 
   return {
-    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene,
+    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene, syncTabs,
     get current() { return cur; },
   };
 })();

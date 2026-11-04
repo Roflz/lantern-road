@@ -226,7 +226,8 @@ const RoadMap = (() => {
         stat('coin', fmt(T.gold), 'gold'),
         stat('star', fmt(T.xp), 'XP each')),
       mats.length || items.length || T.gear ? h('p', { class: 'ts-loot', text: [...mats, ...items, T.gear ? plural(T.gear, 'piece') + ' of gear' + (T.sold ? ` (${T.sold} gold from a full Bag)` : '') : null].filter(Boolean).join(' · ') }) : null,
-      T.unlocks.length ? h('div', { class: 'ts-unl' }, T.unlocks.map(id => h('span', { class: 'rw unlock' }, ico(UNLOCKS[id].icon), UNLOCKS[id].name))) : null,
+      // What the trip unlocked, each with a way to it (js/guide.js): open Tactics, build the blueprint, see the Relic.
+      T.unlocks.length ? h('div', { class: 'ts-new' }, h('span', { class: 'kicker', text: 'New' }), typeof Guide !== 'undefined' ? Guide.newRows(T.unlocks) : T.unlocks.map(id => h('span', { class: 'rw unlock' }, ico(UNLOCKS[id].icon), UNLOCKS[id].name))) : null,
       h('div', { class: 'ts-heroes' }, T.heroes.map(x => {
         const c = Save.char(x.id);
         return c ? h('span', { class: 'fg' + (x.after >= FATIGUE.EXHAUSTED ? ' exh' : x.after >= FATIGUE.WEARY ? ' weary' : '') + (x.out ? ' out' : ''), title: `${c.name}: fatigue ${Math.floor(x.before)} → ${Math.floor(x.after)}` },
@@ -310,6 +311,8 @@ const RoadMap = (() => {
     return h('div', { class: 'foeinfo' },
       h('div', { class: 'fi-h' }, h('b', { text: F.name }), h('span', { text: `${F.boss ? 'Boss' : F.elite ? 'Elite' : 'Foe'} · Lv ${L}${F.tags && F.tags.length ? ' · ' + F.tags.map(t => TAGS[t]).join(', ') : ''}` })),
       h('p', { class: 'flavor', text: F.intro || '' }),
+      // What the foe does that its skills don't say: it starts Hidden, or heals every turn.
+      F.hidden || F.regen ? h('p', { class: 'fi-tr', text: [F.hidden ? 'Starts Hidden: single-target attacks can’t aim at it until it attacks' : null, F.regen ? `Heals ${+(F.regen * 100).toFixed(1)}% of its health every turn` : null].filter(Boolean).join(' · ') }) : null,
       h('div', { class: 'fi-st' }, [['heart', fs.hp, 'Health'], ['sword', Math.round(fs.pow), 'Power'], ['shield', Math.round(fs.def), 'Defense'], ['boot', fs.spd.toFixed(1), 'Speed']].map(([i, v, k]) => h('span', { title: k }, ico(i), v))),
       h('ul', { class: 'fi-sk' }, [F.basic, ...F.skills].filter(id => SKILLS[id]).map(sk), phase),
       h('div', { class: 'fi-res' }, RES_KEYS.map(k => h('span', {}, RESISTS[k].name, h('b', { text: Math.round(fs.res[k]) + '%' })))));
@@ -338,6 +341,8 @@ const RoadMap = (() => {
   ];
   function roadSettings(i) {
     const s = Save.state, road = s.campaign.road, kg = Campaign.has('keepgoing');
+    // Nothing before it's useful (campaign spec §8.1): the trip settings appear with Keep going, at 1-6.
+    if (!kg) return null;
     const prules = Tactics.owner('party').rules;
     const idxOf = r => prules.findIndex(x => x.if === r.if && x.do === r.do && (r.n == null || x.n === r.n) && (r.s == null || x.s === r.s));
     const chip = c => {
@@ -351,16 +356,17 @@ const RoadMap = (() => {
         } }, ico(open ? (UI_ICONS[c.icon] ? c.icon : 'lantern') : 'lock'), c.label);
     };
     const sets = Tactics.sets(), cur = Campaign.setFor(i);
-    const setRow = Campaign.has('tactician') && sets.length
+    // Rule sets come with Tactician I (1-11); until then the row isn't shown (nothing before it's useful).
+    const setRow = !Campaign.has('tactician') ? null : sets.length
       ? h('select', { class: 'setpick', 'aria-label': 'Rule set for this stage', onchange: e => { const v = e.target.value; if (v) { Campaign.chooseSet(i, v); toast(`“${v}” loaded`); } else Campaign.chooseSet(i, null); Save.commit(); } },
         h('option', { value: '' }, 'As they are'), sets.map(x => h('option', { value: x.name, selected: cur === x.name ? 'selected' : null }, x.name)))
-      : h('span', { class: 'chip locked' }, ico('lock'), Campaign.has('tactician') ? 'Save a set on Tactics' : 'Opens at 1-11');
+      : h('span', { class: 'chip locked' }, ico('book'), 'Save a set on Tactics');
     return h('div', { class: 'panel roadset' },
       h('div', { class: 'row' }, h('span', { class: 'k', text: 'Keep going after a win' }), h('span', { class: 'sp' }),
         kg ? h('button', { class: 'tg' + (road.keepGoing ? ' on' : ''), role: 'switch', 'aria-checked': road.keepGoing ? 'true' : 'false', 'aria-label': 'Keep going after a win', onclick: () => { click(); road.keepGoing = !road.keepGoing; Save.commit(); stageSheet(i); } }, h('i'))
           : h('span', { class: 'chip locked' }, ico('lock'), 'Opens at 1-6')),
       h('div', { class: 'row wrap' }, h('span', { class: 'k', text: 'Come home when' }), h('span', { class: 'sp' }), h('div', { class: 'chips' }, CHIPS.map(chip))),
-      h('div', { class: 'row' }, h('span', { class: 'k', text: 'Rule set' }), h('span', { class: 'sp' }), setRow));
+      setRow ? h('div', { class: 'row' }, h('span', { class: 'k', text: 'Rule set' }), h('span', { class: 'sp' }), setRow) : null);
   }
   // The party: each hero's sprite, level and fatigue sliver, tired heroes flagged. A Spent hero rests at camp until
   // fit again (below 50): the strip says when, and leads to the beds. Edit opens the Party board.

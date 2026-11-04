@@ -199,10 +199,11 @@
 .rw.unlock{color:#1a1008;background:var(--ember);border-color:var(--ember);box-shadow:0 0 8px rgba(244,166,70,.4)}
 .rw.dim{color:var(--dim)}
 .rewards.compact .rw{padding:3px 6px}
-.why{display:grid;gap:4px;font-size:14px;color:var(--ash)}
-.why .hint{margin:0;display:flex;gap:6px;align-items:flex-start;padding:6px 8px;background:rgba(212,72,74,.1);border-left:3px solid var(--blood);color:#ffd8cc;font-size:14px;line-height:1.35}
-.why .hint .ico{width:13px;height:13px;margin-top:2px}
-.why.boss span{color:var(--gold)}
+/* why the trip ended, in the report. Scoped: the battle's turn flag has a .why line of its own (css/game.css). */
+.rside .why{display:grid;gap:4px;font-size:14px;color:var(--ash)}
+.rside .why .hint{margin:0;display:flex;gap:6px;align-items:flex-start;padding:6px 8px;background:rgba(212,72,74,.1);border-left:3px solid var(--blood);color:#ffd8cc;font-size:14px;line-height:1.35}
+.rside .why .hint .ico{width:13px;height:13px;margin-top:2px}
+.rside .why.boss span{color:var(--gold)}
 .report-box .rewards{margin-top:2px}
 
 /* a boss's phase, and the tips */

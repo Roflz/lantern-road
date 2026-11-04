@@ -32,6 +32,7 @@ const Battle = (() => {
       frame.style.cssText = `position:absolute;left:0;top:0;width:${fw}px;height:${fh}px;max-width:none;transform-origin:0 0;transform:translateX(${fh}px) rotate(90deg)`;
     }
     frame.classList.toggle('land', S.land); frame.classList.toggle('turned', S.turned);
+    frame.classList.toggle('narrow', S.land && fw < 720); // a small phone on its side: compact controls (css/polish.css)
     S.scale = S.land ? Math.max(2, Math.floor(fh / 118)) : Math.max(2, Math.floor(fw / 110));
     S.W = Math.floor(fw / S.scale); S.H = Math.floor(fh / S.scale);
     cv.width = S.W; cv.height = S.H; mask.width = S.W; mask.height = S.H;
@@ -168,7 +169,9 @@ const Battle = (() => {
     const now = performance.now();
     if (!u.popAt || now - u.popAt > 260) u.popN = 0;
     u.popAt = now;
-    const [x, y0] = css(u.x, headY(u) - 1), y = y0 - (u.popN++ % 4) * 13;
+    // In battle, a pop rises about 34px: keep it clear of the turn flags along the top (about 52px).
+    const k = u.popN++ % 4, [x, y0] = css(u.x, headY(u) - 1), top = S.land && B ? 88 : 0;
+    const y = y0 - k * 13 >= top ? y0 - k * 13 : top + k * 13; // near the top, stack downward instead
     const el = h('div', { class: 'num ' + cls, text });
     el.style.left = x + 'px'; el.style.top = y + 'px';
     el.style.animationDuration = Math.max(450, 1300 / P.speed) + 'ms';
@@ -868,6 +871,8 @@ const Battle = (() => {
         B.curK = B.turnAt.get(B.i);
         const group = log.slice(B.i, j), dur = playTurn(group, B.turnAt.get(B.i));
         const act = group.find(x => x.t === 'act');
+        // The turn and its action, for the first-hour coach marks (js/guide.js): the flags are drawn by now.
+        if (onEvent) { try { onEvent(e); if (act) onEvent(act); } catch (err) { } }
         B.durs.push([act ? act.skill : 'tick', Math.round(dur), group.filter(x => x.t === 'tick').length, group.filter(x => x.t === 'die').length]);
         B.i = j;
         B.busyUntil = B.turnUntil = P.t + dur;

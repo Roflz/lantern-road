@@ -34,7 +34,7 @@ const GearUI = (() => {
   // ── the bands: Always, Costs, When
   function bandsEl(x, where) {
     const B = Items.bands(x, where);
-    const later = l => (l.later ? h('span', { class: 'hs-tag ph-l', text: 'Later · step 5' }) : null);
+    const later = l => (l.later ? h('span', { class: 'hs-tag ph-l', text: 'Later' }) : null);
     const line = (l, cls) => h('p', { class: 'ln ' + cls }, ico(l.icon || 'star'), h('span', { text: l.text }), later(l));
     const out = [];
     if (B.good.length) out.push(h('span', { class: 'band g', text: 'Always' }), ...B.good.map(l => line(l, 'g')));
@@ -184,7 +184,7 @@ const GearUI = (() => {
         h('button', { class: 'chip sort', onclick: () => { click(); ui.sort = { rarity: 'level', level: 'new', new: 'rarity' }[ui.sort]; App.refresh(); } }, 'Sort · ' + { rarity: 'rarity', level: 'level', new: 'new' }[ui.sort])),
       h('div', { class: 'gr-meter' }, h('i', { style: `width:${Math.min(100, 100 * all.length / ITEM.BAG)}%` + (all.length >= ITEM.BAG ? ';background:var(--bad)' : '') })),
       list.length ? h('div', { class: 'gr-inv' }, list.map(x => tile(x, { onclick: () => { click(); card(x.uid, { after: () => App.refresh() }); } })))
-        : h('p', { class: 'ph-note' }, all.length ? 'Nothing of that kind.' : 'The Bag is empty. Gear drops on the road from build step 6; until then, roll some below.'),
+        : h('p', { class: 'ph-note' }, all.length ? 'Nothing of that kind.' : 'The Bag is empty. Gear drops on the road: foes carry some, and a stage’s first clear often gives a piece.'),
       all.length >= ITEM.BAG ? h('div', { class: 'hs-banner' }, ico('bag', 'm'), h('span', { class: 'txt', text: 'The Bag is full. New gear is sold where it drops until you make room.' })) : null,
       commons.length ? btn(`Sell every Common piece · ${fmt(commons.reduce((a, x) => a + Items.sellPrice(x, st), 0))} gold`, () => confirmSellCommons(commons), '', `${commons.length} piece${commons.length === 1 ? '' : 's'}. Fine, Rare and Relics stay.`) : null,
       h('h3', { class: 'sect', text: 'Worn by your heroes' }),
@@ -193,7 +193,7 @@ const GearUI = (() => {
         h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: CLASSES[c.cls].name + ' · Lv ' + c.level })),
         h('span', { class: 'gr-three' }, SLOTS.map(k => (c.gear[k] ? h('span', { class: 'gr-mini-it r-' + Items.rarity(c.gear[k]) }, gearIco(c.gear[k].id)) : h('span', { class: 'gr-mini-it none' })))),
         h('span', { class: 'chev', 'aria-hidden': 'true' })))),
-      prototypeBox());
+      h('div', { class: 'proto-only' }, prototypeBox(() => App.refresh())));
   }
   function confirmSellCommons(list) {
     const st = Save.state, total = list.reduce((a, x) => a + Items.sellPrice(x, st), 0);
@@ -204,24 +204,26 @@ const GearUI = (() => {
       btn(`Sell them · ${fmt(total)} gold`, () => { let g = 0; for (const x of list) g += Items.sell(st, x.uid); Save.commit(); sfx('coin'); closeSheet(); toast(`Sold for ${fmt(g)} gold`); App.refresh(); }, 'primary'),
       btn('Keep them', closeSheet)), 'sheet-bottom');
   }
-  // Until the road drops gear (build step 6): roll it by hand, at a region's rates and levels.
-  function prototypeBox() {
-    const chip = (on, label, fn) => h('button', { class: 'chip' + (on ? ' on' : ''), onclick: () => { click(); fn(); App.refresh(); } }, label);
+  // Prototype (js/proto.js): roll gear by hand, at a region's rates and levels, without the road. Shown in the Bag and in
+  // the Prototype tools panel; redraw() rebuilds whichever holds it.
+  function prototypeBox(redraw) {
+    const again = () => { App.refresh(); if (redraw) redraw(); };
+    const chip = (on, label, fn) => h('button', { class: 'chip' + (on ? ' on' : ''), onclick: () => { click(); fn(); again(); } }, label);
     const od = Items.odds(ui.region, ui.rank), [a, b] = levelOf(ui.region);
     return h('div', { class: 'gr-proto' },
       h('div', { class: 'hs-row' }, h('span', { class: 'ph-tag', text: 'Prototype' }), h('b', { text: 'Roll gear' })),
-      h('p', { class: 'hs-why', text: `Until stages drop loot (build step 6). Region ${['I', 'II', 'III', 'IV', 'V'][ui.region]}: item level ${a}–${b}, ${od.common}% Common, ${od.fine}% Fine, ${od.rare}% Rare.` }),
+      h('p', { class: 'hs-why', text: `Region ${['I', 'II', 'III', 'IV', 'V'][ui.region]}: item level ${a}–${b}, ${od.common}% Common, ${od.fine}% Fine, ${od.rare}% Rare.` }),
       h('div', { class: 'gr-filters' }, ['I', 'II', 'III', 'IV', 'V'].map((n, i) => chip(ui.region === i, n, () => { ui.region = i; }))),
       h('div', { class: 'gr-filters' }, [['normal', 'Road'], ['elite', 'Elite'], ['boss', 'Boss']].map(([k, n]) => chip(ui.rank === k, n, () => { ui.rank = k; }))),
       h('div', { class: 'hs-row' },
-        h('button', { class: 'small', onclick: () => { rollPrototype(1); App.refresh(); } }, 'Roll 1'),
-        h('button', { class: 'small', onclick: () => { rollPrototype(6); App.refresh(); } }, 'Roll 6'),
-        h('button', { class: 'small', onclick: () => { grantNextRelic(); App.refresh(); } }, ico('star'), 'A Relic')));
+        h('button', { class: 'small', onclick: () => { rollPrototype(1); again(); } }, 'Roll 1'),
+        h('button', { class: 'small', onclick: () => { rollPrototype(6); again(); } }, 'Roll 6'),
+        h('button', { class: 'small', onclick: () => { grantNextRelic(); again(); } }, ico('star'), 'A Relic')));
   }
   App.screen('bag', {
     tab: true,
     render() { stopStages(); return bagView(); },
     enter() { App.rest(); },
   });
-  return { card, tile, pickHero, rollPrototype, stopStages, rowOf, sorted };
+  return { card, tile, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
 })();
