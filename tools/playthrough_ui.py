@@ -2,7 +2,7 @@
 
 A new game is played through Region I the way a player taps it: the first pick, the Road tab's Next and the stage
 sheet's Set out, Skip in battle, then the results popup (a tap skips its fill; Report and back on the first two trips;
-its New things, opening "+N" when there are more than it shows; Camp), the Recruit Board, Build on an empty plot. No
+its New things, opening "+N" when there are more than it shows; Hearth), the Recruit Board, Build on an empty plot. No
 prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the camp's ticking
 does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would (Hero.autoBuild).
 
@@ -188,7 +188,7 @@ def main():
                         else:
                             problems.append('Report on the results did not open the battle report')
                     if not tap('#sheet .rs-b[data-tut=camp]', None, 1200):
-                        problems.append('no Camp button on the results')
+                        problems.append('no Hearth button on the results')
                     break
                 if js("() => !document.getElementById('sheet').hidden"):
                     tap('#sheet .sheet-x', None, 400)

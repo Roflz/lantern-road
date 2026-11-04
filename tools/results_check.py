@@ -10,7 +10,7 @@ popup, as a player sees it):
 At each size it checks what the popup says and that it sits inside the frame with nothing spilling over, the guide's
 data-tut hooks, that a tap during the fill skips to the end without pressing what it landed on, and the buttons and
 taps: a fatigue bar and a piece of loot say what they are, Report opens the battle report (which scrolls) and Back
-returns, and Camp, Next, Farm and New go where they should. Taps land where the element is drawn on the screen, so
+returns, and Hearth, Next, Farm and New go where they should. Taps land where the element is drawn on the screen, so
 in the turned frame (390x844 with touch) they go through the quarter-turn.
   python tools/results_check.py [--sizes 844x390,667x375t,1280x720,900x800,390x844t] [--scenes first,four,six,loss,trip]
                                 [--shots docs/screens/results]
@@ -155,9 +155,9 @@ def main():
                     page.wait_for_timeout(1500)
                     check(js('Results.busy'), f'{tag}: the bars are still filling 1.5 s in')
                     shot('four-mid')
-                    # a tap on Camp while the bars fill only skips to the end
+                    # a tap on Hearth while the bars fill only skips to the end
                     tap('.rs-b[data-tut=camp]', wait=400)
-                    check(js("!Results.busy && App.current === 'battle' && !!document.querySelector('#sheet.results .rs-root.done')"), f'{tag}: a tap during the fill skips to the end, and Camp is not pressed')
+                    check(js("!Results.busy && App.current === 'battle' && !!document.querySelector('#sheet.results .rs-root.done')"), f'{tag}: a tap during the fill skips to the end, and Hearth is not pressed')
                 else:
                     page.wait_for_function('!Results.busy', timeout=15000, polling=100)
                 page.wait_for_timeout(500)
@@ -195,7 +195,7 @@ def main():
                     check(info['banner'] == 'Victory' and '1-1' in info['sub'] and 'First clear' in info['sub'] and info['heroes'] == 1 and info['cols'] == 1, f'{tag}: Victory at 1-1, First clear, one hero in one column')
                     check(info['ups'] == 1 and info['lvls'] == [2], f'{tag}: Fulke levels up to 2')
                     check(any('Tactics' in n for n in info['news']), f'{tag}: New: Tactics ({info["news"]})')
-                    check(info['acts'][:3] == ['Report', 'Camp', 'Fight again'] and info['pri'].startswith('Next') and '1-2' in info['pri'], f'{tag}: Report · Camp · Fight again · Next 1-2 ({info["acts"]})')
+                    check(info['acts'][:3] == ['Report', 'Hearth', 'Fight again'] and info['pri'].startswith('Next') and '1-2' in info['pri'], f'{tag}: Report · Hearth · Fight again · Next 1-2 ({info["acts"]})')
                     # the guide can point at a hook: a coach mark rings the XP bar, above the popup
                     js("Guide.coach('check', '[data-tut=xp]', 'Your first level. Each one brings a stat point.', { force: true, place: 'below', ms: 30000 })")
                     page.wait_for_timeout(500)
@@ -214,7 +214,7 @@ def main():
                 elif scene == 'loss':
                     check(info['banner'] == 'Driven back' and '1-9' in info['sub'] and 'First clear' not in info['sub'], f'{tag}: Driven back at 1-9')
                     check(info['wick'] == js('STAGES[8].hint') and info['bubbleClear'], f'{tag}: Wick gives 1-9\'s hint, clear of the heroes and the banner')
-                    check(info['acts'][:3] == ['Report', 'Camp', 'Try again'] and info['pri'].startswith('Farm 1-8'), f'{tag}: Report · Camp · Try again · Farm 1-8 ({info["acts"]})')
+                    check(info['acts'][:3] == ['Report', 'Hearth', 'Try again'] and info['pri'].startswith('Farm 1-8'), f'{tag}: Report · Hearth · Try again · Farm 1-8 ({info["acts"]})')
                 elif scene == 'trip':
                     check(info['banner'] == 'Victory' and '1-6 · 1-7 · 1-8' in info['sub'], f'{tag}: the subline names the stages fought ({info["sub"]})')
                     tot = js("(() => { const T = Save.state.campaign.lastTrip; return T.heroes.map(x => { const c = Save.char(x.id); return Hero.xpBetween(x.from.level, c.level) - x.from.xp + c.xp; }); })()")
@@ -267,7 +267,7 @@ def main():
                     check(js("App.current === 'battle' && current && current.index === 7"), f'{tag}: Farm 1-8 sets out for 1-8')
                 elif scene == 'trip':
                     tap('.rs-b[data-tut=camp]', 0, wait=900)
-                    check(js("App.current") == 'home', f'{tag}: Camp goes to the camp ({js("App.current")})')
+                    check(js("App.current") == 'home', f'{tag}: Hearth goes home ({js("App.current")})')
                 ctx.close()
 
         # ── reduced motion: the end at once

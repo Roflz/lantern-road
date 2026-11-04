@@ -8,13 +8,14 @@
 //                Exhausted (75); its number turns gold, then red, and a tap on it says what that means.
 //   the loot     gold, materials, party items and gear (rarity on the frame) pop in one by one, then New for each
 //                first-clear unlock. A tap on gear opens its card; on New, it does what the trip summary's row does.
-//   the buttons  Report · Camp · Fight again · Next ›, or after a loss Report · Camp · Try again · Farm the stage
+//   the buttons  Report · Hearth · Fight again · Next ›, or after a loss Report · Hearth · Try again · Farm the stage
 //                before (js/main.js decides what is offered, and does it). After a loss Wick gives the stage's hint.
 // About 4 seconds, the heroes staggered and the numbers counting; a tap anywhere skips to the end, and reduced motion
 // shows the end at once. It replaces the level-up sheet and the report that opened by itself; Report opens that.
 // A trip of several battles shows the trip's totals: the XP and fatigue since setting out, all its loot, and the
 // stages fought. (Provisional: the popup for a trip that keeps going waits for the Keep going decision.)
-// The guide points at it through data-tut: xp and fatigue (the first hero's bars), report, camp, again, next and new.
+// The guide points at it through data-tut: xp and fatigue (the first hero's bars), report, camp (the Hearth button),
+// again, next (Next, or Farm) and new.
 // Styles in css/results.css.
 
 const Results = (() => {
@@ -22,7 +23,7 @@ const Results = (() => {
   const IN = 250;   // the popup rises first
   const FILL = 0.6; // one hero's bars take this share of it; the next hero starts a little later
   let last = null;  // { res, o, m }: the popup on show, to show again at its end after the report or a card
-  let run = null;   // the fill under way: { raf, set, root }
+  let run = null;   // the fill under way: { raf, P (the popup being filled) }
 
   const short = n => (n >= 10000 ? Math.round(n / 1000) + 'k' : fmt(n));
   const fracOf = (L, xp) => (L >= HERO.CAP ? 1 : clamp(xp / Hero.xpToNext(L), 0, 1));
@@ -82,8 +83,8 @@ const Results = (() => {
   // (the glossary's words, js/glossary.js, once it is part of the game)
   const FAT_LINES = {
     fresh: 'Under 50 fatigue, a hero fights at full strength.',
-    weary: 'At 50 fatigue a hero loses 5% of their Power, Defense and Speed.',
-    exhausted: 'At 75 fatigue a hero loses 15% of their Power, Defense and Speed.',
+    weary: 'At 50 fatigue a hero loses 5% of their Power, Defence and Speed.',
+    exhausted: 'At 75 fatigue a hero loses 15% of their Power, Defence and Speed.',
     spent: 'At 100 fatigue a hero can’t fight until they rest below 50.',
   };
   function fatigueTip(x) {
@@ -140,7 +141,7 @@ const Results = (() => {
     // the buttons: js/main.js says what is offered (o.next, o.farm) and does each one (o.on)
     const b = (label, sub, tut, fn, pri) => h('button', { class: 'rs-b' + (pri ? ' pri' : ''), type: 'button', 'data-tut': tut, onclick: () => { sfx('click'); fn(); } },
       sub ? [h('span', { class: 'bl', text: label }), h('small', { text: sub })] : label);
-    const acts = [b('Report', null, 'report', o.on.report), b('Camp', null, 'camp', o.on.camp)];
+    const acts = [b('Report', null, 'report', o.on.report), b('Hearth', null, 'camp', o.on.camp)];
     if (m.won) {
       acts.push(b('Fight again', null, 'again', o.on.again, !o.next));
       if (o.next) acts.push(b('Next', `${o.next.id} · ${o.next.name.replace(/^The /, '')}`, 'next', o.on.next, true));
