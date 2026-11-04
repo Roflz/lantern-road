@@ -8,7 +8,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection
@@ -22,17 +22,13 @@ const MATERIALS = [
   { id: 'cinder_iron', name: 'Cinder Iron', region: 3 },
   { id: 'throne_tallow', name: 'Throne Tallow', region: 4 },
 ];
-const STAT_KEYS = ['hp', 'mp', 'pow', 'def', 'spd', 'crit', 'dodge'];
-
-function newCharacter(cls, id, name) {
-  const C = CLASSES[cls], stats = {};
-  for (const k of STAT_KEYS) stats[k] = C[k] || 0;
-  return { id, cls, name: name || C.name, level: 1, xp: 0, stats, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: Date.now() };
-}
+// A character is made and kept by the hero model (js/hero.js): rolled stats, level, points, skills and choices.
+const newCharacter = (cls, id, name) => Hero.create(cls, id, { name });
 
 function defaultState() {
   const now = Date.now();
-  // Until recruiting arrives (step 5) the roster is the prototype's fixed party of six, in formation order.
+  // Until recruiting arrives (step 5) the roster is the prototype's party of six, in formation order, each with
+  // their own rolled level-1 stats.
   const roster = PARTY.map((cls, i) => newCharacter(cls, 'c' + (i + 1)));
   return {
     v: SAVE_VERSION,
@@ -71,7 +67,7 @@ function fillFrom(def, src) {
 }
 function normalizeCharacter(c) {
   if (!isObj(c) || typeof c.id !== 'string' || !CLASSES[c.cls]) return null;
-  return fillFrom(newCharacter(c.cls, c.id), c);
+  return Hero.sanitize(c);
 }
 function normalize(d) {
   const s = fillFrom(defaultState(), d);
@@ -105,6 +101,19 @@ const MIGRATIONS = {
       if (localStorage.getItem('lantern-road-muted') === '1') s.settings.sfx = s.settings.music = false;
     } catch (e) { }
     return s;
+  },
+  // Version 2 (build step 3): characters grow. The prototype's stats become each character's level-1 roll, and the
+  // rules, kept by class until now, now belong to each character.
+  2: old => {
+    const roster = Array.isArray(old.roster) ? old.roster : [];
+    old.roster = roster.map(c => (isObj(c) && CLASSES[c.cls] && typeof c.id === 'string' ? (c.base ? Hero.sanitize(c) : Hero.upgrade(c)) : null)).filter(Boolean);
+    const T = old.tactics;
+    if (isObj(T)) {
+      const rekey = h => { const out = {}; if (!isObj(h)) return out; for (const c of old.roster) if (h[c.cls] && !out[c.id]) out[c.id] = h[c.cls]; return out; };
+      T.heroes = rekey(T.heroes);
+      if (Array.isArray(T.sets)) T.sets.forEach(x => { if (isObj(x)) x.heroes = rekey(x.heroes); });
+    }
+    return old;
   },
 };
 function upgrade(d) {

@@ -8,16 +8,22 @@
 // lives in css/rules.css. The final design will come from the screen mockups; only the view and the stylesheet
 // should need to change for it.
 //
-// Rules are { if, n?, s?, do, on } (see CONDITIONS and PARTY_ACTIONS in js/data.js). An "owner" is a hero's key
-// (a class key while the party is fixed) or 'party' for the party rules.
+// Rules are { if, n?, s?, do, on } (see CONDITIONS and PARTY_ACTIONS in js/data.js). An "owner" is a character's id
+// (Save.state.roster) or 'party' for the party rules. A character's rule slots come from the character (js/hero.js):
+// every character starts with 3, and the Masters' Hall teaches more up to their class's maximum.
 
 const Tactics = (() => {
   const MAX_SETS = 8;
   const clone = x => JSON.parse(JSON.stringify(x));
   const listeners = [];
-  // { v, heroes: { key: { slots, rules } }, party: { slots, rules }, loadout: { slots, items: [id or null] },
+  // { v, heroes: { charId: { rules } }, party: { slots, rules }, loadout: { slots, items: [id or null] },
   //   known: [unlock keys], sets: [{ name, heroes, party, loadout }] }
   let S = null;
+  // The characters and the formation: the save's, or (in the Node tests) a roster of its own.
+  let memRoster = null, memParty = null;
+  const roster = () => (store() ? store().roster : (memRoster || (memRoster = PARTY.map((k, i) => Hero.create(k, 'c' + (i + 1), { rng: makeRng(i + 1) })))));
+  const formation = () => (store() ? store().party : (memParty || (memParty = roster().map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6))));
+  const charOf = o => roster().find(c => c.id === o) || null;
 
   // ── where it lives
   // Inside the game's save (Save.state.tactics, js/save.js) once that has loaded, so it is kept and synced with
@@ -29,6 +35,8 @@ const Tactics = (() => {
     const st = store();
     if (st) { if (!S || st.tactics !== S) { S = sanitize(st.tactics); st.tactics = S; } }
     else if (!S) S = fresh();
+    // A character who joined since (or was missing from an old save) starts with their class's rules.
+    for (const c of roster()) if (!S.heroes[c.id]) S.heroes[c.id] = { rules: startRules(c) };
     return S;
   }
   function changed() {
@@ -58,11 +66,16 @@ const Tactics = (() => {
 
   // ── owners
   const isParty = o => o === 'party';
-  const ownerOk = o => isParty(o) || PARTY.includes(o);
-  const slotRange = o => (isParty(o) ? PARTY_RULES.slots : CLASSES[o].slots);
+  const ownerOk = o => isParty(o) || !!charOf(o);
+  const slotRange = o => (isParty(o) ? PARTY_RULES.slots : [HERO.RULE_SLOTS, CLASSES[charOf(o).cls].slots[1]]);
+  const slotsOf = o => (isParty(o) ? S.party.slots : Hero.ruleSlots(charOf(o)));
   const book = o => (isParty(o) ? S.party : S.heroes[o]);
-  // The actions an owner's rules can take: a hero's basic attack and skills, or the party actions.
-  const actions = o => (isParty(o) ? Object.keys(PARTY_ACTIONS) : [CLASSES[o].basic, ...CLASSES[o].skills]);
+  // The actions an owner's rules can take: a character's basic attack, Defend and the actives they know (only the
+  // equipped ones fire in battle), or the party actions.
+  const actions = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, ...Hero.actives(c), 'defend']; };
+  const equipped = (o, id) => { const c = charOf(o); return !c || id === CLASSES[c.cls].basic || id === 'defend' || c.equip.includes(id); };
+  // A class's starter rules, kept to the skills the character knows.
+  const startRules = c => CLASSES[c.cls].rules.filter(r => r.do === CLASSES[c.cls].basic || c.skills[r.do]).map(norm);
   const norm = r => {
     const o = { if: r.if, do: r.do, on: r.on !== false };
     if (r.n != null) o.n = r.n;
@@ -76,19 +89,21 @@ const Tactics = (() => {
     if (isParty(o)) { const A = PARTY_ACTIONS[r.do]; return !!A && C.who !== 'self' && (!A.who || C.who === A.who); }
     return true;
   }
-  const valid = (o, r) => !!r && !!CONDITIONS[r.if] && actions(o).includes(r.do) && fits(o, r);
+  // Rules may name any active of the character's classes, learned or not, so a respec doesn't erase them; ones the
+  // character can't use yet are flagged in the editor and skipped in battle.
+  const allowed = o => { if (isParty(o)) return Object.keys(PARTY_ACTIONS); const c = charOf(o); return [CLASSES[c.cls].basic, 'defend', ...c.classes.flatMap(k => [CLASSES[k].starter, ...CLASSES[k].tree.flat()]).filter(id => SKILLS[id].kind === 'active')]; };
+  const valid = (o, r) => !!r && !!CONDITIONS[r.if] && allowed(o).includes(r.do) && fits(o, r);
   const cleanItems = (list, n) => Array.from({ length: n }, (_, i) => (list && ITEMS[list[i]] ? list[i] : null));
 
   // ── state
-  // A new player's state. The prototype's fixed party arrives with its step-1 rules, so it knows the conditions
-  // those use and already has the slots they fill.
+  // A new player's state. Each character arrives with their class's starter rules, so the player knows the
+  // conditions those use.
   function fresh() {
     const known = new Set(startingKeys());
     const heroes = {};
-    for (const k of PARTY) {
-      const C = CLASSES[k];
-      heroes[k] = { slots: clamp(C.rules.length, C.slots[0], C.slots[1]), rules: C.rules.map(norm) };
-      C.rules.forEach(r => known.add(condKey(r)));
+    for (const c of roster()) {
+      heroes[c.id] = { rules: startRules(c) };
+      heroes[c.id].rules.forEach(r => known.add(condKey(r)));
     }
     const party = { slots: clamp(PARTY_RULES.rules.length, PARTY_RULES.slots[0], PARTY_RULES.slots[1]), rules: PARTY_RULES.rules.map(norm) };
     party.rules.forEach(r => known.add(condKey(r)));
@@ -104,17 +119,18 @@ const Tactics = (() => {
     if (Array.isArray(data.known)) data.known.forEach(k => typeof k === 'string' && known.add(k));
     const fix = (o, b, def) => {
       const [lo, hi] = slotRange(o);
-      const slots = b && Number.isInteger(b.slots) ? clamp(b.slots, lo, hi) : def.slots;
-      const rules = b && Array.isArray(b.rules) ? b.rules.filter(r => valid(o, r)).map(norm).slice(0, slots) : def.rules;
-      return { slots, rules };
+      const slots = isParty(o) ? (b && Number.isInteger(b.slots) ? clamp(b.slots, lo, hi) : def.slots) : slotsOf(o);
+      let rules = b && Array.isArray(b.rules) ? b.rules.filter(r => valid(o, r)).map(norm).slice(0, slots) : def.rules;
+      if (!isParty(o) && !rules.length) rules = def.rules;
+      return isParty(o) ? { slots, rules } : { rules };
     };
     const heroes = {};
-    for (const k of PARTY) heroes[k] = fix(k, data.heroes && data.heroes[k], base.heroes[k]);
+    for (const c of roster()) heroes[c.id] = fix(c.id, data.heroes && data.heroes[c.id], base.heroes[c.id]);
     const L = data.loadout, lslots = L && Number.isInteger(L.slots) ? clamp(L.slots, LOADOUT.slots[0], LOADOUT.slots[1]) : base.loadout.slots;
     const loadout = { slots: lslots, items: L && Array.isArray(L.items) ? cleanItems(L.items, lslots) : base.loadout.items };
     const sets = Array.isArray(data.sets) ? data.sets.filter(x => x && typeof x.name === 'string').slice(0, MAX_SETS).map(x => ({
       name: x.name.slice(0, 24),
-      heroes: Object.fromEntries(PARTY.map(k => [k, ((x.heroes && x.heroes[k]) || []).filter(r => valid(k, r)).map(norm)])),
+      heroes: Object.fromEntries(roster().map(c => [c.id, ((x.heroes && x.heroes[c.id]) || []).filter(r => valid(c.id, r)).map(norm)])),
       party: (x.party || []).filter(r => valid('party', r)).map(norm),
       loadout: Array.isArray(x.loadout) ? x.loadout.map(id => (ITEMS[id] ? id : null)).slice(0, LOADOUT.slots[1]) : [],
     })) : [];
@@ -124,7 +140,7 @@ const Tactics = (() => {
   // ── editing one owner's list. Each returns true when it changed something.
   function add(o, rule) {
     const b = book(o);
-    if (b.rules.length >= b.slots || !valid(o, rule) || !isKnown(rule)) return false;
+    if (b.rules.length >= slotsOf(o) || !valid(o, rule) || !isKnown(rule)) return false;
     b.rules.push(norm(rule));
     return changed();
   }
@@ -156,18 +172,17 @@ const Tactics = (() => {
     b.rules.splice(to, 0, b.rules.splice(from, 1)[0]);
     return changed();
   }
-  // The price of the next rule slot, in level-up points; null when the owner has them all. Party slots come from the
-  // Tactician instead, so they have no point price.
+  // Whether another rule slot can still be learned; null when the owner has them all. Characters learn them at the
+  // Masters' Hall and the party at the Tactician (build step 5); both are free in this prototype.
   function slotCost(o) {
-    const b = book(o), [lo, hi] = slotRange(o);
-    if (b.slots >= hi) return null;
-    return isParty(o) ? 0 : RULE_SLOT_COST[Math.min(b.slots - lo, RULE_SLOT_COST.length - 1)];
+    const [, hi] = slotRange(o);
+    return slotsOf(o) >= hi ? null : 0;
   }
-  // Prototype: slots are free until level-up points arrive (build step 3).
+  // Prototype: a lesson for free. The Masters' Hall will charge idle time for it (build step 5).
   function unlockSlot(o) {
-    const b = book(o);
     if (slotCost(o) == null) return false;
-    b.slots++;
+    if (isParty(o)) S.party.slots++;
+    else charOf(o).lessons.rule++;
     return changed();
   }
   // Prototype: conditions are free until the Tactician and battle rewards teach them.
@@ -201,7 +216,7 @@ const Tactics = (() => {
   function saveSet(name) {
     name = String(name || '').trim().slice(0, 24);
     if (!name) return false;
-    const set = { name, heroes: Object.fromEntries(PARTY.map(k => [k, clone(S.heroes[k].rules)])), party: clone(S.party.rules), loadout: S.loadout.items.slice() };
+    const set = { name, heroes: Object.fromEntries(roster().map(c => [c.id, clone(S.heroes[c.id].rules)])), party: clone(S.party.rules), loadout: S.loadout.items.slice() };
     const i = S.sets.findIndex(x => x.name.toLowerCase() === name.toLowerCase());
     if (i >= 0) S.sets[i] = set;
     else if (S.sets.length >= MAX_SETS) return false;
@@ -212,7 +227,7 @@ const Tactics = (() => {
   function loadSet(i) {
     const set = S.sets[i];
     if (!set) return false;
-    for (const k of PARTY) S.heroes[k].rules = (set.heroes[k] || []).filter(r => valid(k, r)).map(norm).slice(0, S.heroes[k].slots);
+    for (const c of roster()) S.heroes[c.id].rules = (set.heroes[c.id] || []).filter(r => valid(c.id, r)).map(norm).slice(0, slotsOf(c.id));
     S.party.rules = set.party.filter(r => valid('party', r)).map(norm).slice(0, S.party.slots);
     S.loadout.items = cleanItems(set.loadout, S.loadout.slots);
     return changed();
@@ -226,7 +241,7 @@ const Tactics = (() => {
   // ── reading, for the editor
   function owner(o) {
     const b = book(o), [start, max] = slotRange(o);
-    return { rules: clone(b.rules), slots: b.slots, start, max, cost: slotCost(o) };
+    return { rules: clone(b.rules), slots: slotsOf(o), start, max, cost: slotCost(o) };
   }
   const loadout = () => ({ items: S.loadout.items.slice(), slots: S.loadout.slots, start: LOADOUT.slots[0], max: LOADOUT.slots[1] });
   // The conditions the picker offers for an owner's action, grouped, with whether each is known.
@@ -253,6 +268,9 @@ const Tactics = (() => {
       return { text: C.who === 'ally' || C.who === 'fallen' ? 'Used at once on that ally' : `Used at once on ${sk.revive ? 'the first fallen ally' : 'the most hurt ally'}` };
     }
     const sk = SKILLS[r.do];
+    const ch = charOf(o);
+    if (ch && !ch.skills[r.do] && r.do !== 'defend' && r.do !== CLASSES[ch.cls].basic) return { text: `${sk.name} isn’t learned: skipped in battle`, warn: true };
+    if (!equipped(o, r.do)) return { text: `${sk.name} isn’t equipped: skipped in battle`, warn: true };
     const side = sk.shape === 'foe' ? 'foe' : sk.shape === 'ally' ? 'ally' : null;
     if (sk.revive && (C.who === 'ally' || C.who === 'self')) return { text: `Never fires: ${sk.name} only reaches fallen allies`, warn: true };
     if (sk.shape === 'ally' && !sk.revive && C.who === 'fallen') return { text: `Never fires: ${sk.name} can’t reach a fallen ally`, warn: true };
@@ -261,18 +279,22 @@ const Tactics = (() => {
     if (side) return { text: `Only a check: aims at ${side === 'foe' ? 'the nearest foe' : sk.revive ? 'the first fallen ally' : 'the most hurt ally'}` };
     return { text: 'Only a check' };
   }
-  // The rules for a battle, in the form stageSetup takes.
+  // The battle's party and rules, in the form stageSetup takes: each formation slot's character, as the simulation
+  // reads them (Hero.spec), with their rules.
   function setup() {
-    return { party: PARTY.map(k => ({ key: k, rules: clone(S.heroes[k].rules) })), partyRules: clone(S.party.rules), loadout: S.loadout.items.filter(Boolean) };
+    const party = formation().map(id => { const c = id && charOf(id); return c ? Hero.spec(c, clone(S.heroes[c.id].rules).slice(0, slotsOf(c.id))) : null; });
+    return { party, partyRules: clone(S.party.rules), loadout: S.loadout.items.filter(Boolean) };
   }
 
   // Every call makes sure the state is current first.
   const api = fn => (...a) => { ensure(); return fn(...a); };
-  const out = { condKey, variants, ownerOk, onChange: fn => listeners.push(fn) };
+  const out = { condKey, variants, ownerOk, onChange: fn => listeners.push(fn), charOf: o => charOf(o), roster: () => roster(), formation: () => formation(),
+    // for the Node tests: a roster and formation of their own
+    useRoster: (list, party) => { memRoster = list; memParty = party || list.map(c => c.id).concat([null, null, null, null, null, null]).slice(0, 6); S = null; } };
   const calls = {
     // reading
-    owner, loadout, actions, conditionMenu, explain, isKnown, setup,
-    sets: () => S.sets.map(x => ({ name: x.name, count: PARTY.reduce((n, k) => n + x.heroes[k].length, x.party.length) })),
+    owner, loadout, actions, conditionMenu, explain, isKnown, setup, equipped,
+    sets: () => S.sets.map(x => ({ name: x.name, count: roster().reduce((n, c) => n + (x.heroes[c.id] || []).length, x.party.length) })),
     // editing
     add, replace, toggle, remove, move, unlockSlot, slotCost, learn, learnAll, setItem, unlockItemSlot, saveSet, loadSet, deleteSet,
     // a copy of everything, and loading one (it is checked first)
@@ -297,16 +319,19 @@ if (typeof UI_ICONS !== 'undefined') {
 // ── the editor screen
 const TacticsEditor = (() => {
   const SHAPES = { foe: 'One foe', front: 'The front row', back: 'The back row', random3: '3 random foes', foes: 'All foes', ally: 'One ally', allies: 'All allies', self: 'Self' };
-  const ui = { owner: PARTY[0], back: null, pick: null, draft: '' };
+  const ui = { owner: null, back: null, pick: null, draft: '' };
   const click = () => { if (typeof sfx === 'function') sfx('click'); };
   const say = text => { if (typeof toast === 'function') toast(text); };
-  const nameOf = o => (o === 'party' ? 'Party' : CLASSES[o].name);
+  const nameOf = o => (o === 'party' ? 'Party' : (Tactics.charOf(o) || { name: o }).name);
+  const clsOf = o => Tactics.charOf(o).cls;
+  const owners = () => [...Tactics.formation().filter(Boolean), 'party'];
 
   // Opens the editor on an owner's tab (a hero's key or 'party'). back is called to leave it.
   function open(back, owner) {
     ui.back = back || null;
     ui.pick = null;
     if (owner && Tactics.ownerOk(owner)) ui.owner = owner;
+    if (!ui.owner || !Tactics.ownerOk(ui.owner)) ui.owner = owners()[0];
     render(true);
   }
   function close() {
@@ -329,13 +354,15 @@ const TacticsEditor = (() => {
       const A = PARTY_ACTIONS[id], n = A.kind === 'item' ? Tactics.loadout().items.filter(x => x === A.item).length : 0;
       return { name: A.name, icon: A.icon, note: A.kind === 'item' ? (n ? `${n} packed` : 'Not packed') : 'Targeting', tip: A.tip };
     }
-    const sk = SKILLS[id], basic = id === CLASSES[o].basic;
-    return { name: sk.name, icon: sk.icon, note: basic ? 'Basic · no mana' : `${sk.cost || 0} mana`, tip: [SHAPES[sk.shape], sk.tip].filter(Boolean).join('. ') };
+    const sk = SKILLS[id], basic = id === CLASSES[clsOf(o)].basic || id === 'defend', on = Tactics.equipped(o, id);
+    return { name: sk.name, icon: sk.icon, note: basic ? 'Basic · no mana' : on ? `${sk.cost || 0} mana` : 'Not equipped', off: !on, tip: [SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') };
   };
-  const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: portraitURL(o, true), alt: '' }));
+  const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: portraitURL(clsOf(o), true), alt: '' }));
+  // A skill's text at the character's level, for tips.
+  const descText = (sk, o) => { const c = Tactics.charOf(o); return typeof skillText === 'function' ? skillText(sk, (c && c.skills[sk.id]) || 1) : sk.d || ''; };
 
   function tabs() {
-    return h('div', { class: 'tx-tabs', role: 'tablist', 'aria-label': 'Whose rules' }, [...PARTY, 'party'].map(o => {
+    return h('div', { class: 'tx-tabs', role: 'tablist', 'aria-label': 'Whose rules' }, owners().map(o => {
       const on = ui.owner === o, d = Tactics.owner(o);
       return h('button', { class: 'tx-tab' + (on ? ' on' : '') + (o === 'party' ? ' party' : ''), role: 'tab', 'aria-selected': on ? 'true' : 'false', title: nameOf(o), onclick: () => { click(); ui.owner = o; render(); } },
         portrait(o), h('span', { class: 'nm', text: nameOf(o) }), h('span', { class: 'ct', title: 'Rules / open slots', text: `${d.rules.length}/${d.slots}` }));
@@ -369,17 +396,17 @@ const TacticsEditor = (() => {
       rows.push(h('li', { class: 'tx-slot locked' },
         h('span', { class: 'tx-lock' }, ico('lock')),
         h('div', { class: 'tx-lk' }, h('b', { text: 'Locked slot' }),
-          h('span', { text: party ? 'More party slots come from the Tactician' : next ? `Costs ${d.cost} level-up point${d.cost === 1 ? '' : 's'}` : 'Unlock the one above first' })),
+          h('span', { text: party ? 'More party slots come from the Tactician' : next ? 'The Masters’ Hall teaches more · free in this prototype' : 'Unlock the one above first' })),
         next ? h('button', { class: 'small tx-unlock', onclick: () => { click(); Tactics.unlockSlot(o); render(); } }, 'Unlock') : null));
     }
-    const C = party ? null : CLASSES[o];
+    const C = party ? null : CLASSES[clsOf(o)];
     const foot = party
       ? h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'When' }), h('span', { text: 'Item rules: between every two turns, taking no one’s turn. Focus fire: on each hero’s turn.' }))
       : h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'Otherwise' }), ico(SKILLS[C.basic].icon), h('b', { text: SKILLS[C.basic].name }), h('span', { text: 'basic attack' }));
     return h('section', { class: 'tx-card', 'aria-label': `${nameOf(o)} rules` },
       h('div', { class: 'tx-who' },
         portrait(o),
-        h('div', {}, h('div', { class: 'nm', text: party ? 'Party rules' : C.name }), h('div', { class: 'k', text: party ? 'Team-wide: items and focus fire' : C.role })),
+        h('div', {}, h('div', { class: 'nm', text: party ? 'Party rules' : nameOf(o) }), h('div', { class: 'k', text: party ? 'Team-wide: items and focus fire' : `${C.role} · Lv ${Tactics.charOf(o).level}` })),
         h('div', { class: 'tx-count' }, h('b', { text: `${d.rules.length}/${d.slots}` }), h('span', { text: `${d.slots} of ${d.max} slots open` }))),
       h('ol', { class: 'tx-rules' }, rows),
       foot,
@@ -539,7 +566,7 @@ const TacticsEditor = (() => {
     const cond = p.i >= 0 ? cur : p.cond;
     const opts = Tactics.actions(o).map(id => {
       const a = actionInfo(o, id), ok = o !== 'party' || Tactics.conditionMenu(o, id).some(g => g.items.some(it => it.key === Tactics.condKey(cond)));
-      return h('button', { class: 'tx-opt act' + (cur && cur.do === id ? ' cur' : ''), disabled: !ok, onclick: () => { click(); chooseAct(id); } },
+      return h('button', { class: 'tx-opt act' + (cur && cur.do === id ? ' cur' : '') + (a.off ? ' off' : ''), disabled: !ok, onclick: () => { click(); chooseAct(id); } },
         ico(a.icon), h('span', { class: 'nm', text: a.name }), h('span', { class: 'cost', text: a.note }),
         h('span', { class: 'sub', text: ok ? a.tip : 'Needs a condition that names a foe' }));
     });
@@ -584,11 +611,8 @@ const TacticsEditor = (() => {
 // party rules and loadout. Leaving goes back to the Party screen.
 if (typeof App !== 'undefined') {
   App.screen('tactics', {
-    enter: p => TacticsEditor.open(() => App.go(p.back || 'party'), p.owner),
+    enter: p => TacticsEditor.open(() => (typeof p.back === 'function' ? p.back() : App.go(p.back || 'party')), p.owner),
     leave: () => TacticsEditor.dismiss(),
   });
-  App.actions.tactics = id => {
-    const c = typeof Save !== 'undefined' && Save.char(id);
-    App.go('tactics', { owner: c ? c.cls : id });
-  };
+  App.actions.tactics = (id, back) => App.go('tactics', { owner: id, back });
 }
