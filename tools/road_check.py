@@ -164,7 +164,7 @@ def main():
             shot('00-hearth')
 
             # Set out from the Hearth: up the road to the frontier, its card open
-            tap('.camp .cv-dock .cv-big:not([hidden])', 2200)
+            tap('.camp [data-tut=hearth-setout]', 2200)
             r, c = road(), card()
             check(r and r['on'] and r['road'] == 1 and r['sel'] == 8 and abs(r['stage'] - 8) < 0.01, f'the Hearth\'s Set out flies up the road to 1-9 ({r})')
             check(c and c['id'] == '1-9' and c['go'] == 'Set out' and c['chips'] == ['ok:Lv 5', 'ok:4'] and c['foes'] >= 2 and c['dark'] == 0, f'its card: 1-9, Lv and party met, its foes, Set out ({c})')
@@ -172,8 +172,9 @@ def main():
             check(any(x.startswith('cv-call') and '1-9' in x for x in L), f'the frontier\'s callout shows ({[x for x in L if "call" in x]})')
             check(any(x.startswith('cv-sid') and '1-10' in x for x in L) and any('cv-unl' in x for x in L), f'stage ids and an unlock bubble show ({len(L)} labels)')
             check(js("getComputedStyle(document.querySelector('.cv-dock')).visibility") == 'hidden' and js("getComputedStyle(document.querySelector('.cv-roadhud')).visibility") == 'visible', 'the camp\'s buttons are gone and the road\'s are up')
-            gap = js("(() => { const a = Frame.box(document.querySelector('.cv-region')), b = Frame.box(document.querySelector('.cv-purse')), c = Frame.box(document.querySelector('.cv-card')), d = Frame.box(document.querySelector('.cv-roadgo')); return [Math.round(b.left - a.right), Math.round(d.left - c.right)]; })()")
-            check(gap[0] >= 8 and gap[1] >= 8, f'the region clears the purse, and the card its button ({gap} apart)')
+            # (gold is in the Hearth's dock now, which the road hides: the region has the top to itself)
+            gap = js("(() => { const a = Frame.box(document.querySelector('.cv-region')), c = Frame.box(document.querySelector('.cv-card')), d = Frame.box(document.querySelector('.cv-roadgo')); return [Math.round(Frame.W - a.right), Math.round(d.left - c.right)]; })()")
+            check(gap[0] >= 16 and gap[1] >= 8, f'the region clears the frame\'s edge, and the card its button ({gap} apart)')
             shot('r1-frontier')
 
             # a drag along the road: 64 design pixels a stage, settling on one

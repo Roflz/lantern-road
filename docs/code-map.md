@@ -13,18 +13,18 @@ that changes a screen.
 | Screen | Files | State |
 |---|---|---|
 | 1 Title, servers, the landscape frame | `js/title.js`, `css/title.css`, `js/frame.js`, `#stage`/`#frame` in `css/game.css`, servers in `js/save.js` | Redesigned (PR #21) |
-| 2 The Hearth (camp) | `js/campscene.js` (the scene), `js/hearthart.js` (its buildings and props, drawn in code), `js/camp.js` (the screen: HUD, plaques, taps, formation), `css/camp.css` (`cv-`) | Redesigned (PR #24); the scene's detail pass from `hearth.html` (phase A: the art, the terrace, the Old Beacon) |
-| 3 The first pick | `showPick` in `js/camp.js`; `.page.pick` in `css/base.css` | Old layout; the guide build replaces it (`docs/mockups/first-pick.html`) |
+| 2 The Hearth (camp) | `js/campscene.js` (the scene), `js/hearthart.js` (its buildings and props, drawn in code), `js/camp.js` (the screen: HUD, the dock, plaques, taps, formation), `js/dockart.js` (the dock's menu objects and the board's picture), `js/tip.js` (tooltips), `css/camp.css` (`cv-`) | Redesigned (PR #24); the scene's detail pass from `hearth.html` (phase A: the art, the terrace, the Old Beacon); the dock along the bottom (`docs/mockups/hearth-dock.html`, 2026-11-05: gold and materials, Set out, the menus as drawn things), checked by `tools/board_check.py` |
+| 3 The first pick | `js/firstpick.js` (`FirstPick`), on the Recruit Board's panel (`RecruitBoard` in `js/buildings.js`); `css/board.css` (`rb-`, `fp-`) | Redesigned: the board's panel with Free tags and Wick (`docs/mockups/recruit-board.html`, First pick); checked by `tools/board_check.py` and `tools/guide_check.py` |
 | 4 The Road and the stage sheet | `js/map.js`, `css/map.css` | Old layout, in the column; the road view is being built (`docs/mockups/road-view.html`) |
 | 5 Formation and the Party screen | `screen('party')` in `js/app.js`; `.prow`, `.pslot`, `.rrow` in `css/app.css`; roster rows (`App.actions.rosterRow`) in `js/camp.js` | Old layout; Formation is being built |
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build; Pause and the turn order checked by `tools/battle_check.py` |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
 | 8 The hero | `js/sheet.js` (`HeroSheet`, the `'hero'` screen), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`) | Redesigned (`docs/mockups/hero.html`, 1.32); checked by `tools/hero_check.py` |
 | 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout; star pips on the tiles and the card, and the enchantment lines' band (the gear study, step 1) |
-| 10 Buildings | `js/buildings.js`, `css/base.css` | Old layout |
+| 10 Buildings | `js/buildings.js`, `css/base.css`; the Recruit Board's panel is `RecruitBoard` (end of `js/buildings.js`), `css/board.css` (`rb-`) | Old layout, but the Recruit Board: redesigned (`docs/mockups/recruit-board.html`, 2026-11-05: the stagecoach rows, the confirmation, the reveal, the Upgrades tab; the recruit's card is a placeholder until the new hero card); checked by `tools/board_check.py` |
 | 11 Tactics | `js/rules.js` (`Tactics`, the model, and `TacticsEditor`, the `'tactics'` screen), `css/rules.css` (`tx-`) | Redesigned (`docs/mockups/tactics.html`, 1.35); checked by `tools/tactics_check.py` |
-| 12 Settings, help | `openSettings` in `js/app.js`; "How battles work" (`showHow`) in `js/main.js` | Old layout |
-| — Wick and his guide | `js/wick.js` (his portrait, and the guide's kit: `Wick.show`), `js/firstsession.js` (the first session), `js/visits.js` (his unlock visits: the card at the Hearth and Show me), `js/firstpick.js` (the Recruit Board's first pick), `css/wick.css`, `css/guide.css` (`wk-`, `fp-`) | Built (PR #31); rebuilt around the story, with the 1-3 visit (PR #35); checked by `tools/guide_check.py` (`--resume`: the app opened again at every step) |
+| 12 Settings, help | `openSettings` in `js/app.js`; "How battles work" (`showHow`) in `js/main.js` | Old layout; opened from the Hearth's dock: Settings is the candle, Help the Codex's book |
+| — Wick and his guide | `js/wick.js` (his portrait, and the guide's kit: `Wick.show`), `js/firstsession.js` (the first session), `js/visits.js` (his unlock visits: the card at the Hearth and Show me), `js/firstpick.js` (the Recruit Board's first pick, on the board's panel), `css/wick.css`, `css/guide.css` (`wk-`) | Built (PR #31); rebuilt around the story, with the 1-3 visit (PR #35); checked by `tools/guide_check.py` (`--resume`: the app opened again at every step) |
 | — Bess and her quests | `js/quests.js` (the model: the story quest and the daily jobs; her panel, her new-jobs card, the goal tracker's quest line and her arrival), `js/bessart.js` (her cart, mule, sprite and portrait, drawn in code), Bess in the scene in `js/campscene.js` (`bess()`), hooks in `js/camp.js` (`sceneState`, the chip, the tap, the tracker line), `css/quests.css` (`qs-`, `cv-quest`) | Built (`docs/first-session-spec.md` §4); checked by `tools/quests_check.py` and `tools/simtest.js` |
 | — The first hour's teaching | `js/guide.js`, `css/polish.css` | Coach marks, tips, the new-thing rows and tab dots; Wick's session and visits stand in for the coach marks they say |
 | — Prototype tools | `js/proto.js`, `css/polish.css` | For play-testing only |
@@ -45,10 +45,11 @@ that changes a screen.
 | Bess's quests: the story quest, the daily jobs (counted from `Campaign.onSettle` and the tolls collected) | `js/quests.js` (`save.quests`, with its migration in `js/save.js`) |
 | Saves, migrations, servers, the cloud copy | `js/save.js` |
 | The app shell: screens, the tab bar, the purse | `js/app.js`, `css/app.css` |
+| Tooltips (a hover, or a press held), for the screens drawn to `docs/ui-rules.md` | `js/tip.js`, `.tp` in `css/board.css` |
 | Pixel art, icons, scenery | `js/art.js` |
 | Sound | `js/audio.js` |
 | The glossary (Tactics' long presses read it) | `js/glossary.js`, checked by `node tools/glossary.js`, written out to `docs/glossary.md` |
-| Tests | `tools/simtest.js` (the sim, the models, balance), `tools/playthrough.js` (headless runs through Regions I–II), `tools/playthrough_ui.py` (the UI, Region I), `tools/frame_check.py`, `tools/hero_check.py`, `tools/tactics_check.py`, `tools/results_check.py`, `tools/battle_check.py`, `tools/quests_check.py`, `tools/cloud_check.py`, `tools/camp_perf.py`; `tools/shot.py` for screenshots |
+| Tests | `tools/simtest.js` (the sim, the models, balance), `tools/playthrough.js` (headless runs through Regions I–II), `tools/playthrough_ui.py` (the UI, Region I), `tools/frame_check.py`, `tools/board_check.py` (the Recruit Board and the Hearth's dock), `tools/hero_check.py`, `tools/tactics_check.py`, `tools/results_check.py`, `tools/battle_check.py`, `tools/quests_check.py`, `tools/cloud_check.py`, `tools/camp_perf.py`; `tools/shot.py` for screenshots |
 
 ## Legacy code still running
 
@@ -132,8 +133,8 @@ file.
 | `docs/design.md` | Current: the idle party design (2026-11-03), with the 2026-11-04 decisions. It keeps no roguelike-era sections (§13 lists a roguelike mode as "maybe later"). Superseded parts: §8's camp ring (now the camp views) and §12's build order (now screen by screen). Each has a note. |
 | `docs/content-spec.md`, `docs/campaign-spec.md`, `docs/home-base-spec.md` | Current for numbers and content. The home-base spec's §11 still mentions "the ring", the camp before the camp views. |
 | `docs/glossary.md` | Generated by `node tools/glossary.js`; rerun it whenever `js/` changes. |
-| `docs/mockups/` | Designs, not game code. `camp3d.js` is the prototype that `js/campscene.js` was ported from; `hearth-art.js` and `hearth-scene.js` are where `js/hearthart.js` and the Hearth's terrace came from. |
-| `docs/first-session-spec.md` | Approved 2026-11-05: the first session rebuilt (D3), Wick's menu, and Bess and her quests (§4, built). |
-| `docs/screens/` | `landscape/`, `camp-views/`, `road-view/`, `formation/`, `results/`, `hero/`, `tactics/`, `hearth/`, `guide/`, `battle/` and `bess/` show the current game (`battle/`'s `before-` shots, the old Pause and turn order). The rest (`app-shell/`, `campaign/`, `characters/`, `equipment/`, `home-base/`, `polish/`, `regions/`) are portrait-era screenshots from build steps 2–7: old layouts. |
+| `docs/mockups/` | Designs, not game code. `camp3d.js` is the prototype that `js/campscene.js` was ported from; `hearth-art.js` and `hearth-scene.js` are where `js/hearthart.js` and the Hearth's terrace came from; `d2-art.js` is where `js/dockart.js` came from (for `recruit-board.html` and `hearth-dock.html`, approved 2026-11-05). |
+| `docs/ui-rules.md` | Current: the UI rules every screen follows (2026-11-05). The Recruit Board and the Hearth's dock are the first screens drawn to them. |
+| `docs/screens/` | `landscape/`, `camp-views/`, `road-view/`, `formation/`, `results/`, `hero/`, `tactics/`, `hearth/`, `guide/`, `board/`, `dock/` and `battle/` show the current game (`hearth/`, the HUD before the dock) (`battle/`'s `before-` shots, the old Pause and turn order). The rest (`app-shell/`, `campaign/`, `characters/`, `equipment/`, `home-base/`, `polish/`, `regions/`) are portrait-era screenshots from build steps 2–7: old layouts. |
 | `docs/playtest-log.md`, `docs/onboarding-spec.md`, `docs/idle-heroes-study.md`, `docs/darkest-dungeon-study.md` | Not in git yet: they are in the main checkout only. Start with the play-test log's "Where things stand". The onboarding spec's §2 and §12 say at their top that `docs/idle-heroes-study.md` supersedes them. |
 | `README.md` | Current. Its last section describes the roguelike in `lantern-road.html`. |

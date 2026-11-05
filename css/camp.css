@@ -1,89 +1,140 @@
-/* Lantern Road · the camp (screen 2): views around the fire. The design is docs/mockups/camp-views.html; the scene is
-   js/campscene.js and the HUD over it js/camp.js. The camp fills the landscape frame: 390 design pixels tall and
+/* Lantern Road · the camp (screen 2): views around the fire. The design is docs/mockups/camp-views.html, with the HUD
+   of docs/mockups/hearth-dock.html (approved 2026-11-05, drawn to docs/ui-rules.md: two faces, Pirata One for titles
+   and names and Spectral for the rest; spacing from 4, 8, 16 and 24; ember gold only for what you can press). The scene
+   is js/campscene.js and the HUD over it js/camp.js. The camp fills the landscape frame: 390 design pixels tall and
    694–936 wide, so everything here is placed from the frame's edges. Classes start cv- to keep clear of the rest. */
 #shell.bare #topbar,#shell.bare #tabbar{display:none}
 .view.camp-view{padding:0;overflow:hidden;display:block}
 .camp{position:absolute;inset:0;display:block;overflow:hidden;background:#07050b;touch-action:none;user-select:none;-webkit-user-select:none;outline:none;cursor:grab;font-size:15px;
-  --panel:rgba(14,10,20,.86);--trim:#6b4a2a}
+  --panel:rgba(14,10,20,.82);--trim:#6b4a2a;--name:#f4dfae;--ember-lo:#e08a2a}
 .camp:active{cursor:grabbing}
 .camp img.px{image-rendering:pixelated;display:block}
 .camp button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .camp .cv-scene{position:absolute;left:0;top:0;image-rendering:pixelated;will-change:transform}
 .cv-shade{position:absolute;left:0;right:0;pointer-events:none}
-.cv-shade.t{top:0;height:90px;background:linear-gradient(rgba(6,4,10,.8),rgba(6,4,10,0))}
-.cv-shade.b{bottom:0;height:84px;background:linear-gradient(rgba(6,4,10,0),rgba(6,4,10,.78))}
+.cv-shade.t{top:0;height:96px;background:linear-gradient(rgba(6,4,10,.7),rgba(6,4,10,0))}
 .cv-marks{position:absolute;inset:0;z-index:0;pointer-events:none}
+@keyframes cv-rise{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@keyframes cv-flick{0%,100%{opacity:.75}30%{opacity:1}52%{opacity:.6}74%{opacity:.9}}
+@keyframes cv-sway{0%,100%{rotate:-3deg}50%{rotate:3deg}}
 
-/* top left: you, your Renown, and the next goal */
-.camp .cv-pnl{background:var(--panel);border:1px solid var(--rule)}
-.camp .cv-me{position:absolute;left:18px;top:12px;display:flex;align-items:center;gap:9px;height:44px;padding:0 12px 0 3px;text-align:left}
-.cv-me .cv-face{position:relative;width:38px;height:38px;border:1px solid var(--trim);background:#0f0b14;display:grid;place-items:center}
-.cv-me .cv-face img{width:32px;height:32px}
-.cv-me .cv-face img[width="22"]{width:22px;height:22px}
-.cv-me .cv-face em{position:absolute;right:-7px;bottom:-7px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:700 9px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
-.cv-me .cv-t{display:grid;gap:5px}
-.cv-me .cv-nm{font:400 19px/1 var(--f-display);color:var(--bone)}
-.cv-meter{display:block;width:86px;height:4px;background:#241b2c;border:1px solid #33283d}
-.cv-meter i{display:block;height:100%;background:linear-gradient(90deg,#c97a2c,var(--ember))}
-.camp .cv-goal{position:absolute;left:18px;top:62px;display:flex;align-items:center;gap:9px;height:32px;padding:0 4px 0 9px;max-width:calc(50% - 30px)}
-.cv-goal .cv-gk{font:700 7px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-.cv-goal .cv-gt{font:600 13px/1.1 var(--f-body);color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.cv-goal .cv-go{margin-left:2px;font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:7px 8px}
+/* top left: the crest and banner, you and your Renown, the next goal */
+.camp .cv-crest{position:absolute;left:8px;top:4px;width:64px;height:64px;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 12px rgba(244,166,70,.3));pointer-events:none}
+.cv-banner{position:absolute;left:66px;top:9px;height:28px;padding:0 24px 0 16px;display:grid;place-items:center;font:400 21px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000;background:linear-gradient(#4a1c24,#2a0e14);clip-path:polygon(0 0,100% 0,calc(100% - 8px) 50%,100% 100%,0 100%,8px 50%);pointer-events:none;white-space:nowrap}
+.camp .cv-pnl{background:var(--panel)}
+.camp .cv-me{position:absolute;left:72px;top:40px;display:flex;align-items:center;gap:8px;height:28px;padding:0 8px 0 2px;text-align:left}
+.cv-me .cv-face{width:24px;height:24px;display:grid;place-items:center;background:#0f0b14}
+.cv-me .cv-face img{width:20px;height:20px}
+.cv-me .cv-face img[width="16"]{width:16px;height:16px}
+.cv-me .cv-nm{font:400 17px/1 var(--f-display);color:var(--name);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.cv-me em{font:600 13px/1 var(--f-body);font-style:normal;color:var(--bone)}
+.cv-meter{display:block;width:56px;height:4px;background:#2a2130}
+.cv-meter i{display:block;height:100%;background:var(--ash)}
+.camp .cv-goal{position:absolute;left:16px;top:80px;display:flex;align-items:center;gap:8px;height:32px;padding:0 4px 0 8px;max-width:calc(50% - 24px)}
+.cv-goal .cv-gt{font:600 15px/1 var(--f-body);color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cv-goal .cv-go{flex:none;height:24px;padding:0 8px;display:grid;place-items:center;font:600 13px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo))}
+.camp .cv-proto{position:absolute;left:16px;top:120px;min-height:24px;padding:0 8px;font:400 13px/1 var(--f-body);color:var(--dim);background:rgba(13,10,18,.7);border:1px dashed var(--rule)}
+/* Bess's quest line (js/quests.js; css/quests.css, which loads later) under the goal, in the goal's type; the
+   Prototype chip steps down under it */
+.camp-view .camp .cv-quest{left:16px;top:120px;height:28px;gap:8px;padding:0 4px 0 8px;max-width:calc(50% - 24px)}
+.camp-view .camp .cv-quest .cv-qt{font:600 13px/1 var(--f-body)}
+.camp-view .camp .cv-quest .cv-qc,.camp-view .camp .cv-quest .cv-qc.go{font:600 13px/1 var(--f-body);letter-spacing:0;text-transform:none;border:0;padding:4px 8px}
+.camp-view .camp .cv-quest .cv-qc.go{background:linear-gradient(#ffc876,var(--ember-lo))}
+.camp-view .camp:has(.cv-quest:not([hidden])) .cv-proto{top:156px}
 
-/* top right: what you hold, a bar with its icon over the end and + to go and get more; then help and settings */
-.cv-purse{position:absolute;right:116px;top:17px;display:flex;gap:24px}
-.cv-cur{position:relative;display:flex;align-items:center;height:26px;min-width:118px;padding:0 4px 0 30px;border-radius:13px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,inset 0 1px 0 rgba(255,220,160,.08)}
-.cv-cur .cv-ci{position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
-.cv-cur .cv-ci img{width:22px;height:22px}
-.cv-cur .cv-cv{flex:1;text-align:center;font:700 11px/1 var(--f-pixel);letter-spacing:.04em;color:var(--bone)}
-.cv-cur .cv-cv.gold{color:var(--gold)}
-.camp .cv-plus{position:relative;width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:700 13px/1 var(--f-pixel);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000}
-.camp .cv-plus::after{content:"";position:absolute;inset:-10px -8px}
-.cv-corner{position:absolute;right:18px;top:13px;display:flex;gap:8px}
-.camp .cv-round{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;font:400 23px/1 var(--f-display);color:var(--gold)}
-.cv-round img{width:18px;height:18px}
-.camp .cv-proto{position:absolute;left:18px;top:102px;min-height:26px;padding:0 8px;font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:rgba(13,10,18,.7);border:1px dashed var(--rule)}
+/* top right: the formation, as it stands in battle (two columns behind, the front on the right), with level and
+   fatigue */
+.cv-form{position:absolute;right:16px;top:16px;display:grid;grid-template-columns:repeat(3,40px);gap:8px;padding:8px;background:var(--panel);touch-action:none}
+.camp .cv-tile{position:relative;width:40px;display:grid;gap:4px}
+.cv-fc{position:relative;width:40px;height:40px;background:#16101a;display:grid;place-items:center;box-shadow:inset 0 0 0 1px #3a3044}
+.cv-fc img{width:36px;height:36px}
+.cv-fc em{position:absolute;left:2px;top:1px;font:600 13px/1 var(--f-body);font-style:normal;color:var(--bone);text-shadow:0 1px 0 #000,0 0 3px #000}
+.cv-ft{width:40px;height:4px;background:#2a2130}
+.cv-ft i{display:block;height:100%}
+.cv-tile.front .cv-fc{box-shadow:inset 0 0 0 1px #8a6a3a}
+.cv-tile.empty .cv-fc{box-shadow:none;outline:1px dashed #3a3044;outline-offset:-1px;background:none}
+.cv-tile.empty .cv-ft{background:none}
+.cv-tile.spent .cv-fc img{opacity:.55}
+.cv-tile.lift{opacity:.35}
+.cv-tile.over .cv-fc{box-shadow:inset 0 0 0 1px var(--gold),0 0 10px rgba(241,211,106,.55)}
+.cv-ghost{position:absolute;z-index:6;width:40px;height:40px;pointer-events:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.7))}
+.cv-ghost .cv-fc{box-shadow:inset 0 0 0 1px var(--gold)}
 
-/* bottom right: the ribbon of round buttons, and the corner's big button */
-.cv-dock{position:absolute;right:16px;bottom:10px;display:flex;align-items:flex-end;gap:10px}
-.camp .cv-rb{position:relative;display:grid;justify-items:center;gap:2px;width:54px}
-.cv-rb .cv-orb{position:relative;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,#45304e,#1d1424 70%);border:2px solid #8a6038;box-shadow:0 0 0 1px #000,inset 0 2px 0 rgba(255,220,160,.15),inset 0 -3px 6px rgba(0,0,0,.5)}
-.cv-rb .cv-orb img{width:26px;height:26px}
-.cv-rb>span:last-child{font:400 14px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
-.cv-dot{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:var(--blood);border:2px solid #120c16;box-shadow:0 0 6px rgba(212,72,74,.8)}
+/* ── the dock: 48 tall along the bottom, 16 from each side, one line along its top */
+.cv-dock{position:absolute;left:0;right:0;bottom:0;height:48px;z-index:3;background:linear-gradient(#18121a,#0b080d);box-shadow:0 -1px 0 #5a4430,0 -12px 24px rgba(0,0,0,.5)}
+/* left: what you hold */
+.cv-res{position:absolute;left:16px;top:0;bottom:0;display:flex;align-items:center;gap:8px}
+.cv-rs{position:relative;display:flex;align-items:center;gap:4px;height:32px}
+.cv-rs b{font:600 15px/1 var(--f-body);color:var(--bone);text-shadow:0 1px 0 #000;white-space:nowrap}
+.cv-rs img{width:20px;height:20px}
+.cv-coin{position:relative;display:grid;place-items:center;width:24px;height:24px;overflow:hidden}
+.camp .cv-coin img{width:24px;height:24px}
+.cv-coin::after{content:"";position:absolute;inset:-6px;background:linear-gradient(115deg,transparent 35%,rgba(255,250,220,.85) 50%,transparent 65%);translate:-40px 0;pointer-events:none}
+.cv-coin.glint::after{animation:cv-glint .7s ease-out}
+@keyframes cv-glint{to{translate:40px 0}}
+.cv-pop{position:absolute;left:28px;top:-12px;font:600 13px/1 var(--f-body);font-style:normal;color:var(--good);text-shadow:0 1px 0 #000;animation:cv-up 1s ease-out forwards;pointer-events:none}
+@keyframes cv-up{from{opacity:1;translate:0 0}to{opacity:0;translate:0 -16px}}
+.cv-mats{display:flex;align-items:center;gap:8px}
+.cv-mats.grid{display:grid;grid-template-columns:repeat(3,auto);grid-auto-rows:18px;gap:2px 8px}
+.cv-mats.grid .cv-rs{height:18px}
+.cv-mats.grid .cv-rs b{font-size:13px}
+.cv-mats.grid .cv-rs img{width:16px;height:16px}
+.camp .cv-pl{flex:none;width:32px;height:32px;display:grid;place-items:center;font:600 18px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px #000}
+.camp .cv-pl:active{transform:translateY(1px)}
+/* the middle: Set out, the one big word, a lantern hung at each end, the next stage over it */
+.camp .cv-so{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);width:160px;height:40px;display:grid;place-items:center;z-index:4;background:linear-gradient(#2c2016,#140e0a);box-shadow:inset 0 0 0 1px var(--ember-lo),0 0 16px rgba(244,166,70,.2)}
+.cv-so .cv-sot{position:relative;font:400 32px/1 var(--f-display);color:var(--ember);text-shadow:0 0 12px rgba(244,166,70,.45),0 2px 0 #000;margin-top:2px;white-space:nowrap}
+.camp .cv-so:hover .cv-sot{color:#ffc876}
+.camp .cv-so:active{translate:0 1px}
+.cv-lt{position:absolute;top:6px;width:18px;height:28px;transform-origin:50% 0;animation:cv-sway 3.2s ease-in-out infinite;pointer-events:none}
+.camp .cv-lt img{width:18px;height:28px}
+.cv-lt.l{left:8px}.cv-lt.r{right:8px;animation-delay:-1.6s}
+.cv-lt i{position:absolute;left:50%;top:60%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;background:radial-gradient(circle,rgba(255,196,110,.45),rgba(255,196,110,0) 70%);mix-blend-mode:screen;animation:cv-flick 1.4s ease-in-out infinite}
+.cv-lt.r i{animation-delay:-.6s}
+.cv-so .cv-tag{position:absolute;top:-24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:20px;padding:0 8px;white-space:nowrap;font:600 13px/1 var(--f-body);color:var(--bone);background:rgba(18,12,20,.9)}
+.camp .cv-so .cv-tag img{width:12px;height:12px;opacity:.85}
+/* right: the menus as things resting on the dock, no labels (their names are tooltips) */
+.cv-objs{position:absolute;right:16px;bottom:4px;display:flex;align-items:flex-end;gap:8px}
+.camp .cv-ob{position:relative;width:40px;min-height:40px;display:grid;place-items:end center}
+.cv-ob img{filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 6px rgba(0,0,0,.9));transition:translate .15s}
+.camp .cv-ob:hover img{translate:0 -4px}
+.cv-dot{position:absolute;top:-4px;right:0;width:10px;height:10px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 2px #120c16,0 0 6px rgba(244,166,70,.8)}
+.cv-n{position:absolute;top:-8px;right:-4px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:600 13px/1 var(--f-body);font-style:normal;color:#1a1008;background:var(--ember);border-radius:9px}
+/* a 16:9 frame (694 wide) has no room for the dock as drawn: the menus at their own widths, Set out without its
+   lanterns, the materials closer; and Set out slides off the middle only as far as it must (js/camp.js, fitDock) */
+@container (max-width:779px){
+  .cv-objs{gap:2px}
+  .camp .cv-ob{width:auto;min-width:28px}
+  .camp .cv-so{width:112px}
+  .cv-so .cv-sot{font-size:28px}
+  .cv-so .cv-lt{display:none}
+  .cv-res{gap:4px}
+  .camp .cv-pl{width:28px;height:28px}
+  .cv-mats.grid{gap:2px 4px}
+  .cv-mats.grid .cv-rs{gap:2px}
+  .cv-mats.grid .cv-rs b{font-size:12px}
+  .camp .cv-mats.grid .cv-rs img{width:14px;height:14px}
+}
+/* Collect: when gains wait (once the buildings view is open), over the gold, in either view */
+.camp .cv-col{position:absolute;left:16px;bottom:56px;z-index:3;display:flex;align-items:center;gap:8px;height:36px;padding:0 4px 0 8px;background:var(--panel);animation:cv-rise .3s ease-out}
+.cv-ct{display:flex;align-items:center;gap:8px}
+.cv-ct span{display:flex;align-items:center;gap:4px;font:600 13px/1 var(--f-body);color:var(--good);white-space:nowrap}
+.camp .cv-ct img{width:16px;height:16px}
+.cv-col b{height:28px;padding:0 12px;display:grid;place-items:center;font:600 15px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo))}
+/* the road's big button (Set out, Farm or Locked, on the stage's card; css further down) */
 .camp .cv-big{position:relative;display:grid;justify-items:center;gap:3px;width:84px}
 .cv-big .cv-orb{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;border:2px solid #ffd68a;box-shadow:0 0 0 2px #000,0 0 22px rgba(244,166,70,.55),inset 0 3px 0 rgba(255,240,200,.35),inset 0 -6px 10px rgba(0,0,0,.45);background:radial-gradient(circle at 50% 30%,#f7b85a,#b8622a 70%)}
 .cv-big .cv-orb img{width:34px;height:34px;filter:drop-shadow(0 1px 0 #000)}
 .cv-big>span:last-child{font:400 16px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
-.cv-big.collect .cv-orb{border-color:#d8f0b0;background:radial-gradient(circle at 50% 30%,#bfe6a0,#4e8a34 72%);box-shadow:0 0 0 2px #000,0 0 22px rgba(180,222,152,.45),inset 0 3px 0 rgba(240,255,220,.35),inset 0 -6px 10px rgba(0,0,0,.4)}
-.cv-big .cv-tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;height:20px;padding:0 7px;white-space:nowrap;font:700 9px/1 var(--f-pixel);letter-spacing:.06em;color:var(--bone);background:#120c14;border:1px solid var(--trim);box-shadow:0 0 0 1px #000;z-index:1}
-.cv-big .cv-tag .cv-el{display:inline-block;width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
-.cv-big .cv-tag img{width:12px;height:12px}
-.camp .cv-rb:active .cv-orb,.camp .cv-big:active .cv-orb{transform:scale(.95)}
-
-/* right, under gold and bone dust (the user's move of 2026-11-04): the formation as it stands in battle (two columns
-   behind, the front on the right), with level and fatigue */
-.cv-form{position:absolute;right:18px;top:62px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule);touch-action:none}
-.camp .cv-tile{position:relative;width:40px;height:46px;display:grid;justify-items:center;align-content:start;gap:3px}
-.cv-fc{position:relative;width:40px;height:40px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
-.cv-fc img{width:34px;height:34px}
-.cv-fc em{position:absolute;left:-1px;top:-1px;height:13px;padding:0 3px;display:grid;place-items:center;font:700 7px/1 var(--f-pixel);font-style:normal;color:var(--bone);background:#0b0810;border:1px solid #4a3a52}
-.cv-ft{width:40px;height:3px;background:#241b2c}
-.cv-ft i{display:block;height:100%}
-.cv-tile.front .cv-fc,.cv-tile.front .cv-fc em{border-color:var(--ember)}
-.cv-tile.empty .cv-fc{border-style:dashed;border-color:#3a3044;color:#4a4054;font:700 14px/1 var(--f-pixel)}
-.cv-tile.spent .cv-fc img{opacity:.55}
-.cv-tile.lift{opacity:.35}
-.cv-tile.over .cv-fc{border-color:var(--gold);box-shadow:0 0 10px rgba(241,211,106,.55)}
-.cv-ghost{position:absolute;z-index:6;width:40px;height:40px;pointer-events:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.7))}
-.cv-ghost .cv-fc{border-color:var(--gold)}
+.camp .cv-big:active .cv-orb{transform:scale(.95)}
+.camp .cv-round{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;font:400 23px/1 var(--f-display);color:var(--gold)}
+.cv-round img{width:18px;height:18px}
 
 /* plaques under what stands in the scene, chips over what has something waiting, and Wick's word */
-.cv-plq{position:absolute;left:0;top:0;will-change:transform;height:20px;padding:0 7px;display:grid;place-items:center;background:linear-gradient(#2a1d14,#160f0c);border:1px solid #7a5a36;box-shadow:0 0 0 1px #000,0 2px 6px rgba(0,0,0,.5);font:400 15px/1 var(--f-display);color:#f2e1c0;white-space:nowrap;text-shadow:0 1px 0 #000}
-.cv-plq.empty{color:var(--dim);background:rgba(12,8,16,.8);border-color:#2e2636}
-.cv-wait{position:absolute;left:0;top:0;will-change:transform;display:flex;align-items:center;gap:4px;height:22px;padding:0 7px 0 5px;background:var(--ember);border:1px solid #000;font:700 10px/1 var(--f-pixel);color:#1a1008;box-shadow:0 0 12px rgba(244,166,70,.55);white-space:nowrap}
-.cv-wait img{width:13px;height:13px}
-.cv-wait::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--ember);border-bottom:0}
+.cv-plq{position:absolute;left:0;top:0;will-change:transform;height:20px;padding:0 8px;display:grid;place-items:center;background:rgba(18,12,10,.85);font:400 15px/1 var(--f-display);color:#f2e1c0;white-space:nowrap;text-shadow:0 1px 0 #000}
+.cv-plq.empty{color:var(--dim)}
+.cv-wait{position:absolute;left:0;top:0;will-change:transform;display:flex;align-items:center;gap:4px;height:24px;padding:0 8px 0 4px;background:linear-gradient(#ffc876,var(--ember-lo));font:600 13px/1 var(--f-body);color:#1a1008;box-shadow:0 0 12px rgba(244,166,70,.45);white-space:nowrap}
+.camp .cv-wait img{width:14px;height:14px}
 .cv-say{position:absolute;left:0;top:0;will-change:transform;width:30px;height:20px;display:flex;align-items:center;justify-content:center;gap:3px;background:#f2e7d0;border:1px solid #000;border-radius:10px}
 .cv-say i{width:4px;height:4px;background:#2a1a10}
 .cv-line{position:absolute;z-index:9999;max-width:260px;padding:6px 9px;background:rgba(18,13,24,.96);border:2px solid var(--rule);font:italic 400 14px/1.3 var(--f-body);color:var(--bone);transform:translate(-50%,-100%);animation:cvline 2.8s ease forwards;white-space:nowrap}
@@ -129,8 +180,6 @@
 .camp .cv-big.shut{cursor:default}
 .camp .cv-big.shut>span:last-child{color:var(--dim)}
 .camp .cv-big.shut:active .cv-orb{transform:none}
-/* a 16:9 frame (694 wide): the purse draws in a little, clear of the region's ‹ › */
-@container (max-width:779px){.camp.on-road .cv-purse{gap:14px}.camp.on-road .cv-cur{min-width:100px}}
 .cv-labels{position:absolute;inset:0;z-index:0;pointer-events:none}
 .cv-labels>*{position:absolute;left:0;top:0;will-change:transform;white-space:nowrap}
 .cv-sid{height:16px;padding:0 5px;display:grid;place-items:center;background:rgba(12,8,16,.86);border:1px solid #4a3a2a;font:700 8px/1 var(--f-pixel);letter-spacing:.04em;color:#e6d6b8}
@@ -151,11 +200,12 @@
 .cv-gate img{width:14px;height:14px}
 .cv-gate b{font:700 8px/1 var(--f-pixel);letter-spacing:.12em;color:#6a7a98}
 
-/* what opens over the camp: toasts under the purse, sheets as a centred panel, help and the first pick in a column */
+/* what opens over the camp: toasts at the top, sheets as a centred panel, help in a column (the Recruit Board and the
+   first pick fill the frame: css/board.css) */
 #frame:has(.view.camp-view:not(.out)) #toasts{bottom:auto;top:60px}
 #frame:has(.view.camp-view:not(.out)) #sheet .box{max-width:440px}
 #frame:has(.view.camp-view:not(.out)) #sheet.sheet-bottom .box{border-bottom:2px solid var(--rule)}
 #frame:has(.view.camp-view:not(.out)) #screen>.page{width:100%;max-width:520px;margin:0 auto}
 
-@media (prefers-reduced-motion:reduce){.cv-line,.cv-unl{animation:none}}
-.calm .cv-line,.calm .cv-unl{animation:none}
+@media (prefers-reduced-motion:reduce){.cv-line,.cv-unl,.cv-lt,.cv-lt i,.cv-col,.cv-pop{animation:none}}
+.calm .cv-line,.calm .cv-unl,.calm .cv-lt,.calm .cv-lt i,.calm .cv-col,.calm .cv-pop{animation:none}

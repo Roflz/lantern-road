@@ -2,10 +2,11 @@
 // Lantern Road · the camp (screen 2; play-test notes 1.18–1.20; the design is docs/mockups/camp-views.html). The camp is
 // views around one fire, drawn by js/campscene.js: the party view, close on the fire, with the Recruit Board, Wick and
 // the amber road to the boss's chapel; and the buildings view, turned 180° and further back, with the plots. Drag
-// sideways (or press ← and →) to turn; let go and the camera settles on the nearer view. Over the scene, as in the
-// mockup: you and your Renown, the next goal, gold and bone dust, help and settings, the formation, plaques and chips
-// on what's in the scene, and the corner's ribbon and big button (Set out, or Collect). Taps in the scene open what
-// was tapped. Until the first blueprint the camera stays with the party.
+// sideways (or press ← and →) to turn; let go and the camera settles on the nearer view. Over the scene
+// (docs/mockups/hearth-dock.html): the crest, you and your Renown, the next goal, the formation, plaques and chips on
+// what's in the scene, and the dock along the bottom: gold and the materials, Set out, and the menus as drawn things
+// (the Recruit Board, Heroes, Tactics, the Bag, the Codex and Settings). Taps in the scene open what was tapped. Until
+// the first blueprint the camera stays with the party.
 // The road view (docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the camera flies up the
 // road to the frontier with its stage's card open; or drag down in the party view and the camera follows the finger
 // up the road, and on to the card once let go far enough (play-test note 3.14). Drag up or down (or the wheel, or ↑ ↓)
@@ -180,8 +181,8 @@ const Camp = (() => {
     for (const g of got) if (g.kind === 'xp' && g.to > g.from) LevelUp.toast(g.c, { from: g.from, to: g.to });
     App.refresh();
   }
-  // The + by gold and bone dust: where you earn more. The building if it stands, its blueprint's build sheet if you
-  // have one, or where it comes from.
+  // The dock's + by gold (the Toll House) and by the materials (the Scavenger Camp), until there is a shop: where you
+  // earn more. The building if it stands, its blueprint's build sheet if you have one, or where it comes from.
   function earnMore(id) {
     const s = Save.state;
     if (Base.built(id, s)) { Buildings.open(id); return; }
@@ -195,43 +196,82 @@ const Camp = (() => {
   }
   const leader = s => s.party.map(id => Save.char(id)).find(Boolean) || s.roster[0] || null;
 
-  // ── the camp screen: the scene, and the HUD over it
+  // ── the camp screen: the scene, and the HUD over it (docs/mockups/hearth-dock.html, approved 2026-11-05, drawn to
+  // docs/ui-rules.md). At the top left the crest and banner, you and your Renown, and the next goal; at the top right
+  // the formation, as it stands in battle. Along the bottom the dock, after Darkest Dungeon's town: what you hold on
+  // the left (gold and each material found, as an icon and a number, with a + by each for where to get more), Set out
+  // in the middle, and the menus on the right as drawn things, named in tooltips: the Recruit Board, Heroes, Tactics,
+  // the Bag, the Codex (Help is its first page) and Settings. Collect rises over the gold while something waits, once
+  // the buildings view is open. The scene sits 22 pixels higher (js/campscene.js), so the dock covers ground, not fire.
   const pxImg = (src, size, cls = '') => h('img', { class: 'px ' + cls, src, alt: '', width: size, height: size, draggable: 'false' });
+  const pic = (o, cls = '') => h('img', { class: 'px ' + cls, src: o.url, alt: '', width: o.w, height: o.h, draggable: 'false' });
   const icon = (name, size) => pxImg(iconURL(name), size);
-  const fatCol = c => ({ fresh: 'var(--good)', weary: 'var(--gold)', exhausted: 'var(--bad)', spent: 'var(--blood)' }[Fatigue.state(c)]);
+  const fatCol = c => ({ fresh: 'var(--ash)', weary: '#d8c070', exhausted: 'var(--bad)', spent: 'var(--blood)' }[Fatigue.state(c)]);
   const FORM = [2, 3, 0, 4, 5, 1]; // the formation as it stands in battle: two columns behind, the front on the right
+  // a number in the dock: shortened past a cut (48.2k)
+  const shortN = (n, cut = 9999) => (n > cut ? (Math.round(n / 100) / 10).toLocaleString('en-US') + 'k' : fmt(n));
+  // the materials the dock shows: the staples of the regions reached, and a Trophy once you have one
+  const matsShown = s => { const reached = Math.max(0, ...s.campaign.cleared.map(id => (STAGES.find(x => x.id === id) || { region: 0 }).region)); return MATERIALS.filter(m => (!m.trophy && m.region <= reached) || (s.currencies.mats[m.id] || 0) > 0); };
+  // what each holding is for (its tooltip, after its number)
+  const matLine = (m, n) => `${fmt(n)} · ${m.trophy ? matUse(m.id) : `${Base.regionName(m.region)} · buildings`}`;
+  // the Hearth's crest: a lantern in an iron ring (docs/mockups/hearth.html)
+  let crestURL = null;
+  function crest() {
+    if (crestURL) return crestURL;
+    const C = HearthArt.C, P = HearthArt.painter(32, 32);
+    P.disc(16, 16, 15, (x, y, d) => (d > 12.2 ? (d > 14 ? C.i1 : x + y < 31 ? C.i3 : C.i2) : null));
+    for (const [x, y] of [[15, 1], [15, 29], [1, 15], [29, 15]]) P.rect(x, y, 2, 2, C.i4);
+    P.disc(16, 16, 12.2, (x, y, d) => (d < 12.2 ? (d > 10.8 ? '#120c16' : '#22182a') : null));
+    P.disc(16, 6.6, 1.7, (x, y, d) => (d > 0.8 ? C.i3 : null));
+    P.rect(12, 8, 9, 2, C.i2); P.hl(12, 20, 8, C.i3);
+    P.rect(11, 10, 11, 11, C.i1); P.rect(12, 11, 9, 9, C.y2); P.rect(13, 12, 7, 6, C.y3); P.rect(15, 13, 3, 3, C.y4); P.vl(16, 11, 19, C.y1);
+    P.rect(10, 21, 13, 2, C.i2); P.hl(10, 22, 21, C.i3); P.rect(12, 23, 9, 1, C.i1);
+    return (crestURL = DockArt.big(P.finish({ warm: 0 }), 2));
+  }
   let ui = null;
   function screen() {
     const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The Hearth. Drag sideways, or use the arrow keys, to turn between the party and the buildings. Drag down for the road.' });
     const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
     const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
+    // top left: the crest and banner, you (your face, name and Renown), the next goal
+    const crestEl = pxImg(crest(), 64, 'cv-crest');
+    const banner = h('div', { class: 'cv-banner', text: 'The Hearth' });
     const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');
     const nm = h('span', { class: 'cv-nm', text: 'Captain' });
-    const me = h('button', { class: 'cv-pnl cv-me', 'data-tut': 'hearth-me', onclick: () => { click(); showRenown(); } }, face, h('span', { class: 'cv-t' }, nm, h('span', { class: 'cv-meter' }, bar)));
-    face.append(lvl);
+    const me = Tip.on(h('button', { class: 'cv-pnl cv-me', type: 'button', 'data-tut': 'hearth-me', onclick: () => { click(); showRenown(); } }, face, nm, h('span', { class: 'cv-meter' }, bar), lvl),
+      () => { const R = Base.renown(Save.state); return [`Renown ${R.level}`, `${fmt(R.into)} / ${fmt(R.need)}`, 'lantern']; }, { side: 'below' });
     const goalText = h('span', { class: 'cv-gt' });
-    const goalBtn = h('button', { class: 'cv-pnl cv-goal', 'data-tut': 'hearth-goal' }, h('span', { class: 'cv-gk', text: 'Next' }), goalText, h('span', { class: 'cv-go', text: 'Go' }));
+    const goalBtn = h('button', { class: 'cv-pnl cv-goal', type: 'button', 'data-tut': 'hearth-goal' }, goalText, h('span', { class: 'cv-go', text: 'Go' }));
     // under it, Bess's story quest while it's on (js/quests.js, css/quests.css)
     const questLine = typeof Quests !== 'undefined' ? Quests.tracker() : null;
-    const gold = h('span', { class: 'cv-cv gold' }), bone = h('span', { class: 'cv-cv' });
-    const purse = h('div', { class: 'cv-purse' },
-      h('div', { class: 'cv-cur', title: 'Gold' }, h('span', { class: 'cv-ci' }, icon('coin', 22)), gold, h('button', { class: 'cv-plus', 'aria-label': 'Earn more gold', onclick: () => { click(); earnMore('tollhouse'); } }, '+')),
-      h('div', { class: 'cv-cur', title: 'Bone Dust' }, h('span', { class: 'cv-ci' }, icon('bone', 22)), bone, h('button', { class: 'cv-plus', 'aria-label': 'Earn more bone dust', onclick: () => { click(); earnMore('scavengercamp'); } }, '+')));
-    // Help and Settings take a tap at every step of Wick's guide (data-wk-free: js/wick.js's gate lets them through,
-    // and Wick steps aside while their page is open; play-test note 2.2)
-    const corner = h('div', { class: 'cv-corner' },
-      h('button', { class: 'cv-round', 'aria-label': 'Help', 'data-wk-free': '', onclick: () => { click(); showHow(() => closeScreen()); } }, '?'),
-      h('button', { class: 'cv-round', 'aria-label': 'Settings', 'data-wk-free': '', onclick: () => { click(); App.openSettings(); } }, icon('gear', 18)));
     const proto = h('button', { class: 'chip proto proto-only cv-proto', 'data-wk-free': '', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
-    const rb = (ic, label, fn) => h('button', { class: 'cv-rb', 'data-tut': 'hearth-' + label.toLowerCase(), onclick: () => { click(); fn(); } }, h('span', { class: 'cv-orb' }, icon(ic, 26), h('i', { class: 'cv-dot', hidden: true })), h('span', { text: label }));
-    const heroesB = rb('helm', 'Heroes', () => App.go('party'));
-    const tacticsB = rb('scroll', 'Tactics', () => { const c = leader(Save.state); App.actions.tactics(c ? c.id : 'party', 'home'); });
-    const bagB = rb('bag', 'Bag', () => App.go('bag'));
-    const goTag = h('span', { class: 'cv-tag' }), colTag = h('span', { class: 'cv-tag' });
-    const go = h('button', { class: 'cv-big', 'data-tut': 'hearth-setout' }, goTag, h('span', { class: 'cv-orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
-    const collect = h('button', { class: 'cv-big collect', 'data-tut': 'hearth-collect', hidden: true }, colTag, h('span', { class: 'cv-orb' }, icon('coin', 34)), h('span', { text: 'Collect' }));
+    // the dock, left: gold and the materials, each an icon and a number named in its tooltip, a + by each
+    const coin = h('span', { class: 'cv-coin' }, icon('coin', 24)), goldN = h('b');
+    const goldRs = Tip.on(h('span', { class: 'cv-rs gold', 'data-tut': 'hearth-gold' }, coin, goldN), () => ['Gold', `${fmt(Save.state.currencies.gold)} · Hires, buildings, the Shop`]);
+    const plus = (id, name, ic) => Tip.on(h('button', { class: 'cv-pl', type: 'button', 'aria-label': name, onclick: () => { click(); earnMore(id); } }, '+'), () => [name, BUILDINGS[id].name, ic]);
+    const mats = h('div', { class: 'cv-mats' });
+    const res = h('div', { class: 'cv-res' }, goldRs, plus('tollhouse', 'More gold', 'coin'), mats, plus('scavengercamp', 'More materials', 'bone'));
+    // the middle: Set out, the one big word, a lantern hung at each end, the next stage over it
+    const lt = side => h('span', { class: 'cv-lt ' + side }, pic(DockArt.obj('lantern', 2)), h('i'));
+    const goTag = h('span', { class: 'cv-tag' });
+    const go = h('button', { class: 'cv-so', type: 'button', 'data-tut': 'hearth-setout', 'aria-label': 'Set out' }, lt('l'), lt('r'), goTag, h('span', { class: 'cv-sot', text: 'Set out' }));
     go.addEventListener('click', () => { click(); setOut(); });
-    collect.addEventListener('click', () => { click(); gatherAll(); });
+    // the right: the menus as things resting on the dock, with no labels. The Codex and Settings take a tap at every
+    // step of Wick's guide (data-wk-free: js/wick.js's gate lets them through, and Wick steps aside while their page is
+    // open; play-test note 2.2). The Recruit Board opens from here as well as from the scene.
+    const ob = (k, name, tut, fn, extra, free) => Tip.on(h('button', { class: 'cv-ob', type: 'button', 'data-tut': tut, 'aria-label': name, 'data-wk-free': free ? '' : null, onclick: () => { click(); fn(); } }, pic(DockArt.obj(k, 2)), extra || null), () => [name]);
+    const boardN = h('em', { class: 'cv-n', hidden: true }), heroDot = h('i', { class: 'cv-dot', hidden: true }), bagDot = h('i', { class: 'cv-dot', hidden: true });
+    const objs = h('div', { class: 'cv-objs' },
+      ob('notice', 'Recruit Board', 'hearth-board', () => { if (!FirstSession.boardTap()) Buildings.open('recruitboard'); }, boardN),
+      ob('helm', 'Heroes', 'hearth-heroes', () => App.go('party'), heroDot),
+      ob('table', 'Tactics', 'hearth-tactics', () => { const c = leader(Save.state); App.actions.tactics(c ? c.id : 'party', 'home'); }),
+      ob('satchel', 'Bag', 'hearth-bag', () => App.go('bag'), bagDot),
+      ob('book', 'Codex', 'hearth-codex', () => showHow(() => closeScreen()), null, true),
+      ob('candle', 'Settings', 'hearth-settings', () => App.openSettings(), null, true));
+    const dock = h('div', { class: 'cv-dock cv-nodrag' }, res, go, objs);
+    // Collect: what waits at the idle buildings, the road's tolls and the fire, over the gold
+    const colTag = h('span', { class: 'cv-ct' });
+    const collect = h('button', { class: 'cv-col', type: 'button', 'data-tut': 'hearth-collect', hidden: true, onclick: () => { click(); gatherAll(); } }, colTag, h('b', { text: 'Collect' }));
     const form = h('div', { class: 'cv-form cv-nodrag', 'data-tut': 'hearth-formation', role: 'group', 'aria-label': 'The formation' });
     // the road view (docs/mockups/road-view.html): back to the Hearth, the region with ‹ ›, and the chosen stage's card
     // with its big button (Set out, Farm or Locked)
@@ -241,20 +281,41 @@ const Camp = (() => {
     const nextR = h('button', { class: 'cv-arw', 'aria-label': 'The next region', onclick: () => otherRegion(1) }, '›');
     const cardBox = h('div', { class: 'cv-cardbox' });
     const roadHud = h('div', { class: 'cv-roadhud' }, back, h('div', { class: 'cv-region' }, h('div', { class: 'cv-rt' }, rk, rn), prevR, nextR), cardBox);
-    const dock = h('div', { class: 'cv-dock' }, heroesB, tacticsB, bagB, go, collect);
     const labels = h('div', { class: 'cv-labels', 'aria-hidden': 'true' });
-    camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, dock, me, goalBtn, questLine, roadHud, purse, corner, proto);
+    camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), form, dock, collect, crestEl, banner, me, goalBtn, questLine, roadHud, proto);
     const el = h('div', { class: 'camp-view' }, camp);
 
     let live = null, chips = {}, goalNow = null, placed = { v: -1, w: -1, sig: '', r: -1, sel: null }, alive = true;
     let region = null, ahead = [], cardFor = null; // the region on the road (null: the frontier's), stages ahead with something new, the card's stage
     const pool = new Map(), tags = new Map();
+    // Gold in the dock: when it comes in, the coin glints, the gain rises off it, and the number counts up.
+    let goldNow = null, goldRun = 0;
+    function setGold(n) {
+      if (goldNow == null || n <= goldNow || noMotion()) { goldNow = n; goldRun++; goldN.textContent = shortN(n); return; }
+      const from = goldNow, add = n - from, t0 = performance.now(), run = ++goldRun;
+      goldNow = n;
+      coin.classList.remove('glint'); void coin.offsetWidth; coin.classList.add('glint');
+      const pop = h('i', { class: 'cv-pop', text: '+' + fmt(add) });
+      goldRs.append(pop); setTimeout(() => pop.remove(), 1000);
+      const step = () => { if (run !== goldRun) return; const q = Math.min(1, (performance.now() - t0) / 600); goldN.textContent = shortN(Math.round(from + add * q)); if (q < 1) requestAnimationFrame(step); };
+      step();
+    }
+    // Set out sits in the middle of the dock, unless what you hold, or the menus, reach it there: then it slides only
+    // as far as it must to keep 16 clear of each (a 16:9 frame late in the game).
+    function fitDock() {
+      if (!dock.isConnected || !go.offsetWidth) return;
+      const W = camp.clientWidth, gw = go.offsetWidth, lo = res.offsetLeft + res.offsetWidth + 16, hi = objs.offsetLeft - 16 - gw;
+      const left = Math.max(lo, Math.min(hi, Math.round(W / 2 - gw / 2)));
+      const want = left + gw / 2 === W / 2 ? '' : Math.round(left + gw / 2) + 'px';
+      if (go.style.left !== want) go.style.left = want;
+      dock.dataset.w = W;
+    }
     // ── from the save into the HUD and the scene
     function sync() {
       const s = Save.state;
       if (!s || !alive) return;
       const R = Base.renown(s), lead = leader(s), W = waiting(s);
-      face.replaceChildren(lead ? pxImg(heroPortrait(lead), 32) : icon('lantern', 22), lvl);
+      if (face.dataset.who !== (lead ? lead.id + lead.cls + lookKey(Items.look(lead)) : '')) { face.dataset.who = lead ? lead.id + lead.cls + lookKey(Items.look(lead)) : ''; face.replaceChildren(lead ? pxImg(heroPortrait(lead), 20) : icon('lantern', 16)); }
       lvl.textContent = String(R.level);
       nm.textContent = (s.name || '').trim() || 'Captain';
       bar.style.width = Math.round(100 * R.into / R.need) + '%';
@@ -263,24 +324,37 @@ const Camp = (() => {
       goalText.textContent = goalNow.text;
       goalBtn.onclick = () => { click(); goalNow.go(); };
       if (questLine) Quests.syncTracker(questLine, s);
-      gold.textContent = fmt(s.currencies.gold);
-      bone.textContent = fmt(s.currencies.mats.bone_dust || 0);
+      // what you hold: gold (the coin glints and the number counts up as it comes in), then each material found, in
+      // two rows from three on, their numbers shortened past 999
+      setGold(s.currencies.gold);
+      const ms = matsShown(s), grid = ms.length > 2, msig = ms.map(m => m.id + ':' + (s.currencies.mats[m.id] || 0)).join(',');
+      if (mats.dataset.sig !== msig) {
+        mats.dataset.sig = msig;
+        mats.classList.toggle('grid', grid);
+        mats.replaceChildren(...ms.map(m => Tip.on(h('span', { class: 'cv-rs', 'data-res': m.id }, icon(Base.matIcon(m.id), grid ? 16 : 20), h('b', { text: shortN(s.currencies.mats[m.id] || 0, grid ? 999 : 9999) })), () => [m.name, matLine(m, Save.state.currencies.mats[m.id] || 0)])));
+      }
+      // a dot on a menu when something new waits there; on the board, how many wait on it
       const dots = (App.actions.dots && App.actions.dots()) || {};
-      heroesB.querySelector('.cv-dot').hidden = !dots.party;
-      bagB.querySelector('.cv-dot').hidden = !dots.bag;
-      const Rd = road(s);
+      heroDot.hidden = !dots.party;
+      bagDot.hidden = !dots.bag;
+      boardN.hidden = !W.chips.board;
+      if (W.chips.board) boardN.textContent = String(W.chips.board[1]);
+      const Rd = road(s), tagSig = Rd.done ? '' : Rd.st.kind + Rd.st.id;
       goTag.hidden = Rd.done;
-      goTag.replaceChildren(...(Rd.st.kind !== 'road' ? [h('i', { class: 'cv-el' })] : []), Rd.st.id);
+      if (goTag.dataset.sig !== tagSig) { goTag.dataset.sig = tagSig; goTag.replaceChildren(...(Rd.st.kind !== 'road' ? [icon('skull', 12)] : []), Rd.st.id); }
       go.setAttribute('aria-label', Rd.done ? 'Set out' : `Set out for ${Rd.st.id}`);
-      colTag.hidden = !W.all.length;
-      colTag.replaceChildren(...W.all.slice(0, 3).flatMap(([ic, n]) => [icon(ic, 12), String(n)]));
+      fitDock();
+      // Collect, once the buildings view is open (before that, the road's tolls wait for "While you were away")
+      const col = W.all.length > 0 && !locked(s), colSig = W.all.map(x => x.join(':')).join(',');
+      collect.hidden = !col;
+      if (col && colTag.dataset.sig !== colSig) { colTag.dataset.sig = colSig; colTag.replaceChildren(...W.all.slice(0, 3).map(([ic, n]) => h('span', {}, icon(ic, 16), '+' + n))); }
       chips = W.chips;
       // the formation, as it stands in battle, with level and fatigue
       form.replaceChildren(...FORM.map(slot => {
         const c = Save.char(s.party[slot]), front = slot < 2;
         const tile = h('button', { class: 'cv-tile' + (front ? ' front' : '') + (c ? '' : ' empty') + (c && Fatigue.spent(c) ? ' spent' : ''), 'data-slot': String(slot), 'aria-label': c ? `${c.name}, level ${c.level}` : 'Empty slot: add a hero' },
-          h('span', { class: 'cv-fc' }, c ? [pxImg(heroPortrait(c), 34), h('em', { text: String(c.level) })] : '+'),
-          c ? h('span', { class: 'cv-ft' }, h('i', { style: `width:${Math.min(100, Math.round(c.fatigue || 0))}%;background:${fatCol(c)}` })) : null);
+          h('span', { class: 'cv-fc' }, c ? [pxImg(heroPortrait(c), 36), h('em', { text: String(c.level) })] : null),
+          h('span', { class: 'cv-ft' }, c ? h('i', { style: `width:${Math.min(100, Math.round(c.fatigue || 0))}%;background:${fatCol(c)}` }) : null));
         return tile;
       }));
       if (live) { live.state = sceneState(s, region); live.locked = locked(s); }
@@ -399,13 +473,12 @@ const Camp = (() => {
       placed.v = out.v; placed.w = w; placed.sig = sig; placed.r = R; placed.sel = out.sel;
       // the camp's HUD goes in the first half of the flight up the road, the road's comes in the second
       const wc = Math.max(0, 1 - 2 * R), wr = Math.max(0, 2 * R - 1);
-      const wp = Math.max(0, 1 - 2 * w) * wc, wb = Math.max(0, 2 * w - 1) * wc;
-      fade(form, wp, true);
-      for (const el2 of [me, goalBtn, questLine, proto]) if (el2) fade(el2, wc, true);
-      fade(dock, wc, true); fade(roadHud, wr, true);
+      const wp = Math.max(0, 1 - 2 * w) * wc;
+      if (+dock.dataset.w !== camp.clientWidth) fitDock(); // the frame changed shape
+      // the HUD stays in both views at the fire (the dock, Collect and the formation included)
+      for (const el2 of [form, crestEl, banner, me, goalBtn, questLine, proto, dock, collect]) if (el2) fade(el2, wc, true);
+      fade(roadHud, wr, true);
       if (camp.classList.contains('on-road') !== R > 0.5) camp.classList.toggle('on-road', R > 0.5);
-      if (go.hidden !== (w >= 0.5)) { go.hidden = w >= 0.5; collect.hidden = w < 0.5; }
-      fade(go, Math.max(wp, 0.02)); fade(collect, Math.max(wb, 0.02));
       // once the camera is home, the road shows the frontier's region again
       if (R === 0 && out.roadTo === 0 && region != null) { region = null; sync(); }
       const seen = new Set(), seenTags = new Set();

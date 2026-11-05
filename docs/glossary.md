@@ -45,7 +45,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **The Lantern Road** | The way through five regions of stages, lit one lantern at a time. | Each cleared stage burns on the map, so you can see how far your light reaches. | `road` · lantern |
 | **Battle** | Your party against a stage’s foes, fought on its own while you watch. | You win by preparing: the formation, the rules, the skills and the gear. Speed it up, or skip it, any time. | `battle` · cleave |
 | **Old Wick** | The lamp-keeper at the fire, who knows the road and shows you the way. | Tap the lamp-keeper at the fire for a hand. Settings → Replay the guide plays the lessons again. | `wick` · lantern |
-| **Codex** | The book in Settings with every term, foe, class, item and building. | Foes you haven’t met and gear you haven’t found show as silhouettes. | `codex` · book |
+| **Codex** | The book on the Hearth’s dock: how battles work, and every term and foe. | Foes you haven’t met and gear you haven’t found show as silhouettes. | `codex` · book |
 | **Bess** | The carter by the road out of the Hearth, with quests for your company. | She drives the carts that carry travellers on the road you’ve cleared. Tap her for her quests. | `bess` · scroll |
 | **Quests** | Bess’s work for your company: a goal on the road, and pay for it. | Accept one on her panel, and claim what it pays there once it’s done. | `quests` · scroll |
 | **The Gravedigger** | Bess’s first quest: defeat the Sexton at 1-18, for the travellers. | The travellers pay with the Toll House plan. | `gravedigger` · skull |
@@ -177,7 +177,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Awakening** | A level-5 skill made greater still, for 5 more skill points. | From level 100, a threshold can open an awakening instead of a tier. | `awakening` · holy |
 | **Combining classes** | At level 50, and again at 200, a hero can take up another class. | They gain its first tier and starter skill, and keep their own stats and basic attack. | `combine` · helm |
 | **Respec** | Take back every stat and skill point, and spend them again. | Each threshold gives a free one, and the Shrine sells more. Opened tiers and classes stay. | `respec` · holy |
-| **Recruit** | A hero waiting on the Recruit Board, with stats rolled within their class’s range. | Bars show where each roll falls, so two recruits of one class can differ. | `recruit` · scroll |
+| **Recruit** | A hero waiting on the Recruit Board, with stats rolled within their class’s range. | Their card’s bars show where each roll falls, so two recruits of one class can differ. | `recruit` · scroll |
 | **Roster** | Every hero you’ve hired, in the party or not. | It holds 8 to start, and the Barracks makes room for up to 24. | `roster` · helm |
 | **Dismiss** | Send a hero away for good; only their gear comes back. |  | `dismiss` · boot |
 | **Fatigue** | Tiredness from 0 to 100: every turn a hero takes adds 1. | Heroes shed it resting at the Hearth. Using a party item takes no one’s turn, so it costs none. | `fatigue` · fatigue |
@@ -406,7 +406,7 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 747 · js/data.js 592 · js/firstsession.js 109, 122, 138 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 167, 181, 276, 293 · js/camp.js 820 · js/data.js 592 · js/firstsession.js 109, 122, 138 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
@@ -414,7 +414,7 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
 | Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 327 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 45, 57 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
 | Foe: highest attack | Foe: highest Power |  | js/data.js 288, 506 |
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |

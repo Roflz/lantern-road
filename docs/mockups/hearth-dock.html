@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hearth Dock</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* D2 (play-test note 3.19, 2026-11-05), redrawn to docs/ui-rules.md: the Hearth with a dock along the bottom, after
+   Darkest Dungeon's town. Gold and each material as an icon and a number; a + by gold and by the materials; Set out,
+   the one big word, in the middle; the menus as drawn things with their names in tooltips. Two faces (Pirata One for
+   titles and names, Spectral for the rest); spacing from 4, 8, 16, 24; ember gold only for what you can press. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#8a7e92;
+  --ember:#f4a646; --ember-lo:#e08a2a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.82); --trim:#6b4a2a; --name:#f4dfae;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+/* the page around the frame */
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:8px;margin-bottom:24px}
+.kick{font:600 14px/1.3 var(--f-body);color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 8px;font:400 32px/1.1 var(--f-display)}
+.notes{margin:0;padding:16px 24px 16px 40px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:600}
+.notes code{font:13px ui-monospace,Consolas,monospace;color:var(--ember)}
+.notes.qs{border-color:var(--ember)}
+.states{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.states button{padding:6px 12px;font:600 14px/1.2 var(--f-body);color:var(--ash);border:1px solid var(--rule);background:var(--stone)}
+.states button.on{background:var(--ember);color:#1a1008;border-color:var(--ember)}
+.cap{margin:8px 0 0;color:var(--ash);font-size:15px;min-height:3em}
+.cap b{color:var(--ember);font-weight:600;margin-right:8px}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;user-select:none;touch-action:none}
+.frame canvas{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+/* the scene sits a little higher, so the dock covers road and not the fire */
+.frame canvas.lift{top:-24px}
+.shade-t{position:absolute;inset:0 0 auto 0;height:96px;background:linear-gradient(rgba(6,4,10,.7),rgba(6,4,10,0));pointer-events:none}
+.layer{position:absolute;inset:0;pointer-events:none}
+@keyframes rise{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@keyframes flick{0%,100%{opacity:.75}30%{opacity:1}52%{opacity:.6}74%{opacity:.9}}
+@keyframes sway{0%,100%{rotate:-3deg}50%{rotate:3deg}}
+
+/* top left: the crest and banner, you, the next goal (they stay where hearth.html has them) */
+.crest{position:absolute;left:8px;top:4px;width:64px;height:64px;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 12px rgba(244,166,70,.3))}
+.banner{position:absolute;left:66px;top:9px;height:28px;padding:0 24px 0 16px;display:grid;place-items:center;font:400 21px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000;background:linear-gradient(#4a1c24,#2a0e14);clip-path:polygon(0 0,100% 0,calc(100% - 8px) 50%,100% 100%,0 100%,8px 50%)}
+.me{position:absolute;left:72px;top:40px;display:flex;align-items:center;gap:8px;height:28px;padding:0 8px 0 2px;background:var(--panel)}
+.me .face{width:24px;height:24px;display:grid;place-items:center;background:#0f0b14}
+.me .face img{width:20px;height:20px}
+.me .nm{font:400 17px/1 var(--f-display);color:var(--name)}
+.me em{font:600 13px/1 var(--f-body);font-style:normal;color:var(--bone)}
+.meter{display:block;width:56px;height:4px;background:#2a2130}
+.meter i{display:block;height:100%;background:var(--ash)}
+.goal{position:absolute;left:16px;top:80px;display:flex;align-items:center;gap:8px;height:32px;padding:0 4px 0 8px;background:var(--panel)}
+.goal .gt{font:600 15px/1 var(--f-body);color:var(--bone);white-space:nowrap}
+.goal .go{height:24px;padding:0 8px;display:grid;place-items:center;font:600 13px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo))}
+/* top right: the formation, as it stands in battle (stays; moved up into the purse's place) */
+.form{position:absolute;right:16px;top:16px;display:grid;grid-template-columns:repeat(3,40px);gap:8px;padding:8px;background:var(--panel)}
+.form .tv{position:relative;width:40px;display:grid;gap:4px}
+.form .fc{position:relative;width:40px;height:40px;background:#16101a;display:grid;place-items:center;box-shadow:inset 0 0 0 1px #3a3044}
+.form .fc img{width:36px;height:36px}
+.form .fc em{position:absolute;left:2px;top:1px;font:600 13px/1 var(--f-body);font-style:normal;color:var(--bone);text-shadow:0 1px 0 #000,0 0 3px #000}
+.form .ft{width:40px;height:4px;background:#2a2130}
+.form .ft i{display:block;height:100%}
+.form .front .fc{box-shadow:inset 0 0 0 1px #8a6a3a}
+.form .empty .fc{box-shadow:none;outline:1px dashed #3a3044;outline-offset:-1px}
+
+/* the scene's plaques and what's waiting */
+.plq{position:absolute;transform:translateX(-50%);height:20px;padding:0 8px;display:grid;place-items:center;background:rgba(18,12,10,.85);font:400 15px/1 var(--f-display);color:#f2e1c0;white-space:nowrap;text-shadow:0 1px 0 #000;pointer-events:none}
+.plq.empty{color:var(--dim)}
+.wait{position:absolute;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:24px;padding:0 8px 0 4px;background:linear-gradient(#ffc876,var(--ember-lo));font:600 13px/1 var(--f-body);color:#1a1008;box-shadow:0 0 12px rgba(244,166,70,.45);pointer-events:none}
+.wait img{width:14px;height:14px}
+
+/* ── the dock: 48 tall, 16 from each side, one line along its top */
+.dock{position:absolute;left:0;right:0;bottom:0;height:48px;z-index:3;background:linear-gradient(#18121a,#0b080d);box-shadow:0 -1px 0 #5a4430,0 -12px 24px rgba(0,0,0,.5)}
+/* left: what you hold */
+.res{position:absolute;left:16px;top:0;bottom:0;display:flex;align-items:center;gap:8px}
+.rs{position:relative;display:flex;align-items:center;gap:4px;height:32px;pointer-events:auto}
+.rs b{font:600 15px/1 var(--f-body);color:var(--bone);text-shadow:0 1px 0 #000;white-space:nowrap}
+.rs.gold b{font-size:15px}
+.rs .coin{position:relative;display:grid;place-items:center;width:24px;height:24px;overflow:hidden}
+.rs .coin::after{content:"";position:absolute;inset:-6px;background:linear-gradient(115deg,transparent 35%,rgba(255,250,220,.85) 50%,transparent 65%);translate:-40px 0;pointer-events:none}
+.rs .coin.glint::after{animation:glint .7s ease-out}
+@keyframes glint{to{translate:40px 0}}
+.rs .pop{position:absolute;left:28px;top:-12px;font:600 13px/1 var(--f-body);color:var(--good);text-shadow:0 1px 0 #000;animation:up 1s ease-out forwards;pointer-events:none}
+@keyframes up{from{opacity:1;translate:0 0}to{opacity:0;translate:0 -16px}}
+.mats{display:flex;align-items:center;gap:8px}
+.mats.grid{display:grid;grid-template-columns:repeat(3,auto);grid-auto-rows:18px;gap:2px 8px}
+.mats.grid .rs{height:18px}
+.mats.grid .rs b{font-size:13px}
+.pl{width:32px;height:32px;display:grid;place-items:center;font:600 18px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px #000;pointer-events:auto}
+/* the middle: Set out, the one big word, a lantern hung at each end */
+.so{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);width:160px;height:40px;display:grid;place-items:center;pointer-events:auto;z-index:4;background:linear-gradient(#2c2016,#140e0a);box-shadow:inset 0 0 0 1px var(--ember-lo),0 0 16px rgba(244,166,70,.2)}
+.so>span{position:relative;font:400 32px/1 var(--f-display);color:var(--ember);text-shadow:0 0 12px rgba(244,166,70,.45),0 2px 0 #000;margin-top:2px}
+.so:hover>span{color:#ffc876}
+.so .lt{position:absolute;top:6px;width:18px;height:28px;transform-origin:50% 0;animation:sway 3.2s ease-in-out infinite}
+.so .lt img{width:18px;height:28px}
+.so .lt.l{left:8px}.so .lt.r{right:8px;animation-delay:-1.6s}
+.so .lt i{position:absolute;left:50%;top:60%;width:36px;height:36px;margin:-18px 0 0 -18px;border-radius:50%;background:radial-gradient(circle,rgba(255,196,110,.45),rgba(255,196,110,0) 70%);mix-blend-mode:screen;animation:flick 1.4s ease-in-out infinite}
+.so .lt.r i{animation-delay:-.6s}
+.so .tag{position:absolute;top:-24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:20px;padding:0 8px;white-space:nowrap;font:600 13px/1 var(--f-body);color:var(--bone);background:rgba(18,12,20,.9)}
+.so .tag img{width:12px;height:12px;opacity:.85}
+/* right: the menus as things resting on the dock, no labels */
+.objs{position:absolute;right:16px;bottom:4px;display:flex;align-items:flex-end;gap:8px}
+.ob{position:relative;width:40px;min-height:40px;display:grid;place-items:end center;pointer-events:auto}
+.ob img{filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 6px rgba(0,0,0,.9));transition:translate .15s}
+.ob:hover img{translate:0 -4px}
+.ob .dot{position:absolute;top:-4px;right:0;width:10px;height:10px;border-radius:50%;background:var(--ember);box-shadow:0 0 0 2px #120c16,0 0 6px rgba(244,166,70,.8)}
+.ob .n{position:absolute;top:-8px;right:-4px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:600 13px/1 var(--f-body);color:#1a1008;background:var(--ember);border-radius:9px}
+/* Collect: when idle gains wait, over the gold, in either view */
+.col{position:absolute;left:16px;bottom:56px;z-index:3;display:flex;align-items:center;gap:8px;height:36px;padding:0 4px 0 8px;background:var(--panel);pointer-events:auto;animation:rise .3s ease-out}
+.col .ct{display:flex;align-items:center;gap:4px;font:600 13px/1 var(--f-body);color:var(--good)}
+.col .ct img{width:16px;height:16px}
+.col b{height:28px;padding:0 12px;display:grid;place-items:center;font:600 15px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo))}
+/* a tooltip: a name, a number or a line */
+.tip{position:absolute;z-index:6;transform:translateX(-50%);padding:8px 16px;text-align:center;background:#1a1420;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 8px 20px rgba(0,0,0,.6);animation:rise .15s ease-out;pointer-events:none;white-space:nowrap}
+.tip b{display:block;font:400 19px/1.1 var(--f-display);color:var(--name)}
+.tip span{display:flex;justify-content:center;align-items:center;gap:4px;margin-top:4px;font:400 13px/1.2 var(--f-body);color:var(--ash)}
+.tip span img{width:14px;height:14px}
+/* the annotations, for the "what moved" state */
+.ann{position:absolute;z-index:8;padding:2px 8px;font:600 13px/1.2 var(--f-body);white-space:nowrap;color:#1a1008;background:var(--ember);box-shadow:0 2px 6px rgba(0,0,0,.6);pointer-events:none}
+.ann.stay{background:#cfc4d6}
+.ann.new{background:var(--good)}
+.ann.gone{background:var(--bad)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">D2 · note 3.19 · redrawn to the UI rules</div>
+    <h1>The Hearth’s Dock</h1>
+    <p class="lede">After Darkest Dungeon’s town: what you hold on the left, Set out in the middle, the menus on the right, each named in a tooltip. The frame is live: drag to turn round the fire, hover anything in the dock (press and hold on a phone).</p>
+  </header>
+
+  <div class="states" id="states"></div>
+  <figure style="margin:0"><div class="fw"><div class="phone"><div class="frame" id="frame"></div></div></div></figure>
+  <p class="cap" id="cap"></p>
+
+  <section class="band">
+    <h2>What moves</h2>
+    <ul class="notes">
+      <li><b>Into the dock from the top right:</b> gold and the materials, as icons and numbers (the pill-shaped purse goes); Settings, as the candle. Help becomes the Codex’s first page.</li>
+      <li><b>Into the dock from the bottom right:</b> Heroes, Tactics and the Bag, as the helm, the war table and the satchel, with no labels; Set out, from the round button to the plate in the middle.</li>
+      <li><b>New in the dock:</b> the Codex, as the book, and the Recruit Board, as a notice board, so it opens from either view. The board stays in the scene too, where Wick points at it.</li>
+      <li><b>Stays:</b> the crest, the banner, you and the next goal at top left; the formation at top right, moved up into the purse’s place.</li>
+      <li><b>Collect</b> no longer takes Set out’s place in the buildings view. It rises over the gold whenever something waits, in either view.</li>
+      <li><b>The + by gold</b> opens the Toll House (or, before you have it, says where its plan comes from); <b>the + by the materials</b> opens the Scavenger Camp. Later they open the shop.</li>
+      <li><b>Materials show once found:</b> Bone Dust alone in Region I. From three on they sit in two rows, and past 999 a number shortens (1.9k).</li>
+      <li><b>Moving:</b> the lanterns on Set out sway and flicker; the coin glints and the number counts up when gold comes in; a dot or a count on a menu when something new waits there.</li>
+      <li><b>Anchors</b> (<code>data-tut</code>): <code>hearth-setout</code>, <code>hearth-heroes</code>, <code>hearth-tactics</code>, <code>hearth-bag</code>, <code>hearth-collect</code> and <code>hearth-formation</code> keep their names; new: <code>hearth-board</code>, <code>hearth-codex</code>, <code>hearth-settings</code>, <code>hearth-gold</code>.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>For you</h2>
+    <ol class="notes qs">
+      <li><b>The Recruit Board in the dock</b> as well as in the scene?</li>
+      <li><b>Help into the Codex,</b> so the dock has one book for everything you might look up?</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+// js/camp.js holds the building art. Its screen code needs the rest of the game, so it gets stand-ins that do nothing.
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script src="hearth-art.js"></script>
+<script src="hearth-scene.js"></script>
+<script src="d2-art.js"></script>
+<script>
+'use strict';
+HearthScene.install();
+(() => {
+  const C = HearthArt.C;
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  const stageOf = id => STAGES.find(s => s.id === id);
+  const fmt = (n, cut = 9999) => (n > cut ? (Math.round(n / 100) / 10).toLocaleString('en-GB') + 'k' : n.toLocaleString('en-GB'));
+  const obj = (k, z = 2) => { const o = D2Art.obj(k, z); return pxImg(o.url, o.w, o.h); };
+  const crest = (() => { const P = HearthArt.painter(32, 32);
+    P.disc(16, 16, 15, (x, y, d) => (d > 12.2 ? (d > 14 ? C.i1 : x + y < 31 ? C.i3 : C.i2) : null));
+    for (const [x, y] of [[15, 1], [15, 29], [1, 15], [29, 15]]) P.rect(x, y, 2, 2, C.i4);
+    P.disc(16, 16, 12.2, (x, y, d) => (d < 12.2 ? (d > 10.8 ? '#120c16' : '#22182a') : null));
+    P.disc(16, 6.6, 1.7, (x, y, d) => (d > 0.8 ? C.i3 : null));
+    P.rect(12, 8, 9, 2, C.i2); P.hl(12, 20, 8, C.i3);
+    P.rect(11, 10, 11, 11, C.i1); P.rect(12, 11, 9, 9, C.y2); P.rect(13, 12, 7, 6, C.y3); P.rect(15, 13, 3, 3, C.y4); P.vl(16, 11, 19, C.y1);
+    P.rect(10, 21, 13, 2, C.i2); P.hl(10, 22, 21, C.i3); P.rect(12, 23, 9, 1, C.i1);
+    return P.finish({ warm: 0 }); })();
+
+  // the tooltips: what each holding is for, and each menu's name
+  const RES = {
+    gold: ['Gold', 'Hires, buildings, the Shop'],
+    bone_dust: ['Bone Dust', 'Gravefields · buildings'],
+    chapel_wax: ['Chapel Wax', 'Drowned Chapel · buildings'],
+    heartwood: ['Heartwood', 'Thornwood · buildings'],
+    cinder_iron: ['Cinder Iron', 'Ashen Keep · buildings'],
+    throne_tallow: ['Throne Tallow', 'Hollow Throne · buildings'],
+  };
+  const MID = { heroes: ['sellsword', 'pilgrim', 'warden', 'crossbowman'], lit: 8, wick: true, boardChip: ['scroll', '3'],
+    plots: [{ art: 'toll', chip: ['coin', '610'] }, { art: 'infirmary' }, { art: 'yard', chip: ['star', '2'] }, { empty: true }, { empty: true }, null, null, null, null, null, null, null, null, null] };
+  const LATE_ART = ['shop', 'infirmary', 'toll', 'whet', 'hall', 'shrine', 'yard', 'pit', 'tactician', 'barracks', 'ossuary', 'bell', 'hexing', 'scav'];
+  const LATE = { heroes: ['sellsword', 'pilgrim', 'warden', 'crossbowman', 'hexblade', 'lamplighter'], lit: 17, wick: true, boardChip: ['scroll', '5'], plots: LATE_ART.map(a => ({ art: a })) };
+  const CREW = [{ cls: 'warden', lv: 5, fat: 22 }, { cls: 'sellsword', lv: 6, fat: 41 }, { cls: 'crossbowman', lv: 4, fat: 18 }, { cls: 'pilgrim', lv: 6, fat: 56 }, null, null];
+  const CREW_LATE = [{ cls: 'warden', lv: 61, fat: 12 }, { cls: 'sellsword', lv: 63, fat: 30 }, { cls: 'crossbowman', lv: 60, fat: 8 }, { cls: 'pilgrim', lv: 62, fat: 44 }, { cls: 'hexblade', lv: 59, fat: 20 }, { cls: 'lamplighter', lv: 58, fat: 15 }];
+  const fatCol = f => (f >= 75 ? 'var(--bad)' : f >= 50 ? '#d8c070' : 'var(--ash)');
+  const BASE = { me: { cls: 'sellsword', name: 'Roflz', renown: 4, bar: 62 }, goal: 'Clear 1-9', gold: 1240, mats: [['bone_dust', 34]], crew: CREW, next: '1-9', S: MID, yaw: 0, board: 3, collect: null };
+  const LATER = { me: { cls: 'sellsword', name: 'Roflz', renown: 31, bar: 40 }, goal: 'Clear 4-6', gold: 48210, mats: [['bone_dust', 1904], ['chapel_wax', 862], ['heartwood', 411], ['cinder_iron', 96], ['throne_tallow', 0]], crew: CREW_LATE, next: '4-6', S: LATE, yaw: 0, board: 5, collect: null };
+  const COLLECT = [['coin', '+610'], ['star', '+2']];
+
+  function topLeft(F) {
+    const M = F.me;
+    return [pxImg(crest.toDataURL(), 64, 64, 'px crest'), h('div', { class: 'banner', text: 'The Hearth' }),
+      h('div', { class: 'me', 'data-tut': 'hearth-me' }, h('span', { class: 'face' }, pxImg(portraitURL(M.cls, true, LOOK(M.cls)), 20, 20)), h('span', { class: 'nm', text: M.name }), h('span', { class: 'meter' }, h('i', { style: `width:${M.bar}%` })), h('em', { text: String(M.renown) })),
+      h('div', { class: 'goal', 'data-tut': 'hearth-goal' }, h('span', { class: 'gt', text: F.goal }), h('span', { class: 'go', text: 'Go' }))];
+  }
+  function formation(F) {
+    const Cw = F.crew;
+    const tile = (c, front) => c
+      ? h('span', { class: 'tv' + (front ? ' front' : '') }, h('span', { class: 'fc' }, pxImg(portraitURL(c.cls, true, LOOK(c.cls)), 36, 36), h('em', { text: String(c.lv) })), h('span', { class: 'ft' }, h('i', { style: `width:${c.fat}%;background:${fatCol(c.fat)}` })))
+      : h('span', { class: 'tv empty' + (front ? ' front' : '') }, h('span', { class: 'fc' }), h('span', { class: 'ft', style: 'background:none' }));
+    return h('div', { class: 'form', 'data-tut': 'hearth-formation' }, tile(Cw[2]), tile(Cw[3]), tile(Cw[0], true), tile(Cw[4]), tile(Cw[5]), tile(Cw[1], true));
+  }
+  function dock(F, ui) {
+    const st = stageOf(F.next), elite = st && st.kind !== 'road', grid = F.mats.length > 2;
+    const coin = h('span', { class: 'coin' }, icon('coin', 24));
+    const goldN = h('b', { text: fmt(F.gold) });
+    const goldRs = h('span', { class: 'rs gold', 'data-tut': 'hearth-gold', 'data-res': 'gold' }, coin, goldN);
+    const mats = F.mats.map(([id, n]) => h('span', { class: 'rs', 'data-res': id }, pxImg(D2Art.matURL(id), grid ? 16 : 20, grid ? 16 : 20), h('b', { text: fmt(n, grid ? 999 : 9999) })));
+    const plusG = h('button', { class: 'pl', 'aria-label': 'More gold', 'data-more': 'gold', text: '+' }), plusM = h('button', { class: 'pl', 'aria-label': 'More materials', 'data-more': 'mats', text: '+' });
+    const res = h('div', { class: 'res' }, goldRs, plusG, h('div', { class: 'mats' + (grid ? ' grid' : '') }, ...mats), plusM);
+    const lt = side => h('span', { class: 'lt ' + side }, obj('lantern', 2), h('i'));
+    const go = h('button', { class: 'so', 'data-tut': 'hearth-setout', 'aria-label': 'Set out' }, lt('l'), lt('r'),
+      h('span', { class: 'tag' }, elite ? icon('skull', 12) : null, F.next), h('span', { text: 'Set out' }));
+    const ob = (k, name, tut, extra) => h('button', { class: 'ob', 'data-tut': tut, 'data-name': name, 'aria-label': name }, obj(k, 2), extra || null);
+    const objs = h('div', { class: 'objs' },
+      ob('notice', 'Recruit Board', 'hearth-board', F.board ? h('em', { class: 'n', text: String(F.board) }) : null),
+      ob('helm', 'Heroes', 'hearth-heroes', h('i', { class: 'dot' })), ob('table', 'Tactics', 'hearth-tactics'), ob('satchel', 'Bag', 'hearth-bag', h('i', { class: 'dot' })),
+      ob('book', 'Codex', 'hearth-codex'), ob('candle', 'Settings', 'hearth-settings'));
+    ui.gold = { coin, n: goldN, rs: goldRs }; ui.plus = [plusG, plusM]; ui.res = res; ui.objs = objs;
+    return h('div', { class: 'dock' }, res, go, objs);
+  }
+  const collectPlate = items => h('button', { class: 'col', 'data-tut': 'hearth-collect' }, ...items.map(([ic, n]) => h('span', { class: 'ct' }, icon(ic, 16), n)), h('b', { text: 'Collect' }));
+
+  // ── the states
+  const frame = document.getElementById('frame'), capEl = document.getElementById('cap');
+  const STATES = {
+    party: { label: 'The party view', cap: 'Mid Region I: gold and Bone Dust on the left, Set out toward 1-9 in the middle, the menus on the right. Gold comes in now and then: the coin glints and the number counts up.' },
+    tip: { label: 'Tooltip', cap: 'A material’s tooltip: its name, where it comes from, what it buys.' },
+    tipmenu: { label: 'Menu tooltip', cap: 'The menus have no labels; each names itself in a tooltip, as the town’s do.' },
+    plus: { label: '+', cap: 'The + by gold opens the Toll House, or says where its plan comes from; later it opens the shop.' },
+    build: { label: 'Buildings view', cap: 'Turned to the buildings: the dock stays, Set out included. Collect rises over the gold while the Toll House and the Training Yard hold gains.' },
+    late: { label: 'Later', cap: 'Region IV: five materials in two rows, numbers shortened past 999.' },
+    moved: { label: 'What moved', cap: 'Into the dock (orange), new (green), where it was (grey), gone (red).' },
+  };
+  let timer = null, tip = null;
+  const untip = () => { if (tip) tip.remove(); tip = null; };
+  const tipAt = (el, title, line, lineIcon) => {
+    untip();
+    const r = el.getBoundingClientRect(), f = frame.getBoundingClientRect(), s = f.width / 844;
+    tip = h('div', { class: 'tip' }, h('b', { text: title }), line ? h('span', {}, lineIcon ? icon(lineIcon, 14) : null, line) : null);
+    frame.append(tip);
+    const cx = (r.left + r.width / 2 - f.left) / s, half = tip.offsetWidth / 2;
+    tip.style.left = Math.max(16 + half, Math.min(844 - 16 - half, cx)) + 'px';
+    tip.style.bottom = (f.bottom - r.top) / s + 8 + 'px';
+  };
+  function show(k) {
+    clearInterval(timer); untip();
+    frame.replaceChildren();
+    document.querySelectorAll('#states button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+    capEl.replaceChildren(h('b', { text: STATES[k].label }), STATES[k].cap);
+    const F = k === 'late' ? { ...LATER } : { ...BASE, S: { ...MID, plots: MID.plots.map(p => (p ? { ...p } : p)) } };
+    if (k === 'build') { F.yaw = 180; F.collect = COLLECT; }
+    const cv = h('canvas', { class: 'lift', width: Camp3D.IW, height: Camp3D.IH, 'aria-hidden': 'true' });
+    const marks = h('div', { class: 'layer' });
+    const ui = {};
+    frame.append(cv, h('div', { class: 'shade-t' }), marks, formation(F), dock(F, ui), ...topLeft(F));
+    if (F.collect) frame.append(collectPlate(F.collect));
+    const api = Camp3D.live(cv, frame, F.S, { yaw: F.yaw, drag: true });
+    // plaques and what's waiting, following the scene (lifted with the canvas)
+    const pool = new Map(), LIFT = 24;
+    api.onFrame = out => {
+      const w = out.cam.w, wp = Math.max(0, 1 - 2 * w), wb = Math.max(0, 2 * w - 1), seen = new Set();
+      for (const a of out.anchors) {
+        const op = a.view === 'build' ? wb : a.view === 'party' ? wp : 1, want = [];
+        if (a.name && op > 0.02) want.push(['plq', () => h('span', { class: 'plq' + (a.empty ? ' empty' : ''), text: a.name }), a.x, a.y - 2 - LIFT, op]);
+        if (a.chip && op > 0.02) want.push(['wait', () => h('span', { class: 'wait' }, icon(a.chip[0], 14), a.chip[1]), a.x, a.top - 32 - LIFT, op]);
+        for (const [cls, make, x, y, o] of want) {
+          const key = cls + a.id; seen.add(key);
+          let n = pool.get(key); if (!n) { n = make(); pool.set(key, n); marks.append(n); }
+          n.style.left = Math.round(x) + 'px'; n.style.top = Math.round(y) + 'px'; n.style.opacity = y > 310 ? 0 : o;
+        }
+      }
+      for (const [key, n] of pool) if (!seen.has(key)) n.style.opacity = 0;
+    };
+    // tooltips on everything in the dock
+    const resTip = el => { const kk = el.dataset.res, n = kk === 'gold' ? F.gold : (F.mats.find(m => m[0] === kk) || [0, 0])[1]; tipAt(el, RES[kk][0], `${n.toLocaleString('en-GB')} · ${RES[kk][1]}`); };
+    const moreTip = el => tipAt(el, el.dataset.more === 'gold' ? 'More gold' : 'More materials', el.dataset.more === 'gold' ? 'Toll House' : 'Scavenger Camp', el.dataset.more === 'gold' ? 'coin' : 'bone');
+    for (const el of ui.res.querySelectorAll('[data-res]')) { el.addEventListener('pointerenter', () => resTip(el)); el.addEventListener('pointerleave', untip); }
+    for (const el of ui.objs.querySelectorAll('[data-name]')) { el.addEventListener('pointerenter', () => tipAt(el, el.dataset.name)); el.addEventListener('pointerleave', untip); }
+    ui.plus.forEach(p => { p.addEventListener('pointerenter', () => moreTip(p)); p.addEventListener('pointerleave', untip); p.addEventListener('click', () => moreTip(p)); });
+    if (k === 'tip') requestAnimationFrame(() => resTip(ui.res.querySelector('[data-res="bone_dust"]')));
+    if (k === 'tipmenu') requestAnimationFrame(() => tipAt(ui.objs.querySelector('[data-name="Tactics"]'), 'Tactics'));
+    if (k === 'plus') requestAnimationFrame(() => moreTip(ui.plus[0]));
+    // gold comes in now and then: the coin glints, the number counts up
+    if (k === 'party') {
+      const earn = () => {
+        const add = 12 + Math.floor(Math.random() * 30), from = F.gold, t0 = performance.now();
+        F.gold += add; ui.gold.coin.classList.remove('glint'); void ui.gold.coin.offsetWidth; ui.gold.coin.classList.add('glint');
+        ui.gold.rs.append(h('i', { class: 'pop', text: '+' + add }));
+        const tick = () => { const q = Math.min(1, (performance.now() - t0) / 600); ui.gold.n.textContent = fmt(Math.round(from + add * q)); if (q < 1) requestAnimationFrame(tick); };
+        tick(); setTimeout(() => { const p = ui.gold.rs.querySelector('.pop'); if (p) p.remove(); }, 1000);
+      };
+      setTimeout(earn, 700); timer = setInterval(earn, 4200);
+    }
+    if (k === 'moved') {
+      const ann = (cls, text, x, y) => frame.append(h('span', { class: 'ann ' + cls, text, style: `left:${x}px;top:${y}px` }));
+      ann('', 'From top right', 16, 312); ann('', 'From bottom right', 362, 292);
+      ann('new', 'New', 548, 312); ann('', 'From bottom right', 596, 288); ann('new', 'New', 744, 312); ann('', 'From top right', 724, 264);
+      ann('stay', 'Stays', 232, 44); ann('stay', 'Stays, moved up', 696, 128);
+      ann('gone', 'Help: into the Codex', 664, 160);
+    }
+  }
+  const stEl = document.getElementById('states');
+  for (const [k, S] of Object.entries(STATES)) stEl.append(h('button', { 'data-k': k, text: S.label, onclick: () => show(k) }));
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+  show(new URLSearchParams(location.search).get('s') || 'party');
+  window.__dock = { show };
+})();
+</script>
+</body>
+</html>

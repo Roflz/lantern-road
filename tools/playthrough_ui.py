@@ -253,15 +253,16 @@ def main():
             cdp.detach()
 
         def board(pick):
-            """The Recruit Board's panel (js/firstpick.js): a card, Hire, then the reveal, each by touch."""
+            """The Recruit Board's panel (js/firstpick.js): a row, its +, Hire, then the reveal, each by touch."""
             cards = js("() => [...document.querySelectorAll('#sheet .fp [data-tut=pick-card]')].map(c => c.dataset.cls)")
             if len(cards) != 3:
                 problems.append(f'the Recruit Board shows {len(cards)} faces, not three')
                 return False
             k = cards.index(pick) if pick in cards else 0
             press(js(f"() => ({MID})(document.querySelectorAll('#sheet .fp [data-tut=pick-card]')[{k}])"))
+            press(js(f"() => ({MID})(document.querySelectorAll('#sheet .fp [data-tut=pick-plus]')[{k}])"))
             if not until("() => !!document.querySelector('[data-tut=pick-hire]')", None, 3000):
-                problems.append('no Hire on the Recruit Board after a tap on a face')
+                problems.append('no Hire on the Recruit Board after its + on a face')
                 return False
             press(js(f"() => ({MID})('[data-tut=pick-hire]')"))
             if not until("() => !!document.querySelector('[data-tut=pick-reveal]')", None, 3000):
@@ -404,15 +405,19 @@ def main():
             while st['board'] and st['picks'] > 0 and st['roster'] < min(st['need'], st['cap']) and st['cheapest'] <= st['gold']:
                 if not to_camp('party'):
                     break
-                t = touch('.camp .cv-plq[data-id="board"]', None, "() => App.current === 'building' && !!document.querySelector('.bld-view')")
-                if not t or js("() => App.current") != 'building':
+                t = touch('.camp .cv-plq[data-id="board"]', None, "() => RecruitBoard.shown")
+                if not t or not js("() => RecruitBoard.shown"):
                     problems.append(f"a tap on the Recruit Board at camp did not open it: touched {t}, now {where()}")
                     break
+                # the recruit's +, then the confirmation's Hire, then the reveal (a tap goes on, back to the board)
                 k = js(WANTED)
-                tap(f'.recruits .recruit:nth-child({k + 1})', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
+                tap(f'#sheet.board .rb-row[data-i="{k}"] [data-tut=pick-plus]', None, "() => { const b = document.querySelector('#sheet.board .rb-modal [data-tut=pick-hire]'); return !!b && !b.disabled; }", timeout=2000)
                 n = st['roster']
-                if not tap('.bld-view .btn.primary', '^Hire', 'n => Save.state.roster.length > n', n):
+                if not tap('#sheet.board .rb-modal [data-tut=pick-hire]', None, 'n => Save.state.roster.length > n', n):
                     break
+                page.wait_for_timeout(550)  # the reveal takes a tap only after half a second
+                tap('#sheet.board [data-tut=pick-reveal]', None, "() => !document.querySelector('#sheet.board .rb-reveal')", timeout=2000)
+                tap('#sheet.board .rb-x', None, '() => !RecruitBoard.shown', timeout=2000)
                 ran('hire')
                 shot('hired')
                 st = state()
@@ -436,7 +441,7 @@ def main():
             to_camp('party')
             card()
             if trips == 0:
-                if not tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL):
+                if not tap('.camp [data-tut=hearth-setout]', None, ROAD_STILL):
                     problems.append(f"no Set out at the Hearth, or no flight up the road after it: now {where()}")
             else:
                 pt = road_point()
@@ -449,7 +454,7 @@ def main():
                 problems.append(f"{'the Hearth' + chr(39) + 's Set out' if trips == 0 else 'a tap on the road at camp'} did not fly up the road to the frontier: now {where()}, on the road {on_road}")
                 shot('missed-road')
                 if not on_road:
-                    tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL)
+                    tap('.camp [data-tut=hearth-setout]', None, ROAD_STILL)
             elif trips == 0:
                 ran('set out')
             if trips < 2:

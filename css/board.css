@@ -1,0 +1,174 @@
+/* Lantern Road · the Recruit Board's panel (RecruitBoard in js/buildings.js) and the first pick on it (js/firstpick.js),
+   after docs/mockups/recruit-board.html (approved 2026-11-05), drawn to docs/ui-rules.md; and the tooltips (js/tip.js)
+   the board and the Hearth's dock share. Design pixels in the landscape frame (694–936 wide, 390 tall). Two faces
+   (Pirata One for titles and names, Spectral for the rest), spacing from 4, 8, 16 and 24, ember gold only on what you
+   can press. Classes: rb- (the panel), fp- (Wick and the pointer on the first pick), tp (a tooltip). */
+#sheet.board,#sheet.firstpick{display:block;padding:0;background:rgba(5,3,9,.6)}
+.rbw{position:absolute;inset:0;--name:#f4dfae;--ember-lo:#e08a2a;--line:#2a2130;--trim:#6b4a2a;--rb-dim:#8a7e92}
+.rbw img.px{image-rendering:pixelated;display:block}
+.rbw button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+@keyframes rb-rise{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@keyframes rb-flick{0%,100%{opacity:.8}35%{opacity:1}55%{opacity:.65}80%{opacity:.9}}
+@keyframes rb-bob{50%{translate:0 -4px}}
+
+/* ── the panel: the whole frame, one ground, 16 from every edge */
+.rb{position:absolute;inset:0;overflow:hidden;background:radial-gradient(ellipse 50% 80% at 18% 78%,#25170f 0,#120d16 60%,#0d0a11 100%);color:var(--bone);font:400 15px/1.3 var(--f-body)}
+.rb-art{position:absolute;left:16px;bottom:0;width:320px;height:288px;display:grid;place-items:end center;pointer-events:none}
+.rb-art img{filter:brightness(.66) saturate(.8)}
+.rb-glow{position:absolute;left:248px;top:182px;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle,rgba(255,196,110,.32),rgba(255,196,110,0) 70%);mix-blend-mode:screen;animation:rb-flick 2.2s ease-in-out infinite;pointer-events:none}
+/* the title: the board's icon, its name on a plate */
+.rb-ttl{position:absolute;left:16px;top:16px;display:flex;align-items:center;pointer-events:none}
+.rb-sq{width:48px;height:48px;display:grid;place-items:center;background:#1a1420;border:1px solid var(--trim)}
+.rb-nmp{height:36px;padding:0 24px 0 16px;display:flex;align-items:center;background:linear-gradient(90deg,#2a2232,rgba(26,20,32,0))}
+.rb-ttl h3{margin:0;font:400 28px/1 var(--f-display);color:var(--name);text-shadow:0 1px 0 #000}
+.rb-tabs{position:absolute;left:16px;top:72px;display:flex;gap:8px}
+.rbw .rb-tab{width:40px;height:32px;display:grid;place-items:center;border-bottom:2px solid transparent;opacity:.6}
+.rb-tab img{width:18px;height:18px}
+.rbw .rb-tab.on{opacity:1;border-bottom-color:var(--ember)}
+/* top right: what the board has left, your gold, close */
+.rb-top{position:absolute;left:352px;right:16px;top:16px;height:32px;display:flex;align-items:center;gap:16px}
+.rb-st{display:flex;align-items:center;gap:4px;font:600 15px/1 var(--f-body);color:var(--bone);white-space:nowrap}
+.rb-st img{width:16px;height:16px;opacity:.85}
+.rb-st.dim{color:var(--ash)}
+.rb-sp{flex:1}
+.rb-purse{display:flex;align-items:center;gap:8px;font:600 15px/1 var(--f-body);color:var(--bone);white-space:nowrap}
+.rb-purse img{width:20px;height:20px}
+.rb-purse.hot{filter:drop-shadow(0 0 8px rgba(244,166,70,.8))}
+.rbw .rb-x{flex:none;width:32px;height:32px;display:grid;place-items:center;font:600 18px/1 var(--f-body);color:var(--bone);border-radius:50%;border:1px solid var(--ember-lo);background:#1a1214}
+/* the recruits: rows on the panel's ground, a thin line between */
+.rb-rows{position:absolute;left:352px;right:16px;top:72px;bottom:16px;overflow-y:auto;scrollbar-width:none;touch-action:pan-y}
+#stage.turned .rb-rows{touch-action:pan-x}
+.rb-rows::-webkit-scrollbar{display:none}
+.rb-row{display:grid;grid-template-columns:28px 48px minmax(0,1fr) 72px 36px;align-items:center;column-gap:16px;height:64px;padding:0 8px;border-bottom:1px solid var(--line);cursor:pointer;animation:rb-rise .3s ease-out both;outline:none}
+.rb-row:hover,.rb-row.on,.rb-row:focus-visible{background:linear-gradient(90deg,rgba(244,166,70,.1),rgba(244,166,70,0) 80%)}
+.rb-row.dimmed{opacity:.55}
+.rb-lv{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:600 13px/1 var(--f-body);color:var(--bone);background:#221b28;box-shadow:inset 0 0 0 1px #5a5262}
+.rb-pt{width:48px;height:48px;display:grid;place-items:center;background:#1c1520;box-shadow:inset 0 0 0 1px #4a3a2a;overflow:hidden}
+.rb-pt img{width:44px;height:44px}
+.rb-who{display:grid;gap:4px;min-width:0}
+.rb-who b{font:400 22px/1 var(--f-display);color:var(--name);text-shadow:0 1px 0 #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-cl{justify-self:start;font:400 13px/1 var(--f-body);color:var(--rb-dim);white-space:nowrap}
+.rb-price{justify-self:end;display:flex;align-items:center;gap:4px;font:600 15px/1 var(--f-body);color:var(--bone);white-space:nowrap}
+.rb-price img{width:16px;height:16px}
+.rb-price.free{color:var(--ash);font-weight:400}
+.rb-price.short{color:var(--bad)}
+.rbw .rb-plus{width:36px;height:36px;display:grid;place-items:center;font:600 18px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px #000}
+.rbw .rb-plus:active{transform:translateY(1px)}
+.rb-row.locked{cursor:default;opacity:.45}
+.rb-row.locked:hover{background:none}
+.rb-lk{width:28px;height:28px;display:grid;place-items:center}
+.rb-lk img{width:14px;height:14px}
+.rb-row.locked .rb-pt{background:none;box-shadow:none;outline:1px dashed #4a4054;outline-offset:-1px}
+.rb-none{display:flex;align-items:center;gap:8px;height:64px;padding:0 8px;font:400 15px/1 var(--f-body);color:var(--rb-dim)}
+.rb-none img{width:16px;height:16px;opacity:.8}
+/* more than four rows: a little closer together (and the list scrolls past six) */
+.rb-rows.tight .rb-row{height:52px}
+.rb-rows.tight .rb-pt{width:40px;height:40px}
+.rb-rows.tight .rb-pt img{width:36px;height:36px}
+.rb-rows.tight .rb-row{grid-template-columns:28px 40px minmax(0,1fr) 72px 36px}
+.rb-rows.tight .rb-who b{font-size:20px}
+/* the upgrades: the board's three ranks, as rows */
+.rb-row.trk{grid-template-columns:28px minmax(0,1fr) 88px 104px 90px;column-gap:8px;cursor:default}
+.rb-row.trk:hover{background:none}
+.rb-ic img{width:20px;height:20px}
+.rb-tn{min-width:0}
+.rb-tn b{display:block;font:400 22px/1 var(--f-display);color:var(--name);text-shadow:0 1px 0 #000;white-space:nowrap}
+.rb-pips{display:flex;gap:4px;margin-top:4px}
+.rb-pips i{width:16px;height:4px;background:#2e2536}
+.rb-pips i.on{background:var(--ash)}
+.rb-ch{justify-self:end;white-space:nowrap;display:flex;align-items:center;gap:4px;font:600 15px/1 var(--f-body);color:var(--bone)}
+.rb-ch img{width:14px;height:14px}
+.rb-ch .ar{color:var(--rb-dim);font-weight:400}
+.rb-ch .nx{color:var(--good)}
+.rb-cost{justify-self:end;white-space:nowrap;display:flex;align-items:center;gap:8px;font:600 15px/1 var(--f-body)}
+.rb-cost span{display:flex;align-items:center;gap:4px}
+.rb-cost img{width:16px;height:16px}
+.rb-cost .short{color:var(--bad)}
+.rb-done{justify-self:center;opacity:.7}
+.rb-done img{width:16px;height:16px}
+/* buttons: Hire, Upgrade, and the quiet Cancel */
+.rbw .rb-btn{height:36px;padding:0 16px;font:600 15px/1 var(--f-body);color:#1a1008;background:linear-gradient(#ffc876,var(--ember-lo));box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 1px #000;white-space:nowrap}
+.rbw .rb-btn:active{transform:translateY(1px)}
+.rbw .rb-btn.quiet{color:var(--bone);background:#241c2a;box-shadow:inset 0 0 0 1px #4a3a52}
+.rbw .rb-btn:disabled{filter:grayscale(1) brightness(.55);cursor:default;pointer-events:none}
+.rb-hw{display:inline-flex}
+.rb-row.trk .rb-hw,.rb-row.trk .rb-btn{width:100%;padding:0}
+
+/* ── the confirmation: one frame, a plate, the recruit, the price, two buttons */
+.rb-modal{position:absolute;inset:0;z-index:7;display:grid;place-items:center;background:rgba(5,3,9,.6);animation:fadein .2s}
+.rb-cf{width:392px;background:#16101b;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 18px 44px rgba(0,0,0,.75);animation:rb-rise .2s ease-out}
+.rb-plate{height:40px;padding:0 16px;display:flex;align-items:center;background:linear-gradient(#2e2836,#1c1822);border-bottom:1px solid #000}
+.rb-plate h3{margin:0;font:400 24px/1 var(--f-display);color:var(--name);text-shadow:0 1px 0 #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-cfb{display:grid;grid-template-columns:112px 1fr;gap:24px;padding:16px 24px 24px}
+.rb-arch{height:144px;display:grid;place-items:end center;padding-bottom:8px;border-radius:56px 56px 2px 2px;background:radial-gradient(ellipse 80% 60% at 50% 85%,#3a2418 0,#1a1220 60%,#0e0a12 100%);box-shadow:inset 0 0 0 1px #4a3a2a;overflow:hidden}
+.rb-cfr{display:grid;align-content:start;gap:8px}
+.rb-cl2{justify-self:start;font:400 15px/1.2 var(--f-body);color:var(--ash)}
+.rb-pr{display:flex;align-items:center;gap:8px;margin-top:8px;font:600 18px/1 var(--f-body);color:var(--bone)}
+.rb-pr img{width:20px;height:20px}
+.rb-pr.free{color:var(--ash)}
+.rb-af{display:flex;align-items:center;gap:4px;font:600 15px/1 var(--f-body);color:var(--ash)}
+.rb-af img{width:16px;height:16px}
+.rb-af .ar{font-weight:400;color:var(--rb-dim);margin:0 4px}
+.rb-af .b{color:var(--bad)}
+.rb-act{display:flex;gap:8px;margin-top:16px}
+
+/* ── the hero card (a placeholder until the new hero card is built): the recruit, their rolled stats, Hire */
+.rb-hc{position:absolute;inset:0;z-index:5;background:radial-gradient(ellipse 50% 80% at 18% 78%,#25170f 0,#120d16 60%,#0d0a11 100%);animation:rb-rise .2s ease-out}
+.rbw .rb-back{position:absolute;left:16px;top:16px;width:36px;height:36px;display:grid;place-items:center;font:400 26px/1 var(--f-display);color:var(--bone);border-radius:50%;border:1px solid var(--ember-lo);background:#1a1214}
+.rb-fig{position:absolute;left:24px;top:64px;bottom:16px;width:184px;display:grid;justify-items:center;align-content:end;gap:4px;padding-bottom:16px;border-radius:92px 92px 2px 2px;background:radial-gradient(ellipse 80% 60% at 50% 85%,#3a2418 0,#1a1220 60%,#0e0a12 100%);box-shadow:inset 0 0 0 1px #4a3a2a;overflow:hidden}
+.rb-fig b{font:400 28px/1 var(--f-display);color:var(--name);white-space:nowrap}
+.rb-fig span{font:400 13px/1 var(--f-body);color:var(--ash)}
+.rb-sheet{position:absolute;left:232px;right:24px;top:64px}
+.rb-sheet .rb-plate{background:linear-gradient(90deg,#2a2232,rgba(26,20,32,0));border:0}
+.rb-stats{display:grid;grid-template-columns:1fr 1fr;column-gap:24px;padding:8px 16px 0}
+.rb-stat{display:grid;grid-template-columns:16px minmax(0,1fr) 56px 40px;align-items:center;gap:8px;height:32px;border-bottom:1px solid var(--line)}
+.rb-stat img{width:16px;height:16px}
+.rb-stat .lb{font:400 13px/1 var(--f-body);color:var(--rb-dim);white-space:nowrap}
+.rb-stat .bar{height:4px;background:#2a2130}
+.rb-stat .bar i{display:block;height:100%;background:var(--ash)}
+.rb-stat b{justify-self:end;font:600 15px/1 var(--f-body);color:var(--bone)}
+.rb-ft{position:absolute;right:24px;bottom:24px;display:flex;align-items:center;gap:16px}
+
+/* ── the reveal, after every hire: the hero in the light, their name, class and level, and why they signed on */
+.rb-reveal{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 58%,#2a1a14 0%,#120c14 45%,#07050b 80%);overflow:hidden;cursor:pointer;animation:fadein .4s ease-out}
+.rb-rays{position:absolute;left:50%;top:56%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,rgba(244,166,70,.1) 0deg 6deg,rgba(244,166,70,0) 6deg 18deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);animation:rb-spin 60s linear infinite}
+@keyframes rb-spin{to{transform:rotate(360deg)}}
+.rb-rglow{position:absolute;left:50%;top:58%;width:320px;height:120px;margin:-30px 0 0 -160px;border-radius:50%;background:radial-gradient(ellipse,rgba(244,166,70,.4),rgba(244,166,70,0) 70%)}
+.rb-reveal .rb-hero{position:relative;margin-top:-64px;filter:drop-shadow(0 0 16px rgba(255,200,120,.55));animation:rb-rise .6s ease-out}
+.rb-rpl{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:min(640px,calc(100% - 48px));display:grid;justify-items:center;gap:8px;text-align:center;animation:rb-rise .6s .2s ease-out both}
+.rb-rpl b{font:400 44px/1 var(--f-display);color:var(--bone);text-shadow:0 0 20px rgba(244,166,70,.5),0 2px 0 #000;white-space:nowrap}
+.rb-rpl span{font:400 15px/1 var(--f-body);color:var(--ash)}
+.rb-rpl q{font:italic 400 18px/1.3 var(--f-body);color:var(--bone)}
+.rb-mote{position:absolute;width:3px;height:3px;background:#ffd68a;border-radius:1px;animation:rb-mote 3.2s linear infinite;opacity:0}
+@keyframes rb-mote{0%{opacity:0;translate:0 0}20%{opacity:.9}100%{opacity:0;translate:0 -180px}}
+
+/* ── the first pick: Wick at the board's left, his line over it, and the pointer over the + of the row picked */
+.fp-wick .wick-pt{left:-6px;bottom:-6px;width:150px;height:203px}
+.fp-wick .wick-bubble{left:96px;top:120px;max-width:248px;padding:8px 16px;font:600 15px/1.35 var(--f-body);animation:rb-rise .35s ease-out}
+.fp-wick .wick-bubble::after{top:auto;right:auto;left:28px;bottom:-14px;border:8px solid transparent;border-top:9px solid #f2e7d0;border-bottom:0}
+.fp-arrow{position:absolute;z-index:6;width:27px;height:30px;animation:rb-bob 1.1s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(244,166,70,.7));pointer-events:none}
+
+/* ── a 16:9 frame (694 wide): the board's picture smaller, the rows closer */
+@container (max-width:779px){
+  .rb-art{width:240px}
+  .rb-art img{width:228px;height:auto}
+  .rb-glow{left:184px;top:224px;width:52px;height:52px}
+  .rb-top,.rb-rows{left:264px}
+  .rb-top{gap:12px}
+  .rb-row{column-gap:8px}
+  .rb-who b{font-size:20px}
+  .rb-row.trk{grid-template-columns:24px minmax(0,1fr) 80px 96px 84px}
+  .rb-sheet{left:224px}
+  .rb-stats{column-gap:16px;padding:8px 8px 0}
+  .fp-wick .wick-pt{width:118px;height:160px}
+  .fp-wick .wick-bubble{left:64px;top:152px;max-width:184px;font-size:14px}
+}
+
+/* ── a tooltip (js/tip.js): a name, then a line of icon and words */
+.tp{position:absolute;z-index:24;min-width:96px;max-width:280px;padding:8px 16px;background:#1a1420;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 8px 20px rgba(0,0,0,.6);animation:rb-rise .15s ease-out;pointer-events:none;color:var(--bone)}
+.tp b{display:block;font:400 19px/1.1 var(--f-display);color:#f4dfae;white-space:nowrap}
+.tp span{display:flex;align-items:center;gap:4px;margin-top:4px;font:400 13px/1.25 var(--f-body);color:var(--ash)}
+.tp span img{width:14px;height:14px;image-rendering:pixelated;flex:none}
+
+@media (prefers-reduced-motion:reduce){.rb-glow,.rb-rays,.rb-mote,.fp-arrow,.rb-row{animation:none}}
+.calm .rb-glow,.calm .rb-rays,.calm .rb-mote,.calm .fp-arrow,.calm .rb-row{animation:none}

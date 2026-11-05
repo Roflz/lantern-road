@@ -149,7 +149,7 @@ def main():
         cv = js("(() => { const cv = document.querySelector('.camp .cv-scene'), b = Frame.box(cv); return [cv.width, cv.height, b.width, b.height, document.getElementById('frame').className, getComputedStyle(document.getElementById('tabbar')).display]; })()")
         check(cv[1] == 195 and abs(cv[3] - 390) < 1 and abs(cv[2] - cv[0] * 2) < 1 and cv[2] >= info['W'] and 'column' not in cv[4] and cv[5] == 'none',
               f'the camp fills the stage with its scene at 2x ({cv[0]}x{cv[1]} -> {cv[2]:.0f}x{cv[3]:.0f}), and no tab bar')
-        tapped = tap_el('.camp .cv-dock .cv-big:not([hidden])')
+        tapped = tap_el('.camp [data-tut=hearth-setout]')
         page.wait_for_timeout(1800)
         check(tapped and js("Camp.scene.onRoad && Camp.scene.sel === 0 && /1-1/.test(document.querySelector('.cv-card').textContent)"), f'the camp\'s Set out flies up the road to 1-1, its card open (road {js("Camp.scene.out.road")})')
         js("Camp.scene.toCamp(true); 'ok'")
@@ -173,9 +173,10 @@ def main():
         # let go part-way it settles on the nearer view; a quick tap on the Recruit Board's plaque opens the board
         js("Save.state.unlocks.tollhouse = Date.now(); Base.ensure(Save.state); Save.commit(); App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1200)
-        drag(cx - 60, cy - 70, cx - 60, cy + 70)
+        # (up the frame: a drag down at the fire pulls the camera up the road, play-test note 3.14, tools/road_check.py)
+        drag(cx - 60, cy + 70, cx - 60, cy - 70)
         page.wait_for_timeout(600)
-        check(not js('Camp.scene.locked') and yaw() == 0, f'a drag across the frame leaves the camera in the party view ({yaw()})')
+        check(not js('Camp.scene.locked') and yaw() == 0 and not js('Camp.scene.onRoad'), f'a drag across the frame leaves the camera in the party view ({yaw()})')
         drag(cx + 60, cy, cx - 60 - info['W'] * 0.18, cy, still=True)
         page.wait_for_timeout(1600)
         check(yaw() % 360 == 180 and js('Camp.scene.view') == 'build', f'a drag to the left past a quarter turn settles on the buildings view ({yaw()})')
@@ -186,7 +187,7 @@ def main():
         drag(cx - 60, cy, cx + 60 + info['W'] * 0.18, cy, still=True)
         page.wait_for_timeout(1600)
         check(yaw() % 360 == 0 and js('Camp.scene.view') == 'party', f'a drag to the right turns back to the party view ({yaw()})')
-        check(tap_el('.camp .cv-plq[data-id="board"]') and js("App.current") == 'building', f'a tap on the Recruit Board\'s plaque opens the board (now {js("App.current")})')
+        check(tap_el('.camp .cv-plq[data-id="board"]') and js('RecruitBoard.shown'), f'a tap on the Recruit Board\'s plaque opens its panel (now {js("App.current")})')
         # the formation: drag the hero from the front slot to a back one, and they swap places
         js("App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1000)
