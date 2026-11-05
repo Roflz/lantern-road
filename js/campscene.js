@@ -16,7 +16,8 @@
 //
 // The road view (play-test note 1.21, docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the
 // camera flies from the party view up the road to a stage. Drag along the road and it pans a stage at a time; drag
-// back past the first stage, or tap back, and it flies home to the fire. Up the road: lanterns on posts (lit,
+// back past the first stage, or tap back, and it flies home to the fire. In the party view a drag down pulls the
+// camera up the road the same way (play-test note 3.14). Up the road: lanterns on posts (lit,
 // guttering at the frontier, cold beyond), the party waiting at the frontier, the foes of stages you haven't lit as
 // silhouettes, the boss's chapel, and the gate to the next region.
 //
@@ -890,12 +891,17 @@ const CampScene = (() => {
   //   api.onFrame    (out) => void after every frame: out.cam.w (0 party … 1 buildings), out.road (0 at the fire … 1 on
   //                  the road), out.anchors, out.v (bumped when the anchors move), out.yaw
   //   api.onSnap     (k) => void when the road view settles on a stage (k), or heads home (null)
+  //   api.canPull    () => false holds back the pull up the road (Wick's guide, while a step is up)
   // Panning moves along the road in stages, not ground: every stage is the same drag away, whether the lanterns stand
   // close together near camp or far apart in the hills. u is that place: 0 at the first stage, the boss's index at the
   // boss, and below 0 the pull back toward camp. Drag back past PULL_HOME and let go, and the camera flies home.
   // Past the boss a held drag goes on far enough to show the next region's gate (the mockup stopped short of it), and
   // springs back to the boss when let go.
-  const PX_PER_STAGE = 64, PULL_HOME = 1.3, UMIN = -3, UOVER = 1.15, ZOVER = 300;
+  // At the fire a drag goes the way it first heads (AXIS_PX): across, it turns the camera; down, in the party view, it
+  // pulls the camera up the road toward the frontier, following the finger as the pull home does (the same distance,
+  // mirrored). Let go past PULL_HOME stages' worth, or flick it (FLICK_PX or more, at FLICK_V design pixels a frame or
+  // faster), and it flies on to the frontier's card; short of it, it springs back. Up, it does nothing.
+  const PX_PER_STAGE = 64, PULL_HOME = 1.3, UMIN = -3, UOVER = 1.15, ZOVER = 300, AXIS_PX = 8, PULL_MAX = 0.6, PULL_SPAN = 2.2, FLICK_PX = 24, FLICK_V = 3;
   // The inverse of ease(), so a flight can be picked up where it stands.
   const unease = v => { let k = clamp(v, 0, 1); for (let i = 0; i < 8; i++) { const f = k * k * (3 - 2 * k) - v, d = 6 * k * (1 - k) + 1e-6; k = clamp(k - f / d, 0, 1); } return k; };
   function live(canvas, opts = {}) {
@@ -905,6 +911,9 @@ const CampScene = (() => {
     // the road: how far the camera has flown (roadK, heading for roadTo), where it looks along the road (uc, easing to
     // uTo), a flick's speed, and how far a pull back past the first stage has turned it toward home
     let roadK = 0, roadTo = 0, uc = 0, uVel = 0, uTo = null, pullK = 0, lastY = 0, onRoad = false, sel = null;
+    // a drag at the fire: where it started, which way it went (null until AXIS_PX: 'x' turns, 'pull' pulls up the road,
+    // 'none' does nothing), and how far the pull has lifted the camera (0 … PULL_MAX, as the flight's eased share)
+    let sx = 0, sy = 0, axis = null, lift = 0, liftVel = 0;
     const react = [];
     const reduce = () => (opts.reduce ? opts.reduce() : false);
     const pxPerDeg = () => (IW * K / 2) / 180; // half the frame's width turns 180°
@@ -924,20 +933,23 @@ const CampScene = (() => {
     }
     // The camera now: the orbit, the road, or the flight between them.
     function camNow(r) {
-      const k3 = ease(roadK) * (1 - pullK);
+      const k3 = Math.max(lift, ease(roadK) * (1 - pullK));
       if (k3 <= 0) return camera(IW, yaw, r);
       return camera(IW, blendParams(orbitParams(yaw), roadParams(clamp(zAtU(uc), zOf(0), zOf(last1()) + ZOVER)), k3), r);
     }
     const snap = k => { if (api.onSnap) api.onSnap(k); };
+    // the pull up the road goes to the frontier's stage (the last one once every stage is lit), from the party view
+    const pullStage = () => { const S = api.state; return clamp(S.front < 0 ? S.stages.length - 1 : S.front, 0, last1()); };
+    const pullable = () => weightOf(y0) < 0.5 && api.state.stages.length > 0 && (!api.canPull || !!api.canPull());
     const api = {
       state: opts.state || { heroes: [], stages: [], front: -1, plots: [], board: { open: false }, sig: '' },
-      locked: !!opts.locked, onFrame: null, onSnap: null,
+      locked: !!opts.locked, onFrame: null, onSnap: null, canPull: null,
       get yaw() { return yaw; },
       get view() { return weightOf(target == null ? yaw : target) > 0.5 ? 'build' : 'party'; },
       get w() { return ease(weightOf(yaw)); },
       // on the road, or heading there
       get onRoad() { return roadTo > 0.5; },
-      get road() { return roadK; },
+      get road() { return Math.max(roadK, lift); },
       get stage() { return uTo != null ? uTo : uc; },
       get sel() { return sel; }, set sel(k) { sel = k; },
       // Turn to a view: the nearer way round, or at once with reduced motion (or when asked).
@@ -985,16 +997,35 @@ const CampScene = (() => {
         dragging = true; lastX = px; lastY = py; lastT = performance.now(); vel = 0; uVel = 0; raw = 0; moved = 0;
         onRoad = roadTo > 0.5;
         if (onRoad) return;
+        sx = px; sy = py; axis = null; lift = 0; liftVel = 0;
         y0 = nearest(target == null ? yaw : target); target = null;
       },
       dragMove(px, py = 0) {
         if (!dragging) return;
-        const dx = px - lastX, dy = py - lastY, now = performance.now();
+        const dy = py - lastY, now = performance.now();
+        let dx = px - lastX;
         lastX = px; lastY = py;
         if (onRoad) {
           raw += dy; moved = Math.max(moved, Math.abs(raw));
           if (moved > 6) { const du = dy / PX_PER_STAGE; uc = clamp(uc + du, UMIN, last1() + UOVER); uVel = du / Math.max(8, now - lastT) * 16; uTo = null; }
           lastT = now;
+          return;
+        }
+        // at the fire: which way the drag goes, once it has gone far enough to tell; across, the camera catches up
+        if (!axis) {
+          const tx = px - sx, ty = py - sy;
+          if (Math.hypot(tx, ty) < AXIS_PX) return;
+          axis = Math.abs(ty) > Math.abs(tx) ? (ty > 0 && pullable() ? 'pull' : 'none') : 'x';
+          dx = tx;
+        }
+        if (axis === 'none') return;
+        if (axis === 'pull') {
+          // the camera follows the finger up the road, as far as the pull home brings it back (PULL_MAX)
+          raw = Math.max(0, py - sy); moved = Math.max(moved, raw);
+          liftVel = dy / Math.max(8, now - lastT) * 16; lastT = now;
+          if (reduce()) return;
+          lift = Math.min(PULL_MAX, raw / (PULL_SPAN * PX_PER_STAGE));
+          uc = pullStage(); uTo = null;
           return;
         }
         raw += dx; moved = Math.max(moved, Math.abs(raw));
@@ -1011,6 +1042,20 @@ const CampScene = (() => {
           if (performance.now() - lastT > 90) uVel = 0;
           if (moved > 6) { if (uc < -PULL_HOME) api.toCamp(); else api.panTo(uc + uVel * 6); }
           uVel = 0;
+          return;
+        }
+        const way = axis;
+        axis = null;
+        if (way === 'pull' || way === 'none') {
+          target = y0;
+          if (way !== 'pull') return;
+          // pulled down past PULL_HOME stages' worth, or flicked down (FLICK_PX at FLICK_V or faster, still moving as it
+          // let go), on up the road to the frontier's card; short of it, back to the fire. Either way the flight carries
+          // on from where the finger left the camera.
+          if (performance.now() - lastT > 90) liftVel = 0;
+          const go = raw >= PULL_HOME * PX_PER_STAGE || (raw >= FLICK_PX && liftVel >= FLICK_V);
+          roadK = unease(lift); lift = 0; liftVel = 0;
+          if (go) api.toRoad(pullStage());
           return;
         }
         if (api.locked) { target = y0; return; }
@@ -1114,7 +1159,7 @@ const CampScene = (() => {
       // pulled back past the first stage, the camera starts back toward the fire
       pullK = roadTo > 0.5 ? Math.min(0.6, Math.max(0, -uc) / 2.2) : 0;
       { const dk = roadTo - roadK; roadK = Math.abs(dk) < 0.002 ? roadTo : roadK + dk * (1 - Math.pow(0.93, dt / 16.7)); }
-      if (roadK === 0 && roadTo === 0 && uc !== 0 && uTo == null) uc = 0;
+      if (roadK === 0 && roadTo === 0 && uc !== 0 && uTo == null && lift === 0) uc = 0;
       const settled = !dragging && target != null && Math.abs(target - yaw) < 0.05 && roadStill();
       rest = settled ? Math.min(1, rest + dt / 200) : 0;
       const t0 = performance.now();

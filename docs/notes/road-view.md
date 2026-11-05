@@ -17,6 +17,13 @@ drawing commit (e0596fe, as f81de09); the old branch `claude/road-view-02992c` i
 - The road HUD is `.cv-roadhud` (visibility hidden off the road); labels are in `.cv-labels`; `.camp.on-road` is set
   while the road shows.
 - `RoadMap.setOut(i)` is exported from js/map.js: the big button calls it (Campaign.setOut, rule set, battle).
+- **The drag down at the fire** (play-test note 3.14, `claude/hearth-guide-fixes`): a drag at the Hearth goes the way it
+  first heads (8 design px). Across turns the camera as before; down, in the party view, pulls the camera up the road
+  toward the frontier, following the finger as the pull home does (the same 1.3 stages' worth, mirrored; `lift` in
+  `live()`); let go past it, or flick (24 px or more, still moving), and it flies on to the frontier's card, else it
+  springs back. Up does nothing. `live.canPull()` can hold it back: js/camp.js does while Wick has a step up or holds
+  presses. The camp's scene now cancels its drags' touchmoves: without that Chrome took a flick for a fling and lost
+  the next tap (the card's Set out). Checked in `tools/road_check.py`.
 
 ## Not built
 - Keep going and the come-home chips: deferred to the guide, as decided. They are still on the stage sheet that the
