@@ -177,9 +177,6 @@ button.hs-banner{cursor:pointer;width:100%;animation:hs-breathe 2.4s ease-in-out
 .hs-cls.sel{border-color:var(--ember);background:#2a1a0e}
 
 /* gear and rules */
-.hs-gslots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.hs-gslot{display:grid;justify-items:center;gap:4px;padding:8px 6px;border:2px dashed var(--rule);background:var(--stone);text-align:center}
-.hs-gslot b{font:400 16px/1 var(--f-display)}
 .hs-rules{display:grid;gap:6px}
 .hs-rule{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:8px;background:var(--stone-2);border:2px solid var(--rule)}
 .hs-rule .n{font:400 11px var(--f-pixel);color:var(--ember);text-align:center;padding-top:3px}

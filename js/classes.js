@@ -386,5 +386,7 @@ defClass('crossbowman', {
   ],
 ]);
 
-// The party's default order while the roster is fixed (step 5 brings recruiting).
+// The step 1 prototype's fixed party of six. A new game now starts with one hero from the first pick; PARTY stays for
+// the version-0 save migration (js/save.js), the simulator's default setup, the battle canvas and the rules model before a
+// save has loaded, and the tools.
 const PARTY = ['warden', 'sellsword', 'crossbowman', 'pilgrim', 'lamplighter', 'hexblade'];

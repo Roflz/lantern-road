@@ -172,8 +172,6 @@ button{font:inherit;color:inherit}
 h1,h2{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0}
 h2{font-size:29px;line-height:1.02}
 .camp{display:grid;gap:10px}
-.title{font-size:clamp(52px,15vw,72px);line-height:.86;text-shadow:0 0 30px rgba(244,166,70,.55),0 3px 0 #000;animation:titlein 1.2s ease-out both}
-@keyframes titlein{from{opacity:0;transform:translateY(8px)}}
 .tagline{margin:0;color:var(--ash);font-style:italic;line-height:1.45;max-width:34ch}
 .btn{display:block;width:100%;text-align:left;font:11px/1.35 var(--f-pixel);letter-spacing:.05em;text-transform:uppercase;background:var(--stone-2);color:var(--bone);border:2px solid var(--rule);padding:11px 12px;min-height:46px;cursor:pointer;transition:transform .08s,border-color .15s}
 .btn:hover:not(:disabled){border-color:var(--ember);box-shadow:0 0 14px rgba(244,166,70,.22)}
@@ -184,20 +182,6 @@ h2{font-size:29px;line-height:1.02}
 .play{text-align:center;font-size:14px;padding:15px 12px;background:linear-gradient(180deg,#3d2816,#2a1a0e);border-color:var(--ember);box-shadow:0 0 22px rgba(244,166,70,.25),inset 0 1px 0 rgba(255,220,160,.25);animation:breathe 2.6s ease-in-out infinite}
 .play .sub{text-align:center;color:#d9c3a4}
 @keyframes breathe{50%{box-shadow:0 0 32px rgba(244,166,70,.42),inset 0 1px 0 rgba(255,220,160,.25)}}
-.stages{display:grid;gap:6px}
-.stage-row{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;width:100%;padding:8px 10px;text-align:left;background:rgba(35,27,44,.92);border:1px solid var(--rule);cursor:pointer}
-.stage-row:hover{border-color:var(--ember)}
-.stage-row .k{grid-column:1/-1;display:flex;gap:8px;align-items:center;font:9px var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--ash)}
-.stage-row .nm{font:19px/1.05 var(--f-display)}
-.stage-row .foes{display:flex;gap:2px}
-.stage-row .foes img{width:18px;height:18px;image-rendering:pixelated;background:rgba(7,5,11,.6)}
-.stage-row .foes img.big{width:24px;height:24px;box-shadow:0 0 0 1px var(--gold)}
-.stage-row .tagb{color:var(--bad);border:1px solid #6a2a2a;padding:0 4px}
-.stage-row .tagd{display:inline-flex;gap:3px;align-items:center;color:var(--good)}
-.stage-row .tagd .ico{width:10px;height:10px}
-.stage-row.next{border-color:var(--ember);box-shadow:0 0 12px rgba(244,166,70,.2)}
-.stage-row.done .nm{color:var(--ash)}
-.camp-foot{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
 .textbtn{display:inline-flex;gap:6px;align-items:center;background:none;border:none;color:var(--ash);font:10px var(--f-pixel);letter-spacing:.06em;text-transform:uppercase;min-height:44px;cursor:pointer}
 .textbtn:hover{color:var(--bone)}
 .page{display:grid;gap:14px;align-content:start}
@@ -213,7 +197,6 @@ h2{font-size:29px;line-height:1.02}
 .small{display:inline-flex;align-items:center;justify-content:center;gap:5px;font:10px var(--f-pixel);min-width:48px;min-height:44px;padding:0 10px;background:rgba(14,10,22,.72);border:2px solid var(--rule);color:var(--ash);cursor:pointer}
 .small:hover{border-color:var(--ember);color:var(--bone)}
 .small.on{border-color:var(--ember);color:var(--ember);background:var(--ember-soft)}
-.version{font:9px var(--f-pixel);color:var(--dim);text-align:center;letter-spacing:.08em}
 
 /* Sheets: the battle report and the pause menu */
 #sheet{position:absolute;inset:0;z-index:9;display:flex;align-items:flex-end;background:rgba(6,4,10,.55);animation:fadein .25s}
@@ -339,7 +322,7 @@ h2{font-size:29px;line-height:1.02}
 .actions .btn .sub{text-align:center}
 
 @media (prefers-reduced-motion:reduce){
-  .num,.title,.play,.row,.detail,.flag,.flag .txt,.box,#banner.show,.sts .st{animation-duration:.01ms!important;animation-iteration-count:1!important}
+  .num,.play,.row,.flag,.flag .txt,.box,#banner.show,.sts .st{animation-duration:.01ms!important;animation-iteration-count:1!important}
   .num{animation:none!important;opacity:0}
 }
 .calm #frame,.calm .play{animation:none!important}

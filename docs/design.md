@@ -247,6 +247,8 @@ Home base upgrades improve recruiting:
 ## 8. Home base
 
 ### The camp
+*Superseded by the camp views (`docs/mockups/camp-views.html`, built in PR #24): a party view and a buildings view around one fire, not a ring of plots. See `docs/code-map.md`.*
+
 - The home base is a camp. The current party sits around a fire in the middle, with the building plots in a ring around them.
 - You drag sideways to walk around the fire. The building nearest you comes to the front, and its card offers its main action.
 - The ring is the only way into buildings. There is no separate list view.
@@ -345,6 +347,8 @@ Stages and foes are defined in data tables so content can grow quickly.
 - **Visual identity:** cozy-gothic pixel art, warm lantern light against the dark, procedural music and sound.
 
 ## 12. Build order
+
+*Superseded for what comes next: steps 1–7 are built, and since 2026-11-04 the game is rebuilt screen by screen in the order of `docs/idle-heroes-study.md` §6. See `docs/code-map.md`.*
 
 Each step ends with something you can play-test.
 
