@@ -1282,6 +1282,45 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(rep.weary && rep.tired, 'the starting hero tires in the first hour');
 }
 
+// ── servers (the title's server picker, js/save.js): each keeps its own save, and switching leaves the others intact.
+// S1 keeps the key the game always had.
+{
+  const mem = new Map(), was = global.localStorage;
+  global.localStorage = { getItem: k => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
+  // A save's content, without lastSeen: leaving a server writes its save once more on the way out, which stamps the
+  // time it was last open, and nothing else.
+  const content = key => { const d = JSON.parse(mem.get(key)); delete d.lastSeen; return JSON.stringify(d); };
+  try {
+    Save.load();
+    ok(Save.server === 1 && !Save.state.roster.length && mem.has('lantern-road-save'), 'a first boot opens S1, under the save key the game always had');
+    Base.newGame('sellsword', Save.state); Save.state.currencies.gold = 111; Save.commit();
+    const s1 = content('lantern-road-save');
+    let L = Save.servers();
+    ok(L.newest === 2 && L.list.length === 2 && L.list[0].n === 1 && L.list[0].lead === 'sellsword' && L.list[1].status === 'new', 'the list: S1 with its lead hero, then S2, the newest');
+    Save.use(2, true);
+    ok(Save.server === 2 && !Save.state.roster.length && Save.state.currencies.gold !== 111, 'a new server starts a fresh save');
+    Base.newGame('pilgrim', Save.state); Save.state.currencies.gold = 222; Save.commit();
+    ok(content('lantern-road-save') === s1, 'starting S2 leaves S1’s save untouched');
+    ok(JSON.parse(mem.get('lantern-road-save-s2')).roster[0].cls === 'pilgrim', 'S2 saves beside it, under lantern-road-save-s2');
+    Save.use(1);
+    ok(Save.server === 1 && Save.state.roster.length === 1 && Save.state.roster[0].cls === 'sellsword' && Save.state.currencies.gold === 111, 'back on S1: its save as it was');
+    Save.state.currencies.gold = 333; Save.commit();
+    const s2 = JSON.parse(mem.get('lantern-road-save-s2'));
+    ok(s2.currencies.gold === 222 && s2.roster.length === 1 && s2.roster[0].cls === 'pilgrim', 'playing on S1 leaves S2’s save untouched');
+    Save.use(2);
+    ok(Save.state.currencies.gold === 222 && Save.state.roster[0].cls === 'pilgrim', 'S2 again, as it was');
+    L = Save.servers();
+    ok(L.newest === 3 && L.list.filter(x => x.mine).map(x => x.lead).join() === 'sellsword,pilgrim' && L.current === 2, 'both servers listed with their lead heroes, and S3 the newest');
+    Save.load();
+    ok(Save.server === 2 && Save.state.roster[0].cls === 'pilgrim', 'a reload opens on the last server used');
+    Save.use(1);
+    ok(Save.state.currencies.gold === 333, 'and S1 keeps its last change');
+    Save.use(2, true);
+    ok(JSON.parse(mem.get('lantern-road-save-s2-bak')).currencies.gold === 222 && !Save.state.roster.length, 'a fresh start over a server keeps the old save as its backup');
+    console.log('Servers checked: each keeps its own save (S1 under its old key), switching leaves the others intact, and the last one used opens next.');
+  } finally { global.localStorage = was; }
+}
+
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)}s. Stalls: ${totalStalls}. Problems: ${problems.length}`);
 problems.forEach(p => console.log('  ! ' + p));
 process.exitCode = problems.length || totalStalls ? 1 : 0;

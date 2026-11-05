@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Title Mockups</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Title and loading screen mockups (screen 1 of docs/idle-heroes-study.md §6). Each frame is a phone on its side
+   (844×390), drawn with the game's own sprites, props, icons and fonts. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186; --ember:#f4a646; --good:#b4de98; --gold:#f1d36a;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:60ch}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.band{margin:40px 0 0}
+.band h2{margin:0 0 10px;font:400 30px/1.1 var(--f-display)}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;user-select:none}
+.frame canvas{position:absolute;left:0;top:0;width:846px;height:390px;image-rendering:pixelated}
+
+/* the title */
+.logo{position:absolute;left:46px;top:30px;display:flex;align-items:center;gap:14px}
+.logo img{width:42px;height:42px;filter:drop-shadow(0 0 10px rgba(244,166,70,.8))}
+.logo h2{margin:0;font:400 78px/1 var(--f-display);color:var(--bone);text-shadow:0 0 26px rgba(244,166,70,.5),0 3px 0 #000}
+.load{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:grid;justify-items:center;gap:9px;transition:opacity .4s}
+.load .lt{display:flex;gap:14px;font:700 10px/1 var(--f-pixel);letter-spacing:.22em;text-transform:uppercase;color:var(--ember);text-shadow:0 1px 0 #000}
+.load .lt span:last-child{color:var(--bone);letter-spacing:.08em}
+.bar{width:300px;height:5px;background:rgba(20,14,26,.85);border:1px solid #3a2c22;box-shadow:0 0 0 1px #000}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#b8622a,var(--ember),#ffd68a);box-shadow:0 0 10px rgba(244,166,70,.8)}
+.tap{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);font:400 32px/1 var(--f-display);color:var(--bone);text-shadow:0 0 18px rgba(244,166,70,.65),0 2px 0 #000;animation:pulse 1.8s ease-in-out infinite;white-space:nowrap;transition:opacity .5s}
+@keyframes pulse{50%{opacity:.5}}
+.ver{position:absolute;right:26px;bottom:14px;font:400 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.hide{opacity:0!important;animation:none!important;pointer-events:none}
+
+/* the server pill, the servers dialog and the confirm step (a placeholder for multiplayer) */
+.server{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;height:38px;padding:0 5px 0 14px;background:rgba(14,10,20,.88);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 6px 18px rgba(0,0,0,.5);white-space:nowrap;transition:opacity .5s}
+.st{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.st.new{background:var(--good);box-shadow:0 0 6px rgba(180,222,152,.8)}
+.st.busy{background:#f08c76;box-shadow:0 0 6px rgba(240,140,118,.7)}
+.st.down{background:#7d7186}
+.server b{font:700 13px/1 var(--f-pixel);letter-spacing:.1em;color:var(--bone)}
+.server span{font:italic 400 16px/1 var(--f-body);color:#e6c79a}
+.server .sw{margin-left:8px;font:700 9px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:9px 11px}
+.veil{position:absolute;inset:0;background:rgba(5,3,9,.74)}
+.dlg{position:absolute;left:92px;right:92px;top:44px;bottom:30px;background:linear-gradient(#1d1626,#130e19);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;grid-template-columns:150px 1fr;grid-template-rows:auto 1fr;gap:12px;padding:34px 16px 16px}
+.ttab{position:absolute;left:50%;top:-16px;transform:translateX(-50%);padding:6px 30px 7px;background:linear-gradient(#3a2512,#22160c);border:1px solid var(--ember);font:400 25px/1 var(--f-display);color:var(--bone);box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.25)}
+.close{position:absolute;right:-13px;top:-13px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#5a2420;border:2px solid #d4484a;color:#ffd8cc;font:700 12px/1 var(--f-pixel);box-shadow:0 0 0 1px #000}
+.dlg nav{grid-row:1/3;display:grid;gap:6px;align-content:start}
+.dlg nav span{display:flex;align-items:center;height:40px;padding:0 12px;font:700 9px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ash);background:#1a1320;border:1px solid var(--rule)}
+.dlg nav span.on{color:#1a1008;background:var(--ember);border-color:var(--ember)}
+.legend{display:flex;gap:20px;align-items:center;font:700 9px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.legend .st{margin-right:7px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start;padding:10px;background:#0e0a13;border:1px solid #2a2233}
+.svr{display:flex;align-items:center;gap:10px;height:60px;padding:0 12px;background:#1a1320;border:1px solid var(--rule)}
+.svr.cur{border-color:var(--ember);background:linear-gradient(#2a1c14,#1a1320);box-shadow:inset 0 0 0 1px rgba(244,166,70,.25)}
+.svr .t{display:grid;gap:5px}
+.svr .id{font:700 16px/1 var(--f-pixel);letter-spacing:.08em;color:var(--bone)}
+.svr .nm{font:italic 400 16px/1 var(--f-body);color:#e6c79a}
+.svr .pf{margin-left:auto;position:relative;width:42px;height:42px;border:1px solid #6b4a2a;background:#0f0b14;display:grid;place-items:center}
+.svr .pf img{width:36px;height:36px}
+.svr .pf em{position:absolute;right:-7px;bottom:-7px;font:700 8px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);padding:3px 4px;border:1px solid #000}
+.cf{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:420px;padding:24px 24px 18px;background:linear-gradient(#1d1626,#130e19);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;gap:12px;text-align:center}
+.cf h3{margin:0;font:400 28px/1.1 var(--f-display);color:var(--bone)}
+.cf p{margin:0;color:var(--ash);font-size:16px;line-height:1.4}
+.cf .row{display:flex;gap:10px;margin-top:8px}
+.cf .row span{flex:1;height:44px;display:grid;place-items:center;font:700 10px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);background:#1a1320;border:1px solid var(--rule)}
+.cf .row span.pri{border-color:var(--ember);background:linear-gradient(#3a2512,#22160c);box-shadow:0 0 14px rgba(244,166,70,.28)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 1 · title and loading</div>
+    <h1>The Title</h1>
+    <p class="lede">The first thing a player sees. The road lights lantern by lantern while the game loads, then waits for a tap. You approved this; the server picker is new.</p>
+  </header>
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-p="loop"></div></div></div><figcaption><b>Live</b> Loading, then Tap to begin, on a loop.</figcaption></figure>
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-p="0.47"></div></div></div><figcaption><b>T1</b> Loading: half the road lit.</figcaption></figure>
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-p="1"></div></div></div><figcaption><b>T2</b> Ready: the whole road lit, your server, and Tap to begin.</figcaption></figure>
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-p="servers"></div></div></div><figcaption><b>T3</b> Switch opens the servers. Yours show your lead hero and your Renown there; the newest is marked New.</figcaption></figure>
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-p="confirm"></div></div></div><figcaption><b>T4</b> A new server asks first, because each server keeps its own save.</figcaption></figure>
+
+  <section class="band">
+    <h2>How it behaves</h2>
+    <ul class="notes">
+      <li><b>It shows while the game loads</b> (fonts, sprites and the save) for at least a second and a half, so the lanterns have time to light.</li>
+      <li><b>One tap anywhere.</b> A returning player goes to camp, with “While you were away” first after 5 minutes or more. A new player goes to camp, where Wick is waiting.</li>
+      <li><b>The tap also starts the sound,</b> which browsers allow only after a tap.</li>
+      <li><b>Nothing else is on it</b> but your server: no menu. The build tag in the corner is for play-testing.</li>
+      <li><b>Servers are a placeholder for multiplayer.</b> For now the list lives in the game itself. S1 holds today’s save. Picking another server starts a fresh save there, and your saves on other servers stay as they were. Real servers come later: hosting, other players, guilds and leaderboards. The screen, and a save kept per server, are ready for them.</li>
+    </ul>
+  </section>
+  <section class="band">
+    <h2>Decided</h2>
+    <ol class="notes qs">
+                  <li><b>Servers are numbered,</b> with no names.</li>
+      <li><b>A new server works now:</b> a fresh save there, with your other saves kept. It also makes the new-player tutorial easy to replay.</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+'use strict';
+// ── helpers
+const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+function disc(x, cx, cy, r, col) { x.fillStyle = col; for (let dy = -r; dy <= r; dy++) { const w = Math.floor(Math.sqrt(r * r - dy * dy + r * 0.6)); x.fillRect(cx - w, cy + dy, w * 2 + 1, 1); } }
+function glow(x, gx, gy, r, rgba) { const g = x.createRadialGradient(gx, gy, 0, gx, gy, r); g.addColorStop(0, rgba); g.addColorStop(1, rgba.replace(/[\d.]+\)$/, '0)')); x.fillStyle = g; x.fillRect(gx - r, gy - r, r * 2, r * 2); }
+function pool(x, cx, cy, r, rgba) { x.save(); x.translate(cx, cy); x.scale(1, 0.32); glow(x, 0, 0, r, rgba); x.restore(); }
+function shadow(x, cx, by, w) { x.globalAlpha = 0.45; x.fillStyle = '#050308'; x.fillRect(Math.round(cx - w / 2), by, Math.round(w), 1); x.fillRect(Math.round(cx - w / 2) + 1, by + 1, Math.round(w) - 2, 1); x.globalAlpha = 1; }
+const A = REGION_ART[0];
+const prop = k => sprite(PROPS[k].map, A.pc, 'tt:' + k);
+const POSTS = {
+  big: { map: ['..kkk..', '.kyYyk.', '.kYwYk.', '.kyYyk.', '..kkk..', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '...d...', '..ddd..', '.ddddd.'], lit: [3, 2] },
+  mid: { map: ['.kkk.', 'kyYyk', 'kYwYk', '.kkk.', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..', '.ddd.'], lit: [2, 2] },
+  small: { map: ['.k.', 'kYk', '.k.', '.d.', '.d.', '.d.', 'ddd'], lit: [1, 1] },
+  tiny: { map: ['Y', 'd', 'd'], lit: [0, 0] },
+};
+const ON = { k: '#2e2219', y: '#f4a646', Y: '#ffd68a', w: '#fff6e0', d: '#3a2a1c' }, OFF = { k: '#16121a', y: '#2a2630', Y: '#34303a', w: '#3a3640', d: '#221a16' };
+const postImg = (kind, on) => sprite(POSTS[kind].map, on ? ON : OFF, 'post:' + kind + on);
+
+// ── the scene: the Lantern Road through the Gravefields, at 3×. t runs from the horizon (0) to the bottom edge (1).
+const VW = 282, VH = 130, HZ = 56;
+const road = t => ({ x: 150 - 62 * Math.sin(Math.PI * Math.pow(t, 0.9)), w: 1.5 + 104 * Math.pow(t, 1.75), y: HZ + t * (VH - HZ) });
+const tOf = y => (y - HZ) / (VH - HZ);
+const LAMPS = [0.9, 0.7, 0.55, 0.43, 0.34, 0.26, 0.2, 0.145, 0.1, 0.065].map((t, i) => ({ t, side: i % 2 ? 1 : -1, kind: t >= 0.6 ? 'big' : t >= 0.3 ? 'mid' : t >= 0.12 ? 'small' : 'tiny' }));
+const WALKERS = [['lamplighter', 0.27, -6], ['warden', 0.33, 7], ['pilgrim', 0.39, -7], ['sellsword', 0.45, 7], ['hexblade', 0.51, -7], ['crossbowman', 0.57, 7]];
+const SIDE_PROPS = [];
+for (let i = 0; i < 46; i++) { const t = 0.04 + h2(i, 61) * 0.9, side = h2(i, 62) > 0.5 ? 1 : -1, k = ['grave', 'grave', 'cross', 'stone', 'grave', 'deadtree', 'grave', 'cross'][Math.floor(h2(i, 63) * 8)]; SIDE_PROPS.push({ t, side, k, off: 4 + h2(i, 64) * (14 + 70 * t) }); }
+
+function paint(x, p, t) {
+  // sky, stars and a full moon
+  const g = x.createLinearGradient(0, 0, 0, HZ + 4); g.addColorStop(0, '#05030a'); g.addColorStop(0.55, '#0e0918'); g.addColorStop(1, '#1d1429');
+  x.fillStyle = g; x.fillRect(0, 0, VW, VH);
+  for (let i = 0; i < 130; i++) { const sx = Math.floor(h2(i, 7) * VW), sy = Math.floor(h2(i, 8) * (HZ - 6)), b = h2(i, 9), tw = b > 0.93 && Math.sin(t / 600 + i * 3) > 0.4; x.fillStyle = b > 0.87 ? (tw ? '#fff8e0' : '#d8ccb4') : b > 0.6 ? '#5a4e6c' : '#2c2438'; x.fillRect(sx, sy, 1, 1); }
+  glow(x, 232, 24, 44, 'rgba(232,220,196,.10)'); glow(x, 232, 24, 18, 'rgba(232,220,196,.16)');
+  disc(x, 232, 24, 9, '#ece0c4'); disc(x, 234, 22, 3, '#d8ccae'); disc(x, 228, 27, 2, '#d8ccae'); x.fillStyle = '#d8ccae'; x.fillRect(236, 28, 2, 1); x.fillRect(229, 19, 1, 1);
+  // two ridges of hills, dead wood on the horizon, and the mist
+  x.fillStyle = '#0d0a14'; for (let X = 0; X < VW; X++) { const y = HZ - 9 + Math.round(4 * Math.sin(X / 47 + 1) + 2 * Math.sin(X / 17)); x.fillRect(X, y, 1, HZ + 3 - y); }
+  x.fillStyle = '#100c18'; for (let X = 0; X < VW; X++) { const y = HZ - 4 + Math.round(2 * Math.sin(X / 29 + 2) + h2(X, 3)); x.fillRect(X, y, 1, HZ + 3 - y); }
+  const tree = tinted(prop('deadtree'), '#0b0812');
+  for (let i = 0; i < 40; i++) { const tx = Math.floor(i * 7.4 + h2(i, 4) * 6) - 4; if (Math.abs(tx + 4 - road(0).x) < 9 || h2(i, 6) < 0.35) continue; x.drawImage(tree, tx, HZ + 1 - tree.height - Math.floor(h2(i, 2) * 3)); }
+  // the ground
+  x.fillStyle = '#121510'; x.fillRect(0, HZ, VW, VH - HZ);
+  for (let i = 0; i < 700; i++) { const px = Math.floor(h2(i, 11) * VW), py = HZ + Math.floor(h2(i, 12) * (VH - HZ)); x.fillStyle = h2(i, 13) > 0.5 ? '#1a1e17' : '#0f120d'; x.fillRect(px, py, 1, 1); }
+  // the road, row by row
+  for (let y = HZ; y < VH; y++) {
+    const r = road(tOf(y)), x0 = Math.round(r.x - r.w / 2), w = Math.max(1, Math.round(r.w));
+    x.fillStyle = A.edge; x.fillRect(x0 - 1, y, w + 2, 1);
+    x.fillStyle = A.road; x.fillRect(x0, y, w, 1);
+    for (let k = 0; k < w / 6; k++) if (h2(y * 31 + k, 71) > 0.55) { x.fillStyle = A.roadSpeck; x.fillRect(x0 + Math.floor(h2(y * 31 + k, 72) * w), y, 1, 1); }
+  }
+  const mist = x.createLinearGradient(0, HZ - 7, 0, HZ + 10); mist.addColorStop(0, 'rgba(70,58,100,0)'); mist.addColorStop(0.5, 'rgba(70,58,100,.26)'); mist.addColorStop(1, 'rgba(70,58,100,0)');
+  x.fillStyle = mist; x.fillRect(0, HZ - 7, VW, 17);
+  // back to front: graves along the road, the lanterns, the party
+  const lit = Math.floor(p * LAMPS.length + 1e-6), L = [], P = [], items = [];
+  for (const s of SIDE_PROPS) { const r = road(s.t), img = prop(s.k), px = Math.round(r.x + s.side * (r.w / 2 + s.off)); items.push({ y: r.y, f: () => { x.drawImage(img, px - Math.floor(img.width / 2), Math.round(r.y) - img.height + 1); if (s.t < 0.5) { x.globalAlpha = 0.5 - s.t * 0.8; x.drawImage(tinted(img, '#0b0812'), px - Math.floor(img.width / 2), Math.round(r.y) - img.height + 1); x.globalAlpha = 1; } } }); }
+  LAMPS.forEach((l, i) => {
+    const r = road(l.t), on = i < lit, img = postImg(l.kind, on), px = Math.round(r.x + l.side * (r.w / 2 + 2 + 5 * l.t)), by = Math.round(r.y);
+    items.push({ y: by, f: () => {
+      x.drawImage(img, px - Math.floor(img.width / 2), by - img.height + 1);
+      if (on) { const [lx, ly] = POSTS[l.kind].lit, gx = px - Math.floor(img.width / 2) + lx + 0.5, gy = by - img.height + 1 + ly + 0.5; L.push([gx, gy, 3 + 24 * l.t, 0.35 + 0.3 * l.t]); P.push([r.x + l.side * r.w * 0.2, by, 8 + 46 * l.t]); }
+    } });
+  });
+  for (const [cls, pt, dx] of WALKERS) {
+    const r = road(pt), sp = heroSprite(cls, Math.floor(t / 260) % 2, [Items.starter(cls, 1).id, null, null]), px = Math.round(r.x + dx), by = Math.round(r.y);
+    items.push({ y: by, f: () => { shadow(x, px, by, 8); x.drawImage(sp, px - Math.round(sp.width / 2), by - sp.height + 1); if (cls === 'lamplighter') L.push([px + 3, by - 12, 16, 0.6]); } });
+  }
+  items.sort((a, b) => a.y - b.y);
+  for (const it of items) it.f();
+  // dark closing in, then the light
+  const dk = x.createRadialGradient(140, 100, 30, 140, 100, 230);
+  dk.addColorStop(0, 'rgba(5,3,9,.15)'); dk.addColorStop(0.55, 'rgba(5,3,9,.4)'); dk.addColorStop(1, 'rgba(5,3,9,.85)');
+  x.fillStyle = dk; x.fillRect(0, 0, VW, VH);
+  x.globalCompositeOperation = 'lighter';
+  for (const [px, py, r] of P) pool(x, px, py, r, 'rgba(244,150,70,.30)');
+  for (const [gx, gy, r, a] of L) { glow(x, gx, gy, r, `rgba(255,180,90,${(a * (0.9 + Math.sin(t / 150 + gx) * 0.1)).toFixed(3)})`); glow(x, gx, gy, Math.max(1.5, r * 0.2), `rgba(255,230,170,${(0.25 + 0.3 * a).toFixed(2)})`); }
+  if (p >= 1) { const f = 0.16 + 0.05 * Math.sin(t / 400); glow(x, road(0).x, HZ - 1, 18, `rgba(244,166,70,${f.toFixed(3)})`); }
+  x.globalCompositeOperation = 'source-over';
+  // motes drifting in the lantern light
+  for (let i = 0; i < 14; i++) { const q = ((t / 5200) + h2(i, 81)) % 1, mx = Math.round(h2(i, 82) * VW + Math.sin(t / 1300 + i) * 6), my = Math.round(VH - q * 70); x.globalAlpha = 0.5 * Math.sin(q * Math.PI); x.fillStyle = '#ffd68a'; x.fillRect(mx, my, 1, 1); x.globalAlpha = 1; }
+}
+
+// ── the servers (a placeholder): your servers show your lead hero and Renown there
+const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+function serverCard(id, st, hero, renown, cur) {
+  return h('div', { class: 'svr' + (cur ? ' cur' : '') }, h('i', { class: 'st ' + st }), h('span', { class: 'id', text: id }),
+    hero ? h('span', { class: 'pf' }, pxImg(portraitURL(hero, true, LOOK(hero)), 36, 36), h('em', { text: String(renown) })) : null);
+}
+function serversDialog() {
+  return h('div', { class: 'dlg' }, h('div', { class: 'ttab', text: 'Servers' }), h('span', { class: 'close', text: '✕' }),
+    h('nav', {}, ['Recent', 'Your servers', 'Recommended', 'S1–S20'].map((t, i) => h('span', { class: i === 3 ? 'on' : '', text: t }))),
+    h('div', { class: 'legend' }, h('span', {}, h('i', { class: 'st new' }), 'New'), h('span', {}, h('i', { class: 'st busy' }), 'Busy'), h('span', {}, h('i', { class: 'st down' }), 'Maintenance')),
+    h('div', { class: 'cards' }, serverCard('S1', 'busy', 'sellsword', 4, true), serverCard('S2', 'busy', 'pilgrim', 1), serverCard('S3', 'new')));
+}
+function confirmStep() {
+  return h('div', { class: 'cf' }, h('h3', { text: 'Start on S3?' }),
+    h('p', { text: 'Each server keeps its own save. Your heroes on S1 and S2 stay there.' }),
+    h('div', { class: 'row' }, h('span', { text: 'Cancel' }), h('span', { class: 'pri', text: 'Start' })));
+}
+
+// ── the frames
+const live = [];
+for (const el of document.querySelectorAll('.frame')) {
+  const cv = document.createElement('canvas'); cv.width = VW; cv.height = VH;
+  const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+  const logo = h('div', { class: 'logo' }, pxImg(iconURL('lantern'), 42, 42), h('h2', { text: 'Lantern Road' }));
+  const fill = h('i'), pct = h('span', { text: '0%' });
+  const load = h('div', { class: 'load' }, h('div', { class: 'lt' }, h('span', { text: 'Lighting the road' }), pct), h('div', { class: 'bar' }, fill));
+  const tap = h('div', { class: 'tap hide', text: 'Tap to begin' });
+  const server = h('div', { class: 'server hide' }, h('i', { class: 'st busy' }), h('span', { text: 'Server' }), h('b', { text: 'S1' }), h('span', { class: 'sw', text: 'Switch' }));
+  el.append(cv, logo, load, tap, server, h('div', { class: 'ver', text: 'Prototype · f9e32d4' }));
+  if (el.dataset.p === 'servers' || el.dataset.p === 'confirm') el.append(h('div', { class: 'veil' }), serversDialog());
+  if (el.dataset.p === 'confirm') el.append(h('div', { class: 'veil' }), confirmStep());
+  live.push({ x, mode: el.dataset.p, fill, pct, load, tap, server });
+}
+function tick(t) {
+  for (const f of live) {
+    let p;
+    if (f.mode === 'loop') { const c = (t % 7000) / 1000; p = c < 3.6 ? Math.min(1, c / 3.4) : 1; }
+    else p = isNaN(+f.mode) ? 1 : +f.mode;
+    paint(f.x, p, t);
+    f.fill.style.width = Math.round(p * 100) + '%'; f.pct.textContent = Math.round(p * 100) + '%';
+    f.load.classList.toggle('hide', p >= 1); f.tap.classList.toggle('hide', p < 1); f.server.classList.toggle('hide', p < 1);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+function fit() { document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; }); }
+addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

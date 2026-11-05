@@ -9,6 +9,8 @@ Steps: wait:<ms>, shot:<file>, js:<expression>, until:<expression> (waits, up to
 click:<css selector>, tap:<x>,<y>, size:<w>,<h> (turn the phone)
 With --steps-file, steps are read one per line, so JavaScript may contain semicolons.
 With --artifact, the page is served inside the document skeleton the Claude artifact host adds.
+Every boot opens on the title (js/title.js): the page is tapped once it is ready, as a player would, before the steps
+run. With --title it stays on the title.
 """
 import argparse, functools, http.server, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -53,6 +55,7 @@ def main():
     ap.add_argument('--steps-file', default='')
     ap.add_argument('--hash', default='')
     ap.add_argument('--artifact', action='store_true')
+    ap.add_argument('--title', action='store_true', help='stay on the title instead of tapping to begin')
     a = ap.parse_args()
 
     handler = functools.partial(Quiet, directory=ROOT)
@@ -75,6 +78,10 @@ def main():
         page.on('console', on_console)
         page.on('pageerror', lambda e: (print(f'[pageerror] {e}'), sys.stdout.flush()))
         page.goto(f'http://127.0.0.1:{port}/{a.page}' + ('?artifact' if a.artifact else '') + a.hash)
+        if not a.title and a.page.endswith('index.html'):
+            page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+            page.click('#title')
+            page.wait_for_timeout(600)
         page.wait_for_timeout(a.wait)
         shots = 0
         steps = [s.strip() for s in a.steps.split(';') if s.strip()]

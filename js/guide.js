@@ -7,7 +7,7 @@
 //   new things    the trip summary on the Road tab lists what the trip unlocked, each with one line and a button that
 //                 goes straight to it: open Tactics, the Recruit Board, build the blueprint, see the Relic.
 //   tab dots      a dot on Base, Party, Bag or Road when something there waits for you.
-//   the title     a short title card over the first pick of a new game.
+// The title card over a new game's first pick is now the title screen, on every boot (js/title.js).
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
 // and Settings → First-time tips turns them all off. The new-thing rows are part of the trip summary and always show.
 
@@ -20,19 +20,13 @@ const Guide = (() => {
 
   // ── coach marks
   let mark = null; // { ring, tip, timer }
-  // An element's box in #frame's own coordinates, measured on screen (so centring transforms count). On an upright
-  // phone the landscape battle is drawn turned a quarter (js/battle.js: translateX(height) rotate(90deg) from the
-  // frame's corner), so the screen box is turned back.
+  // An element's box in #frame's own coordinates, measured on screen (so centring transforms count) and turned back
+  // into the landscape frame's design pixels, allowing for its scale and quarter-turn (js/frame.js).
   function boxOf(el) {
     const fr = frame();
     if (!fr.contains(el)) return null;
-    const r = el.getBoundingClientRect();
-    if (fr.classList.contains('turned')) {
-      const a = $('#app').getBoundingClientRect(), fh = fr.offsetHeight;
-      return { x: r.top - a.top, y: fh - (r.right - a.left), w: r.height, h: r.width };
-    }
-    const f = fr.getBoundingClientRect();
-    return { x: r.left - f.left, y: r.top - f.top, w: r.width, h: r.height };
+    const b = Frame.box(el, fr);
+    return { x: b.left, y: b.top, w: b.width, h: b.height };
   }
   function clear() {
     if (!mark) return;
@@ -167,23 +161,6 @@ const Guide = (() => {
     return out;
   }
 
-  // ── the title: a new game opens on the name of the road, over the first pick
-  function intro() {
-    if (noMotion()) return;
-    const el = h('div', { class: 'intro', 'aria-hidden': 'true' },
-      h('div', { class: 'in-glow' }), h('div', { class: 'in-l' }, ico('lantern')),
-      h('div', { class: 'in-t', text: 'Lantern Road' }),
-      h('div', { class: 'in-s', text: 'Light the road, one lantern at a time' }));
-    frame().append(el);
-    const go = () => { if (!el.isConnected || el.classList.contains('out')) return; el.classList.add('out'); setTimeout(() => el.remove(), 700); };
-    el.addEventListener('pointerdown', go);
-    setTimeout(go, 2300);
-  }
-  function boot() {
-    const s = st();
-    if (s && !s.roster.length) intro();
-  }
-
   if (typeof App !== 'undefined') App.actions.dots = dots;
-  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, dots, visit, intro, boot };
+  return { tipsOn, once, seen, coach, clear, tip, battleStart, battleEvent, battleEnd, between, onScreen, newRows, newRow, dots, visit };
 })();
