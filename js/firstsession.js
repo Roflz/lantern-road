@@ -11,7 +11,7 @@
 //   5    the road: what a stage is, then the card's Set out
 //   6    battle 1-1, paused twice: the turn order at the first turn, then speed and skip
 //   7    the results popup: the first level, then the Hearth button (fatigue waits for its first-time tip, js/main.js)
-//   8    Grow: Heroes, the hero, the Stats tab, + or Auto, Keep, "Stronger already."; back, and to the Hearth by its tab
+//   8    Grow: Heroes, the hero, the hero card's Spend, + or Auto, Done, "Stronger already."; back, and to the Hearth
 //   9    1-2, unforced: the goal tracker says "Clear 1-2" and the pointer bobs over Set out; on the road a soft line on 1-1's marker; the
 //        battle doesn't stop. Its results' New chip: the Recruit Board is open, then the Hearth
 //   10   the Recruit Board's free recruit, hired the same way, who waits at the fire
@@ -85,11 +85,11 @@ const FirstSession = (() => {
   const heroName = () => { const c = lead(); return c ? c.name : 'your hero'; };
   const points = () => { const c = lead(); return c && typeof Hero !== 'undefined' ? Hero.points(c).stat : 0; };
   const placing = () => (typeof HeroSheet !== 'undefined' ? HeroSheet.placing : 0);
-  const statsTab = () => { const t = q('[data-tut=hero-tab-stats]'); return !!t && t.getAttribute('aria-selected') === 'true'; };
+  const spending = () => typeof HeroSheet !== 'undefined' && HeroSheet.mode === 'spend';
   const onHero = () => App.current === 'hero' && !sheetOpen();
   const onRoad = () => { const c = camp(); return !!c && c.onRoad; };
   // a step's screen, opened again after a load: the road with the frontier's card; the hero from the Party screen, so ‹
-  // goes back there as it did
+  // goes back there as it did ('stats' opens the hero card's Spend)
   const roadAgain = () => { if (typeof Camp !== 'undefined' && Camp.toRoad) Camp.toRoad(); };
   const heroAgain = tab => { const c = lead(); if (!c) return; App.go('party'); App.showCharacter(c.id, tab); };
   // Wick's story at the fire (docs/story.md, the opening), a line a tap
@@ -120,13 +120,13 @@ const FirstSession = (() => {
     // 7: the results popup
     { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one brings a stat point.' : 'Battles bring XP. A full bar is a level.' }) },
     { id: 'home', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
-    // 8: Grow: the stat point the first level brought, spent on the hero's Stats tab
+    // 8: Grow: the stat point the first level brought, spent on the hero card: Spend, then + (or Auto), then Done
     { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
     { id: 'hero', nav: true, phase: 'grow', skip: () => !points(), at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=party-hero]'), open: () => points() && App.go('party'), show: () => { seen('[data-tut=party-hero]'); return { target: () => q('[data-tut=party-hero]'), pad: 3, tap: 'target', until: () => App.current === 'hero' }; } },
-    { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && statsTab()), at: () => onHero() && !!q('[data-tut=hero-tab-stats]'), open: () => points() && heroAgain(), show: () => ({ target: '[data-tut=hero-tab-stats]', pad: 3, tap: 'target', until: statsTab }) },
-    { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('.hr-stats .hr-plus'), open: () => points() && heroAgain('stats'), show: () => (seen('.hr-stats'), { target: () => [q('.hr-stats'), q('[data-tut=hero-auto]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
-    { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), resume: 'spend', at: () => onHero() && statsTab() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
-    { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('.hr-stats'), open: () => heroAgain('stats'), show: () => ({ target: '.hr-stats', pad: 4, arrow: false, say: 'Stronger already.' }) },
+    { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && spending()), at: () => onHero() && !!q('[data-tut=hero-points]'), open: () => points() && heroAgain(), show: () => ({ target: '[data-tut=hero-points]', pad: 3, tap: 'target', until: spending }) },
+    { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && spending() && !!q('[data-tut^=hero-plus-]'), open: () => points() && heroAgain('stats'), show: () => ({ target: () => [q('[data-tut=hero-stats]'), ...document.querySelectorAll('[data-tut^=hero-plus-]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
+    { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), resume: 'spend', at: () => onHero() && spending() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
+    { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !spending() && !!q('[data-tut=hero-stats]'), open: () => heroAgain(), show: () => ({ target: '[data-tut=hero-stats]', pad: 4, arrow: false, say: 'Stronger already.' }) },
     { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
     { id: 'tabhome', nav: true, phase: 'grow', skip: () => App.current === 'home', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=tab-home]'), show: () => ({ target: '[data-tut=tab-home]', pad: 2, tap: 'target', until: () => App.current === 'home' }) },
     // 9: 1-2, unforced: the pointer over Set out (it was a glow round it, before play-test note 3.7), a soft line on

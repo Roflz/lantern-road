@@ -22,6 +22,62 @@ const GearUI = (() => {
   // A piece's stars as pips: one small gold star each (none at ★0).
   const pips = n => (n > 0 ? h('span', { class: 'pips', 'aria-hidden': 'true' }, Array.from({ length: n }, () => h('i'))) : null);
   const starWord = n => (n === 1 ? '1 star' : `${n} stars`);
+  // ── the tall card and the piece's card (docs/mockups/hero-card.html, docs/ui-rules.md): the hero card's Gear and
+  // its dressing (js/sheet.js), and the Bag. A piece's name and lines are in its tooltip (data-tip, js/sheet.js's Tip)
+  // and on its card; the rarity's colour is on the frame only. The gear stars show as pips at the tall card's bottom
+  // right (x.st, 0–4), and their enchantment lines as a band of short lines on the piece's card.
+  const fmtStat = (k, v) => (k === 'spd' ? (Math.round(v * 10) / 10).toFixed(1) : k === 'crit' || k === 'dodge' ? Math.round(v) + '%' : String(Math.round(v)));
+  const fmtDelta = (k, d) => { const r = k === 'spd' ? Math.round(d * 10) / 10 : Math.round(d); return r === 0 ? null : (r > 0 ? '+' : '−') + (k === 'spd' ? Math.abs(r).toFixed(1) : Math.abs(r)); };
+  const pxImg = (src, s, cls = '') => h('img', { class: 'px ' + cls, src, alt: '', width: s, height: s, draggable: 'false' });
+  const icon = (n, s, cls) => pxImg(iconURL(UI_ICONS[n] ? n : 'star'), s, cls);
+  const SLOT_ICON = { weapon: 'sword', armor: 'plate', accessory: 'bone' };
+  // its effect lines, as words: the lines with no plain stat, then the When lines with their tag
+  function effectWords(x) {
+    const B = Items.bands(x, {});
+    return [...B.good.filter(l => !l.stat).map(l => l.text), ...B.when.map(l => `${l.tag}: ${l.text}`), ...B.bad.filter(l => !l.stat).map(l => l.text)];
+  }
+  // the gear stars' lines, when a piece has them: strings, or { text }
+  const enWords = x => (Array.isArray(x && x.en) ? x.en.map(e => (typeof e === 'string' ? e : e && (e.text || e.name)) || '').filter(Boolean) : []);
+  // what a piece gives, for its tooltip: "Gravecutter|+10 Power · −1.0 Speed · Cleave … +20% damage"
+  function pieceTip(x) {
+    const D = Items.def(x), st = Items.stats(x);
+    const nums = STAT_ORDER.filter(k => st[k]).map(k => `${st[k] > 0 ? '+' : '−'}${fmtStat(k, Math.abs(st[k]))} ${GEAR_STAT_NAMES[k]}`);
+    return D.name + '|' + [...nums, ...effectWords(x), ...enWords(x)].join(' · ');
+  }
+  const whoFor = x => { const u = Items.usersOf(x); return u.length > 1 ? 'Any class' : `${CLASSES[u[0]].name}s`; };
+  // A piece as a tall card in its rarity's frame. x: the piece, or null for an empty slot.
+  // o: { c (the hero its ▲ ▼ are against), slot (an empty slot's ghost icon), size ('lg' | 'md'), sel, trying, glint,
+  //      tut, tip (the tooltip of an empty slot), onclick }
+  function tall(x, o = {}) {
+    const size = o.size ? ' ' + o.size : '';
+    if (!x) return h('button', { class: 'gc empty' + size + (o.sel ? ' sel' : ''), type: 'button', 'data-tut': o.tut || null, 'data-tip': o.tip || null, 'aria-label': o.tip ? o.tip.split('|')[0] : 'Empty', onclick: o.onclick }, o.slot ? icon(SLOT_ICON[o.slot], 16, 'ghost') : null);
+    const D = Items.def(x), c = o.c, can = !c || Items.canUse(c, x), s = o.size === 'lg' ? 48 : o.size === 'md' ? 44 : 40;
+    let mark = null;
+    if (c && can && !(c.gear[D.slot] && c.gear[D.slot].uid === x.uid)) {
+      const now = c.gear[D.slot], d = Items.score(x) - (now ? Items.score(now) : 0);
+      mark = !now || d > 0.5 ? h('span', { class: 'mk up', text: '▲' }) : d < -0.5 ? h('span', { class: 'mk dn', text: '▼' }) : null;
+    }
+    return h('button', { class: `gc r-${D.rarity}${size}${o.sel ? ' sel' : ''}${can ? '' : ' no'}${o.glint ? ' glint' : ''}${o.trying ? ' trying' : ''}`, type: 'button', 'data-tut': o.tut || null, 'data-uid': x.uid, 'data-tip': pieceTip(x), 'aria-label': D.name + (x.st ? ', ' + starWord(x.st) : ''), onclick: o.onclick },
+      pxImg(gearIconURL(x.id), s), x.fresh ? h('span', { class: 'nw' }) : null, h('span', { class: 'lv', text: String(x.lv) }), mark, pips(x.st || 0));
+  }
+  // A piece's card lines: its plain stats as icon and number (green and red against what's worn, when given), then its
+  // effects, then the gear stars' band.
+  function pieceLines(x, worn) {
+    const st = Items.stats(x), was = worn ? Items.stats(worn) : {}, B = Items.bands(x, {}), en = enWords(x);
+    const keys = STAT_ORDER.filter(k => st[k] || (worn && was[k]));
+    const fx = l => h('p', { class: 'pc-fx' }, icon(l.icon || 'star', 12), h('span', { text: l.tag ? `${l.tag}: ${l.text}` : l.text }));
+    return [
+      keys.length ? h('div', { class: 'pc-stats' }, keys.map(k => {
+        const d = (st[k] || 0) - (was[k] || 0), dt = worn ? fmtDelta(k, d) : null;
+        return h('span', { 'data-tip': GEAR_STAT_NAMES[k] }, icon(GEAR_STAT_ICONS[k], 12), h('b', { text: (st[k] < 0 ? '−' : '') + fmtStat(k, Math.abs(st[k] || 0)) }), dt ? h('em', { class: d > 0 ? 'g' : 'b', text: dt }) : null);
+      })) : null,
+      ...B.good.filter(l => !l.stat).map(fx), ...B.when.map(fx), ...B.bad.filter(l => !l.stat).map(fx),
+      en.length ? h('div', { class: 'pc-en' }, en.map(t => h('span', { text: t }))) : null,
+    ].filter(Boolean);
+  }
+  // The head of a piece's card: its name, then its rarity and who can use it.
+  const pieceHead = x => { const D = Items.def(x); return [h('b', { class: 'pc-nm', text: D.name }), h('span', { class: 'pc-kind', text: `${RARITY_NAMES[D.rarity]} · ${whoFor(x)}` })]; };
+
   // ── a piece's tile: its icon in a frame of its rarity's colour, with its level and stars, and what it means against
   // what is worn. o: { c (the hero it is compared with), sel, onclick }
   function tile(x, o = {}) {
@@ -236,5 +292,5 @@ const GearUI = (() => {
     render() { stopStages(); return bagView(); },
     enter() { App.rest(); },
   });
-  return { card, tile, pips, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
+  return { card, tile, pips, tall, pieceLines, pieceHead, pieceTip, effectWords, whoFor, fmtStat, fmtDelta, SLOT_ICON, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
 })();

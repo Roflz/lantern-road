@@ -2,7 +2,7 @@
 screenshots.
 
 From a save set up in the page (four heroes set out, the road lit to 1-11 so the Tactician's sets are open), it opens
-Tactics on Brand the Warden from the hero screen's Edit tactics, then, with taps where things are drawn (through the
+Tactics on Brand the Warden from the hero card's Edit tactics, then, with taps where things are drawn (through the
 quarter-turn when the frame is turned):
   - the owners, the panel and the picker sit inside the frame, the guide's anchors are there, and no word says "rules"
   - a condition: tapping tactic 1's "when" and a condition in the picker changes it; its number steps with ‹ ›
@@ -13,7 +13,7 @@ quarter-turn when the frame is turned):
   - ✕ Tactic removes one
   - the owners: the Party shows its tactics and Return to the Hearth; the Loadout's picker puts an item in a slot
   - sets: Save under a name, the chip shows it, a change clears it, Load brings it back, Delete takes two taps
-  - Back returns to the hero screen
+  - Back returns to the hero card
   python tools/tactics_check.py [--sizes 844x390,667x375t,1280x720,390x844t] [--shots docs/screens/tactics]
 A size ending in t has a touch screen (and 390x844t is turned).
 """
@@ -174,8 +174,8 @@ def main():
             opt = lambda attr, v: f'.tx-opts .tx-opt[data-{attr}="{v}"]'
             brand, party = ids['brand'], 'party'
 
-            # in: the hero screen's Edit tactics
-            js(f"HeroSheet.open('{brand}', 'rules'); 'ok'")
+            # in: the hero card's Edit tactics
+            js(f"HeroSheet.open('{brand}'); 'ok'")
             page.wait_for_timeout(700)
             tap('.hr-edit', wait=700)
             check(on() and plate() == 'Brand', f'{tag}: Edit tactics opens Tactics on Brand ({js("App.current")}, {plate() if on() else ""})')
@@ -288,7 +288,7 @@ def main():
 
             # Back
             tap('.tx-back', wait=600)
-            check(js("App.current") == 'hero' and js("HeroSheet.tab") == 'rules', f'{tag}: Back returns to the hero screen\'s Tactics ({js("App.current")})')
+            check(js("App.current") == 'hero' and js("HeroSheet.id") == brand and js("HeroSheet.mode") == 'card' and js("!!document.querySelector('[data-tut=hero-rules]')"), f'{tag}: Back returns to the hero card, with its Tactics ({js("App.current")})')
             ctx.close()
         b.close()
     srv.shutdown()

@@ -238,8 +238,8 @@ says('awakening', `${HERO.AWAKEN_COST} more skill points`, `level ${HERO.AWAKEN_
 says('tier', `${HERO.TIERS} tiers`);
 says('skill_level', `1 to ${SKILL_LV_MAX}`);
 says('skill_slot', `up to ${HERO.LESSONS}`);
-says('stat_point', `${HERO.RES_CAP} points`);
-holds('stat_point', ['spd', 'crit', 'dodge'].every(k => HERO.POINT_CAP[k] === HERO.RES_CAP), 'Speed, Crit, Dodge and each resistance share one cap');
+says('stat_point', `${HERO.POINT_CAP.spd} points`);
+holds('stat_point', ['spd', 'crit', 'dodge'].every(k => HERO.POINT_CAP[k] === HERO.POINT_CAP.spd) && Hero.capOf('res:stun') === 0, 'Speed, Crit and Dodge share one cap, and a resistance takes no points');
 says('rule_slot', `starts with ${HERO.RULE_SLOTS}`);
 says('loadout', `start with ${LOADOUT.slots[0]}`, `up to ${LOADOUT.slots[1] - LOADOUT.slots[0]} more`);
 says('party_rule_slot', `start with ${PARTY_RULES.slots[0]}`, `Up to ${PARTY_RULES.slots[1]}`);

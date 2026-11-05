@@ -303,7 +303,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
       }
       const all = c.classes.flatMap(k => [CLASSES[k].starter, ...CLASSES[k].tree.flat()]);
       for (let k = 0; k < 120; k++) { const id = pickOf(all); Hero.learn(c, id); if (Hero.skill(c, id).canAwaken) Hero.awaken(c, id); }
-      for (let k = 0; k < 250; k++) Hero.allocate(c, pickOf([...STAT_KEYS, ...RES_KEYS.map(x => 'res:' + x)]), 1);
+      for (let k = 0; k < 250; k++) Hero.allocate(c, pickOf(STAT_KEYS), 1);
       if (rng() < 0.2) c.lessons.skill = 2;
       const acts = Hero.actives(c);
       for (let k = 0; k < Hero.activeSlots(c); k++) Hero.equip(c, k, pickOf(acts));
@@ -597,8 +597,8 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(Hero.options(c, 30).combine.length === 0 && !Hero.options(c, 30).awaken, '30 offers only a tier');
   ok(Hero.choose(c, 30, { kind: 'tier', cls: 'sellsword' }) && c.tiers.sellsword === 2 && c.respecs === 1, 'opening tier 2, with a free respec');
   ok(Hero.learn(c, 'bountyhunter'), 'tier 2 is open');
-  Hero.allocate(c, 'res:stun', 30);
-  ok(c.alloc.res.stun === 25, 'a resistance takes 25 points at most');
+  { const p0 = Hero.points(c).stat, r0 = Hero.res(c).stun;
+    ok(Hero.allocate(c, 'res:stun', 3) === 0 && Hero.allocate(c, 'stun', 3) === 0 && Hero.points(c).stat === p0 && Hero.res(c).stun === r0 && !('res' in c.alloc), 'a resistance takes no stat points'); }
   Hero.gainXp(c, Hero.xpBetween(30, 50));
   ok(Hero.activeSlots(c) === 2 && c.equip.length === 2, 'a second active slot at 50');
   ok(Hero.options(c, 50).combine.length === 11, 'combining at 50');
@@ -633,7 +633,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 7, 'save version 7');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 8, 'save version 8');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -666,11 +666,18 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v6.v = 6; v6.created = 4242;
   v6.inventory.items = [{ uid: 'r1', id: 'bishopscrozier', lv: 30 }, { uid: 'n1', id: 'notchedsword', lv: 3 }];
   const s7 = upgrade(JSON.parse(JSON.stringify(v6))), pieces = Items.everything(s7), relic7 = s7.inventory.items.find(x => x.id === 'bishopscrozier');
-  ok(s7.v === 7 && pieces.every(x => Number.isInteger(x.st) && Array.isArray(x.en) && x.en.length === x.st) && pieces.filter(x => x !== relic7).every(x => x.st === 0) && relic7.st === STARS.RELIC,
+  ok(s7.v === SAVE_VERSION && pieces.every(x => Number.isInteger(x.st) && Array.isArray(x.en) && x.en.length === x.st) && pieces.filter(x => x !== relic7).every(x => x.st === 0) && relic7.st === STARS.RELIC,
     `version 6 → 7: every piece ★0, a Relic ★${STARS.RELIC} (${JSON.stringify(relic7)})`);
   ok(JSON.stringify(upgrade(JSON.parse(JSON.stringify(v6))).inventory.items.find(x => x.id === 'bishopscrozier').en) === JSON.stringify(relic7.en) && JSON.stringify(upgrade(JSON.parse(JSON.stringify(s7))).inventory.items) === JSON.stringify(s7.inventory.items),
     'a Relic\'s lines come from the save, and a version 7 save loads unchanged');
-  console.log('Save migration checked: version 1 → 7 (characters, their rules, gear, the road, the camp, Relics, stars), 2 → 7, 3 → 7, 5 → 7, 6 → 7 and 0 → 7.');
+  // version 7 → 8: points placed in resistances come back to spend on stats; the stats placed stay
+  const v7 = JSON.parse(JSON.stringify(protoState()));
+  v7.v = 7;
+  const w7 = v7.roster[0]; w7.level = 12; w7.alloc = { hp: 2, mp: 0, pow: 3, def: 0, spd: 0, crit: 0, dodge: 0, res: { stun: 4, move: 0, bleed: 2, blight: 0, curse: 0, debuff: 0 } };
+  const s8 = upgrade(v7), w8 = s8.roster[0];
+  ok(s8.v === 8 && !('res' in w8.alloc) && w8.alloc.hp === 2 && w8.alloc.pow === 3 && Hero.points(w8).stat === 11 - 5 && Hero.res(w8).stun === CLASSES[w8.cls].res.stun + HERO.RES_GROWTH * 11,
+    `version 7 → 8: the 6 points in resistances come back (${Hero.points(w8).stat} to spend), the 5 in stats stay`);
+  console.log('Save migration checked: version 1 → 8 (characters, their rules, gear, the road, the camp, Relics, stars, resistance points), 2 → 8, 3 → 8, 5 → 8, 6 → 8, 7 → 8 and 0 → 8.');
 }
 
 // ── The Tactics model
@@ -1024,7 +1031,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     v4.roster[0].lessons = { skill: 0, rule: 1 };
     const s5 = upgrade(v4);
     const elite = STAGES.find(x => x.id === '1-9').kind === 'elite';
-    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 7 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
+    ok(s5.v === SAVE_VERSION && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
     ok(s5.base.legacySlots.party === 4 && s5.base.legacySlots.loadout === 3 && s5.roster[0].lessons.rule === 1, 'slots opened in the prototype stay');
     ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !s5.board.free && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
     const n = JSON.parse(JSON.stringify(s5));
