@@ -1,7 +1,9 @@
 'use strict';
 // Lantern Road · the building screens (build step 5, home-base spec §3–§9): what each building does, what it holds, its
 // focus, its next level and the level-3 and level-5 choices, and tearing it down. Also the sheet for building on an
-// empty plot. You reach a building only through the camp ring (js/camp.js). The model is js/base.js.
+// empty plot. You reach a building through the Hearth (js/camp.js). The model is js/base.js.
+// The Recruit Board is its own panel over the Hearth (RecruitBoard, at the end of this file), which the first pick
+// (js/firstpick.js) shares.
 
 const Buildings = (() => {
   const click = () => sfx('click');
@@ -14,7 +16,8 @@ const Buildings = (() => {
     h('span', { class: (st.currencies.mats[c.mat] || 0) < c.n ? 'short' : '' }, ico(Base.matIcon(c.mat)), `${c.n} ${Base.matName(c.mat)}`));
   const gold = n => h('span', { class: 'gold' }, ico('coin'), fmt(n));
   let cur = null;
-  function open(id) { cur = id; App.go('building', { id }); }
+  // The Recruit Board has its own panel over the Hearth (RecruitBoard, below); every other building its page.
+  function open(id) { if (id === 'recruitboard') { RecruitBoard.open(); return; } cur = id; App.go('building', { id }); }
   // Redraws the open building screen in place, keeping its scroll.
   function redraw() {
     const v = document.querySelector('#views .view.bld-view:not(.out)');
@@ -177,44 +180,6 @@ const Buildings = (() => {
         h('button', { class: 'small on', disabled: !brew.length, onclick: () => { click(); const out = Base.collectBrew(st); done(out.map(g => g.text).join(' · '), 'coin'); } }, 'Collect')))] : null,
       h('p', { class: 'hint', text: 'The most tired heroes at camp take the beds. A hero keeps a bed until fully rested or until they leave camp. Pin a hero to give them the next free bed.' })];
   }
-  function boardPanel(st) {
-    if (!Base.boardOpen(st)) return [panel(h('p', { class: 'flavor', text: 'The board is bare. Clear 1-2 on the road, and the first faces arrive, the first one free.' }))];
-    const b = st.board, cap = Base.rosterCap(st), full = st.roster.length >= cap;
-    const pick = sel.recruit && b.recruits.find(r => r.id === sel.recruit) ? sel.recruit : (b.recruits[0] || {}).id;
-    const statBar = (r, k, icon, label) => {
-      const [a, z] = CLASSES[r.cls].stats[k], v = r.base[k], q = z > a ? clamp((v - a) / (z - a), 0, 1) : 0.5;
-      return h('div', { class: 'rng' }, ico(icon), h('span', { class: 'k', text: label }), h('span', { class: 'tr' }, h('i', { class: q >= 0.8 ? 'hi' : q <= 0.2 ? 'lo' : '', style: `left:${Math.round(q * 96)}%` })), h('span', { class: 'v' + (q >= 0.8 ? ' g' : q <= 0.2 ? ' b' : ''), text: k === 'spd' ? v.toFixed(1) : String(v) }));
-    };
-    const hint = r => { const best = STAT_KEYS.map(k => [k, rel(r, k)]).sort((x, y) => y[1] - x[1]), hi = best[0], lo = best[best.length - 1]; return `${{ hp: 'Sturdy', mp: 'Deep reserves', pow: 'Hits hard', def: 'Hard to hurt', spd: 'Quick', crit: 'A keen eye', dodge: 'Slippery' }[hi[0]]}${lo[1] < 0.25 ? `, ${{ hp: 'but breaks easily', mp: 'but runs dry', pow: 'but hits soft', def: 'but thin-skinned', spd: 'but slow', crit: 'but rarely lands a crit', dodge: 'but easy to hit' }[lo[0]]}` : ''}.`; };
-    const rel = (r, k) => { const [a, z] = CLASSES[r.cls].stats[k]; return z > a ? (r.base[k] - a) / (z - a) : 0.5; };
-    const cards = b.recruits.map(r => {
-      const on = r.id === pick, price = Base.recruitPrice(r, st);
-      return h('button', { class: 'recruit' + (on ? ' sel' : ''), 'aria-pressed': on ? 'true' : 'false', onclick: () => { click(); sel.recruit = r.id; redraw(); } },
-        h('div', { class: 'row' }, h('span', { class: 'sbox' }, h('img', { src: heroImgURL(r.cls, [Items.starter(r.cls, 1).id, null, null]), alt: '' })),
-          h('div', { class: 'who' }, h('span', { class: 'nm', text: r.name }), h('span', { class: 'k', text: `${CLASSES[r.cls].name} · Lv ${r.level}${r.storied ? (r.storied.combine ? ` · combined with the ${CLASSES[r.storied.combine].name}` : ' · an awakened skill') : ''}` })),
-          price ? gold(price) : h('span', { class: 'tag g', text: 'Free' })),
-        on ? [statBar(r, 'pow', 'sword', 'Power'), statBar(r, 'spd', 'boot', 'Speed'), statBar(r, 'hp', 'heart', 'Health'), statBar(r, 'def', 'shield', 'Defense'), h('span', { class: 'hint', text: hint(r) })] : null);
-    });
-    const r = b.recruits.find(x => x.id === pick), price = r ? Base.recruitPrice(r, st) : 0;
-    const why = !r ? '' : b.picks <= 0 ? 'No picks left on this board' : full ? 'The roster is full: dismiss someone, or build the Barracks' : st.currencies.gold < price ? `${fmt(price - st.currencies.gold)} gold short` : '';
-    const tracks = Object.entries(BOARD_TRACKS).map(([k, T]) => {
-      const rk = b.ranks[k], c = Base.rankCost(k, st);
-      return h('div', { class: 'track' }, h('div', {}, h('span', { class: 'nm', text: `${T.name} · rank ${rk}/${T.ranks.length}` }), h('span', { class: 'k', text: T.give(rk) }), c ? h('span', { class: 'k e', text: `Next: ${T.give(rk + 1)}` }) : null),
-        c ? h('button', { class: 'small', disabled: !Base.canPay(c, st), onclick: () => { click(); if (Base.buyRank(k, st)) done(`${T.name} · rank ${rk + 1}`); } }, costEl(c, st)) : h('span', { class: 'tag g', text: 'Done' }));
-    });
-    return [
-      h('div', { class: 'row tags' }, h('span', { class: 'tag e', text: noun(b.picks, 'pick') + ' left' }), h('span', { class: 'tag' }, ico('hourglass'), `New board ${timeStr(Base.boardIn(st))}`), h('span', { class: 'sp' }), h('span', { class: 'k', text: `Roster ${st.roster.length}/${cap}` })),
-      cards.length ? h('div', { class: 'recruits' }, cards) : panel(h('p', { class: 'k', text: 'Everyone on this board has been hired. A new board comes when the party comes home from a battle, or with the timer.' })),
-      r ? h('button', { class: 'btn primary', disabled: !!why, onclick: () => {
-        const c = Base.hire(r.id, st);
-        if (!c) return;
-        sel.recruit = null; Tactics.owner(c.id);
-        done(`${c.name} the ${CLASSES[c.cls].name} joins the company${st.party.includes(c.id) ? '' : ' (the formation is full: they wait at camp)'}`);
-      } }, `Hire ${r.name}${price ? ' · ' + fmt(price) + ' gold' : ' · free'}`, why ? h('span', { class: 'sub', text: why }) : null) : null,
-      h('p', { class: 'hint', text: 'Stat bars show where each roll falls in the class’s range: green near the top, red near the bottom. A better roll costs more.' }),
-      ey('Upgrades'), h('div', { class: 'tracks' }, tracks)];
-  }
-  const sel = { recruit: null, shrine: null };
   function hallPanel(st) {
     const ids = Base.inHall(st), rooms = Base.rooms(st);
     const away = ids.map(cid => { const c = Save.char(cid), l = Base.lessonOf(cid, st); return h('div', { class: 'rost' }, h('img', { class: 'sbox', src: heroPortrait(c), alt: '' }),
@@ -314,7 +279,6 @@ const Buildings = (() => {
     if (D.idle) body.push(storedPanel(id, st));
     if (id === 'trainingyard') body.push(...trainingPanel(st));
     if (id === 'infirmary') body.push(...infirmaryPanel(st));
-    if (id === 'recruitboard') body.push(...boardPanel(st));
     if (id === 'mastershall') body.push(...hallPanel(st));
     if (id === 'shrine') body.push(...shrinePanel(st));
     if (id === 'shop') body.push(...shopPanel(st));
@@ -368,4 +332,246 @@ const Buildings = (() => {
   }
 
   return { open, buildSheet, bonusText, levelText, redraw };
+})();
+
+// ── the Recruit Board's panel (docs/mockups/recruit-board.html, approved 2026-11-05; play-test notes 3.4, 3.5, 3.20),
+// laid out as Darkest Dungeon's stagecoach and drawn to docs/ui-rules.md. The board's picture, dimmed, on the left; a
+// row per recruit on the right: level, portrait, name, class (where they stand and what they do in its tooltip), price
+// and +. + asks first: the recruit, the price, your gold before and after, Cancel and Hire, which greys when it can't
+// be done (its tooltip says why). Every hire ends in the reveal. A tap on a row opens the recruit's hero card: until the
+// new card is built, a placeholder here with the recruit, their rolled stats (a bar for where each falls in the class's
+// range), the price and Hire. Along the top: hires left, the time to a new board, the roster, your gold and ✕. A
+// locked notice is a faint row under the last recruit. The board's ranks (Notices, Picks, Veterans) are the second tab.
+// Prices, who is free and when the board opens are the model's (js/base.js), as before.
+//   RecruitBoard.open()   the board over the Hearth (#sheet.board), from the scene, the dock, the goal or Party
+// The first pick and the guide's free recruit (js/firstpick.js) use the same pieces: panel(o), confirm(o),
+// reveal(c, onGo) and stance(cls). Anchors (data-tut): pick-card (each row), pick-price, pick-plus, pick-hire (the
+// confirmation's Hire, and the card's), pick-reveal and pick-says (the reveal), board-timer, board-upgrades.
+// Styles: css/board.css (rb-).
+const RecruitBoard = (() => {
+  const click = () => sfx('click');
+  const px = (src, w, hh, cls = '') => h('img', { class: 'px' + (cls ? ' ' + cls : ''), src, alt: '', width: w, height: hh, draggable: 'false' });
+  const icon = (n, size) => px(iconURL(n), size, size);
+  const look = cls => [Items.starter(cls, 1).id, null, null];
+  const ORD = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth'];
+  // where each class stands and what it does, with an icon: the class's tooltip
+  const STANCE = {
+    sellsword: ['Front', 'Damage', 'sword'], hexblade: ['Back', 'Curses', 'curse'], pilgrim: ['Back', 'Healer', 'holy'],
+    warden: ['Front', 'Guard', 'shield'], lamplighter: ['Back', 'Support', 'lantern'], crossbowman: ['Back', 'Ranged', 'arrow'],
+  };
+  const stance = cls => STANCE[cls] || [CLASSES[cls].row === 'front' ? 'Front' : 'Back', String(CLASSES[cls].role || '').split(/[:,]/)[0], (SKILLS[CLASSES[cls].basic] || {}).icon || 'star'];
+  const classTip = cls => () => { const [where, role, ic] = stance(cls); return [CLASSES[cls].name, `${where} · ${role}`, ic]; };
+  const big = (c, k, cls) => px(DockArt.big(c, k), c.width * k, c.height * k, cls);
+
+  // ── the panel. o: { list: [{ cls, name, level, price, r? }], gold, sel, first (the first pick: no tabs, no counts),
+  // tabs, tab ('recruits' | 'upgrades'), onTab, stats: { picks, timer, roster, cap }, locked: { n, rank }, none: [icon,
+  // words] (no rows), upgrades (the second tab's rows), hot (the purse glows), onRow(i), onPlus(i), onClose (none: no ✕) }
+  // Returns { root, timer, gold, rows, select(i) }.
+  function panel(o) {
+    const root = h('div', { class: 'rb' + (o.first ? ' first' : ''), role: 'dialog', 'aria-label': 'Recruit Board' });
+    const n = Math.max(1, o.list.length + (o.locked ? 1 : 0)), art = DockArt.boardURL(n, { lit: o.sel });
+    const artImg = px(art.url, art.w, art.h);
+    root.append(h('div', { class: 'rb-art' }, artImg), h('i', { class: 'rb-glow' }));
+    const nt = DockArt.obj('notice', 2);
+    root.append(h('div', { class: 'rb-ttl' }, h('span', { class: 'rb-sq' }, px(nt.url, nt.w, nt.h)), h('span', { class: 'rb-nmp' }, h('h3', { text: 'Recruit Board' }))));
+    if (o.tabs) {
+      const tab = (k, ic, name, tut) => Tip.on(h('button', { class: 'rb-tab' + (o.tab === k ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': o.tab === k ? 'true' : 'false', 'aria-label': name, 'data-tut': tut || null, onclick: () => { if (o.tab !== k) { click(); o.onTab(k); } } }, icon(ic, 18)), () => [name], { side: 'below' });
+      root.append(h('div', { class: 'rb-tabs', role: 'tablist' }, tab('recruits', 'helm', 'Recruits'), tab('upgrades', 'star', 'Upgrades', 'board-upgrades')));
+    }
+    // along the top: what the board has left, then your gold and close
+    const top = h('div', { class: 'rb-top' }), out = { root };
+    if (o.stats) {
+      const S = o.stats;
+      out.timer = h('span', { text: S.timer });
+      top.append(
+        Tip.on(h('span', { class: 'rb-st' }, icon('feather', 16), String(S.picks)), () => ['Hires left', 'From this board', 'feather'], { side: 'below' }),
+        Tip.on(h('span', { class: 'rb-st dim', 'data-tut': 'board-timer' }, icon('hourglass', 16), out.timer), () => ['New board', `When the party comes home, or in ${out.timer.textContent}`, 'hourglass'], { side: 'below' }),
+        Tip.on(h('span', { class: 'rb-st dim' }, icon('helm', 16), `${S.roster}/${S.cap}`), () => ['Roster', `${S.roster} of ${S.cap}`, 'helm'], { side: 'below' }));
+    }
+    out.gold = h('span', { text: fmt(o.gold) });
+    top.append(h('span', { class: 'rb-sp' }), Tip.on(h('span', { class: 'rb-purse' + (o.hot ? ' hot' : '') }, icon('coin', 20), out.gold), () => ['Gold'], { side: 'below' }));
+    if (o.onClose) top.append(h('button', { class: 'rb-x', type: 'button', 'aria-label': 'Close', onclick: () => { click(); o.onClose(); } }, '✕'));
+    root.append(top);
+    if (o.tab === 'upgrades') root.append(o.upgrades);
+    else root.append(rows(o, out));
+    // the first pick picks without drawing again (the rows would rise again): the row in the light, the rest dimmed
+    out.select = i => {
+      o.sel = i;
+      (out.rows || []).forEach((row, k) => { row.classList.toggle('on', k === i); row.classList.toggle('dimmed', i != null && k !== i && !!o.first); });
+      artImg.src = DockArt.boardURL(n, { lit: i }).url;
+    };
+    return out;
+  }
+  function rows(o, out) {
+    const box = h('div', { class: 'rb-rows' + (o.list.length + (o.locked ? 1 : 0) > 4 ? ' tight' : '') });
+    out.rows = o.list.map((r, i) => {
+      const plus = h('button', { class: 'rb-plus', type: 'button', 'data-tut': 'pick-plus', 'aria-label': `Hire ${r.name}`, onclick: e => { e.stopPropagation(); click(); o.onPlus(i); } }, '+');
+      const cl = Tip.on(h('span', { class: 'rb-cl', text: CLASSES[r.cls].name }), classTip(r.cls), { side: 'right' });
+      const price = r.price ? h('span', { class: 'rb-price' + (r.price > o.gold ? ' short' : ''), 'data-tut': 'pick-price' }, icon('coin', 16), fmt(r.price)) : h('span', { class: 'rb-price free', 'data-tut': 'pick-price', text: 'Free' });
+      const row = h('div', { class: 'rb-row' + (o.sel === i ? ' on' : o.sel != null && o.first ? ' dimmed' : ''), role: 'button', tabindex: '0', 'data-tut': 'pick-card', 'data-cls': r.cls, 'data-i': String(i), 'aria-label': `${r.name}, ${CLASSES[r.cls].name}, level ${r.level}`, style: `animation-delay:${i * 50}ms` },
+        h('span', { class: 'rb-lv', text: String(r.level) }),
+        h('span', { class: 'rb-pt' }, px(portraitURL(r.cls, true, look(r.cls)), 44, 44)),
+        h('span', { class: 'rb-who' }, h('b', { text: r.name }), cl),
+        price, plus);
+      row.addEventListener('click', () => { click(); o.onRow(i); });
+      row.addEventListener('keydown', e => { if (e.target === row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); row.click(); } });
+      box.append(row);
+      return row;
+    });
+    // a locked notice: a faint empty row, its tooltip naming the rank that opens it
+    if (o.locked) box.append(h('div', { class: 'rb-row locked' }, h('span', { class: 'rb-lk' }, icon('lock', 14)),
+      Tip.on(h('span', { class: 'rb-pt' }), () => [`A ${ORD[o.locked.n] || o.locked.n + 'th'} notice`, `Notices, rank ${o.locked.rank}`, 'lock'], { side: 'right' })));
+    if (o.none) box.append(h('div', { class: 'rb-none' }, icon(o.none[0], 16), o.none[1]));
+    return box;
+  }
+
+  // ── + asks first. o: { r (a row's recruit), gold, why (what stops the hire, or ''), onCancel, onHire }
+  function confirm(o) {
+    const r = o.r, after = o.gold - r.price, short = r.price > o.gold;
+    const hire = h('button', { class: 'rb-btn', type: 'button', 'data-tut': 'pick-hire', disabled: !!o.why, onclick: () => { click(); o.onHire(); } }, 'Hire');
+    const wrap = h('span', { class: 'rb-hw' }, hire);
+    if (o.why) Tip.on(wrap, () => [o.why], { side: 'below' });
+    const modal = h('div', { class: 'rb-modal' }, h('div', { class: 'rb-cf', role: 'dialog', 'aria-label': `Hire ${r.name}?` },
+      h('div', { class: 'rb-plate' }, h('h3', { text: `Hire ${r.name}?` })),
+      h('div', { class: 'rb-cfb' },
+        h('div', { class: 'rb-arch' }, big(heroSide(r.cls, 0, look(r.cls)), 4)),
+        h('div', { class: 'rb-cfr' },
+          Tip.on(h('span', { class: 'rb-cl2', text: `${CLASSES[r.cls].name} · Lv ${r.level}` }), classTip(r.cls), {}),
+          r.price ? h('span', { class: 'rb-pr' }, icon('coin', 20), fmt(r.price)) : h('span', { class: 'rb-pr free', text: 'Free' }),
+          r.price ? h('span', { class: 'rb-af' }, icon('coin', 16), fmt(o.gold), h('span', { class: 'ar', text: '→' }), h('span', { class: short ? 'b' : '', text: (after < 0 ? '−' : '') + fmt(Math.abs(after)) })) : null,
+          h('span', { class: 'rb-act' }, h('button', { class: 'rb-btn quiet', type: 'button', onclick: () => { click(); o.onCancel(); } }, 'Cancel'), wrap)))));
+    // a tap on the dim round it is Cancel
+    modal.addEventListener('click', e => { if (e.target === modal) { click(); o.onCancel(); } });
+    return modal;
+  }
+
+  // ── the recruit's hero card: a placeholder until the new hero card is built (docs/mockups/hero-card.html). The
+  // recruit in an arch, their name, class and level; their rolled stats, each with a bar for where it falls in the
+  // class's range; the price and Hire, which asks first as + does. ‹ goes back to the board.
+  function card(o) {
+    const x = o.r, r = x.r, C = CLASSES[x.cls];
+    const num = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+    const stats = STAT_KEYS.map(k => {
+      const [a, z] = C.stats[k], v = r.base[k], q = z > a ? clamp((v - a) / (z - a), 0, 1) : 0.5;
+      return Tip.on(h('div', { class: 'rb-stat' }, icon(GEAR_STAT_ICONS[k], 16), h('span', { class: 'lb', text: STAT_LABELS[k] }), h('span', { class: 'bar' }, h('i', { style: `width:${Math.round(8 + q * 92)}%` })), h('b', { text: num(v) })),
+        () => [STAT_LABELS[k], `${num(a)}–${num(z)} for a ${C.name}`, GEAR_STAT_ICONS[k]], {});
+    });
+    return h('div', { class: 'rb-hc', role: 'dialog', 'aria-label': `${x.name} the ${C.name}` },
+      h('button', { class: 'rb-back', type: 'button', 'aria-label': 'Back to the board', onclick: () => { click(); o.onBack(); } }, '‹'),
+      h('div', { class: 'rb-fig' }, big(heroSide(x.cls, 0, look(x.cls)), 7), h('b', { text: x.name }), Tip.on(h('span', { text: `${C.name} · Lv ${x.level}` }), classTip(x.cls), {})),
+      h('div', { class: 'rb-sheet' }, h('div', { class: 'rb-plate' }, h('h3', { text: 'Stats' })), h('div', { class: 'rb-stats' }, stats)),
+      h('div', { class: 'rb-ft' },
+        x.price ? h('span', { class: 'rb-price' + (x.price > o.gold ? ' short' : '') }, icon('coin', 16), fmt(x.price)) : h('span', { class: 'rb-price free', text: 'Free' }),
+        h('button', { class: 'rb-btn', type: 'button', 'data-tut': 'pick-hire', onclick: () => { click(); o.onHire(); } }, 'Hire')));
+  }
+
+  // ── every hire ends here: the hero in the light, their name, class and level, and why they signed on (SIGN_ON in
+  // js/data.js). A tap anywhere goes on (after half a second, so the tap that hired doesn't).
+  function reveal(c, onGo) {
+    const why = typeof SIGN_ON !== 'undefined' ? SIGN_ON[c.cls] : null;
+    const motes = Array.from({ length: 16 }, (_, k) => h('i', { class: 'rb-mote', style: `left:${42 + (k * 53) % 250 / 844 * 100}%;top:${200 + (k * 37) % 80}px;animation-delay:${((k * 0.21) % 3.2).toFixed(2)}s` }));
+    const el = h('div', { class: 'rb-reveal', 'data-tut': 'pick-reveal', role: 'dialog', 'aria-label': `${c.name} the ${CLASSES[c.cls].name} joins` },
+      h('div', { class: 'rb-rays' }), h('div', { class: 'rb-rglow' }), motes, big(heroSide(c.cls, 0, Items.look(c)), 8, 'rb-hero'),
+      h('div', { class: 'rb-rpl' }, h('b', { text: c.name }), h('span', { text: `${CLASSES[c.cls].name} · Lv ${c.level}` }), why ? h('q', { 'data-tut': 'pick-says', text: why }) : null));
+    const at = Date.now();
+    el.addEventListener('click', () => { if (Date.now() - at > 500) onGo(); });
+    return el;
+  }
+
+  // ── the board's ranks, as rows: what the next rank changes (icon and numbers, named in a tooltip), its cost, Upgrade
+  const TRACK_ICON = { notices: 'scroll', picks: 'feather', veterans: 'star' };
+  function change(k, r) {
+    if (k === 'notices') return ['helm', String(BASE.BOARD.size + r), String(BASE.BOARD.size + r + 1)];
+    if (k === 'picks') return ['feather', String(1 + r), String(2 + r)];
+    const cap = BOARD_TRACKS.veterans.cap, pct = n => (n ? Math.round(cap[n] * 100) + '%' : 'Lv 1');
+    return [null, pct(r), pct(r + 1)];
+  }
+  function upgrades(s) {
+    return h('div', { class: 'rb-rows' }, Object.entries(BOARD_TRACKS).map(([k, T]) => {
+      const r = s.board.ranks[k], c = Base.rankCost(k, s), [unit, now, next] = change(k, r), can = !!c && Base.canPay(c, s);
+      const ch = Tip.on(h('span', { class: 'rb-ch' }, unit ? icon(unit, 14) : null, now, c ? [h('span', { class: 'ar', text: '→' }), h('span', { class: 'nx', text: next })] : null), () => [T.name, T.line, TRACK_ICON[k]], { side: 'below' });
+      let act;
+      if (c) {
+        const b = h('button', { class: 'rb-btn', type: 'button', disabled: !can, onclick: () => { click(); if (Base.buyRank(k, s)) { Save.commit(); sfx('kindle'); toast(`${T.name} · rank ${r + 1}`); draw(); } } }, 'Upgrade');
+        act = h('span', { class: 'rb-hw' }, b);
+        if (!can) Tip.on(act, () => [`${Base.short(c, s)} short`], { side: 'below' });
+      } else act = Tip.on(h('span', { class: 'rb-done' }, icon('check', 16)), () => [T.name, 'Every rank'], {});
+      return h('div', { class: 'rb-row trk' },
+        h('span', { class: 'rb-ic' }, icon(TRACK_ICON[k], 20)),
+        h('span', { class: 'rb-tn' }, h('b', { text: T.name }), h('span', { class: 'rb-pips' }, Array.from({ length: T.ranks.length }, (_, i) => h('i', { class: i < r ? 'on' : '' })))),
+        ch,
+        c ? h('span', { class: 'rb-cost' }, h('span', { class: s.currencies.gold < c.gold ? 'short' : '' }, icon('coin', 16), fmt(c.gold)), h('span', { class: (s.currencies.mats[c.mat] || 0) < c.n ? 'short' : '' }, icon(Base.matIcon(c.mat), 16), String(c.n))) : h('span'),
+        act);
+    }));
+  }
+
+  // ── the board itself, over the Hearth
+  let B = null; // { wrap, tab, view, list, seq }
+  const shown = () => !!B && !$('#sheet').hidden && $('#sheet').classList.contains('board') && $('#sheet').contains(B.wrap);
+  const timeStr = ms => Camp.timeStr(ms);
+  function open() {
+    const s = Save.state;
+    if (!s) return;
+    if (!s.roster.length) { FirstPick.open({ mode: 'pick' }); return; }
+    if (App.current !== 'home') App.go('home');
+    Base.tick(s);
+    B = { wrap: h('div', { class: 'rbw' }), tab: 'recruits' };
+    openSheet(B.wrap, 'board');
+    draw();
+  }
+  function close() { Tip.hide(); if (shown()) closeSheet(); B = null; App.refresh(); }
+  // what stops a hire, in a word or two (Hire's tooltip)
+  function whyNot(x, s) {
+    if (s.board.picks <= 0) return 'No hires left';
+    if (!Base.canHire(s)) return 'Roster full';
+    return x.price > s.currencies.gold ? `${fmt(x.price - s.currencies.gold)} short` : '';
+  }
+  function draw() {
+    if (!B) return;
+    Tip.hide();
+    const s = Save.state, b = s.board, isOpen = Base.boardOpen(s), rk = b.ranks.notices;
+    const list = isOpen ? b.recruits.map(r => ({ cls: r.cls, name: r.name, level: r.level, price: Base.recruitPrice(r, s), r })) : [];
+    B.list = list; B.seq = b.seq;
+    B.view = panel({
+      list, gold: s.currencies.gold, tab: B.tab, tabs: isOpen, onTab: t => { B.tab = t; draw(); },
+      stats: isOpen ? { picks: b.picks, timer: timeStr(Base.boardIn(s)), roster: s.roster.length, cap: Base.rosterCap(s) } : null,
+      locked: isOpen && rk < BOARD_TRACKS.notices.ranks.length ? { n: Base.boardSize(s) + 1, rank: rk + 1 } : null,
+      none: !isOpen ? ['lock', `Opens at ${BASE_UNLOCK_STAGE.recruitboard}`] : !list.length ? ['hourglass', `New faces in ${timeStr(Base.boardIn(s))}`] : null,
+      upgrades: B.tab === 'upgrades' ? upgrades(s) : null,
+      onClose: close, onRow: i => showCard(list[i]), onPlus: i => ask(list[i]),
+    });
+    B.wrap.replaceChildren(B.view.root);
+  }
+  const OVER = ':scope > .rb-modal, :scope > .rb-hc, :scope > .rb-reveal';
+  const layer = el => { if (!B) return; Tip.hide(); B.wrap.querySelectorAll(OVER).forEach(n => n.remove()); if (el) B.wrap.append(el); };
+  const overlaid = () => !!B && !!B.wrap.querySelector(OVER);
+  function ask(x) { const s = Save.state; layer(confirm({ r: x, gold: s.currencies.gold, why: whyNot(x, s), onCancel: () => layer(null), onHire: () => hire(x) })); }
+  function showCard(x) { layer(card({ r: x, gold: Save.state.currencies.gold, onBack: () => layer(null), onHire: () => ask(x) })); }
+  function hire(x) {
+    const s = Save.state, c = Base.hire(x.r.id, s);
+    if (!c) { toast(whyNot(x, s) || 'No one more can join now'); draw(); return; }
+    Tactics.owner(c.id); // their starter rules
+    Save.commit(); sfx('kindle');
+    const placed = s.party.includes(c.id);
+    draw();
+    layer(reveal(c, () => { click(); layer(null); if (!placed) toast(`${c.name} waits at the fire: the formation is full`); App.refresh(); }));
+  }
+  // The board keeps time while it's open: the timer, the purse, and a new board when the old one's time is up.
+  setInterval(() => {
+    if (!B) return;
+    if (!shown()) { B = null; return; }
+    if (document.hidden) return;
+    const s = Save.state;
+    Base.tick(s);
+    if (s.board.seq !== B.seq && !overlaid()) { draw(); return; }
+    if (B.view.timer) B.view.timer.textContent = timeStr(Base.boardIn(s));
+    if (B.view.gold) B.view.gold.textContent = fmt(s.currencies.gold);
+  }, 5000);
+  // Escape: back from the card or the confirmation, else close the board
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !shown()) return;
+    e.preventDefault();
+    if (overlaid()) { if (!B.wrap.querySelector(':scope > .rb-reveal')) layer(null); } else close();
+  });
+  return { open, close, panel, confirm, card, reveal, stance, get shown() { return shown(); } };
 })();

@@ -6,9 +6,10 @@ real input, the way a player taps it, and saves a screenshot of every step.
 
 At each step it checks that Wick's step is up with its line, that a press away from the lit thing is held back (the
 screen and the step don't change), then does what the step asks: a tap anywhere for a line, a tap on the lit thing,
-the name box, the first pick and the free recruit (a card, Hire, the reveal and the hero's line), Grow's + and Keep,
+the name box, the first pick and the free recruit (a row, its +, Hire, the reveal and the hero's line), Grow's + and Keep,
 the unforced 1-2 (Set out glows, the soft line on the road, nothing held back), and the drag in Formation. On the
-story's first line it opens Settings (Wick steps aside, Replay the guide does nothing, Wick comes back) and Help; at
+story's first line it opens Settings (Wick steps aside, Replay the guide does nothing, Wick comes back) and the Codex
+(Help), both from the Hearth's dock; at
 the turned size it then presses Skip, which goes straight to the name box, and at the other it taps every line. The
 battles play at the speed Wick sets (2× after his second pause). At the end the session is done, the save holds two
 heroes in the formation, 1-1 and 1-2 are cleared, the goal tracker says "Clear 1-3", and Settings → Replay the guide
@@ -57,23 +58,23 @@ STEPS = [
 # --resume: what the app opened again at each moment brings back: (the step that must show, a test of the screen it
 # needs). The same step, from its start, wherever it can be had again; where its moment has passed, the step the
 # session carries on with (the battle resolved while the app was closed, the results popup gone, the way back to the
-# Hearth already made by the load). The moments inside a step are the walk's own: pick-card (a card chosen), pick-reveal
-# (hired: the reveal), spend-placed (+ pressed, not kept), battle-1-2 (1-2 under way).
+# Hearth already made by the load). The moments inside a step are the walk's own: pick-card (a row chosen), pick-confirm
+# (its + pressed: Hire asks first), pick-reveal (hired: the reveal), spend-placed (+ pressed, not kept), battle-1-2 (1-2 under way).
 HEARTH = "App.current === 'home' && !!Camp.scene && !Camp.scene.onRoad && document.getElementById('sheet').hidden"
 ROAD = "!!Camp.scene && Camp.scene.onRoad && !!document.querySelector('.cv-card') && document.querySelector('.cv-card .cv-id').textContent === '{}'"
-BOARD = "FirstPick.shown && !document.querySelector('#sheet .fp-card.on') && !document.querySelector('[data-tut=pick-reveal]')"
+BOARD = "FirstPick.shown && !document.querySelector('#sheet .fp .rb-row.on') && !document.querySelector('#sheet .fp .rb-modal') && !document.querySelector('[data-tut=pick-reveal]')"
 HERO = "App.current === 'hero' && HeroSheet.placing === 0"
 FORM = "Formation.shown"
 RESUME = {
     **{k: (k, HEARTH) for k in ('hello', 'inn', 'king', 'hollow', 'wall', 'offer', 'name', 'welcome', 'board', 'setout', 'heroes', 'setout2', 'board2', 'form', 'bye', 'tolls', 'fire')},
-    'pick': ('pick', BOARD), 'pick-card': ('pick', BOARD), 'pick-reveal': ('setout', HEARTH),
+    'pick': ('pick', BOARD), 'pick-card': ('pick', BOARD), 'pick-confirm': ('pick', BOARD), 'pick-reveal': ('setout', HEARTH),
     'stage': ('stage', ROAD.format('1-1')), 'go': ('go', ROAD.format('1-1')),
     'order': ('heroes', HEARTH), 'speed': ('heroes', HEARTH), 'xp': ('heroes', HEARTH), 'home': ('heroes', HEARTH),
     'hero': ('hero', "App.current === 'party'"), 'stats': ('spend', HERO), 'spend': ('spend', HERO), 'spend-placed': ('spend', HERO),
     'keep': ('spend', HERO), 'strong': ('strong', "App.current === 'hero'"),
     'heroback': ('setout2', HEARTH), 'tabhome': ('setout2', HEARTH),
     'yours': ('yours', ROAD.format('1-2')), 'battle-1-2': ('board2', HEARTH), 'new': ('board2', HEARTH), 'home2': ('board2', HEARTH),
-    'hire': ('hire', BOARD), 'hire-card': ('hire', BOARD), 'hire-reveal': ('form', HEARTH),
+    'hire': ('hire', BOARD), 'hire-card': ('hire', BOARD), 'hire-confirm': ('hire', BOARD), 'hire-reveal': ('form', HEARTH),
     'place': ('place', FORM + " && document.querySelectorAll('#wk .wk-call').length === 2"), 'done': ('done', FORM),
 }
 # Wick's visit to Tactics after 1-3's first clear (js/visits.js): his soft lines, in order
@@ -289,8 +290,8 @@ def main():
                         press(b, 500)
                         check(js("document.getElementById('sheet').hidden") and js('Save.state.guide.replay') is None and any('showing you round already' in t for t in js("[...document.querySelectorAll('#toasts .toast')].map(t => t.textContent)")),
                               '  Replay the guide closes Settings, and does nothing while the session runs (“Wick is showing you round already”)')
-                    aside('Settings', '.camp .cv-corner [aria-label=Settings]', '#sheet:not([hidden]) .setbox', replay_and_close)
-                    aside('Help', '.camp .cv-corner [aria-label=Help]', '#screen:not([hidden]) .page.how', lambda: press(js("__mid('#screen .page.how .back')"), 400))
+                    aside('Settings', '.camp [data-tut=hearth-settings]', '#sheet:not([hidden]) .setbox', replay_and_close)
+                    aside('Codex', '.camp [data-tut=hearth-codex]', '#screen:not([hidden]) .page.how', lambda: press(js("__mid('#screen .page.how .back')"), 400))
                     s = js('__wk()')
                     if touch:
                         # the story's Skip, in the panel's corner: straight to the name box (the other size taps through)
@@ -349,6 +350,11 @@ def main():
                     check(bool(bub) and not bub.startswith('Three'), f'  Wick says a line on the {want}: “{bub}”')
                     shot(how + '-card')
                     probe(how + '-card')
+                    # its +: Hire asks first (the recruit, Free, Cancel and Hire)
+                    press(js(f"__mid(document.querySelectorAll('#sheet .fp [data-tut=pick-plus]')[{k}])"), 400)
+                    check(js("(() => { const h = document.querySelector('#sheet .fp .rb-modal [data-tut=pick-hire]'); return !!h && !h.disabled; })()"), '  its +: Hire asks first')
+                    shot(how + '-confirm')
+                    probe(how + '-confirm')
                     press(js("__mid('[data-tut=pick-hire]')"), 700)
                     check(js("!!document.querySelector('[data-tut=pick-reveal]')"), '  Hire: the reveal')
                     page.wait_for_timeout(900)  # the hero's line rises

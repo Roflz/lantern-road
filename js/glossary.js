@@ -1,6 +1,6 @@
 'use strict';
 // Lantern Road · the glossary: every term a player meets, defined once (onboarding spec §7, §8 and §10).
-// Tooltips, the Codex (Settings → Codex → Glossary) and Old Wick all read from this one table. It is also the naming
+// Tooltips, the Codex (the book on the Hearth's dock) and Old Wick all read from this one table. It is also the naming
 // list: every name a player sees, in one place, to review and rename in a single pass.
 // docs/glossary.md is generated from it by `node tools/glossary.js`, which also checks it against the game's own tables.
 // It is plain data: it needs no other file, touches no page, and nothing reads it yet.
@@ -41,7 +41,7 @@ const GLOSSARY = (() => {
     road: { name: 'The Lantern Road', icon: 'lantern', line: 'The way through five regions of stages, lit one lantern at a time.', more: 'Each cleared stage burns on the map, so you can see how far your light reaches.', see: ['region', 'stage', 'trip'] },
     battle: { name: 'Battle', icon: 'cleave', line: 'Your party against a stage’s foes, fought on its own while you watch.', more: 'You win by preparing: the formation, the rules, the skills and the gear. Speed it up, or skip it, any time.', see: ['turn', 'rule', 'skip'] },
     wick: { name: 'Old Wick', icon: 'lantern', line: 'The lamp-keeper at the fire, who knows the road and shows you the way.', more: 'Tap the lamp-keeper at the fire for a hand. Settings → Replay the guide plays the lessons again.', see: ['codex', 'hearth'] },
-    codex: { name: 'Codex', icon: 'book', line: 'The book in Settings with every term, foe, class, item and building.', more: 'Foes you haven’t met and gear you haven’t found show as silhouettes.', see: ['wick'] },
+    codex: { name: 'Codex', icon: 'book', line: 'The book on the Hearth’s dock: how battles work, and every term and foe.', more: 'Foes you haven’t met and gear you haven’t found show as silhouettes.', see: ['wick'] },
     // Bess and her quests (js/quests.js, docs/first-session-spec.md §4); "jobs" is her word for quests
     bess: { name: 'Bess', icon: 'scroll', line: 'The carter by the road out of the Hearth, with quests for your company.', more: 'She drives the carts that carry travellers on the road you’ve cleared. Tap her for her quests.', see: ['quests', 'jobs'] },
     quests: { name: 'Quests', icon: 'scroll', line: 'Bess’s work for your company: a goal on the road, and pay for it.', more: 'Accept one on her panel, and claim what it pays there once it’s done.', see: ['bess', 'gravedigger', 'jobs'] },
@@ -173,7 +173,7 @@ const GLOSSARY = (() => {
     awakening: { name: 'Awakening', icon: 'holy', line: 'A level-5 skill made greater still, for 5 more skill points.', more: 'From level 100, a threshold can open an awakening instead of a tier.', see: ['threshold', 'skill_level'] },
     combine: { name: 'Combining classes', icon: 'helm', line: 'At level 50, and again at 200, a hero can take up another class.', more: 'They gain its first tier and starter skill, and keep their own stats and basic attack.', see: ['threshold', 'class'] },
     respec: { name: 'Respec', icon: 'holy', line: 'Take back every stat and skill point, and spend them again.', more: 'Each threshold gives a free one, and the Shrine sells more. Opened tiers and classes stay.', see: ['shrine', 'threshold'] },
-    recruit: { name: 'Recruit', icon: 'scroll', line: 'A hero waiting on the Recruit Board, with stats rolled within their class’s range.', more: 'Bars show where each roll falls, so two recruits of one class can differ.', see: ['recruitboard', 'class'] },
+    recruit: { name: 'Recruit', icon: 'scroll', line: 'A hero waiting on the Recruit Board, with stats rolled within their class’s range.', more: 'Their card’s bars show where each roll falls, so two recruits of one class can differ.', see: ['recruitboard', 'class'] },
     roster: { name: 'Roster', icon: 'helm', line: 'Every hero you’ve hired, in the party or not.', more: 'It holds 8 to start, and the Barracks makes room for up to 24.', see: ['barracks', 'dismiss'] },
     dismiss: { name: 'Dismiss', icon: 'boot', line: 'Send a hero away for good; only their gear comes back.', see: ['roster'] },
     fatigue: { name: 'Fatigue', icon: 'fatigue', line: 'Tiredness from 0 to 100: every turn a hero takes adds 1.', more: 'Heroes shed it resting at the Hearth. Using a party item takes no one’s turn, so it costs none.', see: ['weary', 'exhausted', 'spent', 'rest'] },

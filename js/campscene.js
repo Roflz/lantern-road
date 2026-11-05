@@ -287,7 +287,10 @@ const CampScene = (() => {
   // ── the camera, at a canvas width
   // The orbit's parameters for a yaw; the road view's for a place along the road (looking north, down at the road from
   // above and behind, its target following the road's smoothed line); and a blend of two.
-  function orbitParams(yaw) { const w = ease(weightOf(yaw)), P = VIEWS.party, B = VIEWS.build, v = { yaw, w, road: 0, ty: 0 }; for (const k of ['pitch', 'dist', 'f', 'tx', 'tz', 'cy']) v[k] = lerp(P[k], B[k], w); return v; }
+  // At the Hearth the scene sits LIFT pixels higher (22 design pixels), so the dock along the bottom (js/camp.js,
+  // docs/mockups/hearth-dock.html) covers ground and not the fire; the road view's camera is its own.
+  const LIFT = 11;
+  function orbitParams(yaw) { const w = ease(weightOf(yaw)), P = VIEWS.party, B = VIEWS.build, v = { yaw, w, road: 0, ty: 0 }; for (const k of ['pitch', 'dist', 'f', 'tx', 'tz', 'cy']) v[k] = lerp(P[k], B[k], w); v.cy -= LIFT; return v; }
   const ROADCAM = { pitch: 34, dist: 330, f: 280, cy: 118 };
   const smoothX = z => { let sum = 0, n = 0; for (let d = -420; d <= 420; d += 70) { sum += roadAt(Math.max(30, z + d)); n++; } return sum / n; };
   function roadParams(zc) { const tx = smoothX(zc); return { yaw: 0, w: 0, road: 1, pitch: ROADCAM.pitch, dist: ROADCAM.dist, f: ROADCAM.f, cy: ROADCAM.cy, tx, tz: zc, ty: groundY(tx, zc) }; }
