@@ -53,7 +53,6 @@ const Fatigue = (() => {
     if (s.base.beds.includes(c.id)) return 'bed';
     return 'fire';
   }
-  const PLACE_NAMES = { road: 'Out on the road', hall: 'At the Masters’ Hall', yard: 'Training', bed: 'In a bed', fire: 'At the fire' };
   // Fatigue recovered per hour where they are.
   function rate(c, s = store(), o = {}) {
     const w = where(c, s, o), L = Base.level('infirmary', s);
@@ -160,7 +159,7 @@ const Fatigue = (() => {
     return out;
   }
 
-  return { state, spent, penalty, onRoad, where, PLACE_NAMES, rate, fillBeds, pin, advance, timeTo, battle };
+  return { state, spent, penalty, onRoad, where, rate, fillBeds, pin, advance, timeTo, battle };
 })();
 
 // Weary and Exhausted weaken a hero in battle (home-base spec §6).

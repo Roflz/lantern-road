@@ -452,7 +452,6 @@ function dressArmour(m, B, A, id, back) {
   const G = GEAR_ART[id], wt = ARMOUR_WEIGHT(id);
   if (!G || !wt) return;
   const acc = B.acc || '';
-  const torsoish = (x, y) => y >= B.torso && y < A.h - 1;
   for (let y = 0; y < m.length; y++) for (let x = 0; x < m[y].length; x++) {
     let ch = m[y][x];
     if (y >= B.torso && acc.includes(ch)) ch = m[y][x] = 'c';

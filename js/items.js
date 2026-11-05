@@ -29,7 +29,6 @@ const ITEM = {
   RATES: [[70, 25, 5], [55, 35, 10], [45, 40, 15], [35, 45, 20], [25, 50, 25]],
   RANK_SHIFT: { normal: 0, elite: 10, boss: 20 },
 };
-const RARITIES = ['common', 'fine', 'rare', 'relic'];
 const RARITY_NAMES = { common: 'Common', fine: 'Fine', rare: 'Rare', relic: 'Relic' };
 const SLOTS = ['weapon', 'armor', 'accessory'];
 const SLOT_NAMES = { weapon: 'Weapon', armor: 'Armour', accessory: 'Accessory' };
