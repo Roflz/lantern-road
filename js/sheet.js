@@ -14,7 +14,8 @@
 //              the arch. The tree (learn, raise, awaken) and Respec open from here
 //     Gear     what's worn; the Bag's pieces that fit, best first. A tap tries one on, a second opens its card
 //              (GearUI.card, js/bag.js). Unequip, and Auto-equip: the best that fits for each slot
-//     Rules    the hero's rules as when → do, top first, then Otherwise; Edit rules opens the editor (js/rules.js)
+//     Tactics  the hero's tactics (rules in the code) as when → do, top first, then Otherwise; Edit tactics opens the
+//              editor (js/rules.js)
 // A threshold, the tree and a respec open as framed panels in the panel's place, so the arch stays in sight. Every change
 // goes through the hero model (js/hero.js) or the item model (js/items.js), and is saved.
 // The guide points into it through data-tut: hero-tab-stats, hero-tab-skills, hero-tab-gear, hero-tab-rules (the tabs),
@@ -277,7 +278,7 @@ const HeroSheet = (() => {
     K.close.remove();
     K.plate.classList.add('hr-tabs');
     K.plate.setAttribute('role', 'tablist');
-    K.plate.replaceChildren(...[['stats', 'Stats', 'heart'], ['skills', 'Skills', 'book'], ['gear', 'Gear', 'helm'], ['rules', 'Rules', 'scroll']].map(([k, n, ic]) =>
+    K.plate.replaceChildren(...[['stats', 'Stats', 'heart'], ['skills', 'Skills', 'book'], ['gear', 'Gear', 'helm'], ['rules', 'Tactics', 'scroll']].map(([k, n, ic]) =>
       h('button', { class: 'hr-tab' + (ui.tab === k ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': ui.tab === k ? 'true' : 'false', 'data-tut': 'hero-tab-' + k,
         onclick: () => { if (ui.tab === k) return; click(); ui.tab = k; ui.tryOn = null; ui.worn = null; draw(); } },
         icon(ic, 16), h('span', { text: n }), dots[k] ? h('i', { class: 'hr-dot', 'aria-label': 'Something waits here' }) : null)));
@@ -373,7 +374,7 @@ const HeroSheet = (() => {
       !basic ? tag(st.L ? `Lv ${st.L}/${SKILL_LV_MAX}` : st.open ? 'Not learned' : `Tier ${roman(sk.tier)}`, st.L ? 'e' : '') : null,
       active ? tag(cost || 'Free', 'w') : null, active && sk.shape ? tag(SHAPES[sk.shape] || sk.shape) : null, active && sk.range ? tag(sk.range + (sk.reach ? ' · reach' : '')) : null,
       st.awakened ? tag('Awakened', 'e') : null,
-      active && !basic && st.equipped && !ruled ? tag('No rule uses it', 'b') : null,
+      active && !basic && st.equipped && !ruled ? tag('No tactic uses it', 'b') : null,
     ];
     const desc = (which, withNext) => h('p', { class: 'hr-desc' + (which === 'aw' ? ' aw' : '') }, skillParts(sk, L, which).map(x => (x.text != null ? x.text : h('b', {}, x.num, withNext && x.next && x.next !== x.num ? h('span', { class: 'hr-next', text: ' → ' + x.next }) : null))));
     const done = msg => { Save.commit(); if (msg) toast(msg); draw(); };
@@ -473,10 +474,10 @@ const HeroSheet = (() => {
         h('span', { class: 'hr-to', text: '→' }), h('span', { class: 'hr-do' }, icon(sk.icon || 'sword', 16), h('span', { text: sk.name || r.do })));
     };
     return [
-      sect('Rules, top first', { chip: h('em', { class: 'hr-chip dim', text: `${o.rules.length} / ${o.slots}` }) },
+      sect('Tactics, top first', { chip: h('em', { class: 'hr-chip dim', text: `${o.rules.length} / ${o.slots}` }) },
         h('div', { class: 'hr-rules', 'data-tut': 'hero-rules', 'data-scroll': 'rules' }, o.rules.map(row),
           h('div', { class: 'hr-rule other' }, h('span', { class: 'hr-num', text: '·' }), h('span', { class: 'hr-if' }, h('span', { text: 'Otherwise' })), h('span', { class: 'hr-to', text: '→' }), h('span', { class: 'hr-do' }, icon(basic.icon || 'sword', 16), h('span', { text: basic.name }))))),
-      h('div', { class: 'hr-row' }, h('span', { class: 'sp' }), btn2('Edit rules', () => App.actions.tactics(c.id, () => open(c.id, 'rules')), { cls: 'hr-edit' })),
+      h('div', { class: 'hr-row' }, h('span', { class: 'sp' }), btn2('Edit tactics', () => App.actions.tactics(c.id, () => open(c.id, 'rules')), { cls: 'hr-edit' })),
     ];
   }
 

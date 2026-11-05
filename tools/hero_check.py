@@ -9,7 +9,8 @@ Agnes's portrait, then, with taps where things are drawn (through the quarter-tu
   - Skills: a tap on a skill shows its card, a second tap watches it in the arch
   - a threshold: a path to choose lights the Skills tab; choosing a tier opens it, and the tree learns a skill
   - Gear: a tap tries a piece on (the arch says so); Auto-equip puts on the best that fits in each slot; Unequip
-  - Rules: one row a rule plus Otherwise; Edit rules opens the editor, and its Back comes back to Rules
+  - Tactics: one row a tactic plus Otherwise, under the plate Tactics, top first; Edit tactics opens the editor, and
+    its Back comes back to them
   - Respec gives the points back; Back returns to the camp with Formation open
   python tools/hero_check.py [--sizes 844x390,667x375t,1280x720,390x844t] [--shots docs/screens/hero]
 A size ending in t has a touch screen (and 390x844t is turned).
@@ -237,15 +238,17 @@ def main():
             check(char('agnes', '[c.gear.armor, c.gear.accessory, !!c.gear.weapon]') == [None, None, True], f'{tag}: Unequip takes off the armour and accessory, and keeps the weapon')
             tap('[data-tut="hero-autoequip"]', wait=450)
 
-            # Rules
+            # Tactics (rules in the code)
             tab('rules')
             n = js(f"Tactics.owner('{ids['agnes']}').rules.length")
-            check(js("document.querySelectorAll('[data-tut=\"hero-rules\"] .hr-rule').length") == n + 1 and 'Otherwise' in js("document.querySelector('.hr-rule.other').textContent"), f'{tag}: the rules list has {n} rules and Otherwise')
+            words = js("[document.querySelector('[data-tut=\"hero-tab-rules\"]').textContent, document.querySelector('.tab-rules h4').textContent, document.querySelector('.hr-edit').textContent]")
+            check(words[0] == 'Tactics' and words[1].startswith('Tactics, top first') and words[2] == 'Edit tactics', f'{tag}: the tab, its plate and its button say Tactics ({words})')
+            check(js("document.querySelectorAll('[data-tut=\"hero-rules\"] .hr-rule').length") == n + 1 and 'Otherwise' in js("document.querySelector('.hr-rule.other').textContent"), f'{tag}: the tactics list has {n} tactics and Otherwise')
             shot('rules')
             tap('.hr-edit', wait=500)
-            check(js("App.current") == 'tactics', f'{tag}: Edit rules opens the editor')
+            check(js("App.current") == 'tactics', f'{tag}: Edit tactics opens the editor')
             tap('#screen .btn.back', wait=600)
-            check(on() and js("HeroSheet.tab") == 'rules' and who() == ids['agnes'], f'{tag}: the editor\'s Back comes back to Rules')
+            check(on() and js("HeroSheet.tab") == 'rules' and who() == ids['agnes'], f'{tag}: the editor\'s Back comes back to Tactics')
 
             # Respec
             tab('skills')
