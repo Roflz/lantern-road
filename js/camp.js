@@ -96,8 +96,9 @@ const Camp = (() => {
     const plots = Array.from({ length: total }, (_, i) => (i >= open ? null : s.base.plots[i] ? { id: s.base.plots[i], art: BUILDINGS[s.base.plots[i]].art } : { empty: true }));
     // the board stands lit for a new game's first pick (screen 3), then dark until 1-2 opens it
     const board = { open: Base.boardOpen(s) || !s.roster.length }, gate = R.region + 1 < REGIONS.length;
-    const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), R.region, stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open].join('|');
-    return { heroes, region: R.region, stages, front: R.front, gate, plots, board, sig };
+    const bess = typeof Quests !== 'undefined' ? Quests.scene(s) : null; // Bess the carter and her cart (js/quests.js)
+    const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), R.region, stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open, bess ? bess.arrive : '-'].join('|');
+    return { heroes, region: R.region, stages, front: R.front, gate, plots, board, bess, sig };
   }
   // The buildings view opens with the first blueprint: until then the camera stays with the party.
   const locked = s => !BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (Base.built(id, s) || Base.blueprint(id, s)));
@@ -127,6 +128,8 @@ const Camp = (() => {
     }
     if (s.freePotion.waiting) { chips.fire = ['flask', s.freePotion.waiting]; sum.items += s.freePotion.waiting; }
     if (Base.boardOpen(s) && s.board.picks > 0 && s.board.recruits.length && (s.board.fresh || s.board.free)) chips.board = ['scroll', s.board.recruits.length];
+    const bq = typeof Quests !== 'undefined' ? Quests.ready(s) : 0; // Bess: a quest on offer, or something to claim
+    if (bq) chips.bess = ['scroll', bq];
     const all = [];
     if (sum.gold) all.push(['coin', fmt(sum.gold)]);
     for (const m in sum.mats) all.push([Base.matIcon(m), fmt(sum.mats[m])]);
@@ -208,6 +211,8 @@ const Camp = (() => {
     face.append(lvl);
     const goalText = h('span', { class: 'cv-gt' });
     const goalBtn = h('button', { class: 'cv-pnl cv-goal', 'data-tut': 'hearth-goal' }, h('span', { class: 'cv-gk', text: 'Next' }), goalText, h('span', { class: 'cv-go', text: 'Go' }));
+    // under it, Bess's story quest while it's on (js/quests.js, css/quests.css)
+    const questLine = typeof Quests !== 'undefined' ? Quests.tracker() : null;
     const gold = h('span', { class: 'cv-cv gold' }), bone = h('span', { class: 'cv-cv' });
     const purse = h('div', { class: 'cv-purse' },
       h('div', { class: 'cv-cur', title: 'Gold' }, h('span', { class: 'cv-ci' }, icon('coin', 22)), gold, h('button', { class: 'cv-plus', 'aria-label': 'Earn more gold', onclick: () => { click(); earnMore('tollhouse'); } }, '+')),
@@ -238,7 +243,7 @@ const Camp = (() => {
     const roadHud = h('div', { class: 'cv-roadhud' }, back, h('div', { class: 'cv-region' }, h('div', { class: 'cv-rt' }, rk, rn), prevR, nextR), cardBox);
     const dock = h('div', { class: 'cv-dock' }, heroesB, tacticsB, bagB, go, collect);
     const labels = h('div', { class: 'cv-labels', 'aria-hidden': 'true' });
-    camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, dock, me, goalBtn, roadHud, purse, corner, proto);
+    camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, dock, me, goalBtn, questLine, roadHud, purse, corner, proto);
     const el = h('div', { class: 'camp-view' }, camp);
 
     let live = null, chips = {}, goalNow = null, placed = { v: -1, w: -1, sig: '', r: -1, sel: null }, alive = true;
@@ -257,6 +262,7 @@ const Camp = (() => {
       goalNow = goal(s, W);
       goalText.textContent = goalNow.text;
       goalBtn.onclick = () => { click(); goalNow.go(); };
+      if (questLine) Quests.syncTracker(questLine, s);
       gold.textContent = fmt(s.currencies.gold);
       bone.textContent = fmt(s.currencies.mats.bone_dust || 0);
       const dots = (App.actions.dots && App.actions.dots()) || {};
@@ -386,7 +392,7 @@ const Camp = (() => {
     }
     const fade = (el, v, key) => { const o = Math.round(v * 50) / 50; if (el._o === o) return; el._o = o; el.style.opacity = o; if (key) el.style.visibility = o < 0.02 ? 'hidden' : 'visible'; };
     const nameOf = a => (a.id === 'board' ? 'Recruit Board' : a.plot != null ? (live.state.plots[a.plot].empty ? 'Empty plot' : BUILDINGS[live.state.plots[a.plot].id].name) : null);
-    const chipOf = a => (a.id === 'board' ? chips.board : a.id === 'fire' ? chips.fire : a.plot != null && !live.state.plots[a.plot].empty ? chips[live.state.plots[a.plot].id] : null);
+    const chipOf = a => (a.id === 'board' || a.id === 'bess' ? chips[a.id] : a.id === 'fire' ? chips.fire : a.plot != null && !live.state.plots[a.plot].empty ? chips[live.state.plots[a.plot].id] : null);
     function place(out) {
       const w = out.cam.w, R = out.road, sig = Object.entries(chips).map(([k, v]) => k + v.join('')).join(',');
       if (out.v === placed.v && w === placed.w && sig === placed.sig && R === placed.r && out.sel === placed.sel) return;
@@ -395,7 +401,7 @@ const Camp = (() => {
       const wc = Math.max(0, 1 - 2 * R), wr = Math.max(0, 2 * R - 1);
       const wp = Math.max(0, 1 - 2 * w) * wc, wb = Math.max(0, 2 * w - 1) * wc;
       fade(form, wp, true);
-      for (const el2 of [me, goalBtn, proto]) fade(el2, wc, true);
+      for (const el2 of [me, goalBtn, questLine, proto]) if (el2) fade(el2, wc, true);
       fade(dock, wc, true); fade(roadHud, wr, true);
       if (camp.classList.contains('on-road') !== R > 0.5) camp.classList.toggle('on-road', R > 0.5);
       if (go.hidden !== (w >= 0.5)) { go.hidden = w >= 0.5; collect.hidden = w < 0.5; }
@@ -428,6 +434,12 @@ const Camp = (() => {
           const n = mark('s:wick', 'cv-say', 'wick', () => h('span', {}, h('i'), h('i'), h('i')));
           put(n, x + 4, top - 26, wp); seen.add('s:wick');
         }
+        // Bess and her cart: an unseen box over them for Wick's guide to point at (js/quests.js); taps go to the scene
+        if (a.id === 'bess') {
+          const n = mark('h:bess', 'cv-hit', 'bess', () => h('span', { 'data-tut': 'hearth-bess' })), bw = Math.round((a.box[2] - a.box[0]) * K), bh = Math.round((a.box[3] - a.box[1]) * K);
+          if (n._w !== bw || n._h !== bh) { n._w = bw; n._h = bh; n.style.width = bw + 'px'; n.style.height = bh + 'px'; }
+          put(n, Math.round((a.box[0] + a.box[2]) / 2 * K), Math.round(a.box[1] * K), op); seen.add('h:bess');
+        }
       }
       for (const [key, node] of pool) if (!seen.has(key) && node._at.o !== 0) { node._at.o = 0; node.style.opacity = 0; }
     }
@@ -447,6 +459,8 @@ const Camp = (() => {
       if (a.id === 'board') { click(); if (!FirstSession.boardTap()) Buildings.open('recruitboard'); return; }
       if (a.id === 'fire') { click(); tapFire(); return; }
       if (a.id === 'wick') { click(); say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
+      // Bess tips her hat, and her panel opens (js/quests.js)
+      if (a.id === 'bess') { click(); live.hop('bess'); Quests.tap(); return; }
       if (a.hero != null) {
         const c = live.state.heroes[a.hero] && live.state.heroes[a.hero].c;
         if (!c) return;
@@ -462,7 +476,7 @@ const Camp = (() => {
     function at(x, y) {
       let best = null;
       for (const node of pool.values()) {
-        if (!(node._at.o > 0.5) || !node.dataset.id || node.classList.contains('cv-say')) continue;
+        if (!(node._at.o > 0.5) || !node.dataset.id || node.classList.contains('cv-say') || node.classList.contains('cv-hit')) continue;
         const l = node._at.x - node.offsetWidth / 2, t = node._at.y, inside = x >= l - 4 && x <= l + node.offsetWidth + 4 && y >= t - 4 && y <= t + node.offsetHeight + 4;
         if (inside && (!best || (node._at.z || 0) > (best._at.z || 0))) best = node;
       }

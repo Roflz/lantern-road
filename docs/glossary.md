@@ -23,7 +23,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 
 | Topic | Entries |
 |---|---|
-| [The basics](#the-basics) | 8 |
+| [The basics](#the-basics) | 12 |
 | [Battle](#battle) | 36 |
 | [Rules](#rules) | 56 |
 | [Heroes](#heroes) | 35 |
@@ -32,7 +32,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | [The road](#the-road) | 25 |
 | [Statuses](#statuses) | 57 |
 | [Resources](#resources) | 10 |
-| **All** | **283** |
+| **All** | **287** |
 
 ## The basics
 
@@ -46,6 +46,10 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Battle** | Your party against a stage’s foes, fought on its own while you watch. | You win by preparing: the formation, the rules, the skills and the gear. Speed it up, or skip it, any time. | `battle` · cleave |
 | **Old Wick** | The lamp-keeper at the fire, who knows the road and shows you the way. | Tap the lamp-keeper at the fire for a hand. Settings → Replay the guide plays the lessons again. | `wick` · lantern |
 | **Codex** | The book in Settings with every term, foe, class, item and building. | Foes you haven’t met and gear you haven’t found show as silhouettes. | `codex` · book |
+| **Bess** | The carter by the road out of the Hearth, with quests for your company. | She drives the carts that carry travellers on the road you’ve cleared. Tap her for her quests. | `bess` · scroll |
+| **Quests** | Bess’s work for your company: a goal on the road, and pay for it. | Accept one on her panel, and claim what it pays there once it’s done. | `quests` · scroll |
+| **The Gravedigger** | Bess’s first quest: defeat the Sexton at 1-18, for the travellers. | The travellers pay with the Toll House plan. | `gravedigger` · skull |
+| **Jobs** | Three small quests from Bess each day, each paying gold and a material. | New ones come at midnight. Do all three for a gear roll and a party item. | `jobs` · hourglass |
 
 ## Battle
 
@@ -400,11 +404,11 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 592 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 747 · js/data.js 592 · js/firstsession.js 109, 122, 138 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 109 · js/guide.js 92, 98 · js/main.js 377 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 118 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
 | Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 324 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |

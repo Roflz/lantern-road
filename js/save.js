@@ -76,6 +76,9 @@ function defaultState() {
     // replay: the steps seen again since Settings → Replay the guide, or null. visits: his unlock visits
     // (js/visits.js), each 'new', 'later' or 'seen'.
     guide: { step: '', done: false, replay: null, visits: {} },
+    // Bess the carter (js/quests.js): bess, at the Hearth; story, her first quest ('', 'offered', 'on', 'claimed');
+    // jobs, the daily jobs ('', 'due', 'new', 'seen'); daily, today's.
+    quests: { bess: false, story: '', jobs: '', daily: null },
   };
 }
 
@@ -126,6 +129,9 @@ function normalize(d) {
   if (!(s.lastSeen > 0)) s.lastSeen = Date.now();
   // A save from before the guide, with heroes in it, has had its first session.
   if (!(isObj(d) && isObj(d.guide)) && s.roster.length) s.guide.done = true;
+  // A save from before Bess, past 1-2, has her at the Hearth already, with her first quest offered.
+  if (!(isObj(d) && isObj(d.quests)) && s.campaign.cleared.includes('1-2')) { s.quests.bess = true; s.quests.story = 'offered'; }
+  if (typeof Quests !== 'undefined') Quests.ensure(s);
   if (typeof Base !== 'undefined') Base.ensure(s);
   return s;
 }
