@@ -175,6 +175,8 @@ def main():
             check(len(rows) == 3 and all(r[1] == 'Free' for r in rows) and all(r[2] for r in rows), f'three rows, each named and Free: {rows}')
             check(not js("!!document.querySelector('#sheet .fp .rb-x')") and not js("!!document.querySelector('#sheet .fp .rb-tabs, #sheet .fp .rb-st')"), 'no ✕, no tabs, no counts')
             check(js("document.querySelector('#sheet .fp .wick-bubble').textContent").startswith('Three looking for work'), 'Wick: “Three looking for work…”')
+            if not touch:
+                page.mouse.move(2, 2)  # (the title's tap left the mouse over a row)
             page.wait_for_timeout(400)
             shot('board', 'first')
             k = [r[0] for r in rows].index('sellsword')
