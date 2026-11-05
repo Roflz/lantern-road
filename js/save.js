@@ -16,7 +16,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 8;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
@@ -232,6 +232,12 @@ const MIGRATIONS = {
       x.st = 0; x.en = [];
       if (GEAR[x.id].rarity === 'relic') Items.enchantRelic(x, old);
     }
+    return old;
+  },
+  // Version 8 (the hero card, 2026-11-05): level-up points no longer go into resistances. Every point a hero placed in
+  // one comes back as a point to spend on a stat (the hero card's Spend shows them on its badge).
+  8: old => {
+    for (const c of Array.isArray(old.roster) ? old.roster : []) if (isObj(c) && isObj(c.alloc)) delete c.alloc.res;
     return old;
   },
 };

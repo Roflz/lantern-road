@@ -5,7 +5,7 @@
 // Hero is the model: every change goes through it. It touches no page, so tools/simtest.js tests it in Node.
 //
 // A character:
-//   { id, cls, name, level, xp, base: { hp, mp, pow, def, spd, crit, dodge }, alloc: { hp.., res: { stun.. } },
+//   { id, cls, name, level, xp, base: { hp, mp, pow, def, spd, crit, dodge }, alloc: { hp, mp, pow.. },
 //     classes: [first class, second?, third?], tiers: { cls: highest open tier }, skills: { id: level 1–5 },
 //     awakened: [ids], awakenSlots, equip: [active ids or null], picks: { threshold level: choice }, respecs,
 //     lessons: { skill, rule }, fatigue, spent (true from 100 fatigue until it falls below 50, js/rest.js),
@@ -19,10 +19,10 @@ const HERO = {
   AWAKEN_FROM: 100,          // thresholds from here can awaken a level-5 skill
   AWAKEN_COST: 5,            // skill points to awaken a level-5 skill
   TIERS: 9,
-  // What one stat point buys (tune). Speed, Crit, Dodge and each resistance take 25 points at most.
+  // What one stat point buys (tune). Speed, Crit and Dodge take 25 points at most. Resistances take no points (the
+  // user's decision of 2026-11-05): they come from the class, the levels, gear and buildings.
   POINT: { hp: 10, mp: 5, pow: 1, def: 1, spd: 0.2, crit: 1, dodge: 1 },
   POINT_CAP: { spd: 25, crit: 25, dodge: 25 },
-  RES_POINT: 1, RES_CAP: 25,
   RES_GROWTH: 0.1,           // every resistance grows this much per level
   RULE_SLOTS: 3,             // every character starts with 3 rule slots
   LESSONS: 2,                // the Masters' Hall teaches at most this many extra active slots (build step 5)
@@ -32,8 +32,7 @@ const STAT_LABELS = { hp: 'Health', mp: 'Mana', pow: 'Power', def: 'Defense', sp
 
 const Hero = (() => {
   const clone = x => JSON.parse(JSON.stringify(x));
-  const zeroRes = () => Object.fromEntries(RES_KEYS.map(k => [k, 0]));
-  const zeroAlloc = () => Object.assign(Object.fromEntries(STAT_KEYS.map(k => [k, 0])), { res: zeroRes() });
+  const zeroAlloc = () => Object.fromEntries(STAT_KEYS.map(k => [k, 0]));
 
   // ── XP: the XP to go from level L to L + 1 (tune)
   const xpToNext = L => (L >= HERO.CAP ? Infinity : Math.round(30 * Math.pow(L, 1.6)));
@@ -71,7 +70,7 @@ const Hero = (() => {
   }
   function res(c) {
     const C = CLASSES[c.cls], out = {};
-    for (const k of RES_KEYS) out[k] = C.res[k] + HERO.RES_GROWTH * (c.level - 1) + (c.alloc.res[k] || 0) * HERO.RES_POINT;
+    for (const k of RES_KEYS) out[k] = C.res[k] + HERO.RES_GROWTH * (c.level - 1);
     return out;
   }
   // With the plain stats of the gear they wear (js/items.js), then its enchantment lines: a percent line is a share of
@@ -103,18 +102,18 @@ const Hero = (() => {
   }
 
   // ── points
-  const statSpent = c => STAT_KEYS.reduce((n, k) => n + (c.alloc[k] || 0), 0) + RES_KEYS.reduce((n, k) => n + (c.alloc.res[k] || 0), 0);
+  const statSpent = c => STAT_KEYS.reduce((n, k) => n + (c.alloc[k] || 0), 0);
   const free = c => new Set(c.classes.map(k => CLASSES[k].starter));
   const skillSpent = c => Object.entries(c.skills).reduce((n, [id, L]) => n + L - (free(c).has(id) ? 1 : 0), 0) + c.awakened.length * HERO.AWAKEN_COST;
   const points = c => ({ stat: c.level - 1 - statSpent(c), skill: Math.floor(c.level / 5) - skillSpent(c) });
-  const capOf = k => (k.startsWith('res:') ? HERO.RES_CAP : HERO.POINT_CAP[k] || Infinity);
-  const placed = (c, k) => (k.startsWith('res:') ? c.alloc.res[k.slice(4)] || 0 : c.alloc[k] || 0);
-  // Places n stat points in k: a stat, or 'res:stun' and the like. Returns how many it placed.
+  const capOf = k => (STAT_KEYS.includes(k) ? HERO.POINT_CAP[k] || Infinity : 0);
+  const placed = (c, k) => c.alloc[k] || 0;
+  // Places n stat points in k, one of STAT_KEYS (a resistance takes none). Returns how many it placed.
   function allocate(c, k, n = 1) {
     const room = Math.min(points(c).stat, capOf(k) - placed(c, k));
     const m = Math.max(0, Math.min(n, room));
     if (!m) return 0;
-    if (k.startsWith('res:')) c.alloc.res[k.slice(4)] += m; else c.alloc[k] += m;
+    c.alloc[k] += m;
     return m;
   }
 
@@ -306,10 +305,8 @@ const Hero = (() => {
     if (d.base && typeof d.base === 'object') for (const k of STAT_KEYS) if (Number.isFinite(d.base[k])) c.base[k] = d.base[k];
     if (Array.isArray(d.classes)) c.classes = [d.cls].concat(d.classes.filter(k => CLASSES[k] && k !== d.cls)).slice(0, 3);
     for (const k of c.classes) c.tiers[k] = clamp(Math.round((d.tiers || {})[k]) || 1, 1, HERO.TIERS);
-    if (d.alloc) {
-      for (const k of STAT_KEYS) c.alloc[k] = Math.max(0, Math.round(d.alloc[k]) || 0);
-      for (const k of RES_KEYS) c.alloc.res[k] = Math.max(0, Math.round((d.alloc.res || {})[k]) || 0);
-    }
+    // (points an older save placed in resistances, alloc.res, are not read: they come back to spend; js/save.js, version 8)
+    if (d.alloc) for (const k of STAT_KEYS) c.alloc[k] = Math.max(0, Math.round(d.alloc[k]) || 0);
     if (d.skills) for (const id in d.skills) if (owns(c, id) && SKILLS[id].tier <= c.tiers[SKILLS[id].cls]) c.skills[id] = clamp(Math.round(d.skills[id]) || 0, 0, SKILL_LV_MAX);
     for (const id in c.skills) if (!c.skills[id]) delete c.skills[id];
     for (const k of c.classes) c.skills[CLASSES[k].starter] = Math.max(1, c.skills[CLASSES[k].starter] || 0);

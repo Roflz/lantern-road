@@ -350,7 +350,7 @@ def main():
             elif sid == 'speed':
                 press(js(f"() => ({MID})('[data-tut=battle-speed]')"))
             elif sid == 'spend':
-                press(js(f"() => ({MID})('.hr-stats .hr-plus')"))  # Grow: + on a stat (Keep is the next step)
+                press(js(f"() => ({MID})('[data-tut=hero-plus-pow]')"))  # Grow: + on a stat, after Spend (Done is the next step)
             elif w['tap'] == 'any':
                 press(stage_point(js('() => Frame.W') / 2, 60))
             else:

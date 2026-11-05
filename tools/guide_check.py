@@ -6,7 +6,7 @@ real input, the way a player taps it, and saves a screenshot of every step.
 
 At each step it checks that Wick's step is up with its line, that a press away from the lit thing is held back (the
 screen and the step don't change), then does what the step asks: a tap anywhere for a line, a tap on the lit thing,
-the name box, the first pick and the free recruit (a row, its +, Hire, the reveal and the hero's line), Grow's + and Keep,
+the name box, the first pick and the free recruit (a row, its +, Hire, the reveal and the hero's line), Grow's Spend, + and Done,
 the unforced 1-2 (Set out glows, the soft line on the road, nothing held back), and the drag in Formation. On the
 story's first line it opens Settings (Wick steps aside, Replay the guide does nothing, Wick comes back) and the Codex
 (Help), both from the Hearth's dock; at
@@ -34,7 +34,7 @@ SIZES = '844x390,390x844t'
 # The steps in order, with what each one says (its first words; "~words" for words in the middle), and how to answer it.
 #   any: a tap anywhere   target: a tap on the lit thing   name, pick, hire, plus, place: special
 #   soft-setout, soft-go: the unforced 1-2's soft steps (nothing held back), answered by Set out
-# A step id ending in "?" may be passed over (the hero screen already on its Stats tab).
+# A step id ending in "?" may be passed over (the hero card already spending its points).
 STEPS = [
     ('hello', 'Another company. Come in.', 'any'), ('inn', 'I’m Wick. I keep the inn', 'any'),
     ('king', 'Fifty years ago, the king', 'any'), ('hollow', 'So he learned to raise the dead', 'any'),
@@ -64,14 +64,15 @@ HEARTH = "App.current === 'home' && !!Camp.scene && !Camp.scene.onRoad && docume
 ROAD = "!!Camp.scene && Camp.scene.onRoad && !!document.querySelector('.cv-card') && document.querySelector('.cv-card .cv-id').textContent === '{}'"
 BOARD = "FirstPick.shown && !document.querySelector('#sheet .fp .rb-row.on') && !document.querySelector('#sheet .fp .rb-modal') && !document.querySelector('[data-tut=pick-reveal]')"
 HERO = "App.current === 'hero' && HeroSheet.placing === 0"
+SPEND = HERO + " && HeroSheet.mode === 'spend'"
 FORM = "Formation.shown"
 RESUME = {
     **{k: (k, HEARTH) for k in ('hello', 'inn', 'king', 'hollow', 'wall', 'offer', 'name', 'welcome', 'board', 'setout', 'heroes', 'setout2', 'board2', 'form', 'bye', 'tolls', 'fire')},
     'pick': ('pick', BOARD), 'pick-card': ('pick', BOARD), 'pick-confirm': ('pick', BOARD), 'pick-reveal': ('setout', HEARTH),
     'stage': ('stage', ROAD.format('1-1')), 'go': ('go', ROAD.format('1-1')),
     'order': ('heroes', HEARTH), 'speed': ('heroes', HEARTH), 'xp': ('heroes', HEARTH), 'home': ('heroes', HEARTH),
-    'hero': ('hero', "App.current === 'party'"), 'stats': ('spend', HERO), 'spend': ('spend', HERO), 'spend-placed': ('spend', HERO),
-    'keep': ('spend', HERO), 'strong': ('strong', "App.current === 'hero'"),
+    'hero': ('hero', "App.current === 'party'"), 'stats': ('stats', HERO), 'spend': ('spend', SPEND), 'spend-placed': ('spend', SPEND),
+    'keep': ('spend', SPEND), 'strong': ('strong', "App.current === 'hero'"),
     'heroback': ('setout2', HEARTH), 'tabhome': ('setout2', HEARTH),
     'yours': ('yours', ROAD.format('1-2')), 'battle-1-2': ('board2', HEARTH), 'new': ('board2', HEARTH), 'home2': ('board2', HEARTH),
     'hire': ('hire', BOARD), 'hire-card': ('hire', BOARD), 'hire-confirm': ('hire', BOARD), 'hire-reveal': ('form', HEARTH),
@@ -328,8 +329,8 @@ def main():
                         check(js('!Battle.paused && !Wick.step'), '  1-2 plays on: nothing stops it')
                         probe('battle-1-2')
                 elif how == 'plus':
-                    press(js("__mid('.hr-stats .hr-plus')"), 400)
-                    check(js('HeroSheet.placing') == 1, '  + places a point (Keep comes next)')
+                    press(js("__mid('[data-tut=hero-plus-pow]')"), 400)
+                    check(js('HeroSheet.placing') == 1, '  + places a point (Done comes next)')
                     probe('spend-placed')
                 elif how == 'target':
                     press(s['hole'])

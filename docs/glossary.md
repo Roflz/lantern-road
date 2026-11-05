@@ -161,7 +161,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **XP** | Experience from battles and training; enough of it brings a new level. | Battle XP is a share of a level at the stage’s level, so a hero below it catches up fast. A first clear pays at least 30% of a level at your top hero’s level. | `xp` · star |
 | **Too easy** | A stage that pays a hero under 10% of their own level in XP. | A stage below a hero’s level pays less of theirs. New stages on the road pay more. | `too_easy` · star |
 | **Level** | How far a hero has grown, from 1 up to 200. | Each level brings a stat point and the class’s own growth. Every fifth brings a skill point. | `level` · star |
-| **Stat point** | One for every level: spend it on a stat or a resistance. | Speed, Crit, Dodge and each resistance take 25 points at most. | `stat_point` · plus |
+| **Stat point** | One for every level: spend it on a stat. | Speed, Crit and Dodge take 25 points at most. Resistances grow with each level on their own. | `stat_point` · plus |
 | **Skill point** | One for every fifth level: learn a skill, or raise one a level. |  | `skill_point` · plus |
 | **Threshold** | Levels 30, 50, 80, 100, 120, 150, 180 and 200, where something new opens. | Each brings a free respec and one choice: the next tier of a tree, another class, or an awakening. | `threshold` · star |
 | **Skill** | A hero’s ability: an active they use, or a passive that’s always on. |  | `skill` · book |
@@ -419,7 +419,7 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 372 |
-| straight apostrophes | curly ones (’) |  | js/bag.js 214 · js/data.js 295 |
+| straight apostrophes | curly ones (’) |  | js/bag.js 271 · js/data.js 295 |
 | Ossuary, the Gravecaller’s first path | Charnel Host | The Boneward path ends in Charnel Fortress. | js/classes-late.js: CLASSES.gravecaller.paths[0] |
 | Surgeon, the Barber-Surgeon’s second path | Sawbones |  | js/classes-late.js: CLASSES.surgeon.paths[1] |
 | Bastion, the Warden’s second path | Unbroken | Unbroken is also a skill on that path, and the status the skill gives. | js/classes.js: CLASSES.warden.paths[1] |

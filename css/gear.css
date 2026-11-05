@@ -1,6 +1,48 @@
-/* Lantern Road · gear: the hero sheet's Gear tab, the item card and the Bag (js/sheet.js, js/bag.js).
-   After the screen mockups ("Equipment"): rarity shows as a colour and a word, every stat line carries its icon, and
-   the bands read Always, Costs, When. */
+/* Lantern Road · gear (js/bag.js): the tall card and the piece's card (the hero card's Gear and dressing, and the Bag),
+   after docs/mockups/hero-card.html; then the item card's bottom sheet (GearUI.card) and the Bag, after the screen
+   mockups ("Equipment"). */
+
+/* ── the tall card: a piece in its rarity's frame (the only place rarity's colour shows), its level at the bottom left,
+   ▲ ▼ against what's worn at the top right, and the gear stars' pips at the bottom right */
+.gc{position:relative;width:var(--gc-w,56px);height:var(--gc-h,80px);flex:none;display:grid;place-items:center;padding:0;background:radial-gradient(ellipse at 50% 30%,#271d2c,#0c0910 75%);border:2px solid var(--gc-r,#4a3a2a);box-shadow:0 0 0 1px #000,inset 0 0 12px rgba(0,0,0,.8);overflow:hidden;cursor:pointer}
+.gc.lg{--gc-w:66px;--gc-h:96px}.gc.md{--gc-w:64px;--gc-h:92px}
+.gc img{filter:drop-shadow(0 2px 0 rgba(0,0,0,.6))}
+.gc .lv{position:absolute;left:4px;bottom:3px;font:600 11px/1 var(--f-body);color:var(--ash)}
+.gc .mk{position:absolute;right:4px;top:3px;font:600 11px/1 var(--f-body)}
+.gc .mk.up{color:var(--good,#9fd68a)}.gc .mk.dn{color:var(--bad,#ec8070)}
+.gc .pips{right:4px;bottom:4px;gap:1px}
+.gc .pips i{width:7px;height:7px}
+.gc .nw{position:absolute;left:4px;top:4px;width:6px;height:6px;border-radius:50%;background:var(--bone);box-shadow:0 0 4px rgba(242,231,208,.6)}
+.gc.empty{border-style:dashed;--gc-r:#3e3024;background:rgba(12,9,16,.6)}
+.gc .ghost{opacity:.3}
+.gc.no{opacity:.35;filter:grayscale(.7)}
+.gc.sel{box-shadow:0 0 0 1px #000,0 0 0 3px var(--ember),0 0 12px rgba(244,166,70,.5)}
+.gc.trying::after{content:"";position:absolute;inset:0;border:1px solid rgba(244,166,70,.6)}
+.gc.r-common{--gc-r:#7d7580}.gc.r-fine{--gc-r:#5a9a48}.gc.r-rare{--gc-r:#4f86e8}.gc.r-relic{--gc-r:#e0a83a}
+.gc.r-rare:not(.sel){box-shadow:0 0 0 1px #000,inset 0 0 12px rgba(0,0,0,.8),0 0 8px rgba(79,134,232,.4)}
+.gc.r-relic:not(.sel){box-shadow:0 0 0 1px #000,inset 0 0 12px rgba(0,0,0,.8),0 0 10px rgba(224,168,58,.5)}
+.gc.r-relic::before,.gc.glint::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,240,200,.4) 50%,transparent 65%) no-repeat;background-size:300% 100%;background-position:120% 0;pointer-events:none}
+.gc.r-relic::before{animation:gc-sweep 6s ease-in-out infinite}
+.gc.glint::before{animation:gc-sweep .8s ease-out 1}
+@keyframes gc-sweep{0%{background-position:120% 0}20%,100%{background-position:-20% 0}}
+/* the piece's card: its name, rarity and who can use it, its stats as icon and number, its effects, the stars' band */
+.pc{display:grid;align-content:start;gap:8px;min-width:0}
+.pc-nm{font:400 21px/1 var(--f-display);color:var(--bone)}
+.pc-kind{font:400 13px/1 var(--f-body);color:var(--dim,#8f8496)}
+.pc-stats{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:4px}
+.pc-stats span{display:flex;align-items:center;gap:4px}
+.pc-stats img{width:12px;height:12px}
+.pc-stats b{font:600 15px/1 var(--f-body);color:var(--bone)}
+.pc-stats em{font:600 11px/1 var(--f-body);font-style:normal}
+.pc-stats em.g{color:var(--good,#9fd68a)}.pc-stats em.b{color:var(--bad,#ec8070)}
+.pc-fx{margin:0;display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:8px;font:400 13px/1.3 var(--f-body);color:var(--ash)}
+.pc-fx img{width:12px;height:12px;margin-top:3px}
+.pc-en{display:flex;flex-wrap:wrap;gap:4px 8px;padding:4px 0;border-top:1px solid #3a2c22;border-bottom:1px solid #3a2c22}
+.pc-en span{font:600 11px/1.3 var(--f-body);color:var(--plate,#e2c48a)}
+.pc .hc-row{margin-top:8px}
+@media (prefers-reduced-motion:reduce){.gc::before{animation:none!important}}
+
+/* ── the item card's bottom sheet, and the Bag */
 
 :root{--r-common:#b4a8b6;--r-fine:#b4de98;--r-rare:#8cc4e6;--r-relic:#f1d36a}
 .r-common{--rc:var(--r-common)}.r-fine{--rc:var(--r-fine)}.r-rare{--rc:var(--r-rare)}.r-relic{--rc:var(--r-relic)}
@@ -12,10 +54,6 @@
 .prow.front .pspr{width:56px;height:56px}
 .pslot .pspr img{width:auto;height:44px;background:none;box-shadow:none;image-rendering:pixelated}
 .prow.front .pslot .pspr img{height:52px}
-
-/* the stage while trying something on */
-.hs-stage.trying{box-shadow:inset 0 0 0 2px var(--ember)}
-.hs-ov.who .hs-kv b{font-weight:400;color:var(--bone)}
 
 /* the three slots */
 .gr-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -34,16 +72,6 @@
 .gr-well.r-relic{box-shadow:0 0 12px rgba(241,211,106,.35)}
 .gr-well.r-rare{box-shadow:0 0 8px rgba(140,196,230,.2)}
 @keyframes gr-pulse{50%{box-shadow:0 0 22px rgba(244,166,70,.5)}}
-
-/* trying on */
-.gr-try{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:7px 8px;background:#1d130b;border:2px solid #6b4520}
-.gr-try.on{border-color:var(--ember);background:linear-gradient(180deg,#2c1c10,#1d130b)}
-.gr-try.no{border-color:#6a3030;background:#251217}
-.gr-try.no .hs-k{color:var(--bad);text-transform:none;letter-spacing:0;font:italic 13px/1.3 var(--f-body)}
-.gr-try>div{display:grid;gap:3px;min-width:0}
-.gr-try b{font:400 18px/1 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gr-try .gr-well{width:34px;height:34px}
-.gr-try .small{min-height:38px;min-width:0;padding:0 9px}
 
 /* the Bag's pieces */
 .gr-bagrow{display:flex;align-items:center;gap:8px}

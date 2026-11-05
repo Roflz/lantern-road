@@ -19,7 +19,7 @@ that changes a screen.
 | 5 Formation and the Party screen | `screen('party')` in `js/app.js`; `.prow`, `.pslot`, `.rrow` in `css/app.css`; roster rows (`App.actions.rosterRow`) in `js/camp.js` | Old layout; Formation is being built |
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build; Pause and the turn order checked by `tools/battle_check.py` |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
-| 8 The hero | `js/sheet.js` (`HeroSheet`, the `'hero'` screen), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`) | Redesigned (`docs/mockups/hero.html`, 1.32); checked by `tools/hero_check.py` |
+| 8 The hero card | `js/sheet.js` (`HeroSheet`, the `'hero'` screen, and `tipsFor`, which gives every `data-tip` its tooltip through `js/tip.js`), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`, and the card kit `hc-` the Bag and the Heroes list share), the tall card and the piece's card in `js/bag.js` (`GearUI.tall`, `GearUI.pieceLines`) and `css/gear.css` (`gc-`, `pc-`) | Redesigned again as one page (`docs/mockups/hero-card.html`, D1, approved 2026-11-05, to `docs/ui-rules.md`); checked by `tools/hero_check.py` |
 | 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout; star pips on the tiles and the card, and the enchantment lines' band (the gear study, step 1) |
 | 10 Buildings | `js/buildings.js`, `css/base.css`; the Recruit Board's panel is `RecruitBoard` (end of `js/buildings.js`), `css/board.css` (`rb-`) | Old layout, but the Recruit Board: redesigned (`docs/mockups/recruit-board.html`, 2026-11-05: the stagecoach rows, the confirmation, the reveal, the Upgrades tab; the recruit's card is a placeholder until the new hero card); checked by `tools/board_check.py` |
 | 11 Tactics | `js/rules.js` (`Tactics`, the model, and `TacticsEditor`, the `'tactics'` screen), `css/rules.css` (`tx-`) | Redesigned (`docs/mockups/tactics.html`, 1.35); checked by `tools/tactics_check.py` |
@@ -37,7 +37,7 @@ that changes a screen.
 | Data: statuses, conditions, foes, stages, regions | `js/data.js` |
 | Classes and skills | `js/classes.js`, `js/classes-late.js` |
 | The battle simulation (seed and setup in, event log out) | `js/sim.js` |
-| Heroes: rolls, levels, points, thresholds, trees | `js/hero.js` |
+| Heroes: rolls, levels, points (stats only: resistances take none from save version 8), thresholds, trees | `js/hero.js` |
 | Gear and loot: pieces, rolls, stars and enchantment lines (`ENCHANT`; the star odds and floors are `STARS` in `js/data.js`) | `js/items.js` |
 | The home base model: buildings, plots, Renown, the Recruit Board, idle buildings, the road's tolls | `js/base.js` |
 | Fatigue and rest | `js/rest.js` |
@@ -109,6 +109,16 @@ because it only holds words.
   - `tools/simtest.js` and `tools/playthrough.js`: the same results.
   - `frame_check.py`, `results_check.py`, `playthrough_ui.py` and `node tools/glossary.js` pass.
 
+## Removed with the hero card (2026-11-05)
+
+Each was checked with grep across `js/`, `index.html` and `tools/` first.
+- **The old hero sheet's styles** (the Later table's row): everything in `css/sheet.css` but the sprite stage (`.stg-*`),
+  the `.hs-` classes the item card's sheet and the prototype tools still use (`hs-banner`, `hs-card`, `hs-k`, `hs-kv`,
+  `hs-row`, `hs-tag`, `hs-why`), the Party screen's markers and the battle's floating words; `.hs-stage`, `.hs-ov` and
+  `.gr-try` in `css/gear.css`.
+- **The hero screen's tabs** (Stats, Skills, Gear, Tactics) and their styles in `css/hero.css`, the skill watched on a
+  dummy in the arch (`HeroSheet.watch`, `.playing`), the Gear tab's Card and Unequip, and `HeroSheet.waiting` (no caller).
+
 ## Later: dead code in files a builder is working in
 
 Remove these in a second PR, once the road view, Formation and the guide have merged. Check each one again first,
@@ -120,7 +130,7 @@ because those builds may already have removed or reused it.
 | `js/app.js` | `showAway`'s own sheet, after `if (actions.away) return actions.away(ms)`, and `awayGains` (and its export) | `js/camp.js` always sets `App.actions.away` (`camp.js` is in `index.html`), so the fallback never runs. Nothing pushes to `awayGains`: `grep -rn awayGains js tools` finds only `js/app.js` |
 | `css/map.css` | `.ts-unl` | No element has the class: `grep -rn ts-unl js` finds nothing (its last use went in `aba4b1e`) |
 | `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map, Party and Bag leave the column. That is not yet; they still call it |
-| `css/sheet.css`, `css/gear.css` | the old hero sheet's styles: everything in `css/sheet.css` but `.stg-*` (the sprite stage) and the `.hs-` classes the Bag and the prototype tools still use (`hs-banner`, `hs-card`, `hs-k`, `hs-kv`, `hs-row`, `hs-tag`, `hs-why`); `.hs-stage`, `.hs-ov` and `.gr-try` in `css/gear.css` | The hero screen (`js/sheet.js`) draws with `css/hero.css` now: `grep -on "hs-[a-z]*" js/*.js` finds only those seven, in `js/bag.js` and `js/proto.js` |
+| `css/gear.css` | `.gr-slots`, `.gr-slot`, `.gr-bagrow`, `.gr-fits`, `.gr-legend` | No element has these classes (`grep -rn` across `js/` finds none); dead before the hero card, so left for this table |
 
 No dead code was found in `js/camp.js`, `js/campscene.js`, `css/camp.css`, `js/map.js` or `js/guide.js`. Their
 exports that no other file reads (`Camp.sceneState`, `CampScene.weightOf` and the like) are used inside their own
@@ -134,7 +144,7 @@ file.
 | `docs/content-spec.md`, `docs/campaign-spec.md`, `docs/home-base-spec.md` | Current for numbers and content. The home-base spec's §11 still mentions "the ring", the camp before the camp views. |
 | `docs/glossary.md` | Generated by `node tools/glossary.js`; rerun it whenever `js/` changes. |
 | `docs/mockups/` | Designs, not game code. `camp3d.js` is the prototype that `js/campscene.js` was ported from; `hearth-art.js` and `hearth-scene.js` are where `js/hearthart.js` and the Hearth's terrace came from; `d2-art.js` is where `js/dockart.js` came from (for `recruit-board.html` and `hearth-dock.html`, approved 2026-11-05). |
-| `docs/ui-rules.md` | Current: the UI rules every screen follows (2026-11-05). The Recruit Board and the Hearth's dock are the first screens drawn to them. |
+| `docs/ui-rules.md` | Current: the UI rules every screen follows (2026-11-05). The Recruit Board, the Hearth's dock and the hero card are drawn to them. |
 | `docs/screens/` | `landscape/`, `camp-views/`, `road-view/`, `formation/`, `results/`, `hero/`, `tactics/`, `hearth/`, `guide/`, `board/`, `dock/` and `battle/` show the current game (`hearth/`, the HUD before the dock) (`battle/`'s `before-` shots, the old Pause and turn order). The rest (`app-shell/`, `campaign/`, `characters/`, `equipment/`, `home-base/`, `polish/`, `regions/`) are portrait-era screenshots from build steps 2–7: old layouts. |
 | `docs/playtest-log.md`, `docs/onboarding-spec.md`, `docs/idle-heroes-study.md`, `docs/darkest-dungeon-study.md` | Not in git yet: they are in the main checkout only. Start with the play-test log's "Where things stand". The onboarding spec's §2 and §12 say at their top that `docs/idle-heroes-study.md` supersedes them. |
 | `README.md` | Current. Its last section describes the roguelike in `lantern-road.html`. |
