@@ -36,8 +36,14 @@ const GearUI = (() => {
     const B = Items.bands(x, {});
     return [...B.good.filter(l => !l.stat).map(l => l.text), ...B.when.map(l => `${l.tag}: ${l.text}`), ...B.bad.filter(l => !l.stat).map(l => l.text)];
   }
-  // the gear stars' lines, when a piece has them: strings, or { text }
-  const enWords = x => (Array.isArray(x && x.en) ? x.en.map(e => (typeof e === 'string' ? e : e && (e.text || e.name)) || '').filter(Boolean) : []);
+  // the gear stars' enchantment lines, when a piece has them: [{ text, tip }]. Items.bands gives them as its lines once the
+  // stars land (PR #42); until then a piece's en, as strings or { text }, stands in.
+  function enLines(x) {
+    const B = x ? Items.bands(x, {}) : {};
+    if (Array.isArray(B.lines)) return B.lines.map(l => ({ text: l.text, tip: l.tip || null }));
+    return (Array.isArray(x && x.en) ? x.en : []).map(e => ({ text: typeof e === 'string' ? e : (e && (e.text || e.name)) || '', tip: null })).filter(l => l.text);
+  }
+  const enWords = x => enLines(x).map(l => l.text);
   // what a piece gives, for its tooltip: "Gravecutter|+10 Power · −1.0 Speed · Cleave … +20% damage"
   function pieceTip(x) {
     const D = Items.def(x), st = Items.stats(x);
@@ -63,7 +69,7 @@ const GearUI = (() => {
   // A piece's card lines: its plain stats as icon and number (green and red against what's worn, when given), then its
   // effects, then the gear stars' band.
   function pieceLines(x, worn) {
-    const st = Items.stats(x), was = worn ? Items.stats(worn) : {}, B = Items.bands(x, {}), en = enWords(x);
+    const st = Items.stats(x), was = worn ? Items.stats(worn) : {}, B = Items.bands(x, {}), en = enLines(x);
     const keys = STAT_ORDER.filter(k => st[k] || (worn && was[k]));
     const fx = l => h('p', { class: 'pc-fx' }, icon(l.icon || 'star', 12), h('span', { text: l.tag ? `${l.tag}: ${l.text}` : l.text }));
     return [
@@ -72,7 +78,7 @@ const GearUI = (() => {
         return h('span', { 'data-tip': GEAR_STAT_NAMES[k] }, icon(GEAR_STAT_ICONS[k], 12), h('b', { text: (st[k] < 0 ? '−' : '') + fmtStat(k, Math.abs(st[k] || 0)) }), dt ? h('em', { class: d > 0 ? 'g' : 'b', text: dt }) : null);
       })) : null,
       ...B.good.filter(l => !l.stat).map(fx), ...B.when.map(fx), ...B.bad.filter(l => !l.stat).map(fx),
-      en.length ? h('div', { class: 'pc-en' }, en.map(t => h('span', { text: t }))) : null,
+      en.length ? h('div', { class: 'pc-en' }, en.map(l => h('span', { 'data-tip': l.tip, text: l.text }))) : null,
     ].filter(Boolean);
   }
   // The head of a piece's card: its name, then its rarity and who can use it.
