@@ -126,12 +126,16 @@ const App = (() => {
     Save.commit();
     return true;
   }
+  // Puts a hero in a formation slot: from another slot they swap with whoever stands there; from the roster, whoever
+  // stands there goes to rest. False when the Oathbound Gorget refuses it.
   function placeIn(slot, id) {
     const p = Save.state.party, was = p.indexOf(id);
-    if (frontLocked([[id, slot], [p[slot], was]])) return;
+    if (slot < 0 || slot > 5 || was === slot) return false;
+    if (frontLocked([[id, slot], [p[slot], was]])) return false;
     if (was >= 0) p[was] = p[slot];
     p[slot] = id;
     Save.commit();
+    return true;
   }
   screen('party', {
     tab: true,
@@ -297,7 +301,7 @@ const App = (() => {
   }
 
   return {
-    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene, syncTabs, swapSlots,
+    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene, syncTabs, swapSlots, placeIn, frontLocked,
     get current() { return cur; },
   };
 })();

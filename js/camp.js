@@ -347,7 +347,7 @@ const Camp = (() => {
       if (far < 8 && ev.type === 'pointerup') tapAt(p.x, p.y);
     };
     camp.addEventListener('pointerup', up); camp.addEventListener('pointercancel', up);
-    // ── the formation: tap a face for the hero, drag to swap places, tap an empty slot to add someone
+    // ── the formation: drag to swap places; a tap opens Formation (js/formation.js)
     let fd = null;
     form.addEventListener('pointerdown', ev => {
       const tile = ev.target.closest('.cv-tile');
@@ -392,9 +392,8 @@ const Camp = (() => {
       const tile = ev.target.closest('.cv-tile');
       if (!tile) return;
       if (form.dataset.dragged) { form.dataset.dragged = ''; return; }
-      const slot = +tile.dataset.slot, id = Save.state.party[slot];
       click();
-      if (id) App.showCharacter(id); else App.go('party', { arrange: slot });
+      Formation.open(); // screen 5, js/formation.js
     });
 
     function start() {
