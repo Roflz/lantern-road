@@ -8,7 +8,9 @@ const DUMMY_PAL = { n: '#c8a050', k: '#5a3a20', w: '#6b4a2e' };
 
 class SpriteStage {
   // el: the element to fill. o: { cls, look (the gear drawn: Items.look), scale, hx (the hero's place, 0–1), dummy,
-  // ambient: skill ids to play now and then }
+  // ambient: skill ids to play now and then }. The hero screen's arch (js/sheet.js) adds: backdrop: false (draw only
+  // the hero and what they do, over the arch's own night), dummy: 'play' (the dummy steps in only while a skill
+  // plays), dx (the dummy's place, 0–1) and ground (art pixels below the hero's feet).
   constructor(el, o) {
     this.el = el; this.o = o; this.k = o.scale || 6;
     this.cv = document.createElement('canvas'); this.cv.className = 'stg-cv';
@@ -29,9 +31,9 @@ class SpriteStage {
     if (w === this.W && hh === this.H) return;
     this.W = w; this.H = hh; this.cv.width = w; this.cv.height = hh;
     this.x.imageSmoothingEnabled = false;
-    this.gy = hh - Math.max(3, Math.round(hh * 0.16));
+    this.gy = hh - (this.o.ground != null ? this.o.ground : Math.max(3, Math.round(hh * 0.16)));
     this.hx = Math.round(w * (this.o.hx != null ? this.o.hx : 0.32));
-    this.dx = Math.round(w * 0.76);
+    this.dx = Math.round(w * (this.o.dx != null ? this.o.dx : 0.76));
     const r = makeRng(w * 31 + hh);
     this.props = [];
     for (let i = 0; i < Math.ceil(w / 9); i++) this.props.push({ x: Math.floor(r() * w), y: Math.floor(this.gy - 3 - r() * 6), k: r() > 0.5 ? 'grave' : 'cross' });
@@ -61,6 +63,7 @@ class SpriteStage {
   play(sk, info = {}) {
     const F = (typeof Battle !== 'undefined' && Battle.FX && Battle.FX[sk.fx]) || { kind: 'buff', color: '#f4a646' };
     const now = performance.now(), s = this.hero(), top = this.gy - (s.bh || s.height), hx = this.hx, dx = this.dx, ty = this.gy - 8;
+    this.dummyUntil = now + 1900;
     const hit = (delay, big) => this.at(delay, () => {
       this.dummyHit = performance.now() + 90; this.dummyShake = performance.now();
       this.burst(dx, ty, F.color || '#fff0d0', big ? 14 : 8, big ? 1.4 : 1);
@@ -116,20 +119,23 @@ class SpriteStage {
     const x = this.x, W = this.W, H = this.H, gy = this.gy;
     if (this.auto.length && t > this.nextAuto && !noMotion()) { const a = this.auto[this.ai++ % this.auto.length]; if (a) this.play(a.sk, a.info); this.nextAuto = t + 2600; }
     while (this.events.length && this.events[0].t <= t) this.events.shift().fn();
-    const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0812'); g.addColorStop(1, '#1b1421');
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-    const A = REGION_ART[0];
-    for (const p of this.props) { const s = sprite(PROPS[p.k].map, A.pc, 'stg:' + p.k); x.globalAlpha = 0.35; x.drawImage(s, p.x, p.y - s.height + 4); x.globalAlpha = 1; }
-    x.fillStyle = '#1f1826'; x.fillRect(0, gy, W, H - gy); x.fillStyle = '#2a2131'; x.fillRect(0, gy, W, 1);
-    for (let i = 0; i < W; i += 3) { x.fillStyle = (i * 7) % 5 ? '#241c2a' : '#18121e'; x.fillRect(i, gy + 2 + (i % 3), 2, 1); }
-    // the lantern
-    const lx = Math.max(3, this.hx - 10), flick = 0.32 + Math.sin(t / 130) * 0.03 + Math.sin(t / 47) * 0.02;
-    const lg = x.createRadialGradient(lx, gy - 9, 1, lx, gy - 9, H * 0.95);
-    lg.addColorStop(0, `rgba(244,166,70,${flick})`); lg.addColorStop(1, 'rgba(244,166,70,0)');
-    x.globalCompositeOperation = 'lighter'; x.fillStyle = lg; x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'source-over';
-    if (H > 22) { const p = sprite(PROPS.post.map, A.pc, 'stg:post'); x.drawImage(p, lx - 2, gy - p.height + 1); }
+    const A = REGION_ART[0], bare = this.o.backdrop === false;
+    if (bare) x.clearRect(0, 0, W, H);
+    else {
+      const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0b0812'); g.addColorStop(1, '#1b1421');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      for (const p of this.props) { const s = sprite(PROPS[p.k].map, A.pc, 'stg:' + p.k); x.globalAlpha = 0.35; x.drawImage(s, p.x, p.y - s.height + 4); x.globalAlpha = 1; }
+      x.fillStyle = '#1f1826'; x.fillRect(0, gy, W, H - gy); x.fillStyle = '#2a2131'; x.fillRect(0, gy, W, 1);
+      for (let i = 0; i < W; i += 3) { x.fillStyle = (i * 7) % 5 ? '#241c2a' : '#18121e'; x.fillRect(i, gy + 2 + (i % 3), 2, 1); }
+      // the lantern
+      const lx = Math.max(3, this.hx - 10), flick = 0.32 + Math.sin(t / 130) * 0.03 + Math.sin(t / 47) * 0.02;
+      const lg = x.createRadialGradient(lx, gy - 9, 1, lx, gy - 9, H * 0.95);
+      lg.addColorStop(0, `rgba(244,166,70,${flick})`); lg.addColorStop(1, 'rgba(244,166,70,0)');
+      x.globalCompositeOperation = 'lighter'; x.fillStyle = lg; x.fillRect(0, 0, W, H); x.globalCompositeOperation = 'source-over';
+      if (H > 22) { const p = sprite(PROPS.post.map, A.pc, 'stg:post'); x.drawImage(p, lx - 2, gy - p.height + 1); }
+    }
     // the dummy
-    if (this.o.dummy !== false) {
+    if (this.o.dummy !== false && (this.o.dummy !== 'play' || t < (this.dummyUntil || 0))) {
       const D = sprite(DUMMY_MAP, DUMMY_PAL, 'dummy');
       let ddx = this.dx - 4; const e = t - this.dummyShake;
       if (e < 220) ddx += Math.round(Math.sin(Math.PI * e / 220) * 2);
