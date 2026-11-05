@@ -460,10 +460,11 @@ function foeStats(F, level) {
 // ── Regions
 // Five regions along the road (campaign spec §2, §6), every one built.
 // mat: the material it drops most (MATERIALS in js/save.js). opens: what lights the road into it. lit: what the trip
-// summary says when its boss falls.
+// summary says when its boss falls. trophy: its Trophy (MATERIALS), which its elites and boss always drop, and the foes
+// in trophyFrom sometimes (regions study §3.1; TROPHY below). Regions III–V's wait for the play-test of I and II.
 const REGIONS = [
-  { num: 'I', name: 'Gravefields', levels: [1, 10], mat: 'bone_dust', boss: 'The Sexton', relic: 'gravediggersspade', stages: 18, line: 'Barrow-fields under a low moon. The dead do not stay put.', lit: 'The Gravefields are lit.' },
-  { num: 'II', name: 'Drowned Chapel', levels: [11, 30], mat: 'chapel_wax', boss: 'The Drowned Bishop', relic: 'bishopscrozier', stages: 17, opens: 'Beat the Sexton to enter', line: 'A flooded chapel where the drowned still hold their services, and bells toll under the water.', lit: 'The Drowned Chapel is lit.' },
+  { num: 'I', name: 'Gravefields', levels: [1, 10], mat: 'bone_dust', trophy: 'burial_coin', trophyFrom: ['digger', 'mourner'], boss: 'The Sexton', relic: 'gravediggersspade', stages: 18, line: 'Barrow-fields under a low moon. The dead do not stay put.', lit: 'The Gravefields are lit.' },
+  { num: 'II', name: 'Drowned Chapel', levels: [11, 30], mat: 'chapel_wax', trophy: 'bell_bronze', trophyFrom: ['bellwraith', 'sister'], boss: 'The Drowned Bishop', relic: 'bishopscrozier', stages: 17, opens: 'Beat the Sexton to enter', line: 'A flooded chapel where the drowned still hold their services, and bells toll under the water.', lit: 'The Drowned Chapel is lit.' },
   { num: 'III', name: 'Thornwood', levels: [31, 50], mat: 'heartwood', boss: 'The Antlered One', relic: 'barkofoldgod', stages: 17, opens: 'Beat the Drowned Bishop to enter', line: 'An old wood where the road narrows, wolves run in packs, and an old god waits.', lit: 'Thornwood is lit.' },
   { num: 'IV', name: 'Ashen Keep', levels: [51, 75], mat: 'cinder_iron', boss: 'The Burnt Marshal', relic: 'marshalsblade', stages: 18, opens: 'Beat the Antlered One to enter', line: 'A keep its own marshal burned. It is burning still.', lit: 'The Ashen Keep is lit, and its fires are out.' },
   { num: 'V', name: 'Hollow Throne', levels: [76, 100], mat: 'throne_tallow', boss: 'The Hollow King', relic: 'hollowcrown', stages: 18, opens: 'Beat the Burnt Marshal to enter', line: 'A court of the dead under a throne of tallow and bone, where would-be kings wait for a crown.', lit: 'Every lantern on the road burns.' },
@@ -549,6 +550,11 @@ const UNLOCKS = {
   // Region V: the Hollow Throne teaches nothing new. Its boss lights the last lantern.
   'relic:hollowcrown': { kind: 'relic', name: 'Relic: the Hollow Crown', icon: 'star', relic: 'hollowcrown' },
   roadlit: { kind: 'feature', name: 'Every lantern on the road burns', icon: 'lantern', line: 'The Hollow King has fallen. Every stage stays open to farm.' },
+  // First finds (regions study §4): a region's Trophy, and the first piece of its own gear, each once, wherever it drops
+  'find:burial_coin': { kind: 'find', name: 'Burial Coin', icon: 'burialcoin', line: 'For making and remaking Gravefields gear at the Smithy, which opens after the Sexton.' },
+  'find:bell_bronze': { kind: 'find', name: 'Bell Bronze', icon: 'bellbronze', line: 'For making and remaking Drowned Chapel gear at the Smithy, which opens after the Sexton.' },
+  'find:gear:0': { kind: 'find', name: 'Gravefields gear', icon: 'lantern', line: 'Gear that drops only in the Gravefields. Its card names the region.' },
+  'find:gear:1': { kind: 'find', name: 'Drowned Chapel gear', icon: 'lantern', line: 'Gear that drops only in the Drowned Chapel. Its card names the region.' },
 };
 for (const id in UNLOCKS) UNLOCKS[id].id = id;
 // What opening a region also brings (home-base spec §3): its buildings' blueprints and the classes that join the recruit
@@ -790,6 +796,17 @@ const CLEAR = {
 const XP_FLOOR = 0.3;
 // A stage that pays a hero less than this share of their own level is tagged Too easy for them (tune).
 const XP_TOO_EASY = 0.1;
+// Trophies (regions study §3.1, tune): an elite or a boss always drops its stage region's Trophy (elite and boss: how
+// many), and the region's own signature foes (REGIONS[r].trophyFrom) drop one at chance. Wandering foes drop none.
+const TROPHY = { chance: 0.15, elite: 1, boss: 3 };
+// What a foe drops of its stage region's Trophy: { id, n, chance }, or null.
+function trophyOf(F, region) {
+  const R = REGIONS[region], id = R && R.trophy;
+  if (!id || !F || F.wander) return null;
+  if (F.boss) return { id, n: TROPHY.boss, chance: 1 };
+  if (F.elite) return { id, n: TROPHY.elite, chance: 1 };
+  return (R.trophyFrom || []).includes(F.id) ? { id, n: 1, chance: TROPHY.chance } : null;
+}
 // A loot roll is a party item 60% of the time, by these odds, and a gear roll otherwise.
 const LOOT_ITEM = 0.6;
 const LOOT_ITEMS = [['draught', 50], ['lampoil', 25], ['tincture', 15], ['salts', 10]];

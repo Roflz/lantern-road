@@ -291,11 +291,12 @@ const RoadMap = (() => {
   function formation(st, info, dark) {
     const cell = (x, slot) => {
       if (!x) return h('span', { class: 'fcell empty' });
-      const key = foeKey(x), F = FOES[key], spr = foeSprite(key);
+      const key = foeKey(x), F = FOES[key], spr = foeSprite(key), T = trophyOf(F, st.region);
       const waits = slot >= 2 && isWaiter(F);
       const img = h('img', { class: 'fspr' + (F.boss ? ' big' : ''), src: spr.toDataURL(), alt: dark ? 'Unknown foe' : F.name });
       return h('button', { class: 'fcell' + (dark ? ' sil' : '') + (info === slot ? ' on' : '') + (F.elite ? ' elite' : '') + (F.boss ? ' boss' : ''), disabled: !!dark, 'aria-label': dark ? 'An unknown foe' : `${F.name}${waits ? ', waits behind' : ''}`, onclick: () => { click(); stageSheet(st.index, info === slot ? null : slot); } },
-        img, h('span', { class: 'fn', text: dark ? '?' : F.name.replace(/^The /, '') }), waits && !dark ? h('span', { class: 'wt', text: 'waits' }) : null);
+        img, h('span', { class: 'fn', text: dark ? '?' : F.name.replace(/^The /, '') }), waits && !dark ? h('span', { class: 'wt', text: 'waits' }) : null,
+        T && !dark ? h('span', { class: 'tr', title: trophyLine(T) }, ico(matIcon(T.id))) : null);
     };
     const kids = [
       h('div', { class: 'frow back' }, h('span', { class: 'fl', text: 'Back' }), [2, 3, 4, 5].map(k => cell(st.foes[k], k))),
@@ -306,7 +307,7 @@ const RoadMap = (() => {
   }
   const isWaiter = F => { const at = [F.basic, ...F.skills].map(id => SKILLS[id]).filter(sk => sk && (sk.power || sk.charge)); return at.length > 0 && at.every(sk => { const t = sk.charge ? SKILLS[sk.charge] : sk; return t.range === 'melee' && !sk.reach && !t.reach; }); };
   function foeInfo(st, x) {
-    const key = foeKey(x), F = Object.assign({}, FOES[key], (x && x.over) || {}), L = (x && x.level) || st.level, fs = foeStats(F, L);
+    const key = foeKey(x), F = Object.assign({}, FOES[key], (x && x.over) || {}), L = (x && x.level) || st.level, fs = foeStats(F, L), T = trophyOf(FOES[key], st.region);
     const sk = id => { const S = SKILLS[id]; return h('li', {}, ico(S.icon), h('b', { text: S.name }), h('span', { text: [S.cost ? `${S.cost} mana` : 'basic', S.tip].filter(Boolean).join(' · ') })); };
     const phase = (FOES[key].phases || []).map(p => h('li', { class: 'ph' }, ico('rage'), h('b', { text: p.name }), h('span', { text: `below ${Math.round(p.below * 100)}% health: ${p.line}` })));
     return h('div', { class: 'foeinfo' },
@@ -314,9 +315,21 @@ const RoadMap = (() => {
       h('p', { class: 'flavor', text: F.intro || '' }),
       // What the foe does that its skills don't say: it starts Hidden, or heals every turn.
       F.hidden || F.regen ? h('p', { class: 'fi-tr', text: [F.hidden ? 'Starts Hidden: single-target attacks can’t aim at it until it attacks' : null, F.regen ? `Heals ${+(F.regen * 100).toFixed(1)}% of its health every turn` : null].filter(Boolean).join(' · ') }) : null,
+      T ? h('p', { class: 'fi-tr drop', title: matUse(T.id) }, ico(matIcon(T.id)), trophyLine(T)) : null,
       h('div', { class: 'fi-st' }, [['heart', fs.hp, 'Health'], ['sword', Math.round(fs.pow), 'Power'], ['shield', Math.round(fs.def), 'Defense'], ['boot', fs.spd.toFixed(1), 'Speed']].map(([i, v, k]) => h('span', { title: k }, ico(i), v))),
       h('ul', { class: 'fi-sk' }, [F.basic, ...F.skills].filter(id => SKILLS[id]).map(sk), phase),
       h('div', { class: 'fi-res' }, RES_KEYS.map(k => h('span', {}, RESISTS[k].name, h('b', { text: Math.round(fs.res[k]) + '%' })))));
+  }
+  // The region's Trophy (regions study §3.1): which of the stage's foes drop it, and how surely. A chip on the rewards
+  // row names them ("Burial Coin · Gravewarden, Gravedigger 15%"), and a mark on each foe that drops it.
+  const matIcon = id => (typeof Base !== 'undefined' ? Base.matIcon(id) : 'bone');
+  const trophyLine = T => `Drops ${MATERIALS.find(m => m.id === T.id).name}: ${T.chance >= 1 ? (T.n > 1 ? `${T.n}, always` : 'always') : `${Math.round(T.chance * 100)}% chance`}`;
+  function trophyTag(st, tag) {
+    const list = st.foes.filter(Boolean).map(x => FOES[foeKey(x)]).map(F => ({ F, T: trophyOf(F, st.region) })).filter(o => o.T);
+    if (!list.length) return null;
+    const id = list[0].T.id, M = MATERIALS.find(m => m.id === id), seen = new Set();
+    const who = list.filter(o => !seen.has(o.F.id) && seen.add(o.F.id)).map(o => o.F.name.replace(/^The /, '') + (o.T.chance < 1 ? ` ${Math.round(o.T.chance * 100)}%` : o.T.n > 1 ? ` ×${o.T.n}` : ''));
+    return tag('e', matIcon(id), `${M.name} · ${who.join(', ')}`, matUse(id));
   }
   // The stage's rewards, by its tier; and until the first clear, the ribbon with what lighting it brings.
   // XP is measured for the lead hero: what it is as a share of their own level (p.each, from Campaign.preview).
@@ -331,7 +344,8 @@ const RoadMap = (() => {
       tag('y', 'coin', `~${fmt(p.gold)}`, 'Gold for clearing it, every foe defeated'),
       tag('', 'star', `~${fmt(p.xp)} XP${lead ? ' · ' + pctOf(lead.share) : ''}`, (lead ? `XP for each hero: ${pctOf(lead.share)} of a level for ${lead.c.name} (Lv ${lead.c.level}).` : `About ${Math.round(p.xpLv * 100)}% of a level at level ${st.level}.`) + floor),
       easy.length ? tag('b', null, 'Too easy', `Under ${pctOf(XP_TOO_EASY)} of a level for ${easy.map(x => x.c.name).join(', ')}. A stage below a hero’s level pays less of theirs; new stages on the road pay more.`) : null,
-      tag('', typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
+      tag('', matIcon(R.mat), `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
+      trophyTag(st, tag),
       tag('w', 'bag', p.gear >= 1 ? 'Gear' : `Gear ${Math.round(p.gear * 100)}%`, st.kind === 'boss' ? 'Boss rarity: up to Rare' : st.kind === 'elite' ? 'Elite rarity' : `${REGIONS[st.region].name} rarity`),
     ];
     const unl = first && st.first.length ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' }), st.first.map(id => tag('e', UNLOCKS[id].icon, UNLOCKS[id].kind === 'condition' ? 'Condition: ' + UNLOCKS[id].name : UNLOCKS[id].name, UNLOCKS[id].line || ''))) : first ? h('div', { class: 'ribbon1' }, h('span', { class: 'k', text: 'First clear' }), h('span', { class: 'tag e', text: '×2 gold and materials' })) : null;

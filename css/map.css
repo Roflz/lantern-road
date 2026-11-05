@@ -123,6 +123,11 @@
 .fcell.sil .fspr{filter:brightness(0) drop-shadow(0 0 1px #3a3044)}
 .fn{font:7px/1.2 var(--f-pixel);letter-spacing:.02em;text-transform:uppercase;text-align:center;color:var(--ash)}
 .wt{position:absolute;top:2px;right:2px;font:6px var(--f-pixel);text-transform:uppercase;padding:1px 3px;background:#2a2230;color:var(--ward)}
+/* a foe that drops the region's Trophy (regions study §3.1): its mark, and the line in its info */
+.fcell .tr{position:absolute;top:2px;left:2px;line-height:0}
+.fcell .tr .ico{width:10px;height:10px}
+.fi-tr.drop{display:flex;align-items:center;gap:5px;color:var(--ember)}
+.fi-tr.drop .ico{width:12px;height:12px}
 .foeinfo{display:grid;gap:6px;margin-top:4px;padding:8px;background:rgba(7,5,11,.7);border:1px solid var(--ember);animation:fadein .2s}
 .fi-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .fi-h b{font:20px/1 var(--f-display)}

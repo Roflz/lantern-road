@@ -25,14 +25,20 @@ const SERVERS_KEY = 'lantern-road-servers';      // the last server used, and a 
 // A server's own key: S1 has the keys above, S2 and up the same with "-s2" and so on (-bak and -broken after it).
 const saveKey = (n, part = '') => (n > 1 ? `${SAVE_KEY}-s${n}` : SAVE_KEY) + part;
 
-// Each region drops one material more often than the others (design §8). The names are placeholders.
+// Each region drops one material more often than the others (design §8): its staple, for buildings. The first five are
+// the staples, in region order (MATERIALS[r] is region r's). After them, each region's Trophy (trophy: true; the regions
+// study §3.1), for making and remaking its own gear at the Smithy, a later build. Regions III–V's Trophies come later.
 const MATERIALS = [
   { id: 'bone_dust', name: 'Bone Dust', region: 0 },
   { id: 'chapel_wax', name: 'Chapel Wax', region: 1 },
   { id: 'heartwood', name: 'Heartwood', region: 2 },
   { id: 'cinder_iron', name: 'Cinder Iron', region: 3 },
   { id: 'throne_tallow', name: 'Throne Tallow', region: 4 },
+  { id: 'burial_coin', name: 'Burial Coin', region: 0, trophy: true },
+  { id: 'bell_bronze', name: 'Bell Bronze', region: 1, trophy: true },
 ];
+// What a Trophy is for, for its tooltips ('' for a staple: the buildings say what they need).
+const matUse = id => { const m = MATERIALS.find(x => x.id === id); return m && m.trophy ? `For making and remaking ${REGIONS[m.region].name} gear at the Smithy, which opens after the Sexton.` : ''; };
 // A character is made and kept by the hero model (js/hero.js): rolled stats, level, points, skills and choices.
 const newCharacter = (cls, id, name) => Hero.create(cls, id, { name });
 

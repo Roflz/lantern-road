@@ -106,7 +106,8 @@ const Campaign = (() => {
     const L = stage.level, S = GOLD_SCALE(L), won = res.winner === 0, rank = stageRank(stage);
     const r = { won, first: !!(o.first && won), gold: 0, spoilsGold: 0, clearGold: 0, xpLv: 0, mats: {}, items: {}, gear: [], foes: 0, called: 0 };
     const item = () => { const id = pickW(rng, LOOT_ITEMS); r.items[id] = (r.items[id] || 0) + 1; };
-    const gear = (gr, why) => r.gear.push({ piece: Items.roll(L, stage.region, rng, Object.assign({ classes: o.classes }, gr)), why });
+    // a gear roll tries the region's own line first (Items.loot); the Cage Mimic's, with its rarity set, stays general
+    const gear = (gr, why) => r.gear.push({ piece: Items.loot(L, stage.region, rng, Object.assign({ classes: o.classes }, gr)), why });
     const lootRoll = () => (rng() < LOOT_ITEM ? item() : gear({ rank }, 'loot'));
     // battle spoils, from every foe defeated
     for (const u of defeated(res)) {
@@ -115,6 +116,9 @@ const Campaign = (() => {
       r.spoilsGold += sp.gold * S;
       r.xpLv += sp.xp;
       for (let k = 0; k < sp.rolls; k++) if (rng() < sp.loot) lootRoll();
+      // the region's Trophy: elites and the boss always, its signature foes sometimes (regions study §3.1)
+      const T = trophyOf(FOES[u.key], stage.region);
+      if (T && (T.chance >= 1 || rng() < T.chance)) r.mats[T.id] = (r.mats[T.id] || 0) + T.n;
       // A Cage Mimic killed drops an extra gear roll, one rarity above the stage's usual (campaign spec §3.4).
       if (u.key === 'mimic') { const od = Items.odds(stage.region, rank); gear({ rarity: RARITY_UP[pickW(rng, Object.entries(od))] }, 'mimic'); }
     }
@@ -245,6 +249,9 @@ const Campaign = (() => {
     }
     r.unlocks = [];
     if (first) for (const id of stage.first) if (unlock(id, s)) r.unlocks.push(id);
+    // First finds (regions study §4): a region's Trophy, and the first piece of a region's own gear, each once
+    for (const k in r.mats) if (UNLOCKS['find:' + k] && unlock('find:' + k, s)) r.unlocks.push('find:' + k);
+    for (const g of r.gear) { const rg = Items.regionOf(g.piece); if (rg != null && UNLOCKS['find:gear:' + rg] && unlock('find:gear:' + rg, s)) r.unlocks.push('find:gear:' + rg); }
     // The first time any hero falls, anywhere: "Ally: fallen".
     const fell = res.start.some(u => u.side === 0 && !u.thrall && res.stats[u.id].falls > 0);
     if (fell && unlock('cond:ally_fallen', s)) r.unlocks.push('cond:ally_fallen');

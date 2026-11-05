@@ -401,6 +401,14 @@ Gear rolls use the content spec's rates for the region the stage is in, unchange
 
 - **Elite stages** move 10 points from Common to Rare, and **boss stages** move 20 *(tune)*. So a Region I boss rolls 50% Common, 25% Fine and 25% Rare, and a Region V boss rolls 5%, 50% and 45%.
 - **Relics** never come from rolls. Each region's boss drops its Relic on the first clear, as the content spec says.
+- **Region gear** (the regions study §3.1, 2026-11-05): on a stage of a region with its own line (Regions I and II so far), each gear roll first tries that line, 40% of the time on a normal stage, 70% on an elite and every time on a boss *(tune: `ITEM.LINE` in `js/items.js`)*. Otherwise it rolls the general pool as above, which never holds region gear. The Cage Mimic's roll, one rarity up, stays general. The Shop, the Salvage Pit and the Scavenger Camp roll the general pool.
+
+### Trophies *(tune)*
+Each region has a second material beside its staple: its **Trophy** (the regions study §3.1). Burial Coin is the Gravefields', and Bell Bronze the Drowned Chapel's. Regions III–V's come with their gear lines.
+- Every elite and boss on a stage of the region drops it, 1 from an elite and 3 from a boss. Its signature foes drop 1 at a 15% chance: Gravediggers and Mourners in the Gravefields, and Bell Wraiths and Silent Sisters in the Drowned Chapel. These live in `TROPHY` and `REGIONS[r].trophyFrom` in `js/data.js`. Wandering foes drop none. Like the battle's spoils, Trophies are kept after a loss.
+- The stage sheet names the foes that drop it, with their chance, and marks each one in the formation.
+- It is for making and remaking the region's gear at the Smithy, which opens after the Sexton. The Smithy, Remake and the Forge wait for a later study (the regions study, decision 5). Until then Trophies only collect, in the purse.
+- The first Trophy of each kind, and the first piece of each region's gear, bring a New card once (the regions study §4).
 
 ### The gear roll (placeholder)
 Gear progression is deliberately undecided, so this is only enough to build with:

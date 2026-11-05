@@ -84,7 +84,7 @@ const Buildings = (() => {
     if (id === 'scavengercamp') {
       const [a, b] = String(x.focus || 'r0').split(',');
       const wide = Base.hasChoice(id, 'widenet', st);
-      opts = MATERIALS.map((m, r) => ({ key: 'r' + r, name: Base.regionName(r), line: `Mostly ${m.name.toLowerCase()}`, on: a === 'r' + r, second: wide && b === 'r' + r, lock: !Base.reached(r, st) }));
+      opts = MATERIALS.filter(m => !m.trophy).map((m, r) => ({ key: 'r' + r, name: Base.regionName(r), line: `Mostly ${m.name.toLowerCase()}`, on: a === 'r' + r, second: wide && b === 'r' + r, lock: !Base.reached(r, st) }));
       return [ey(wide ? 'Focus · two regions, each at 60%' : 'Focus · where they scavenge'),
         h('div', { class: 'focus' }, opts.map(o => h('button', { class: 'fo' + (o.on || o.second ? ' sel' : '') + (o.lock ? ' lk' : ''), disabled: o.lock, onclick: () => {
           click();
