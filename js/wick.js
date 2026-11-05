@@ -1,7 +1,8 @@
 'use strict';
 // Lantern Road · Old Wick, the lamp-keeper (onboarding spec §6.1): his portrait, Wick.say for a line of his in a
 // bubble (the results popup has him give the stage's hint after a loss, js/results.js), and the guide's kit, Wick.show,
-// after docs/mockups/camp-welcome.html, first-pick.html and formation.html: the spotlight and its pointer, his bubble
+// after docs/mockups/camp-welcome.html, first-pick.html and formation.html: the spotlight (a clear hole in the dim, with
+// no ring round it since play-test note 3.7) and its pointer, his bubble
 // and his wide panel, callouts on the things they explain, a hand that shows a drag, and the gate that lets only the
 // lit thing take a press during a forced step. The first session's script is js/firstsession.js. Styles in
 // css/wick.css (his bubble) and css/guide.css (the kit).
@@ -168,9 +169,11 @@ const Wick = (() => {
     window.addEventListener(t, gate, { capture: true, passive: false });
 
   // Shows one step of the guide, and returns its handle. o:
-  //   target    what it is about (see boxOf): the spotlight and the pointer go on it. Without one the stage dims.
+  //   target    what it is about (see boxOf): the spotlight (kept clear of the dim) and the pointer go on it. Without
+  //             one the stage dims.
   //   round     an oval spotlight (for things drawn in the scene) instead of a rounded box. pad: room around it.
-  //   dim       false: no dimming (a soft line in battle). arrow: false for no pointer.
+  //   dim       false: no dimming (a soft line in battle). arrow: false for no pointer (then nothing marks the target
+  //             but the hole in the dim: keep the pointer on a step with no dim).
   //   say       Wick's line in his bubble, with his portrait on the side away from the target (side: 'l' or 'r').
   //   panel     his line in the wide panel along the bottom instead (the welcome), with his name and a ▼.
   //   skip      with panel: a Skip button in its corner, which calls this (the story jumps to the name box).

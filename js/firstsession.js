@@ -12,7 +12,7 @@
 //   6    battle 1-1, paused twice: the turn order at the first turn, then speed and skip
 //   7    the results popup: the first level, then the Hearth button (fatigue waits for its first-time tip, js/main.js)
 //   8    Grow: Heroes, the hero, the Stats tab, + or Auto, Keep, "Stronger already."; back, and to the Hearth by its tab
-//   9    1-2, unforced: the goal tracker says "Clear 1-2" and Set out glows; on the road a soft line on 1-1's marker; the
+//   9    1-2, unforced: the goal tracker says "Clear 1-2" and the pointer bobs over Set out; on the road a soft line on 1-1's marker; the
 //        battle doesn't stop. Its results' New chip: the Recruit Board is open, then the Hearth
 //   10   the Recruit Board's free recruit, hired the same way, who waits at the fire
 //   11   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done
@@ -102,9 +102,9 @@ const FirstSession = (() => {
     // 3: the first pick (the board's own panel says Wick's lines, and the new hero says theirs at the reveal)
     { id: 'pick', phase: 'pick', forced: true, at: () => FirstPick.shown, show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 0 && !FirstPick.shown }) },
     // 4–5: the road
-    { id: 'setout', phase: 'first', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', round: true, say: `The road starts at the gate. Take ${heroName()} through.`, tap: 'target', until: onRoad }) },
+    { id: 'setout', phase: 'first', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', say: `The road starts at the gate. Take ${heroName()} through.`, tap: 'target', until: onRoad }) },
     { id: 'stage', phase: 'first', at: () => onRoadCard() && !!marker(), show: () => ({ target: marker, round: true, pad: 12, say: 'Each stage is a stretch of road. Win its fight, and the stretch is yours.' }) },
-    { id: 'go', phase: 'first', at: onRoadCard, show: () => ({ target: '[data-tut=road-go]', round: true, say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
+    { id: 'go', phase: 'first', at: onRoadCard, show: () => ({ target: '[data-tut=road-go]', say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
     // 6: battle 1-1, paused twice (shown from the battle's events, below)
     { id: 'order', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=turn-order] .flag.in', pad: 4, say: 'Battles fight themselves. The turn order shows who acts next.', small: true, side: 'l', pause: true }) },
     { id: 'speed', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=battle-speed], [data-tut=battle-skip]', pad: 5, say: 'Speed it up, or skip to the end.', small: true, side: 'l', pause: true, tap: 'target' }) },
@@ -112,18 +112,19 @@ const FirstSession = (() => {
     { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one brings a stat point.' : 'Battles bring XP. A full bar is a level.' }) },
     { id: 'home', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
     // 8: Grow: the stat point the first level brought, spent on the hero's Stats tab
-    { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', round: true, say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
+    { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
     { id: 'hero', nav: true, phase: 'grow', skip: () => !points(), at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=party-hero]'), show: () => { seen('[data-tut=party-hero]'); return { target: () => q('[data-tut=party-hero]'), pad: 3, tap: 'target', until: () => App.current === 'hero' }; } },
     { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && statsTab()), at: () => onHero() && !!q('[data-tut=hero-tab-stats]'), show: () => ({ target: '[data-tut=hero-tab-stats]', pad: 3, tap: 'target', until: statsTab }) },
     { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('.hr-stats .hr-plus'), show: () => (seen('.hr-stats'), { target: () => [q('.hr-stats'), q('[data-tut=hero-auto]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
     { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
     { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('.hr-stats'), show: () => ({ target: '.hr-stats', pad: 4, arrow: false, say: 'Stronger already.' }) },
-    { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', round: true, pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
+    { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
     { id: 'tabhome', nav: true, phase: 'grow', skip: () => App.current === 'home', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=tab-home]'), show: () => ({ target: '[data-tut=tab-home]', pad: 2, tap: 'target', until: () => App.current === 'home' }) },
-    // 9: 1-2, unforced: Set out glows, a soft line on 1-1's marker, and the battle doesn't stop
-    { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', round: true, dim: false, arrow: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
+    // 9: 1-2, unforced: the pointer over Set out (it was a glow round it, before play-test note 3.7), a soft line on
+    // 1-1's marker, and the battle doesn't stop
+    { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', dim: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
     // (Wick small, on the left: the card's Set out, bottom right, stays in sight)
-    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), show: () => ({ target: firstMarker, round: true, pad: 10, dim: false, arrow: false, say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
+    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), show: () => ({ target: firstMarker, round: true, pad: 10, dim: false, say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
     { id: 'new', phase: 'road', at: () => results(1) && !!q('[data-tut=new]'), show: () => ({ target: '[data-tut=new]', pad: 4, say: 'The Recruit Board is open.' }) },
     { id: 'home2', nav: true, phase: 'road', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
     // 10: the free recruit
