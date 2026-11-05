@@ -263,7 +263,7 @@ def main():
         # 6. tactics reorder by drag on Tactics, and its picker scrolls
         js("Proto.lightNext(); Save.commit(); App.actions.tactics(Save.state.roster[0].id); 'ok'")
         page.wait_for_timeout(1000)
-        rules = lambda: js("[...document.querySelectorAll('.tx-main .tx-rule[data-i]')].map(r => r.textContent.replace(/\s+/g, ' ').trim().slice(0, 48))")
+        rules = lambda: js("[...document.querySelectorAll('.tx-main .tx-rule[data-i]')].map(r => r.textContent.replace(/\\s+/g, ' ').trim().slice(0, 48))")
         r0 = rules()
         g = js("__design('.tx-main .tx-rule[data-i] .tx-grip')")
         step = js("(() => { const l = [...document.querySelectorAll('.tx-main .tx-rule[data-i]')].map(el => Frame.box(el).top); return l[1] - l[0]; })()")

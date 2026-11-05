@@ -827,8 +827,8 @@ const TacticsEditor = (() => {
     }
   }
 
-  // Escape goes back, or closes the sets menu.
-  document.addEventListener('keydown', ev => {
+  // Escape goes back, or closes the sets menu. (Not in Node: tools/simtest.js loads this file for the model.)
+  if (typeof document !== 'undefined') document.addEventListener('keydown', ev => {
     if (typeof App === 'undefined' || App.current !== 'tactics' || !ui.view || !ui.view.isConnected || ev.key !== 'Escape' || (ev.target.closest && ev.target.closest('input,textarea,select'))) return;
     ev.preventDefault();
     if (ui.menu) { ui.menu = false; draw(); } else close();
