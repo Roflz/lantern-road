@@ -8,7 +8,7 @@ This study covers:
 - where our first session falls short
 - how Wick should lead instead, with a draft premise
 
-Nothing here is built. It's for us to discuss.
+§5 is built, in PR #TBD: onboarding spec §6.4 has it as built, and §6.5 the 1-3 visit that Tactics moved to. The rest is for us to discuss.
 
 **Note 2.3:** the lantern premise is replaced by `docs/story.md`, approved on 2026-11-05. §5 has the first session with the new story. The lines quoted in §3 are today's, which assume the lanterns.
 
@@ -142,9 +142,9 @@ Chosen on 2026-11-05: `docs/story.md`, spine A, "the Fallen Kingdom". You run a 
 1. **The story:** `docs/story.md`, approved 2026-11-05.
 2. **How it's told:** Wick tells it at the fire, one tap a line, with Skip. It needs no new art; four pictures could come later.
 
-**For the first-session build,** with my pick:
+**Decided for the first-session build** (approved 2026-11-05, with my picks; built in PR #TBD):
 3. **The order:** spend the stat point in the first session, and move Tactics to 1-3 and fatigue to its first-time tip? **Yes.** Today's Tactics visit has nothing to choose, and fatigue has nothing to do yet.
-4. **A reason to come back:** tolls start at 1-5 with the Toll House, about 17 minutes in. The story now backs earlier tolls: travellers pay to use the road you've cleared, even while you're away. Should every cleared stage earn a small toll from 1-1, with the Toll House raising it? Wick's goodbye would then add "The road earns tolls while you're away. Come back and collect." **Yes,** as Idle Heroes shows idle loot in its first session. The amounts are yours to approve.
+4. **A reason to come back:** tolls start at 1-5 with the Toll House, about 17 minutes in. The story now backs earlier tolls: travellers pay to use the road you've cleared, even while you're away. Should every cleared stage earn a small toll from 1-1, with the Toll House raising it? Wick's goodbye would then add "The road earns tolls while you're away. Come back and collect." **Yes,** as Idle Heroes shows idle loot in its first session. The amounts are yours to approve: built as 5 gold an hour for each cleared stage, stored up to 8 hours *(tune)*, with the Toll House adding its own on top.
 5. **Skipping the guide** from Settings, for players who've played before? **No.** The story can be skipped, and the forced part is short. The Prototype panel keeps its skip for play-testing.
 
 **For the rename pass, later:**

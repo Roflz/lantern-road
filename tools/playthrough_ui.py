@@ -36,8 +36,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # the flows --quick waits for, each once; in the order a new game first meets them
 FLOWS = {
-    'guide': "Wick's first session, every forced step",
+    'guide': "Wick's first session, every forced step, and the unforced 1-2 in it",
     'pick': 'the first pick',
+    'visit': "Wick's card at the Hearth after 1-3's first clear (Show me), and his soft visit to Tactics",
     'set out': "Set out at the Hearth, up the road to the frontier's card",
     'battle': 'a battle, skipped',
     'results': 'the results popup, with Report',
@@ -79,9 +80,11 @@ ROAD_STILL = """() => { const L = Camp.scene, b = document.querySelector('.cv-ro
 IN_BATTLE = "() => !!(Battle.busy && !document.getElementById('controls').hidden)"
 SHEET_OR_BATTLE = "() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)"
 RESULTS = "() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"
-# Wick's first session: one of his forced steps is up (js/wick.js), or the session is over. His gate holds back the
-# synthetic clicks tap() makes, so his steps are answered with real touches where they are drawn.
-WICK_UP = "() => { const g = Wick.step; return !FirstSession.on || !!(g && !g.closed && g.root.classList.contains('in')); }"
+# Wick's first session: one of his forced steps is up (js/wick.js), the session is in its unforced 1-2 (setout2, yours:
+# the player sets out), or it is over. His gate holds back the synthetic clicks tap() makes, so his steps are answered
+# with real touches where they are drawn.
+UNFORCED = ['setout2', 'yours']
+WICK_UP = "() => { const g = Wick.step; return !FirstSession.on || !!(g && !g.closed && g.root.classList.contains('in')) || " + json.dumps(UNFORCED) + ".includes(FirstSession.step); }"
 WICK_NOW = """() => { const g = Wick.step; if (!g || g.closed) return null;
   const m = el => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; };
   return { step: FirstSession.step, tap: g.tap, hole: m(g.root.querySelector('.wk-hole')) }; }"""
@@ -261,6 +264,31 @@ def main():
             press(stage_point(js('() => Frame.W') / 2, 200))
             return until("() => !document.querySelector('#sheet .fp')", None, 3000)
 
+        def card():
+            """Wick's card at the Hearth when a first clear opened something (js/visits.js): Show me, then his soft steps
+            on the screen it opens (a press anywhere goes on), then ‹ back to the Hearth. Its gate holds back tap()'s
+            synthetic clicks, so it is answered with real touches."""
+            if not js("() => Visits.card || Object.values(Save.state.guide.visits || {}).includes('new')"):
+                return
+            if not until("() => Visits.card", None, 4000):
+                return
+            page.wait_for_timeout(450)
+            shot('visit-card')
+            press(js(f"() => ({MID})('[data-tut=visit-show]')"))
+            n = 0
+            while js('() => Visits.on') and n < 6:
+                if until("() => !!Wick.soft || !Visits.on", None, 6000) and js('() => !!Wick.soft'):
+                    page.wait_for_timeout(450)
+                    shot(f'visit-{n + 1}')
+                    press(stage_point(js('() => Frame.W') / 2, 24))
+                    page.wait_for_timeout(200)
+                n += 1
+            if js("() => !Visits.on && Save.state.guide.visits.items === 'seen'"):
+                ran('visit')
+            else:
+                problems.append(f"Wick's visit after Show me did not finish: now {where()}")
+            tap('.tx-back', None, "() => App.current === 'home'")
+
         steps = []
         while js('() => FirstSession.on') and time.time() < t_end:
             if not until(WICK_UP, None, 60000):
@@ -268,6 +296,30 @@ def main():
                 break
             if not js('() => FirstSession.on'):
                 break
+            sid = js('() => FirstSession.step')
+            if sid in UNFORCED and not js(WICK_NOW):
+                # the unforced 1-2: Set out glows (a soft step), and the player sets out; on the road a soft line, and
+                # the card's Set out; the battle plays on its own, and its results bring the next forced step
+                page.wait_for_timeout(450)
+                steps.append(sid)
+                shot('wick-' + sid)
+                if sid == 'setout2':
+                    until("() => !!Wick.soft && Wick.soft.root.classList.contains('in')", None, 5000)  # Set out glows
+                    page.wait_for_timeout(400)
+                    press(js(f"() => ({MID})('[data-tut=hearth-setout]')"))
+                    if not until(ROAD_STILL, None, 15000):
+                        problems.append(f"Set out in the unforced 1-2 did not fly up the road: now {where()}")
+                        break
+                    if until("() => FirstSession.step === 'yours' && !!Wick.soft", None, 3000):
+                        page.wait_for_timeout(450)
+                        steps.append('yours')
+                        shot('wick-yours')
+                press(js(f"() => ({MID})('[data-tut=road-go]')"))
+                if not until(IN_BATTLE, None, 8000):
+                    problems.append(f"the road's Set out in the unforced 1-2 did not start 1-2: now {where()}")
+                    break
+                until("() => !" + json.dumps(UNFORCED) + ".includes(FirstSession.step)", None, 3000)
+                continue
             page.wait_for_timeout(450)  # it has risen and settled on what it lights (a tap sooner is taken for a stray one)
             w = js(WICK_NOW)
             if not w:
@@ -289,6 +341,8 @@ def main():
                 drag(d0, to)
             elif sid == 'speed':
                 press(js(f"() => ({MID})('[data-tut=battle-speed]')"))
+            elif sid == 'spend':
+                press(js(f"() => ({MID})('.hr-stats .hr-plus')"))  # Grow: + on a stat (Keep is the next step)
             elif w['tap'] == 'any':
                 press(stage_point(js('() => Frame.W') / 2, 60))
             else:
@@ -319,6 +373,8 @@ def main():
             if still > 40:
                 problems.append(f"the road stopped at stage {st['fr'] + 1} for 40 trips")
                 break
+            # Wick's card, if a first clear has just opened something
+            card()
             # rest: the clock moves on, and the camp's own ticking brings the party back
             waited = 0
             while st['tired'] or not st['fit']:
@@ -363,6 +419,7 @@ def main():
             # camera flies up the road to the frontier with its card open. Its Set out, or after two losses there, a
             # step back down the road (↓) and Farm.
             to_camp('party')
+            card()
             if trips == 0:
                 if not tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL):
                     problems.append(f"no Set out at the Hearth, or no flight up the road after it: now {where()}")

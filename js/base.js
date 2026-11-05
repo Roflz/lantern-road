@@ -11,6 +11,8 @@
 //   base.beds       who holds each Infirmary bed; base.pins: who keeps theirs
 //   base.hall       { charId: { id, since, need, slot } } a lesson under way; base.done { 'char:lesson': ms } progress
 //                   kept by a cancelled lesson; base.paid ['char:lesson'] lessons already paid for
+//   base.tolls      { held, full, frac }: the road's tolls, stored like an idle building's output (ms of it, up to
+//                   BASE.STORE hours), from the first cleared stage on
 //   base.clock      the last moment the base was brought up to date; base.skew: prototype time travel, in ms
 //   renown          { points, awarded: { key: 1 } }: every award that counts once per save
 //   board           the Recruit Board: { recruits, picks, refreshedAt, ranks: { notices, picks, veterans }, free, seq,
@@ -33,6 +35,7 @@ const BASE = {
   // a class joining, a building built, each upgrade level (× the new level), a lesson finished.
   RENOWN: { stage: 40, elite: 100, xpLv: 15, boss: 250, bossAgain: 20, threshold: 50, cls: 50, built: 60, up: 30, lesson: 40 },
   STORE: 8,                       // hours of output an idle building stores; +4 with the level-3 storage choice, +12 with the level-5 one
+  TOLL: 5,                        // the road's tolls: gold an hour for each cleared stage, stored up to STORE hours (tune)
   POTION: { every: 4, max: 3 },   // the free Healing Draught by the fire: one every 4 hours, up to 3 waiting
   BOARD: { size: 3, every: 4, sameClass: 2 },
   STALL_EVERY: 8,                 // the Shop's gear stall refreshes every 8 hours
@@ -56,8 +59,8 @@ const BUILDINGS = {
   recruitboard: { name: 'Recruit Board', icon: 'scroll', art: 'board', home: 'bone_dust', unlock: 'recruitboard', plot: false,
     line: 'New faces for the road. It stands outside the plots.' },
   tollhouse: { name: 'Toll House', icon: 'coin', art: 'toll', home: 'chapel_wax', f: 0.8, unlock: 'tollhouse', idle: true,
-    line: 'Travellers pay to walk the road you’ve lit.',
-    focus: [['coin', 'Coin', 'Gold, more the further your light reaches'], ['kind', 'Kind', 'Party items instead of gold']],
+    line: 'Raises the tolls on the road you’ve cleared.',
+    focus: [['coin', 'Coin', 'Gold, more the further you’ve cleared'], ['kind', 'Kind', 'Party items instead of gold']],
     choices: { 3: [['strongbox', 'Strongbox', 'Stores 12 hours'], ['busyroad', 'Busy Road', 'Output +30%']],
       5: [['nightwatch', 'Night Watch', 'Stores 12 hours more'], ['bothways', 'Both Ways', 'Coin and Kind at once, each at 60%']] } },
   infirmary: { name: 'Infirmary', icon: 'cross', art: 'infirmary', home: 'chapel_wax', f: 0.8, unlock: 'infirmary',
@@ -167,6 +170,10 @@ const Base = (() => {
     if (!Array.isArray(B.paid)) B.paid = [];
     if (!Number.isFinite(B.clock)) B.clock = 0;
     if (!Number.isFinite(B.skew)) B.skew = 0;
+    if (!isO(B.tolls)) B.tolls = {};
+    if (!Number.isFinite(B.tolls.held)) B.tolls.held = 0;
+    if (!Number.isFinite(B.tolls.full)) B.tolls.full = 0;
+    if (!isO(B.tolls.frac)) B.tolls.frac = {};
     if (!isO(s.unlocks)) s.unlocks = {};
     if (!isO(s.renown)) s.renown = { points: 0, awarded: {} };
     if (!Number.isFinite(s.renown.points)) s.renown.points = 0;
@@ -474,6 +481,8 @@ const Base = (() => {
       if (x.held >= cap) x.full = t0 + (cap - before);
     };
     for (const id of ['tollhouse', 'scavengercamp', 'salvagepit']) { const x = rec(id, s); if (x) grow(x, storeHours(id, s) * HOUR); }
+    // the road's tolls, once a stage is cleared
+    if (s.base.tolls && cleared(s).length) grow(s.base.tolls, BASE.STORE * HOUR);
     const y = rec('trainingyard', s);
     if (y) {
       const cap = storeHours('trainingyard', s) * HOUR;
@@ -537,6 +546,17 @@ const Base = (() => {
     return out;
   }
   const matIcon = m => ({ bone_dust: 'bone', chapel_wax: 'wax', heartwood: 'wood', cinder_iron: 'iron', throne_tallow: 'tallow' }[m] || 'bone');
+  // ── the road's tolls (tutorial study §7, pick 4): travellers pay to use the road you've cleared, even while you're
+  // away. Each cleared stage earns BASE.TOLL gold an hour, stored up to BASE.STORE hours like an idle building's
+  // output. The Toll House (from 1-5) adds its own on top. Collect, and "While you were away", take them.
+  const tollRate = (s = store()) => BASE.TOLL * cleared(s).length;
+  function tollHarvest(s, dry) {
+    const x = s && s.base.tolls;
+    if (!x) return [];
+    const v = (x.frac.gold || 0) + tollRate(s) * x.held / HOUR, gold = Math.floor(v + 1e-9);
+    if (!dry) { s.currencies.gold += gold; x.held = 0; x.full = 0; x.frac = { gold: v - gold }; }
+    return gold ? [{ kind: 'gold', icon: 'coin', n: gold, text: `+${fmt(gold)} gold in tolls`, tolls: true }] : [];
+  }
   // A trainee's stored XP, collected into them: the XP, levels gained and thresholds passed.
   function collectTrainee(cid, s, dry) {
     const y = rec('trainingyard', s), T = y && y.trainees[cid], c = s.roster.find(x => x.id === cid);
@@ -560,6 +580,7 @@ const Base = (() => {
     return out;
   }
   function collect(id, s = store()) {
+    if (id === 'tolls') return tollHarvest(s, false);
     const x = rec(id, s);
     if (!x) return [];
     if (id === 'trainingyard') return trainees(s).map(cid => collectTrainee(cid, s)).filter(Boolean).map(t => ({ kind: 'xp', c: t.c, n: t.xp, from: t.from, to: t.to, text: `${t.c.name} · +${fmt(t.xp)} XP` }));
@@ -569,15 +590,16 @@ const Base = (() => {
   }
   // Everything waiting: the idle buildings, the still-room and the free draughts.
   function preview(id, s = store()) {
+    if (id === 'tolls') return tollHarvest(s, true);
     if (id === 'trainingyard') return trainees(s).map(cid => collectTrainee(cid, s, true)).filter(t => t && t.xp > 0).map(t => ({ kind: 'xp', c: t.c, n: t.xp, from: t.from, to: t.to, capped: t.capped, text: `${t.c.name} · +${fmt(t.xp)} XP` }));
     if (id === 'infirmary') return brewWaiting(s);
     return BUILDINGS[id].idle ? harvest(id, s, true) : [];
   }
   // How full a building is: { held, cap, pct, fullFor (ms it has been full), fullIn (ms until full) }.
   function storage(id, s = store()) {
-    const x = rec(id, s);
-    if (!x || !BUILDINGS[id].idle) return null;
-    const cap = storeHours(id, s) * HOUR;
+    const x = id === 'tolls' ? s && s.base.tolls : rec(id, s);
+    if (!x || (id !== 'tolls' && !BUILDINGS[id].idle)) return null;
+    const cap = id === 'tolls' ? BASE.STORE * HOUR : storeHours(id, s) * HOUR;
     let held = x.held, full = x.full;
     if (id === 'trainingyard') { const ts = trainees(s).map(cid => x.trainees[cid]); held = ts.length ? Math.max(...ts.map(T => T.held)) : 0; full = ts.length ? Math.max(0, ...ts.map(T => T.full || 0)) : 0; }
     const t = now(s);
@@ -1041,6 +1063,8 @@ const Base = (() => {
   // What happened while you were away (home-base spec §4): the rows of the away sheet, before collecting.
   function makeReport(s, before, ms) {
     const rows = [];
+    const tolls = tollHarvest(s, true);
+    if (tolls.length) rows.push({ id: 'tolls', got: tolls, full: storage('tolls', s).fullFor });
     for (const id of ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard', 'infirmary']) {
       if (!built(id, s)) continue;
       const got = preview(id, s), st = storage(id, s);
@@ -1061,10 +1085,10 @@ const Base = (() => {
     report = makeReport(s, before, now(s) - from);
     return report;
   }
-  // Gather it all: every building, the still-room and the fire.
+  // Gather it all: the road's tolls, every building, the still-room and the fire.
   function collectAll(s = store()) {
     tick(s);
-    const out = [];
+    const out = tollHarvest(s, false);
     for (const id of ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard', 'infirmary']) if (built(id, s)) out.push(...collect(id, s));
     const n = collectPotions(s);
     if (n) out.push({ kind: 'item', item: 'draught', icon: 'flask', n, text: `+${n} Healing Draught${n === 1 ? '' : 's'}` });
@@ -1107,7 +1131,7 @@ const Base = (() => {
     rec, level, built, choice, hasChoice, blueprint, available, cost, canPay, short, matName, matIcon, build, next, upgrade, rechoose, tearDown, setFocus,
     renown, plotsCleared, renownFor, award,
     partySlots, loadoutSlots, rosterCap, syncSlots, teach, bonuses,
-    storeHours, rates, scavRegions, trainees, yardCap, setTrainee, yardCeiling, span, collect, preview, storage, collectTrainee,
+    storeHours, rates, scavRegions, trainees, yardCap, setTrainee, yardCeiling, span, collect, preview, storage, collectTrainee, tollRate,
     brewWaiting, collectBrew, potionIn, collectPotions,
     shopLevel, itemPrice, itemSell, shopItems, buyItem, sellItem, restock, stallPrice, stallIn, buyGear,
     boardOpen, boardSize, boardPicks, boardClasses, quality, recruitPrice, rollBoard, boardIn, home, canHire, hire, place, buyRank, rankCost,

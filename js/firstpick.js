@@ -1,11 +1,12 @@
 'use strict';
 // Lantern Road · the Recruit Board's first pick (screen 3), after docs/mockups/first-pick.html P1–P5 (play-test note
-// 1.26). A new game's board stands lit at the Hearth with the three who would carry the lantern. Tap one and they
-// step into the light while Wick says what they do, then Hire (free), and a reveal: the hero in the lantern light,
-// their rolled name, class and level. Tap to go on, back to the Hearth.
+// 1.26). A new game's board stands lit at the Hearth with three looking for work. Tap one and they step into the light
+// while Wick says what they do, then Hire (free), and a reveal: the hero in the light, why they signed on (SIGN_ON in
+// js/data.js), their rolled name, class and level. Tap to go on, back to the Hearth.
 // The first session (js/firstsession.js) opens it again after 1-2 for the free recruit, with the board's own three.
 // FirstPick.open({ mode: 'pick' | 'hire', rest, onDone }): rest leaves the hired hero out of the formation (Formation
-// is the next step, F3). The cards hang on data-tut: pick-card (each), pick-hire (Hire).
+// is the next step, F3). The cards hang on data-tut: pick-card (each), pick-hire (Hire), pick-reveal and pick-says (the
+// new hero's line).
 // Styles in css/guide.css, classes prefixed fp-.
 
 const FirstPick = (() => {
@@ -62,7 +63,7 @@ const FirstPick = (() => {
     }));
     const x = P.sel != null ? P.list[P.sel] : null, price = x && x.r ? Base.recruitPrice(x.r, s) : 0;
     P.hire.replaceChildren(x ? h('button', { class: 'fp-go', type: 'button', 'data-tut': 'pick-hire', onclick: () => { click(); hire(); } }, 'Hire', h('em', { text: price ? fmt(price) : 'Free' })) : '');
-    P.bubble.textContent = x ? card(x.cls).line : P.mode === 'pick' ? 'Three would carry the lantern. Tap each to hear about them.' : 'Three new faces. Tap each to hear about them.';
+    P.bubble.textContent = x ? card(x.cls).line : P.mode === 'pick' ? 'Three looking for work. Tap each to hear about them.' : 'Three new faces. Tap each to hear about them.';
   }
   function hire() {
     const s = Save.state, x = P.list[P.sel];
@@ -81,12 +82,14 @@ const FirstPick = (() => {
     Save.commit(); sfx('kindle');
     reveal(c);
   }
-  // P4: the hero in the lantern light. A tap goes on.
+  // P4: the hero in the lantern light, saying why they signed on (SIGN_ON in js/data.js, from docs/story.md's class
+  // table). A tap goes on.
   function reveal(c) {
-    const sp = big(heroSide(c.cls, 0, Items.look(c)), 8);
+    const sp = big(heroSide(c.cls, 0, Items.look(c)), 8), why = typeof SIGN_ON !== 'undefined' ? SIGN_ON[c.cls] : null;
     const motes = Array.from({ length: 16 }, (_, k) => h('i', { class: 'fp-mote', style: `left:${42 + (k * 53) % 250 / 844 * 100}%;top:${240 + (k * 37) % 80}px;animation-delay:${((k * 0.21) % 3.2).toFixed(2)}s` }));
     const el = h('div', { class: 'fp-reveal', 'data-tut': 'pick-reveal', role: 'dialog', 'aria-label': `${c.name} the ${CLASSES[c.cls].name} joins` },
       h('div', { class: 'fp-rays' }), h('div', { class: 'fp-glow' }), motes, img(sp, 'fp-hero'),
+      why ? h('div', { class: 'fp-says', 'data-tut': 'pick-says', text: why }) : null,
       h('div', { class: 'fp-plate' }, h('b', { text: c.name }), h('span', { text: `${CLASSES[c.cls].name} · Lv ${c.level}` })),
       h('div', { class: 'fp-tap', text: 'Tap to go on' }));
     const go = () => { click(); const done = P && P.onDone; close(); App.refresh(); if (done) done(c); };

@@ -90,6 +90,7 @@ const App = (() => {
 
   TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, 'data-tut': 'tab-' + t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));
   $('#tbSettings').append(ico('gear'));
+  $('#tbSettings').setAttribute('data-wk-free', ''); // Settings takes a tap at every step of Wick's guide (js/wick.js)
   $('#tbSettings').addEventListener('click', () => { sfx('click'); openSettings(); });
 
   // ── shared pieces

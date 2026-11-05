@@ -12,7 +12,7 @@
 //                 and Bag buttons show them too).
 // The title card over a new game's first pick is now the title screen, on every boot (js/title.js), and Wick's first
 // session (js/firstsession.js) teaches the first ten minutes: while it runs, the coach marks here stay quiet, and the
-// battle's events go to it.
+// battle's events go to it. His unlock visits (js/visits.js) stand in for the coach marks they say.
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
 // and Settings → First-time tips turns them all off. The new-thing rows are part of the trip summary and always show.
 
@@ -69,8 +69,13 @@ const Guide = (() => {
   // Any tap ends a coach mark (the tap itself still goes through).
   document.addEventListener('pointerdown', () => { if (mark && Date.now() - (mark.at || 0) > 400) clear(); }, true);
 
-  // ── battle tips (§8.3): one line, the first time something happens, never blocking the battle
-  function tip(key, text) { if (once(key)) { toast(text, 'tip'); return true; } return false; }
+  // ── battle tips (§8.3): one line, the first time something happens, never blocking the battle. One that Wick's first
+  // session says itself (the stat point: his Grow step) waits, and the session marks it seen when it's over.
+  function tip(key, text) {
+    if (FS() && FS().covers && FS().covers(key)) return false;
+    if (once(key)) { toast(text, 'tip'); return true; }
+    return false;
+  }
 
   // ── the battle: the first battle shows the turn flags and the speed buttons, 1-2 the rule each flag names, and the
   // first battle with party items the draughts (campaign spec §8.2). Called for every event as it plays (js/main.js).
@@ -85,22 +90,24 @@ const Guide = (() => {
       const heroGap = () => Math.round(frame().offsetWidth * 0.2); // right of the top-left hero
       if (fight.turns === 1) setTimeout(() => {
         if (coach('c:flags', '#flags .flag.in', 'Who acts next, and with what. The big flag is the turn being played.', { place: 'below', ms: 7000, all: true, minLeft: heroGap() })) fight.t0 = Date.now();
-        else if (coach('c:items', '.it-tray:not([hidden])', 'Tap a draught to use it now, or leave it to the party rule.', { place: 'above', ms: 6500 })) fight.t0 = Date.now();
+        else if (coach('c:items', '.it-tray:not([hidden])', 'Tap a draught to use it now, or leave it to the party’s tactic.', { place: 'above', ms: 6500 })) fight.t0 = Date.now();
       }, 450);
       else if (fight.t0 && Date.now() - fight.t0 > 7600 && !seen('c:speed')) setTimeout(() => coach('c:speed', '#bSkip', 'Faster with 2× and 4×, or skip straight to the result.', { place: 'above', ms: 6000 }), 200);
     }
     if (e.t === 'act' && e.rule >= 0 && /^p\d$/.test(e.who) && fight.i >= 1 && !seen('c:rule') && !mark)
-      setTimeout(() => coach('c:rule', '.flag.now .why', 'The flag names the rule that chose the move. Rules are yours to change, on Tactics.', { place: 'below', ms: 7000, minLeft: Math.round(frame().offsetWidth * 0.2) }), 350);
+      setTimeout(() => coach('c:rule', '.flag.now .why', 'The flag names the tactic that chose the move. Tactics are yours to change.', { place: 'below', ms: 7000, minLeft: Math.round(frame().offsetWidth * 0.2) }), 350);
   }
   function battleEnd() { fight = null; clear(); if (FS()) FS().battleEnd(); }
   // Between battles on a trip that keeps going.
   function between() { setTimeout(() => coach('c:walk', '.between .bt-acts .btn:last-child', 'The party walks on to the next stage by itself. Come home whenever you like.', { place: 'below', ms: 6000 }), 500); }
 
   // ── screens: the first visit that matters
+  // (Wick's unlock visits, js/visits.js, stand in for the ones they say: none shows over a visit)
+  const V = () => (typeof Visits !== 'undefined' ? Visits : null);
   function onScreen(name) {
-    if (!tipsOn() || (FS() && FS().on)) return;
+    if (!tipsOn() || (FS() && FS().on) || (V() && V().on)) return;
     const s = st();
-    if (name === 'tactics') setTimeout(() => coach('c:tactics', '.tx-rule .tx-grip', 'Rules run from the top. Drag one to move it; switch one off to skip it.', { place: 'below', ms: 7000 }), 450);
+    if (name === 'tactics') setTimeout(() => { if (!(V() && V().on)) coach('c:tactics', '.tx-rule .tx-grip', 'Tactics run from the top. Drag one to move it; switch one off to skip it.', { place: 'below', ms: 7000 }); }, 450);
     // the free recruit: the Recruit Board's chip in the camp's party view (its plaque, if the chip isn't up)
     if (name === 'home' && typeof Base !== 'undefined' && Base.boardOpen(s) && s.board.free && s.board.recruits.length)
       setTimeout(() => coach('c:board', $('.camp .cv-wait[data-id="board"]') ? '.camp .cv-wait[data-id="board"]' : '.camp .cv-plq[data-id="board"]', 'Your first recruit is free: open the Recruit Board.', { place: 'above', ms: 6500 }), 700);
@@ -120,7 +127,8 @@ const Guide = (() => {
   const NEW = {
     tactics: () => ({ line: 'Every hero follows rules you set, read from the top on each turn.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     recruitboard: () => ({ line: 'It stands at camp, and your first recruit is free.', label: 'Recruit', fn: goBoard }),
-    items: () => ({ line: 'Two Healing Draughts are packed. A party rule uses one when an ally drops below half health, or tap one in battle.', label: 'The loadout', fn: () => App.actions.tactics('party', 'map') }),
+    // Party items (1-3): Wick's visit to the Tactics screen until it's seen (js/visits.js), then the party's tactics
+    items: () => ({ line: 'Two Healing Draughts are packed. A party tactic uses one when an ally drops below half health, or tap one in battle.', label: 'The loadout', fn: () => (V() && V().waiting('items') ? V().start('items') : App.actions.tactics('party', 'map')) }),
     keepgoing: () => ({ line: 'After a win the party walks on to the next stage. The come-home rule brings everyone back at 75 fatigue.' }),
     tactician: () => ({ line: 'Thresholds, Focus fire, the Move action, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     gravecaller: () => ({ line: 'A new class joins the Recruit Board: the Gravecaller, who raises thralls from the fallen.', label: 'Recruit', fn: goBoard }),

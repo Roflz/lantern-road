@@ -97,7 +97,7 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 - The screen dims except the target, which gets a soft lantern glow and a pointing hand.
 - Wick's portrait and one or two short lines sit on the side away from the target.
 - **Forced steps:** in the first session, only the target takes a tap.
-- **Soft steps:** after the first session, a tap anywhere moves on.
+- **Soft steps:** a tap anywhere moves on, and nothing is held back. *Built:* the first session's unforced 1-2, the unlock visits (§6.5) and Replay the guide.
 - Battles pause for Wick only in 1-1, twice. This changes campaign spec §8.1, which says tips never block a battle.
 
 ### 6.3 The goal tracker
@@ -107,48 +107,45 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 - **Tapping the tracker** shows the chapter's checklist: what's done, the current goal, and what's next.
 - After Region I it simply points at the frontier stage.
 
-### 6.4 The first session: forced, about 10 minutes
+### 6.4 The first session: about 10 minutes
 
-**Being revised:** `docs/tutorial-study.md` §5 rewrites this session for the story, and waits on your approval. Below is the build as it stands.
+**Built** (the `guide` build, PR #31, 2026-11-04; rebuilt around the story in the first-session build, PR #TBD, 2026-11-05, after `docs/tutorial-study.md` §5 with the picks in its §7): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts, the hand, and soft steps), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's stage markers). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game, and on through 1-3's unlock visit (§6.5).
 
-**Built** (the `guide` build, 2026-11-04): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts and the hand), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's lanterns). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game.
-
-It follows the screens built since the first draft: the camp is the Hearth's party view (`camp-views.html`), Set out flies up the road view (`road-view.html`), and the formation is its own panel (`formation.html`). Wick's lines are still drafts.
+Wick's lines are the story's (`docs/story.md`, the opening) and the study's. It follows the built screens: the Hearth's party view (`camp-views.html`), the road view (`road-view.html`), the hero screen (PR #29) and Formation (`formation.html`).
 
 | # | Where | Wick says | You do |
 |---|---|---|---|
-| 1 | The Hearth, after the title (W1–W3) | Panel: "Ah, a traveller. Come and sit by the fire." · "The road's gone dark. Someone has to light it again." · Bubble: "What do they call you?" · Panel: "Roflz. A good name for the road. Let me show you the Hearth." · Spotlight on the board (V4): "The Recruit Board. Let's find you a lantern-bearer." | Tap to go on, give a name (or none: "Traveller"), then tap the Recruit Board |
-| 2 | The Recruit Board, first pick (P1) | "Three would carry the lantern. Tap each to hear about them." | Tap a card |
-| 3 | The same (P2–P4) | Sellsword: "Hits hardest, up front. Simple and strong." · Hexblade: "Curses that tick. Patient, and hard on healers." · Pilgrim: "Heals, and burns the dead. Slow, but hard to kill." | Hire (free), then the reveal: the hero's rolled name, class and level |
-| 4 | The Hearth (P5) | "A bearer needs a road. Set out when you're ready." | Tap Set out: the camera flies up the road with 1-1's card open |
-| 5 | The road view | On 1-1's lantern: "Each lantern is a stage." · On the card's Set out: "Light the first." | Tap to go on, then Set out |
-| 6 | Battle 1-1, paused twice | At the first turn, on the turn order: "Battles fight themselves. The turn order shows who acts next." · At the third turn, on speed and skip: "Speed it up, or skip to the end." | Tap to go on; then tap the speed button (or Skip) |
-| 7 | The results popup | On the XP bar: "Your first level. Each one brings a stat point." · On the fatigue bar: "Every turn tires a hero a little. They rest at the Hearth." · On Hearth: "Back to the Hearth." | Tap to go on twice, then Hearth |
-| 8 | The Hearth | On Heroes: "Your hero fights by tactics. Let's look at them." | Tap Heroes, then the hero, then the Tactics tab |
-| 9 | The hero screen (screen 8), Tactics | On the tactics: "Tactics run from the top. The first one that fits is used." | Tap to go on, then ‹ back to the Party, then its Hearth tab |
-| 10 | Set out, then battle 1-2 | "On to 1-2." · In battle, without stopping it, a ring on the tactic's name: "The turn order names the tactic that chose the move." · On the results' New chip: "The Recruit Board is open." | Set out twice, watch, then Hearth |
-| 11 | The Hearth, then the board | On the board: "The board has a free recruit for you." · On the board: "Three new faces. Tap each to hear about them.", then a line on each | Hire one (free); the reveal. They wait at the fire, out of the formation |
-| 12 | The Hearth, then Formation (F3) | On the party panel: "Two of you now. Let's find them a place." · In Formation, callouts on the rows (Front: "Takes the blows. Melee can only reach here." Back: "Safe while the front stands.") and a hand showing the drag: "Sturdy heroes in front, the rest behind." · On Done: "Well placed." · Panel: "That's the road. I'm by the fire if you need me." | Drag the new hero into a place, Done, tap to go on |
+| 1 | The Hearth, after the title, in Wick's panel | "Another company. Come in. Sit by the fire." · "I'm Wick. I keep the inn here, at the gate." · "Fifty years ago, the king over that wall wanted to rule forever." · "So he learned to raise the dead. When he died, he rose again, hollow." · "His people fled, so he raised their dead to serve him. We walled him in." · "Now the crown has an offer: clear the old road, and keep what you clear." | A tap a line. Skip, in the panel's corner, jumps to the name box |
+| 2 | The same | Bubble, with the name box: "Who's in charge?" · Panel: "[Name]. Welcome to the Hearth. Your company can camp here." · Spotlight on the board: "First, you'll need heroes. The Recruit Board's there." | Give a name (with none you're "Captain", shown by your Renown), then tap the board |
+| 3 | The Recruit Board, first pick | "Three looking for work. Tap each to hear about them." Then a line on each: Sellsword "Hits hardest, up front. Simple and strong." · Hexblade "Curses that tick. Patient, and hard on healers." · Pilgrim "Heals, and burns the dead. Slow, but hard to kill." At the reveal the new hero says why they signed on, over their head (`SIGN_ON` in `js/data.js`, from the bible's class table): the Sellsword, "Someone's paying. That's all I need to know." | Tap a card, Hire (free), then the reveal: the hero's line, their rolled name, class and level |
+| 4 | The Hearth | On Set out: "The road starts at the gate. Take [hero] through." | Set out: the camera flies up the road with 1-1's card open |
+| 5 | The road view | On 1-1's marker: "Each stage is a stretch of road. Win its fight, and the stretch is yours." · On the card's Set out: "Clear the first." | Tap to go on, then Set out |
+| 6 | Battle 1-1, paused twice | At the first turn, on the turn order: "Battles fight themselves. The turn order shows who acts next." · At the third, on speed and skip: "Speed it up, or skip to the end." | Tap to go on; then the speed button (or Skip) |
+| 7 | The results popup | On the XP bar: "Your first level. Each one brings a stat point." · On Hearth: "Back to the Hearth." | Tap to go on, then Hearth |
+| 8 | Grow: the Hearth, then the hero's Stats tab | On Heroes: "[Hero] has a stat point. Let's spend it." · Pointers on the hero (the Party screen) and the Stats tab (passed over when it's open already) · On the stats and Auto: "Tap + on a stat, or Auto to let them choose." · A pointer on Keep · On the stats: "Stronger already." · Pointers on ‹ and the Hearth tab | Heroes → the hero → + (or Auto) → Keep → ‹ → Hearth |
+| 9 | Unforced: 1-2 | Nothing is dimmed or held back. The goal tracker says "Clear 1-2", and Set out glows. On the road, a soft line on 1-1's marker: "First stretch cleared. It's yours now." The battle doesn't stop. On the results' New chip, as before: "The Recruit Board is open." · A pointer on Hearth | Set out, Set out on the card, watch; then tap to go on, and Hearth |
+| 10 | The Hearth, then the board | On the board: "The board has a free recruit for you." · On the board: "Three new faces. Tap each to hear about them.", then a line on each. At the reveal, the new hero says their line | Hire one (free). They wait at the fire, out of the formation |
+| 11 | Formation (F3) | On the party panel: "Two of you now. Let's find them a place." · In Formation, callouts on the rows (Front: "Takes the blows. Melee can only reach here." Back: "Safe while the front stands.") and a hand showing the drag: "Sturdy heroes in front, the rest behind." · On Done: "Well placed." | Drag the new hero into a place, then Done |
+| 12 | The Hearth, in Wick's panel | "The Sexton's at the end of the Gravefields. Plenty of road before him." · "The road earns tolls while you're away. Come back and collect." · "I'll be by the fire." | Tap to go on |
 
-After step 12 the forced session ends and the goal tracker takes over (after 1-2 it reads "Spend 1 stat point").
+After step 12 the session ends and the goal tracker takes over with "Clear 1-3".
 
 **How a step behaves:**
 - **A line** (a ▼ in its corner) goes on with a tap anywhere, or Enter.
 - **A tap step** lights one thing, with the pointer on it. Nothing else takes a press, keys included, until it's tapped.
-- **Between steps** (the camera flying, the popup filling) nothing takes a press either, except in a battle. If no step comes for 15 seconds the hold lets go, so a save the script didn't foresee is never stuck.
+- **A soft step** (1-2's) holds nothing back. A press anywhere puts it aside and still does what it pressed; it comes back the next time its moment does, so Set out glows again when you're back at the Hearth.
+- **Help and Settings take a tap at every step** (play-test note 2.2): the ? and ⚙ at the top right of the Hearth, and Settings on the Party screen's top bar. Wick steps aside while their page is open, and comes back on the same step when it closes. Replay the guide does nothing while the session runs (a toast says "Wick is showing you round already"), and Start over begins a new session.
+- **Between steps** (the camera flying, the popup filling) nothing takes a press either, except in a battle and in the unforced 1-2 until its results. If no step comes for 15 seconds the hold lets go, so a save the script didn't foresee is never stuck.
 - **Wick stands on the side away from what he points at.** His bubble moves up, or to the top, when it would cover it.
-- **A reload carries on** where the session was. A step whose moment has gone (a battle resolved while the app was closed) is skipped. "While you were away" and the Road's "Back from the road" card wait until the session is over.
+- **A reload carries on** where the session was. A step whose moment has gone (a battle resolved while the app was closed) is skipped, and a reload in the middle of Grow starts it again from Heroes. "While you were away" and the Road's "Back from the road" card wait until the session is over.
 
-**Changes from the first draft:**
-- Step 1 follows `camp-welcome.html` W1–W3, with your name (shown by your Renown).
-- Step 4: Set out flies up the road (the road view), instead of "tap the signpost".
-- Step 5: "Light the first" goes on the card's Set out.
-- Step 6: the second pause lights speed and skip, and waits for a tap on one, as Idle Heroes does. Its line: "Speed it up, or skip to the end."
-- Step 8 goes Heroes → the hero → Tactics, the way Idle Heroes reaches its hero screen. Steps 8–9 hang on `data-tut` anchors (`hearth-heroes`, `party-hero`, `hero-tab-rules`, `hero-rules`, `hero-back`, `tab-home`), on the rebuilt hero screen (PR #29).
-- "Rules" are "Tactics" in Wick's lines (the user's naming decision); the game's other strings follow in the glossary's rename pass.
-- Step 10 doesn't stop the battle (only 1-1 stops, per §6.2).
-- Step 11 opens the board's own panel, the first pick's, with its three recruits and a line on each.
-- Step 12 is Formation (screen 5), after F3: the free recruit waits out of the formation so the drag has someone to place.
+**Moved out of the session** (the study's §7, item 3):
+- **Tactics** come at 1-3's first clear, in Wick's visit (§6.5).
+- **Fatigue:** the results' fatigue line is gone. The first-time Weary tip says it now: "Weary: every turn tires a hero a little. They rest at the Hearth."
+- **The tactic on the turn order** isn't said in 1-2 any more. Its coach mark says it, once, in the first battle after the session where a tactic chooses a move: "The flag names the tactic that chose the move. Tactics are yours to change."
+- **What the session still says:** its first-time tip or coach mark waits, and is marked seen when the session ends. That's the turn order (`c:flags`), speed and skip (`c:speed`), the free recruit (`c:board`) and the stat point (the `stat` tip, said by Grow).
+
+**Tolls from 1-1** (the study's §7, item 4): every cleared stage earns 5 gold an hour *(tune)*, stored up to 8 hours like an idle building's output (`BASE.TOLL` and `base.tolls` in `js/base.js`). "While you were away" shows them as Tolls, and its Gather it all takes them, as the Hearth's Collect does. Before 1-5 the Hearth has no buildings view, so no Collect: the tolls wait for "While you were away". The Toll House, built from 1-5, adds its own output on top, as before.
 
 **Tuning:** 1-1's first clear now gives at least a level's worth of XP (`firstXp: 1.05` on the stage, in `js/data.js`), so step 7 always shows a level-up. 1-1 and 1-2 can't be lost with any starter (200 seeds each).
 
@@ -163,9 +160,27 @@ Every first-clear unlock in campaign spec §5.3 gets three things:
 2. **Wick's card back at camp:** icon, name, one line, with **Show me** (a guided visit of two to four steps) or **Later**.
 3. **The next goal** uses it.
 
+**Built: Party items, at 1-3's first clear** (the first-session build, PR #TBD; `js/visits.js`). It merges the Party items visit with Tactics, which moved here from the first session (the study's §7, item 3): problem first, answer second, as campaign spec §8.1 has it.
+1. **The results popup:** its New chip, "New: Party items". A tap on it starts the visit as well.
+2. **Wick's card, back at the Hearth:** the flask, "Party items", "Two Healing Draughts, and a tactic that uses them.", with **Show me** and **Later**. While it's up nothing else takes a press, except Help and Settings. It waits until the Hearth is still with nothing over it, and never comes while the first session runs.
+3. **Show me** opens Tactics on the Party. Wick's steps there are soft: a press anywhere goes on, and nothing is held back.
+   - On the Party's draught tactic, "Ally: health below 50% → Healing Draught", the plainest *when → do*: "When an ally's hurt, the party drinks a draught. That's a tactic."
+   - The screen turns to the hero's own tactics: "Your hero has tactics like this too."
+   - Unless the Tactics screen's coach mark has said it already: "Tactics run from the top. The first one that fits is used." (the line the first session used to say on the hero's tactics)
+   - The visit is over after its last step, or when you leave the screen.
+4. **Later:** the card goes, and the goal tracker reads "Party items" until the visit is seen. Its Go starts the visit.
+5. **The next battle** with the draughts packed: their coach mark points at them, as before. "Tap a draught to use it now, or leave it to the party's tactic."
+
+Nothing is said twice, and nothing is lost:
+- The visit stands in for the Tactics screen's coach mark (`c:tactics`), which is marked seen when it ends. If you opened Tactics yourself first, the coach mark said it, and the visit leaves out its third step.
+- With Settings → First-time tips off there's no card and no steps. The goal tracker still carries it, and its Go opens the screen.
+- Only a first clear in a battle earns the card: the Prototype panel's lit stages don't, and nor does a save that cleared 1-3 before this build.
+
+**For the other unlocks:** each is an entry in `VISITS` (`js/visits.js`): the card's icon, name and line, the goal's words, the screen the visit happens on and how to open it, its steps (`at`, `show`, and optionally `before` and `unless`), and the coach marks it covers. A first clear of an unlock with an entry earns its card (`save.guide.visits`: new, later or seen).
+
 | Unlock | Guided visit |
 |---|---|
-| Party items (1-3) | The loadout and the draught rule; in the next battle, a pointer at the draughts |
+| Party items (1-3) | **Built** (above): the party's draught tactic, the hero's own tactics; in the next battle, a pointer at the draughts |
 | The first gear drop | Bag → tap the piece → try it on → Equip |
 | The first stat or skill point | The hero sheet → spend it |
 | Toll House blueprint (1-5) | Walk the ring to an empty plot → Build → Collect |
@@ -181,7 +196,8 @@ Every first-clear unlock in campaign spec §5.3 gets three things:
 
 ### 6.6 Turning it off, and replaying it
 - **Settings → Tips, On or Off.** Off stops Wick's soft steps, his unlock cards and the one-line tips. The goal tracker stays.
-- **Settings → Replay the guide** plays Wick's explanations again on your current save, without forced taps. *Built:* each line shows once more when its place comes up (the welcome at the Hearth, the road when you set out, the battle lines in your next battle, and so on). Nothing is held back, and a press anywhere moves on.
+- **Settings → Replay the guide** plays Wick's explanations again on your current save, without forced taps. *Built:* each line shows once more when its place comes up (the story at the Hearth, the road when you set out, the battle lines in your next battle, and so on). Nothing is held back, and a press anywhere moves on. While the first session runs it does nothing ("Wick is showing you round already").
+- **No "Skip the guide" in Settings** (the study's §7, item 5): the story can be skipped, and the forced part is short.
 - **The forced first session can't be skipped on a new save.** For play-testing, the Prototype panel can skip it. *Built:* Prototype tools → Rules and tips → Skip the guide (the camp's Prototype chip stays live during the session for this).
 
 ## 7. Tooltips

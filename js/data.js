@@ -469,6 +469,23 @@ const REGIONS = [
   { num: 'V', name: 'Hollow Throne', levels: [76, 100], mat: 'throne_tallow', boss: 'The Hollow King', relic: 'hollowcrown', stages: 18, opens: 'Beat the Burnt Marshal to enter', line: 'A court of the dead under a throne of tallow and bone, where would-be kings wait for a crown.', lit: 'Every lantern on the road burns.' },
 ];
 const REGION_NAMES = REGIONS; // the battle screen's older name for the same list
+
+// ── Why each class signs on, in their own words (docs/story.md, the class table). A new hero says it at the reveal
+// when hired (js/firstpick.js); the Recruit Board and the heroes' remarks can use it too.
+const SIGN_ON = {
+  sellsword: 'Someone’s paying. That’s all I need to know.',
+  hexblade: 'I curse things for a living. Over there, everything’s earned one.',
+  pilgrim: 'The dead deserve their rest. I’m here to give it to them.',
+  warden: 'Somebody has to stand at the front.',
+  lamplighter: 'It’s dark over that wall. Somebody should bring a lamp.',
+  crossbowman: 'Paid by the bolt, and there’s plenty to aim at.',
+  duellist: 'Nobody’s beaten the Burnt Marshal. Yet.',
+  alchemist: 'The king’s magic is made of something. I’d like to know what.',
+  surgeon: 'Companies need patching. I need paying.',
+  bellringer: 'Every bell over that wall went quiet. I’d like to hear one ring.',
+  gravecaller: 'Same magic as the king. I just give them back after.',
+  cutpurse: 'A whole kingdom, and nobody guarding it.',
+};
 const TOTAL_STAGES = REGIONS.reduce((n, R) => n + R.stages, 0);
 
 // ── What a first clear unlocks (campaign spec §5.3)
@@ -481,7 +498,7 @@ const UNLOCKS = {
   items: { kind: 'feature', name: 'Party items', icon: 'flask', line: '2 loadout slots, 2 Healing Draughts, and “Ally: health below 50% → Healing Draught”.' },
   'cond:foes_at_least': { kind: 'condition', name: 'N or more foes', icon: 'scroll', cond: ['foes_at_least'] },
   'cond:foe_back': { kind: 'condition', name: 'Foe: in the back row', icon: 'scroll', cond: ['foe_back'] },
-  tollhouse: { kind: 'building', name: 'Toll House blueprint', icon: 'bell', line: 'Gold while you are away.', step: 5 },
+  tollhouse: { kind: 'building', name: 'Toll House blueprint', icon: 'bell', line: 'More tolls while you are away.', step: 5 },
   keepgoing: { kind: 'feature', name: 'Keep going after a win', icon: 'lantern', line: 'Chain stages until fatigue or a party rule sends the party home.' },
   'cond:foe_tag:undead': { kind: 'condition', name: 'Foe: undead', icon: 'scroll', cond: ['foe_tag:undead'] },
   infirmary: { kind: 'building', name: 'Infirmary blueprint', icon: 'cross', line: 'Beds rest fatigue away faster.', step: 5 },

@@ -123,8 +123,12 @@ const Wick = (() => {
 
   // ── the gate: during a forced step only the lit thing (or the step's area) takes a press; everything else is held
   // back before the page sees it. A press that started inside may end anywhere (a drag). Keys are held back too.
+  // Help and Settings ([data-wk-free]) always take a tap, and while their page is open nothing is held back: Wick steps
+  // aside until it closes (css/guide.css; play-test note 2.2).
   let cur = null;                 // the step on show
   const allowed = new Set();      // pointers pressed inside the lit area
+  const softs = new Set();        // soft steps on show: a press anywhere ends them, and goes through
+  const aside = () => !!document.querySelector('#sheet:not([hidden]) .setbox, #screen:not([hidden]) .page.how');
   // Between forced steps (the camera flying, a popup filling) nothing takes a press either, while hold() says so.
   let holdFn = null;
   const HOLD = { tap: 'hold', at: 0, closed: false, areas: () => [], next() { } };
@@ -134,10 +138,13 @@ const Wick = (() => {
     return els.some(el => { if (!el || !el.isConnected) return false; const r = el.getBoundingClientRect(); return r.width > 0 && t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom; });
   };
   function gate(ev) {
+    // a soft step goes on with any press (a moment after it came up), which still reaches what it landed on; Help and
+    // Settings only put it out of sight while their page is open
+    if (ev.type === 'pointerdown' && softs.size && !aside() && !(ev.target && ev.target.closest && ev.target.closest('#wk .wk-ui, [data-wk-free]'))) for (const s of [...softs]) if (Date.now() - s.at > 350) s.next();
     let g = cur;
     if (!g || g.closed) { if (holdFn && holdFn()) g = HOLD; else return; }
-    if (ev.target && ev.target.closest && ev.target.closest('#wk .wk-ui, [data-wk-free]')) return; // Wick's own buttons and the name box; the Prototype chip
-    if (document.querySelector('#sheet:not([hidden]) .protobox')) return; // the Prototype panel, which can skip the guide
+    if (ev.target && ev.target.closest && ev.target.closest('#wk .wk-ui, [data-wk-free]')) return; // Wick's own buttons and the name box; Help, Settings and the Prototype chip
+    if (document.querySelector('#sheet:not([hidden]) .protobox') || aside()) return; // the Prototype panel, which can skip the guide; Help and Settings
     if (g.tap === 'free') { if (ev.type === 'pointerdown') g.next(); return; } // a soft step: any press ends it, and goes through
     const id = ev.pointerId != null ? ev.pointerId : 'm';
     if (ev.type === 'keydown') {
@@ -166,12 +173,13 @@ const Wick = (() => {
   //   dim       false: no dimming (a soft line in battle). arrow: false for no pointer.
   //   say       Wick's line in his bubble, with his portrait on the side away from the target (side: 'l' or 'r').
   //   panel     his line in the wide panel along the bottom instead (the welcome), with his name and a ▼.
+  //   skip      with panel: a Skip button in its corner, which calls this (the story jumps to the name box).
   //   small     a smaller Wick (in battle, and over Formation).
   //   callouts  [{ target, title, text, below }]: boxed lines with a tail, above (or below) what they explain.
   //   hand      { from, to }: a hand that drags from one to the other, over and over, along a dashed trail.
   //   tap       'any': a tap anywhere goes on. 'target': only the target (and area) takes a press; the step ends when
   //             until() holds, or with the tap when it has none. 'none': only area takes presses. 'free': a soft step,
-  //             nothing is held back and any press ends it (and goes through).
+  //             nothing is held back and any press ends it (and goes through), from 350 ms after it came up.
   //   area      what takes presses besides the target: an element, a selector, or a function returning them.
   //   until     () => true once the step is done, checked every frame. ms: the step ends by itself after this.
   //   ui        elements of the step's own that take taps (the name box): marked .wk-ui.
@@ -189,7 +197,8 @@ const Wick = (() => {
     let pt = null, bubble = null, panel = null;
     if (o.panel) {
       pt = h('img', { class: 'wk-pt big', src: portraitURL(), alt: 'Old Wick', draggable: 'false' });
-      panel = h('div', { class: 'wk-panel' }, h('div', { class: 'wk-who', text: 'Old Wick' }), h('p', { text: o.panel }), tap === 'any' ? h('span', { class: 'wk-more' }) : null);
+      panel = h('div', { class: 'wk-panel' }, h('div', { class: 'wk-who', text: 'Old Wick' }), h('p', { text: o.panel }), tap === 'any' ? h('span', { class: 'wk-more' }) : null,
+        o.skip ? h('button', { class: 'wk-skip wk-ui', type: 'button', onclick: () => { if (typeof sfx === 'function') sfx('click'); o.skip(); } }, 'Skip') : null);
       root.append(panel, pt);
     } else if (o.say) {
       pt = h('img', { class: 'wk-pt', src: portraitURL(), alt: 'Old Wick', draggable: 'false' });
@@ -216,6 +225,7 @@ const Wick = (() => {
       if (H.closed) return;
       H.closed = true;
       cancelAnimationFrame(raf); clearTimeout(timer);
+      softs.delete(H);
       if (cur === H) { cur = null; allowed.clear(); }
       root.classList.remove('in'); root.classList.add('out');
       setTimeout(() => root.remove(), 220);
@@ -276,7 +286,7 @@ const Wick = (() => {
       if (!same(b, last) || ((calls.length || hand) && ++n % 6 === 0)) { lay(b); last = b; }
       raf = requestAnimationFrame(tick);
     }
-    if (tap !== 'free') { if (cur && cur !== H) cur.close(); cur = H; allowed.clear(); }
+    if (tap !== 'free') { if (cur && cur !== H) cur.close(); cur = H; allowed.clear(); } else softs.add(H);
     last = o.target ? boxOf(o.target) : null;
     lay(last);
     requestAnimationFrame(() => root.classList.add('in'));
@@ -284,6 +294,6 @@ const Wick = (() => {
     return H;
   }
   // Ends whatever step is on show.
-  function hide() { if (cur) cur.close(); for (const el of document.querySelectorAll('#wk .wk-step:not(.out)')) el.remove(); }
-  return { portrait: wickPortrait, portraitURL, say, show, hide, boxOf, get step() { return cur; }, set hold(fn) { holdFn = fn; }, get held() { return !cur && !!holdFn && !!holdFn(); } };
+  function hide() { if (cur) cur.close(); for (const s of [...softs]) s.close(); for (const el of document.querySelectorAll('#wk .wk-step:not(.out)')) el.remove(); }
+  return { portrait: wickPortrait, portraitURL, say, show, hide, boxOf, get step() { return cur; }, get soft() { return [...softs][0] || null; }, set hold(fn) { holdFn = fn; }, get held() { return !cur && !!holdFn && !!holdFn(); } };
 })();

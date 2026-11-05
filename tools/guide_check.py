@@ -6,10 +6,14 @@ real input, the way a player taps it, and saves a screenshot of every step.
 
 At each step it checks that Wick's step is up with its line, that a press away from the lit thing is held back (the
 screen and the step don't change), then does what the step asks: a tap anywhere for a line, a tap on the lit thing,
-the name box, the first pick and the free recruit (a card, Hire, the reveal), and the drag in Formation. The battles
-play at the speed Wick sets (2× after his second pause). At the end the session is done, the save holds two heroes
-in the formation, 1-1 and 1-2 are lit, and Settings → Replay the guide shows his first line again without holding
-anything back. Console errors fail the run.
+the name box, the first pick and the free recruit (a card, Hire, the reveal and the hero's line), Grow's + and Keep,
+the unforced 1-2 (Set out glows, the soft line on the road, nothing held back), and the drag in Formation. On the
+story's first line it opens Settings (Wick steps aside, Replay the guide does nothing, Wick comes back) and Help; at
+the turned size it then presses Skip, which goes straight to the name box, and at the other it taps every line. The
+battles play at the speed Wick sets (2× after his second pause). At the end the session is done, the save holds two
+heroes in the formation, 1-1 and 1-2 are cleared, the goal tracker says "Clear 1-3", and Settings → Replay the guide
+shows his first line again without holding anything back. Then, in the same save, 1-3: its results' New chip, Wick's
+card at the Hearth, Show me, and the soft visit to Tactics. Console errors fail the run.
 """
 import argparse, functools, http.server, os, socketserver, sys, threading, time
 from playwright.sync_api import sync_playwright
@@ -19,22 +23,32 @@ sys.stdout.reconfigure(encoding='utf-8')
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 SIZES = '844x390,390x844t'
 
-# The steps in order, with what each one says (the first words), and how to answer it.
-#   any: a tap anywhere   target: a tap on the lit thing   name, pick, hire, place: special
+# The steps in order, with what each one says (its first words; "~words" for words in the middle), and how to answer it.
+#   any: a tap anywhere   target: a tap on the lit thing   name, pick, hire, plus, place: special
+#   soft-setout, soft-go: the unforced 1-2's soft steps (nothing held back), answered by Set out
+# A step id ending in "?" may be passed over (the hero screen already on its Stats tab).
 STEPS = [
-    ('hello', 'Ah, a traveller', 'any'), ('dark', 'The road', 'any'), ('name', 'What do they call you', 'name'),
-    ('show', 'Roflz. A good name', 'any'), ('board', 'The Recruit Board', 'target'), ('pick', None, 'pick'),
-    ('setout', 'A bearer needs a road', 'target'), ('lantern', 'Each lantern is a stage', 'any'), ('go', 'Light the first', 'target'),
+    ('hello', 'Another company. Come in.', 'any'), ('inn', 'I’m Wick. I keep the inn', 'any'),
+    ('king', 'Fifty years ago, the king', 'any'), ('hollow', 'So he learned to raise the dead', 'any'),
+    ('wall', 'His people fled', 'any'), ('offer', 'Now the crown has an offer', 'any'),
+    ('name', 'Who’s in charge?', 'name'), ('welcome', 'Roflz. Welcome to the Hearth.', 'any'),
+    ('board', 'First, you’ll need heroes.', 'target'), ('pick', None, 'pick'),
+    ('setout', 'The road starts at the gate. Take', 'target'), ('stage', 'Each stage is a stretch of road.', 'any'),
+    ('go', 'Clear the first.', 'target'),
     ('order', 'Battles fight themselves', 'any'), ('speed', 'Speed it up', 'target'),
-    ('xp', 'Your first level', 'any'), ('fatigue', 'Every turn tires', 'any'), ('home', 'Back to the Hearth', 'target'),
-    ('heroes', 'Your hero fights by tactics', 'target'), ('hero', None, 'target'), ('tab', None, 'target'),
-    ('rules', 'Tactics run from the top', 'any'), ('heroback', None, 'target'), ('tabhome', None, 'target'),
-    ('setout2', 'On to 1-2', 'target'), ('go2', None, 'target'), ('why', 'The turn order names the tactic', 'soft'),
+    ('xp', 'Your first level', 'any'), ('home', 'Back to the Hearth', 'target'),
+    ('heroes', '~has a stat point. Let’s spend it.', 'target'), ('hero', None, 'target'), ('stats?', None, 'target'),
+    ('spend', 'Tap + on a stat, or Auto', 'plus'), ('keep', None, 'target'), ('strong', 'Stronger already.', 'any'),
+    ('heroback', None, 'target'), ('tabhome', None, 'target'),
+    ('setout2', None, 'soft-setout'), ('yours', 'First stretch cleared. It’s yours now.', 'soft-go'),
     ('new', 'The Recruit Board is open', 'any'), ('home2', None, 'target'),
     ('board2', 'The board has a free recruit', 'target'), ('hire', None, 'hire'),
     ('form', 'Two of you now', 'target'), ('place', 'Sturdy heroes in front', 'place'), ('done', 'Well placed', 'target'),
-    ('bye', 'That’s the road', 'any'),
+    ('bye', 'The Sexton’s at the end of the Gravefields.', 'any'), ('tolls', 'The road earns tolls while you’re away.', 'any'),
+    ('fire', 'I’ll be by the fire.', 'any'),
 ]
+# Wick's visit to Tactics after 1-3's first clear (js/visits.js): his soft lines, in order
+VISIT = ['When an ally’s hurt, the party drinks a draught.', 'Your hero has tactics like this too.', 'Tactics run from the top.']
 
 HELPERS = """
 window.__toClient = (x, y) => {
@@ -118,11 +132,28 @@ def main():
                 t0 = time.time()
                 while time.time() - t0 < timeout:
                     s = js('__wk()')
-                    if s and (s['step'] == sid or (sid == 'why' and s['soft'])):
+                    if s and s['step'] == sid:
                         page.wait_for_timeout(450)  # it has risen, and settled on its target
                         return js('__wk()')
                     page.wait_for_timeout(100)
                 return None
+
+            def says(s, line):
+                return bool(s) and (line[1:] in s['text'] if line.startswith('~') else s['text'].startswith(line))
+
+            def aside(what, open_sel, page_sel, close):
+                """Help or Settings on a forced step: it opens, Wick steps aside and nothing is held back; it closes,
+                and the same step is back."""
+                before = js('__wk()')
+                press(js(f"__mid('{open_sel}')"), 500)
+                page.wait_for_timeout(300)
+                hidden = js("getComputedStyle(document.getElementById('wk')).display === 'none'")
+                check(js(f"!!document.querySelector('{page_sel}')") and hidden and js('Wick.step && !Wick.step.closed') is True, f'  {what} opens over the step, and Wick steps aside')
+                shot(what.lower())
+                close()
+                page.wait_for_timeout(500)
+                after = js('__wk()')
+                check(bool(after) and after['step'] == before['step'] and js("getComputedStyle(document.getElementById('wk')).display") != 'none', f'  {what} closes, and Wick is back on the same step')
 
             def drag(d0, d1, steps=14):
                 """A finger (or the mouse) from one point to another, in design pixels: up first, so a drag from the
@@ -146,16 +177,47 @@ def main():
             # a neutral point for "tap anywhere", clear of anything lit: the stage's top middle
             W = js('Frame.W')
             anywhere = lambda: at(W / 2, 70)
+            broke = skipped = False
             for sid, line, how in STEPS:
-                s = wait_step(sid)
+                if skipped and sid in ('inn', 'king', 'hollow', 'wall', 'offer'):
+                    continue
+                if sid.endswith('?'):
+                    sid = sid[:-1]
+                    if not js(f"FirstSession.step === '{sid}'"):
+                        continue
+                s = wait_step(sid, 120 if sid == 'new' else 40)
                 if not check(bool(s), f'step {sid} is up'):
                     print('    state:', js('__state()'))
+                    broke = True
                     break
                 if line:
-                    check(s['text'].startswith(line), f'  Wick says “{line}…”' + ('' if s['text'].startswith(line) else f' (got “{s["text"]}”)'))
+                    check(says(s, line), f'  Wick says “{line.lstrip("~")}…”' + ('' if says(s, line) else f' (got “{s["text"]}”)'))
                 shot(sid)
+                if sid == 'hello':
+                    # Help and Settings at every step (play-test note 2.2), and Replay the guide does no harm
+                    def close_settings():
+                        press(js("__mid('#sheet .setbox [data-tut=x], #sheet .setbox .sheet-x')"), 400)
+                    def replay_and_close():
+                        js("(() => { const b = [...document.querySelectorAll('#sheet .setbox .btn')].find(x => /^Replay the guide/.test(x.textContent)); if (b) b.scrollIntoView({ block: 'center' }); })()")
+                        page.wait_for_timeout(250)
+                        b = js("(() => { const b = [...document.querySelectorAll('#sheet .setbox .btn')].find(x => /^Replay the guide/.test(x.textContent)); return b ? __mid(b) : null; })()")
+                        press(b, 500)
+                        check(js("document.getElementById('sheet').hidden") and js('Save.state.guide.replay') is None and any('showing you round already' in t for t in js("[...document.querySelectorAll('#toasts .toast')].map(t => t.textContent)")),
+                              '  Replay the guide closes Settings, and does nothing while the session runs (“Wick is showing you round already”)')
+                    aside('Settings', '.camp .cv-corner [aria-label=Settings]', '#sheet:not([hidden]) .setbox', replay_and_close)
+                    aside('Help', '.camp .cv-corner [aria-label=Help]', '#screen:not([hidden]) .page.how', lambda: press(js("__mid('#screen .page.how .back')"), 400))
+                    s = js('__wk()')
+                    if touch:
+                        # the story's Skip, in the panel's corner: straight to the name box (the other size taps through)
+                        press(js("__mid('#wk .wk-skip')"), 400)
+                        t0 = time.time()
+                        while time.time() - t0 < 5 and js('FirstSession.step') != 'name':
+                            page.wait_for_timeout(100)
+                        check(js('FirstSession.step') == 'name', '  Skip jumps to the name box')
+                        skipped = True
+                        continue
                 # a press away from what's lit is held back
-                if how in ('target', 'pick', 'hire', 'place', 'name'):
+                if how in ('target', 'pick', 'hire', 'place', 'name', 'plus'):
                     before = js('__state()')
                     cands = [at(24, 200), at(W - 24, 200), at(W / 2, 24)]
                     hx = s['hole'] or at(W / 2, 200)
@@ -165,8 +227,22 @@ def main():
                     check(after == before, '  a press elsewhere is held back')
                 if how == 'any':
                     press(anywhere())
-                elif how == 'soft':
-                    page.wait_for_timeout(300)
+                elif how in ('soft-setout', 'soft-go'):
+                    # the unforced 1-2: a soft step, and nothing is held back
+                    check(s['soft'] and js('!Wick.held && !Wick.step'), '  a soft step: nothing is held back')
+                    if how == 'soft-setout':
+                        goal = js("document.querySelector('.camp .cv-gt').textContent")
+                        check(goal == 'Clear 1-2', f'  the goal tracker says “Clear 1-2” (got “{goal}”)')
+                        press(js("__mid('[data-tut=hearth-setout]')"), 600)
+                        check(js('!!(Camp.scene && Camp.scene.onRoad)'), '  Set out (pressed by the player) flies up the road')
+                    else:
+                        press(js("__mid('[data-tut=road-go]')"), 900)
+                        check(js("App.current") == 'battle', '  the card’s Set out (pressed by the player) starts 1-2')
+                        page.wait_for_timeout(1500)
+                        check(js('!Battle.paused && !Wick.step'), '  1-2 plays on: nothing stops it')
+                elif how == 'plus':
+                    press(js("__mid('.hr-stats .hr-plus')"), 400)
+                    check(js('HeroSheet.placing') == 1, '  + places a point (Keep comes next)')
                 elif how == 'target':
                     press(s['hole'])
                 elif how == 'name':
@@ -187,6 +263,9 @@ def main():
                     shot(how + '-card')
                     press(js("__mid('[data-tut=pick-hire]')"), 700)
                     check(js("!!document.querySelector('[data-tut=pick-reveal]')"), '  Hire: the reveal')
+                    page.wait_for_timeout(900)  # the hero's line rises
+                    said = js("(() => { const e = document.querySelector('[data-tut=pick-says]'); return e ? e.textContent : ''; })()")
+                    check(said == js(f"SIGN_ON['{want}']"), f'  the {want} says why they signed on: “{said}”')
                     shot(how + '-reveal')
                     press(at(W / 2, 200), 700)
                     check(js('Save.state.roster.length') == (1 if how == 'pick' else 2), f'  the roster has {1 if how == "pick" else 2}')
@@ -199,12 +278,18 @@ def main():
                     d0 = js(f"(() => {{ const b = Frame.box(document.querySelector('.fm-port[data-id=\"{fresh}\"] .fm-pf'), document.getElementById('stage')); return [b.left + b.width / 2, b.top + b.height / 2]; }})()")
                     drag(d0, to)
                     check(fresh in js('Save.state.party'), '  dragged into the formation')
+            if broke:
+                ctx.close()
+                continue
             check(js('Save.state.guide.done') is True, 'the session is done')
-            check(js("Save.state.campaign.cleared.slice(0, 2).join()") == '1-1,1-2', '1-1 and 1-2 are lit')
+            check(js("Save.state.campaign.cleared.slice(0, 2).join()") == '1-1,1-2', '1-1 and 1-2 are cleared')
             check(js('Save.state.party.filter(Boolean).length') == 2, 'two heroes in the formation')
+            check(js("Guide.seen('stat') && !Guide.seen('c:rule')"), 'the stat-point tip is marked seen (Grow said it); the turn order’s tactic still has its coach mark to come')
             page.wait_for_timeout(600)
             check(js('!Wick.held'), 'nothing is held back after it')
-            check(bool(js("document.querySelector('.camp .cv-gt').textContent")), 'the goal tracker takes over: ' + js("document.querySelector('.camp .cv-gt').textContent"))
+            goal = js("document.querySelector('.camp .cv-gt').textContent")
+            check(goal == 'Clear 1-3', f'the goal tracker takes over: “{goal}”')
+            check(js('Base.tollRate(Save.state)') == 2 * js('BASE.TOLL'), 'the road earns tolls for its two cleared stages')
             shot('after')
             # Settings → Replay the guide: his first line again, held back from nothing
             js("FirstSession.replay()")
@@ -214,10 +299,68 @@ def main():
             page.wait_for_timeout(400)
             s = js('__wk()')
             ok = bool(s) and s['soft']
-            check(ok and s['text'].startswith('Ah, a traveller'), 'Replay the guide: his first line again, as a soft step')
+            check(ok and s['text'].startswith('Another company'), 'Replay the guide: his first line again, as a soft step')
+            check(js('!Wick.held && !Wick.step'), '  nothing is held back')
             if ok:
                 shot('replay')
-                press(at(W / 2, 70))
+            # (a press would go through to the scene behind, and the road is there: the replay ends here instead)
+            js("Save.state.guide.replay = null; Save.commit(); Wick.hide(); 'ok'")
+            page.wait_for_timeout(400)
+
+            # ── 1-3's first clear: the New chip, Wick's card at the Hearth, Show me, and the soft visit to Tactics
+            def wait(cond, what, timeout=15000):
+                try:
+                    page.wait_for_function(cond, timeout=timeout, polling=100)
+                    return True
+                except Exception:
+                    check(False, f'{what} (now {js("__state()")}, Wick {js("__wk()")})')
+                    if a.shots:
+                        shot('missed')
+                    return False
+
+            js("Proto.train(2); Proto.restAll(); Save.commit(); App.refresh(); 'ok'")  # a sure win, so the walk stays about the guide
+            page.wait_for_timeout(500)
+            press(js("__mid('[data-tut=hearth-setout]')"), 400)
+            if not wait("(() => { const b = document.querySelector('[data-tut=road-go]'); return !!(Camp.scene && Camp.scene.road > 0.99 && b && b.offsetWidth); })()", 'Set out at the Hearth flies up the road to 1-3'):
+                ctx.close()
+                continue
+            page.wait_for_timeout(400)
+            press(js("__mid('[data-tut=road-go]')"), 1200)
+            press(js("__mid('#bSkip')"), 400)
+            if not wait("!!document.querySelector('#sheet.results:not([hidden]) .rs-box')", '1-3 is fought, and its results come up', 20000):
+                ctx.close()
+                continue
+            press(js("__mid('#sheet .rs-banner')"), 600)  # the bars, filled at once
+            chip = js("(() => { const c = document.querySelector('#sheet [data-tut=new]'); return c ? c.textContent : ''; })()")
+            check('Party items' in chip, f'1-3’s results: “New: Party items” (got “{chip}”)')
+            shot('visit-new')
+            press(js("__mid('#sheet [data-tut=camp]')"), 400)
+            t0 = time.time()
+            while time.time() - t0 < 15 and not js("Visits.card"):
+                page.wait_for_timeout(100)
+            page.wait_for_timeout(450)
+            check(js('Visits.card') and 'Party items' in js("document.querySelector('#wk .wk-card').textContent"), 'back at the Hearth: Wick’s card, “Party items”, with Show me and Later')
+            before = js('App.current')
+            press(at(24, 200), 300)
+            check(js('Visits.card') and js('App.current') == before, '  a press elsewhere is held back')
+            shot('visit-card')
+            press(js("__mid('[data-tut=visit-show]')"), 600)
+            check(js("App.current") == 'tactics' and js("TacticsEditor.owner") == 'party', 'Show me: the Tactics screen, on the party')
+            for k, line in enumerate(VISIT):
+                t0 = time.time()
+                while time.time() - t0 < 8 and not ((js('__wk()') or {}).get('soft') and js('Visits.step') == k):
+                    page.wait_for_timeout(100)
+                page.wait_for_timeout(450)
+                s = js('__wk()')
+                ok = bool(s) and s['soft'] and s['text'].startswith(line)
+                check(ok, f'  visit step {k + 1}, a soft step: “{line}…”' + ('' if ok else f' (got {s})'))
+                if k == 1:
+                    check(js('TacticsEditor.owner') == js('Save.state.party.find(Boolean)'), '  on the hero’s own tactics')
+                shot(f'visit-{k + 1}')
+                press(at(W / 2, 24), 500)  # a press anywhere goes on
+            page.wait_for_timeout(600)
+            check(not js('Visits.on') and js("Save.state.guide.visits.items") == 'seen' and js("Guide.seen('c:tactics')"), 'the visit is over: seen, and the Tactics coach mark it said is marked seen')
+            check(js("App.current") == 'tactics' and not js('Wick.held'), 'nothing is held back after it')
             ctx.close()
         b.close()
     srv.shutdown()
