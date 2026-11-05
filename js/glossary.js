@@ -42,6 +42,11 @@ const GLOSSARY = (() => {
     battle: { name: 'Battle', icon: 'cleave', line: 'Your party against a stage’s foes, fought on its own while you watch.', more: 'You win by preparing: the formation, the rules, the skills and the gear. Speed it up, or skip it, any time.', see: ['turn', 'rule', 'skip'] },
     wick: { name: 'Old Wick', icon: 'lantern', line: 'The lamp-keeper at the fire, who knows the road and shows you the way.', more: 'Tap the lamp-keeper at the fire for a hand. Settings → Replay the guide plays the lessons again.', see: ['codex', 'hearth'] },
     codex: { name: 'Codex', icon: 'book', line: 'The book in Settings with every term, foe, class, item and building.', more: 'Foes you haven’t met and gear you haven’t found show as silhouettes.', see: ['wick'] },
+    // Bess and her quests (js/quests.js, docs/first-session-spec.md §4); "jobs" is her word for quests
+    bess: { name: 'Bess', icon: 'scroll', line: 'The carter by the road out of the Hearth, with quests for your company.', more: 'She drives the carts that carry travellers on the road you’ve cleared. Tap her for her quests.', see: ['quests', 'jobs'] },
+    quests: { name: 'Quests', icon: 'scroll', line: 'Bess’s work for your company: a goal on the road, and pay for it.', more: 'Accept one on her panel, and claim what it pays there once it’s done.', see: ['bess', 'gravedigger', 'jobs'] },
+    gravedigger: { name: 'The Gravedigger', icon: 'skull', line: 'Bess’s first quest: defeat the Sexton at 1-18, for the travellers.', more: 'The travellers pay with the Toll House plan.', see: ['quests', 'tollhouse', 'gravefields'] },
+    jobs: { name: 'Jobs', icon: 'hourglass', line: 'Three small quests from Bess each day, each paying gold and a material.', more: 'New ones come at midnight. Do all three for a gear roll and a party item.', see: ['bess', 'quests', 'gear_roll'] },
   });
 
   // ═══════════════════════════════════════════════════════════════════ battle

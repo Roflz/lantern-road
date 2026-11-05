@@ -8,7 +8,7 @@
 // Run: node tools/simtest.js [battles per stage, default 300]
 const fs = require('fs'), path = require('path'), vm = require('vm');
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'base.js', 'rest.js', 'save.js', 'rules.js', 'campaign.js', 'art.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
+for (const f of ['core.js', 'data.js', 'classes.js', 'classes-late.js', 'items.js', 'sim.js', 'hero.js', 'base.js', 'rest.js', 'save.js', 'rules.js', 'campaign.js', 'quests.js', 'art.js']) vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), { filename: f });
 vm.runInThisContext(fs.readFileSync(path.join(__dirname, 'reference.js'), 'utf8'), { filename: 'reference.js' });
 
 // node tools/simtest.js [battles] [--ref] [--regions=2,3]: --ref runs only the reference-party balance report, for the
@@ -1384,6 +1384,107 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   for (const x of STAGES) if (!S.campaign.cleared.includes(x.id)) S.campaign.cleared.push(x.id);
   ok(Campaign.frontier(S) === STAGES.length && Campaign.litIn(4, S) === 18, 'every lantern lit: the frontier is past the end of the road');
   console.log('Campaign checked: the five regions\' data and art, foe growth, stepping up, summons, phases, fleeing, wanderers, Hidden, Lure and Move, thorns, mana drain, regeneration, splash, auras, row charges, raising, Gather, rewards, fatigue, unlocks, trips and the hooks for step 5.');
+}
+
+// ── Bess and her quests (js/quests.js, docs/first-session-spec.md §4): the save and its migration, the story quest and
+// its plan, and the daily jobs: drawn, counted from battles and the tolls, claimed, the bonus, and a new day
+{
+  const st = id => STAGES.find(x => x.id === id);
+  const HOUR = BASE.HOUR, J = Quests.JOB_KINDS;
+  const won = (stage, L, seed = 1) => { for (let k = 0; k < 50; k++) { const r = simulate(refSetup(stage, seed + k, REF.ORDERS[0], L)); if (r.winner === 0) return r; } return null; };
+  const S = protoState();
+  Quests.ensure(S);
+  ok(S.quests.bess === false && S.quests.story === '' && S.quests.jobs === '' && S.quests.daily === null, 'quests: a new save has no Bess, no quest and no jobs');
+  // the save: an older save past 1-2 has Bess at the Hearth with her quest offered; one before 1-2, or of this build, doesn't
+  const older = (cleared, keep) => { const d = JSON.parse(JSON.stringify(protoState())); if (!keep) delete d.quests; d.campaign.cleared = cleared; return upgrade(d); };
+  ok(older(['1-1', '1-2']).quests.bess && older(['1-1', '1-2']).quests.story === 'offered' && older(['1-1', '1-2']).quests.jobs === '', 'quests: an older save past 1-2 has Bess there, The Gravedigger offered');
+  ok(!older(['1-1']).quests.bess && !older(['1-1', '1-2'], true).quests.bess, 'quests: not an older save before 1-2, nor a save that has the field');
+  const odd = older(['1-1', '1-2'], true);
+  odd.quests = { bess: 'yes', story: 'nope', jobs: 7, daily: { day: 3 } };
+  Quests.ensure(odd);
+  ok(odd.quests.bess === false && odd.quests.story === '' && odd.quests.jobs === '' && odd.quests.daily === null, 'quests: a broken field is mended');
+  // Bess arrives with her first quest on offer
+  ok(Quests.come(S) && S.quests.bess && Quests.story(S).state === 'offered' && !Quests.accepted(S) && !Quests.come(S), 'quests: Bess arrives once, with The Gravedigger on offer');
+  ok(Quests.ready(S) === 1 && Quests.today(S) === null, 'quests: the offer is one thing to see; no jobs yet');
+  ok(Quests.STORY.name === 'The Gravedigger' && Quests.STORY.stage === '1-18' && STAGES.find(x => x.id === '1-18').boss && REGIONS[0].boss.includes('Sexton'), 'quests: the Gravedigger asks for the Sexton, the boss at 1-18');
+  // accepting: on, and the jobs due on the next trip home
+  ok(Quests.accept(S) && Quests.accepted(S) && S.quests.story === 'on' && S.quests.jobs === 'due' && !Quests.accept(S), 'quests: accepted, with the jobs due');
+  ok(Quests.story(S).state === 'on' && Quests.today(S) === null && Quests.ready(S) === 0, 'quests: on, not done, and still no jobs');
+  // home from the next trip: three jobs, each a different kind, only kinds that can be done now
+  S.campaign.cleared = ['1-1', '1-2'];
+  Campaign.setOut(st('1-3').index, S);
+  Campaign.end({ k: 'called', text: 'Home' }, S);
+  const D = Quests.today(S);
+  ok(S.quests.jobs === 'new' && D && D.jobs.length === Quests.QUEST.JOBS && new Set(D.jobs.map(j => j.kind)).size === D.jobs.length && D.day === Quests.dayOf(Base.now(S)), 'quests: home from a trip, three of today’s jobs, no kind twice');
+  const kindsIn = s => { const seen = new Set(); for (let d = 1; d <= 40; d++) for (const j of Quests.roll(s, `2026-12-${d}`).jobs) seen.add(j.kind + (j.fam ? ':' + j.fam : '')); return [...seen].sort().join(); };
+  ok(kindsIn(S) === 'clear,family:beast,family:undead,foes,win', `quests: before 1-3 and a blueprint, no party-item or toll jobs; families from Region I (${kindsIn(S)})`);
+  ok(Quests.roll(S, D.day).jobs.map(j => j.kind).join() === D.jobs.map(j => j.kind).join(), 'quests: a day’s draw is the same all day');
+  const T = protoState(); T.campaign.cleared = ['1-1', '1-2', '1-3']; T.unlocks.items = 1; T.unlocks.tollhouse = 1;
+  ok(/items/.test(kindsIn(T)) && /tolls/.test(kindsIn(T)), 'quests: with party items and a blueprint, those jobs too');
+  // battles count: every kind, from what a battle earned
+  S.quests.daily = { day: D.day, jobs: Object.keys(J).map(kind => ({ kind, need: J[kind].need, done: 0, claimed: false, ids: kind === 'clear' ? [] : undefined, fam: kind === 'family' ? 'undead' : undefined })), bonus: false };
+  const job = k => S.quests.daily.jobs.find(j => j.kind === k);
+  const r3 = won(st('1-3'), 3), undead = res => Campaign.defeated(res).filter(u => FOES[u.key].tags.includes('undead')).length;
+  const e3 = Campaign.settle(r3, st('1-3').index, S);
+  ok(job('win').done === 1 && job('clear').done === 1 && job('foes').done === e3.foes && e3.foes > 0 && job('family').done === undead(r3) && job('items').done === Math.min(2, r3.log.filter(e => e.t === 'item').length) && job('tolls').done === 0,
+    `quests: a won battle counts a win, a stage, its foes (${e3.foes}), its undead (${undead(r3)}) and party items used`);
+  Campaign.settle(won(st('1-3'), 3, 40), st('1-3').index, S);
+  ok(job('win').done === 2 && job('clear').done === 1, 'quests: the same stage again is another win, not another stage');
+  Campaign.settle(won(st('1-2'), 3), st('1-2').index, S);
+  ok(job('clear').done === 2 && job('clear').ids.join() === '1-3,1-2', 'quests: another stage, replays included, counts');
+  const lost = (() => { for (let k = 0; k < 60; k++) { const r = simulate(refSetup(st('1-9'), 900 + k, REF.ORDERS[1], 1)); if (r.winner === 1) return r; } return null; })();
+  const w0 = job('win').done;
+  Campaign.settle(lost, st('1-9').index, S);
+  ok(lost && job('win').done === w0, 'quests: a lost battle is no win');
+  job('foes').done = 29;
+  Campaign.settle(won(st('1-3'), 3, 80), st('1-3').index, S);
+  ok(job('foes').done === 30, 'quests: a job’s count stops at what it needs');
+  // the tolls, collected by Collect or "Gather it all"
+  S.base.tolls.held = 2 * HOUR;
+  Base.collectAll(S);
+  ok(job('tolls').done === 1, 'quests: collecting the tolls counts');
+  // claiming a job: 60 × S gold and 5 of the furthest region's material, once, and only once it's done
+  const iw = S.quests.daily.jobs.indexOf(job('family'));
+  job('family').done = 3;
+  ok(Quests.claimJob(iw, S) === null && !job('family').claimed, 'quests: an unfinished job can’t be claimed');
+  job('family').done = 10;
+  const fr = STAGES[Campaign.frontier(S)], R = Quests.jobReward(S), g0 = S.currencies.gold, b0 = S.currencies.mats.bone_dust || 0;
+  ok(R.gold === Math.round(60 * GOLD_SCALE(fr.level)) && R.mat === 'bone_dust' && R.n === 5, `quests: a job pays 60 × S gold (${R.gold} at ${fr.id}) and 5 Bone Dust`);
+  ok(Quests.ready(S) >= 1, 'quests: a job done and unclaimed is ready');
+  const staples = [0, 1, 2, 3, 4].map(r => { const U = protoState(); for (let k = 1; k <= r; k++) U.unlocks['region:' + k] = 1; return Quests.jobReward(U).mat; });
+  ok(staples.join() === REGIONS.map(x => x.mat).join() && staples.every(id => !MATERIALS.find(m => m.id === id).trophy), `quests: a job pays the furthest region’s staple, never its Trophy (${staples.join(', ')})`);
+  const got = Quests.claimJob(iw, S);
+  ok(got && S.currencies.gold === g0 + R.gold && S.currencies.mats.bone_dust === b0 + 5 && job('family').claimed && Quests.claimJob(iw, S) === null, 'quests: claimed once, for its gold and Bone Dust');
+  // the bonus: every job done brings a gear roll at the frontier, Fine or better, into the Bag, and a party item
+  ok(!Quests.bonusReady(S) && Quests.claimBonus(S) === null, 'quests: no bonus until every job is done');
+  for (const j of S.quests.daily.jobs) j.done = j.need;
+  const bag0 = S.inventory.items.length, pots0 = Object.values(S.inventory.potions).reduce((a, n) => a + n, 0);
+  const B = Quests.claimBonus(S);
+  ok(B && ['fine', 'rare'].includes(Items.rarity(B.piece)) && B.piece.lv === fr.level && S.inventory.items.length === bag0 + 1 && S.inventory.items.includes(B.piece) && Object.values(S.inventory.potions).reduce((a, n) => a + n, 0) === pots0 + 1, `quests: the bonus is a ${B ? Items.rarity(B.piece) : '?'} piece at level ${fr.level} in the Bag, and a party item`);
+  ok(S.quests.daily.bonus && Quests.claimBonus(S) === null, 'quests: the bonus is claimed once');
+  let fines = 0;
+  for (let d = 1; d <= 30; d++) { const U = protoState(); U.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; U.base.skew = d * 24 * HOUR; Quests.ensure(U); for (const j of Quests.today(U).jobs) j.done = j.need; if (['fine', 'rare'].includes(Items.rarity(Quests.claimBonus(U).piece))) fines++; }
+  ok(fines === 30, 'quests: the bonus piece is never Common');
+  // a new day: new jobs, at local midnight
+  const day0 = S.quests.daily.day, left = Quests.resetIn(S);
+  ok(left > 0 && left <= 24 * HOUR, `quests: new jobs in ${Math.round(left / 60000)} minutes`);
+  S.base.skew += left + 1000;
+  const D2 = Quests.today(S);
+  ok(D2.day !== day0 && D2.jobs.length === 3 && D2.jobs.every(j => !j.done && !j.claimed) && !D2.bonus, 'quests: after midnight, three new jobs');
+  // the story quest: done once 1-18 is lit, and claimed for the Toll House plan
+  const P = protoState(); P.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; Quests.ensure(P); Base.ensure(P);
+  for (const x of STAGES.filter(x => x.region === 0)) if (!['1-5'].includes(x.id)) P.campaign.cleared.push(x.id); // as if the plan hadn't come with 1-5
+  ok(Quests.story(P).state === 'done' && Quests.story(P).lit === 17 && Quests.ready(P) === 1 && !Base.blueprint('tollhouse', P), 'quests: 1-18 lit, The Gravedigger is done');
+  const pr = Quests.claimStory(P);
+  ok(pr && pr.plan === 'tollhouse' && Base.blueprint('tollhouse', P) && P.quests.story === 'claimed' && Quests.claimStory(P) === null && Quests.ready(P) === 0, 'quests: claimed once, for the Toll House plan');
+  const P2 = protoState(); P2.quests = { bess: true, story: 'on', jobs: '', daily: null }; Quests.ensure(P2); Base.ensure(P2);
+  for (const x of STAGES.filter(x => x.region === 0)) { P2.campaign.cleared.push(x.id); for (const id of x.first) Campaign.unlock(id, P2); }
+  const c1 = Base.cost('tollhouse', 1), pg = P2.currencies.gold, pb = P2.currencies.mats.bone_dust || 0, pr2 = Quests.claimStory(P2);
+  ok(pr2 && !pr2.plan && P2.currencies.gold === pg + c1.gold && P2.currencies.mats.bone_dust === pb + c1.n, `quests: with the plan already known (from 1-5), it pays the Toll House’s cost instead (${c1.gold} gold, ${c1.n} Bone Dust)`);
+  const P3 = protoState(); P3.quests = { bess: true, story: 'offered', jobs: '', daily: null }; Quests.ensure(P3);
+  for (const x of STAGES.filter(x => x.region === 0)) P3.campaign.cleared.push(x.id);
+  ok(Quests.story(P3).state === 'offered' && Quests.accept(P3) && Quests.story(P3).state === 'done', 'quests: accepted after the Sexton already fell, it’s done at once');
+  console.log('Quests checked: the save and its migration, Bess’s arrival, The Gravedigger and its plan, and the daily jobs (drawn, counted, claimed, the bonus and a new day).');
 }
 
 // ── The reference party, every stage of every region against its target (campaign spec §5.6). Off-target stages are

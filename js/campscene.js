@@ -32,6 +32,8 @@
 //   gate     true when a region lies beyond this one
 //   plots    one per plot, in the order they open: null (Renown hasn't cleared it), { empty: true } or { id, art }
 //   board    { open }: the Recruit Board stands dark until the road opens it
+//   bess     null until Bess the carter is at the Hearth (js/quests.js); then { arrive }: the moment (performance.now())
+//            her cart started rolling in, or 0 once it stands by the road
 //   sig      a string that changes whenever any of the above does
 //
 // Speed (tools/camp_perf.py measures it): while the camera rests, at the fire or on the road, everything that doesn't move (the sky, the ground,
@@ -55,6 +57,10 @@ const CampScene = (() => {
   // The Recruit Board stands where the party can see it, at a seated hero's scale; Wick keeps to the bottom-left corner,
   // small, like a guide in the corner of the screen (the user's moves of 2026-11-04).
   const BOARD = [-56, -18], SIGN = [30, 62], WICK = [-61, -41];
+  // Bess the carter's cart stands by the fire where the road leaves the camp (docs/first-session-spec.md §4). On her
+  // arrival it rolls down the road out of the dark from BESS_FROM, pulls in, and she hops down from the bench: ARRIVE ms
+  // in all, the last HOP of it the hop.
+  const BESS = [84, 108], BESS_FROM = 360, ARRIVE = 5200, HOP = 0.12;
   const CAMP_POSTS = [[-62, 40], [62, 40], [-96, -50], [96, -50]];
   // The Hearth's ground south of the fire (docs/mockups/hearth.html, play-test note 1.30): fourteen plots in two rows,
   // six on the lower ground either side of the fire and eight on a terrace behind, with steps up the middle toward the
@@ -182,7 +188,7 @@ const CampScene = (() => {
     const near = clamp(IW / REF, 0.8, 1), inB = b => 180 + (b - 180) * near;
     const plots = ORDER.map(([b, up]) => { const bb = inB(b); return atB(bb, up ? R_UP : R_LO).concat(bb, up); });
     const wallR = Math.max(...plots.map(([a, b]) => Math.hypot(a, b))) + 40;
-    const W = { IW, plots, wallR, lamps: LAMPS.map(inB), scenery: makeScenery(wallR), board: [BOARD[0] * near, BOARD[1]], wick: [WICK[0] * near, WICK[1]] };
+    const W = { IW, plots, wallR, lamps: LAMPS.map(inB), scenery: makeScenery(wallR), board: [BOARD[0] * near, BOARD[1]], wick: [WICK[0] * near, WICK[1]], bess: [BESS[0] * near, BESS[1]] };
     worlds.set(IW, W);
     return W;
   }
@@ -566,6 +572,64 @@ const CampScene = (() => {
   const litZ = S => { const Z = stageZ(S.stages.length); return S.front < 0 ? Z[Z.length - 1] : S.front > 0 ? Z[S.front] : 40; };
   function litEdge(S) { const z = litZ(S); let i = 0; while (i < EDGES.length - 1 && EDGES[i + 1].rz <= z) i++; return i; }
 
+  // ── Bess and her cart (in build): one billboard drawn every frame, the cart where its arrival has it (or in its
+  // place), the lantern's light, and her anchor (id 'bess') once the cart stands still
+  function bess(cam, Wd, S, items, lights, anchors, at, northA, reduce) {
+    const [sx0, sz0] = Wd.bess, home = at(sx0, sz0), t0 = S.bess.arrive || 0;
+    if (!home) return;
+    // where the cart is at k (0 … 1 of the roll): down the road to its last bend, then off it to its place
+    const Z1 = 100;
+    const path = k => { const u = 1 - (1 - k) * (1 - k); if (u < 0.8) { const z = lerp(BESS_FROM, Z1, u / 0.8); return [roadAt(z), z]; } const v = (u - 0.8) / 0.2; return [lerp(roadAt(Z1), sx0, v), lerp(Z1, sz0, v)]; };
+    // standing, the cart faces the way it pulled in; Bess stands at its end nearer the road, facing the fire
+    const rest = sx0 > roadAt(Z1) ? 1 : -1, stand = at(sx0 - rest * 16, sz0 - 9);
+    // part of a picture (sx, sy, sw, sh), facing left, or mirrored to face right, into the box at dx, dy
+    const put =(x, img, sx, sy, sw, sh, dx, dy, w, hh, face) => {
+      if (face > 0) { x.save(); x.translate(dx * 2 + w, 0); x.scale(-1, 1); x.drawImage(img, sx, sy, sw, sh, dx, dy, w, hh); x.restore(); }
+      else x.drawImage(img, sx, sy, sw, sh, dx, dy, w, hh);
+    };
+    // the cart's box at a point: [left, top, width, height, scale]
+    const box = (p, img) => { const sc = cam.scale(p.s), w = Math.round(img.width * sc), hh = Math.round(img.height * sc); return [Math.round(p.x - w / 2), Math.round(p.y - hh + sc), w, hh, sc]; };
+    items.push({ d: home.d, dyn: true, fn: (x, t, react) => {
+      const k = t0 ? clamp((t - t0) / ARRIVE, 0, 1) : 1, roll = Math.min(1, k / (1 - HOP));
+      const [wx, wz] = roll < 1 ? path(roll) : [sx0, sz0], p = at(wx, wz);
+      if (!p) return;
+      const ax = roll < 1 ? path(Math.min(1, roll + 0.01))[0] : wx + rest, face = ax > wx + 0.05 ? 1 : -1;
+      const frame = roll < 1 ? 1 + (Math.floor(roll * 70) % 2) : !reduce && (t / 260) % 23 < 1.2 ? 3 : 0, img = BessArt.rig(frame);
+      const [bx, by, w, hh, sc] = box(p, img), fade = northA * (roll < 1 ? clamp((BESS_FROM - wz) / 70, 0, 1) : 1);
+      x.globalAlpha = fade;
+      put(x, img, 0, 0, img.width, img.height, bx, by, w, hh, face);
+      // Bess on the bench while it rolls: her top half, sitting in front of the cover
+      const me = BessArt.bess('rest'), bench = img.bench;
+      if (roll < 1) {
+        const ex = face < 0 ? bx + Math.round((bench[0] - me.ax) * sc) : bx + w - Math.round((bench[0] + me.width - me.ax) * sc);
+        put(x, me, 0, 0, me.width, 18, ex, by + Math.round((bench[1] + 1 - 18) * sc), Math.round(me.width * sc), Math.round(18 * sc), face);
+        // its lantern, swinging along in the dark
+        x.globalCompositeOperation = 'lighter'; x.imageSmoothingEnabled = true;
+        const lx = face < 0 ? bx + (img.lamp[0] + 0.5) * sc : bx + w - (img.lamp[0] + 0.5) * sc;
+        glow(x, lx, by + img.lamp[1] * sc, 12 * sc, LAMP, 0.6 * fade);
+        x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
+      } else if (stand) {
+        // standing by the cart, facing the fire; hopping down from the bench first
+        const ss = cam.scale(stand.s), hop = k < 1 ? (k - (1 - HOP)) / HOP : 1;
+        const q = react && react.bess ? (t - react.bess) / 640 : 1, tapped = q >= 0 && q < 1;
+        const pose = tapped ? 'tip' : !reduce && Math.sin(t / 700) > 0.72 ? 'breathe' : 'rest', sp = BessArt.bess(pose), look = -rest;
+        let ex = Math.round(stand.x - (look < 0 ? sp.ax : sp.width - sp.ax) * ss), ey = Math.round(stand.y - sp.height * ss + ss);
+        if (hop < 1) {
+          const fx = face < 0 ? bx + Math.round((bench[0] - me.ax) * sc) : bx + w - Math.round((bench[0] + me.width - me.ax) * sc), fy = by + Math.round((bench[1] + 1 - 18) * sc);
+          ex = Math.round(lerp(fx, ex, hop)); ey = Math.round(lerp(fy, ey, hop) - Math.sin(Math.PI * hop) * 7 * ss);
+        } else if (tapped && !reduce) ey -= Math.round(Math.sin(Math.PI * q) * 3 * ss / 2);
+        put(x, sp, 0, 0, sp.width, sp.height, ex, ey, Math.round(sp.width * ss), Math.round(sp.height * ss), look);
+      }
+      x.globalAlpha = 1;
+    } });
+    if (t0) return;
+    // standing: the lantern's light, and where a tap on her lands (the cart and Bess together)
+    const img = BessArt.rig(0), [bx, by, w, , sc] = box(home, img);
+    lights.push([rest < 0 ? bx + (img.lamp[0] + 0.5) * sc : bx + w - (img.lamp[0] + 0.5) * sc, by + img.lamp[1] * sc, 10 * sc, LAMP, 0.5 * northA]);
+    const top = Math.min(by, stand ? stand.y - 27 * cam.scale(stand.s) : by);
+    anchors.push({ id: 'bess', d: stand ? stand.d : home.d, x: stand ? stand.x : home.x, y: stand ? stand.y : home.y, top, box: [bx - 2, top - 2, bx + w + 2, (stand ? stand.y : home.y) + 2], view: 'party', a: northA });
+  }
+
   // ── everything that stands up: the billboards, each { d, dyn, img, x, y, w, h, a } or { d, dyn, fn(x, t) }, with
   // the lights they cast and the anchors the camp screen puts its plaques, chips and taps on
   function build(cam, Wd, S, reduce, sel) {
@@ -801,6 +865,10 @@ const CampScene = (() => {
         anchors.push({ id: 'wick', d: p.d, x: p.x, y: p.y, top: by, box: [bx - 2, by - 2, bx + img.width * s + 2, p.y + 2], view: 'party', a: northA });
       }
     }
+    // Bess the carter and her cart, by the road out of camp (js/quests.js; the art is js/bessart.js). Arriving, the cart
+    // rolls down the road out of the dark with its lantern lit, pulls in, and Bess hops down from the bench. Standing,
+    // the mule flicks an ear now and then and Bess breathes; tapped (react.bess), she tips her hat.
+    if (S.bess && northA > 0.01 && typeof BessArt !== 'undefined') bess(cam, Wd, S, items, lights, anchors, at, northA, reduce);
     if (fireP) {
       const s = cam.scale(fireP.s);
       items.push({ d: fireP.d, dyn: true, fn: (x, t) => { const img = paintFire(t, 1); x.drawImage(img, Math.round(fireP.x - 13 * s), Math.round(fireP.y - 27 * s), Math.round(26 * s), Math.round(30 * s)); } });
@@ -1193,5 +1261,5 @@ const CampScene = (() => {
     return api;
   }
 
-  return { K, IH, VIEWS, weightOf, opacityOf, live, camera, worldFor, seated, stageZ, PX_PER_STAGE };
+  return { K, IH, VIEWS, weightOf, opacityOf, live, camera, worldFor, seated, stageZ, PX_PER_STAGE, ARRIVE };
 })();
