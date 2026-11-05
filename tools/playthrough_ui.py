@@ -1,16 +1,19 @@
 """The play-through again, in the browser, through the game's own buttons (build step 7b).
 
 A new game is played through Region I the way a player taps it: Wick's first session (js/firstsession.js), every
-forced step by touch where it is lit: his welcome and the name box, the first pick at the Recruit Board, 1-1 and 1-2
-with his pauses, the results, the hero's tactics, the free recruit and the drag in Formation; then at the Hearth (screen 2, views around
-the fire) the corner's Set out for the first trip, then a tap on the road in the scene; either flies up the road to the
-frontier's card (the road view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in
-battle, then the results popup (a tap skips its fill; Report and back on the first two trips; its New things, opening
-"+N" when there are more than it shows; Hearth); the Recruit
-Board, tapped in the Hearth's party view; and Build, by turning to the buildings view and tapping an empty plot. No
-prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the camp's ticking
-does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would (Hero.autoBuild).
-Taps in the Hearth's scene are real touches at the place on the screen, so they go through the turned frame.
+forced step by touch where it is lit: his story and the name box, the first pick at the Recruit Board, 1-1 with his
+pauses, the results, Grow (a + on the hero's Stats tab, and Keep), the unforced 1-2 (Set out, and the road's Set out),
+the free recruit and the drag in Formation; then at the Hearth (screen 2, views around the fire) the corner's Set out
+for the first trip, then a tap on the road in the scene; either flies up the road to the frontier's card (the road
+view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in battle, then the results
+popup (a tap skips its fill; Report and back on the first two trips; its New things, opening "+N" when there are more
+than it shows; Hearth); Wick's card after 1-3 (Show me, and his soft visit to Tactics); the Recruit Board, tapped in
+the Hearth's party view, hiring a class the party lacks (the cheapest of those, as tools/playthrough.js hires); and
+Build, by turning to the buildings view and tapping an empty plot. No prototype tools. Three stand-ins for a player's
+own time: the clock is moved on to rest the party (the camp's ticking does the rest, as when the app stays open),
+points are spent as the Stats tab's + buttons would (Hero.autoBuild), and gear is worn as the Gear tab's Auto-equip
+would wear it (HeroSheet.autoEquipPlan). Taps in the Hearth's scene are real touches at the place on the screen, so they
+go through the turned frame.
 
 It records every console error, every coach mark and tip as it appears, and every new thing the results popup shows,
 and fails when the road stops moving.
@@ -91,6 +94,10 @@ WICK_NOW = """() => { const g = Wick.step; if (!g || g.closed) return null;
 # the middle of an element on the screen, and a point in the stage's design pixels on the screen (through the turn)
 MID = "sel => { const el = typeof sel === 'string' ? document.querySelector(sel) : sel; if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; }"
 TO_CLIENT = "([x, y]) => { const r = document.getElementById('stage').getBoundingClientRect(), k = Frame.k; return Frame.turned ? [r.left + (Frame.H - y) * k, r.top + x * k] : [r.left + x * k, r.top + y * k]; }"
+# The recruit to hire: a class the party lacks, the cheapest of those that can be paid for (its place on the board).
+WANTED = """() => { const s = Save.state, have = new Set(s.roster.map(c => c.cls)), price = r => Base.recruitPrice(r, s);
+  const list = s.board.recruits.map((r, i) => ({ r, i })).filter(x => price(x.r) <= s.currencies.gold).sort((a, b) => (have.has(a.r.cls) - have.has(b.r.cls)) || (price(a.r) - price(b.r)));
+  return list.length ? list[0].i : 0; }"""
 # The guide's coach marks in battle and between battles (js/guide.js) come with time on screen: until each has shown,
 # battles play (at 4×) before Skip, and the walk between battles takes its time.
 WATCH_KEYS = ['c:flags', 'c:items', 'c:rule']
@@ -386,7 +393,12 @@ def main():
                     break
             # points, as the Stats tab's + buttons would place them
             js('() => { for (const c of Save.state.roster) Hero.autoBuild(c); Save.commit(); }')
-            # hire: the Recruit Board, tapped in the camp's party view (its plaque), a card, Hire
+            # gear, as the hero screen's Auto-equip would wear it (the Gear tab's button, HeroSheet.autoEquipPlan), the
+            # formation first. Without it every hero fights Region I with their starting weapon, and a run stalls at a
+            # wall or not as luck has it (on main too).
+            js('() => { const s = Save.state, ids = s.party.filter(Boolean).concat(s.roster.map(c => c.id).filter(id => !s.party.includes(id))); for (const id of ids) { const c = Save.char(id); for (const x of HeroSheet.autoEquipPlan(c)) Items.equip(s, c, x.uid); } Save.commit(); }')
+            # hire: the Recruit Board, tapped in the camp's party view (its plaque), the card of a class the party lacks
+            # (the cheapest of those, as tools/playthrough.js hires), Hire
             while st['board'] and st['picks'] > 0 and st['roster'] < min(st['need'], st['cap']) and st['cheapest'] <= st['gold']:
                 if not to_camp('party'):
                     break
@@ -394,7 +406,8 @@ def main():
                 if not t or js("() => App.current") != 'building':
                     problems.append(f"a tap on the Recruit Board at camp did not open it: touched {t}, now {where()}")
                     break
-                tap('.recruit', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
+                k = js(WANTED)
+                tap(f'.recruits .recruit:nth-child({k + 1})', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
                 n = st['roster']
                 if not tap('.bld-view .btn.primary', '^Hire', 'n => Save.state.roster.length > n', n):
                     break
