@@ -140,9 +140,12 @@ function comeHomeNow(res) {
 // Battle controls: play or pause, one turn at a time, speed, skip.
 const ICON_PLAY = '<svg viewBox="0 0 10 10"><path d="M2 1v8l7-4z"/></svg>';
 const ICON_PAUSE = '<svg viewBox="0 0 10 10"><path d="M2 1h2v8H2zM6 1h2v8H6z"/></svg>';
+// Pause lets the turn on screen play out, then stops before the next turn; the button shows paused at once.
+// The pause menu stops the clock at once, mid-move (openMenu).
+const pausedNow = () => Battle.paused || Battle.pausing;
 function togglePlay() {
   if (!Battle.busy) return;
-  if (Battle.paused) Battle.play(); else Battle.setPaused(true);
+  if (pausedNow()) Battle.play(); else Battle.pauseAfterTurn();
   syncControls();
 }
 function stepTurn() { if (Battle.busy) { Battle.stepOnce(); syncControls(); } }
@@ -154,7 +157,7 @@ function cycleSpeed() {
   Battle.setSpeed(st.speed); syncControls();
 }
 function syncControls() {
-  const p = Battle.paused, b = $('#bPlay');
+  const p = pausedNow(), b = $('#bPlay');
   b.innerHTML = p ? ICON_PLAY : ICON_PAUSE;
   b.setAttribute('aria-label', p ? 'Play' : 'Pause');
   b.classList.toggle('on', p);

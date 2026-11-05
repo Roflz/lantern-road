@@ -5,7 +5,8 @@
 // A battle is landscape and side-on: heroes on the left, foes on the right (S.mode 'battle'). The canvas has one other
 // use, the 'camp' mode below: the road scene behind the screens still in the portrait column. It is not the Hearth,
 // which js/campscene.js draws (and which holds this canvas undrawn, Battle.hold).
-// Every animation runs on one play clock that speed changes scale and Pause stops.
+// Every animation runs on one play clock that speed changes scale and a pause stops (the Pause button lets the turn on
+// screen play out first).
 
 const Battle = (() => {
   const frame = $('#frame'), cv = $('#world'), ctx = cv.getContext('2d');
@@ -572,7 +573,7 @@ const Battle = (() => {
         const t = U[e.who];
         pop(t, 'Pushed back', 'tag stagger');
         if (t) addFx({ type: 'ring', x: t.x, y: t.y - 4, r0: 2, r1: 10, dur: 300, color: '#b8d0e0' });
-        if (B && e.queue) renderFlags(Math.max(0, B.curK), true);
+        if (B && e.queue) drawFlags();
         break;
       }
       case 'quick': {
@@ -644,7 +645,7 @@ const Battle = (() => {
         pop(u, foe ? 'Called' : 'Rises', 'tag ' + (foe ? 'stagger' : 'raise'));
         layoutPlates();
         sfx(foe ? 'bite' : 'bone');
-        if (B && e.queue) renderFlags(Math.max(0, B.curK), true);
+        if (B && e.queue) drawFlags();
         break;
       }
       case 'step': {
@@ -748,8 +749,22 @@ const Battle = (() => {
     el.addEventListener('click', () => toast(`${u.name}: ${sk ? sk.name + (sk.tip ? '. ' + sk.tip : sk.d ? '. ' + skillText(sk, 1) : '') : t.skip ? 'stunned' : 'falls before acting'}`));
     return el;
   }
-  // The turn being played sits on top; the coming turns hang below it.
+  // The turn being played sits on top, marked now; the coming turns hang beside it. Once a turn has played out (the
+  // battle stops or waits before the next), its flag leaves and the first flag is the next turn to act.
   const flagLeft = (pos, current) => (current ? (pos === 0 ? 0 : 246 + (pos - 1) * 46) : pos * 46);
+  function drawFlags() {
+    if (!B) return;
+    if (B.curK < 0 || B.played) renderFlags(B.curK + 1, false);
+    else renderFlags(B.curK, true);
+  }
+  // The turn on screen has played out. A turn that follows at once takes the flags itself (playTurn), so this is
+  // called only where the battle stops or waits between turns: a stop, an item, the enrage, a foe fleeing.
+  function turnPlayed() {
+    if (!B || B.curK < 0 || B.played) return;
+    B.played = true;
+    S.active = null;
+    drawFlags();
+  }
   const flagCount = () => clamp(Math.floor((frame.offsetWidth - 230 - 246) / 46) + 1, 2, FLAG_N);
   function renderFlags(k, current) {
     if (!B) return;
@@ -818,7 +833,7 @@ const Battle = (() => {
     // The first time the party walks into a region, its name comes up before the stage's (campaign spec §7).
     const R = REGION_NAMES[stage.region], entering = !!opts.first && stage.region > 0 && STAGES.find(x => x.region === stage.region) === stage && (typeof Campaign === 'undefined' || !Campaign.isLit(stage.id));
     const lead = entering ? 1700 : 0;
-    B = { res, stage, i: 1, busyUntil: P.t + 950 + lead, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0, setup, curK: -1 };
+    B = { res, stage, i: 1, busyUntil: P.t + 950 + lead, round: 1, enrage: 0, over: false, onEnd: opts.onEnd, dealt: [0, 0], started: false, durs: [], turns: buildTurns(res.log), turnAt: new Map(), stepped: false, turnUntil: 0, setup, curK: -1, played: false };
     B.turns.forEach((t, k) => B.turnAt.set(t.i, k));
     setHud(stage, 1, 0);
     hudEl.hidden = false; $('#controls').hidden = false;
@@ -838,8 +853,14 @@ const Battle = (() => {
     B.i = j;
     return res;
   }
-  // Step mode: play one turn, then pause.
-  let stepping = false;
+  // A stop at the next turn: Turn (play one turn, then stop) or the Pause button (pausing: the turn on screen plays
+  // out, then stop). B.stepped: the turn that counts has played, so the next turn is where it stops.
+  let stepping = false, pausing = false;
+  function stop() {
+    stepping = false; B.stepped = false;
+    turnPlayed();
+    setPaused(true);
+  }
   // Moves the battle on: plays the next beat of the log when the last one is done.
   function step() {
     if (!B || B.over || P.paused) return;
@@ -850,11 +871,12 @@ const Battle = (() => {
       if (e.t === 'round') { B.round = e.n; setHud(B.stage, B.round, B.enrage); B.i++; continue; }
       if (e.t === 'enrage') {
         B.enrage = e.level; setHud(B.stage, B.round, B.enrage); B.i++;
-        if (e.level === 1) { S.active = null; banner('The foes are enraged', 'rage', 'They hit harder every round'); sfx('enrage'); screenFlash('#e5574a', .3, 500); B.busyUntil = P.t + 800; at(P.t + 760, hideBanner); if (onEvent) onEvent(e); return; }
+        if (e.level === 1) { turnPlayed(); banner('The foes are enraged', 'rage', 'They hit harder every round'); sfx('enrage'); screenFlash('#e5574a', .3, 500); B.busyUntil = P.t + 800; at(P.t + 760, hideBanner); if (onEvent) onEvent(e); return; }
         continue;
       }
-      if (e.t === 'flee') { apply(e); B.i++; B.busyUntil = P.t + 700; return; }
+      if (e.t === 'flee') { turnPlayed(); apply(e); B.i++; B.busyUntil = P.t + 700; return; }
       if (e.t === 'item') {
+        turnPlayed();
         const j = groupEnd(log, B.i), dur = playItem(log.slice(B.i, j));
         B.i = j;
         B.busyUntil = P.t + dur;
@@ -862,10 +884,10 @@ const Battle = (() => {
         return;
       }
       if (e.t === 'turn') {
-        if (stepping && B.stepped) { stepping = false; B.stepped = false; setPaused(true); return; }
+        if (stepping && B.stepped) { stop(); return; }
         if (stepping) B.stepped = true;
         const j = groupEnd(log, B.i);
-        B.curK = B.turnAt.get(B.i);
+        B.curK = B.turnAt.get(B.i); B.played = false;
         const group = log.slice(B.i, j), dur = playTurn(group, B.turnAt.get(B.i));
         const act = group.find(x => x.t === 'act');
         // The turn and its action, for the first-hour coach marks (js/guide.js): the flags are drawn by now.
@@ -875,7 +897,8 @@ const Battle = (() => {
         B.busyUntil = B.turnUntil = P.t + dur;
         return;
       }
-      if (e.t === 'end') { B.i++; finish(); syncTray(); return; }
+      // Paused in the last turn: the last blow lands, and the battle waits before Victory
+      if (e.t === 'end') { if (stepping && pausing && B.stepped) { stop(); return; } B.i++; finish(); syncTray(); return; }
       B.i++;
     }
   }
@@ -910,7 +933,7 @@ const Battle = (() => {
     B.turns.forEach((x, k) => B.turnAt.set(x.i, k));
     // The coming turns may have changed: draw their flags again.
     for (const [k, el] of flagEls) if (k > B.curK) { el.remove(); flagEls.delete(k); }
-    if (B.started) renderFlags(Math.max(0, B.curK), B.curK >= 0);
+    if (B.started) drawFlags();
     if (P.paused) landNow();
     syncTray();
     return true;
@@ -921,6 +944,7 @@ const Battle = (() => {
     queue = [];
     q.forEach(x => x.fn());
     B.busyUntil = B.turnUntil = P.t;
+    turnPlayed();
     const log = B.res.log;
     while (B.i < log.length && log[B.i].t !== 'turn' && log[B.i].t !== 'end') {
       const e = log[B.i];
@@ -1458,6 +1482,8 @@ const Battle = (() => {
     frame.style.setProperty('--speed', n);
   }
   let onPause = null;
+  // Stops (or restarts) the play clock at once, mid-move: the pause menu, aiming an item, and the guide's pauses.
+  // setPaused(false) leaves a pending stop in place, so a Pause pressed before the menu still holds after Resume.
   function setPaused(v) {
     P.paused = v;
     frame.classList.toggle('paused', v);
@@ -1469,8 +1495,16 @@ const Battle = (() => {
     if (!B || B.over) return;
     // In the middle of a turn, finish that turn and stop. Between turns, play the next one and stop.
     B.stepped = B.started && P.t < B.turnUntil;
-    stepping = true;
+    stepping = true; pausing = false;
     setPaused(false);
+  }
+  // The Pause button: the turn on screen plays out, then the battle stops before the next turn (Turn's stop). Before
+  // the first turn, the party walks in first; in the last turn, it stops before Victory.
+  function pauseAfterTurn() {
+    if (!B || B.over || P.paused) return;
+    B.stepped = true;
+    stepping = true; pausing = true;
+    if (onPause) onPause(true);
   }
   // The party waits on the road with no foes in sight: the camp, before a march.
   function idle(region = 0) {
@@ -1502,13 +1536,14 @@ const Battle = (() => {
     requestAnimationFrame(loop);
   }
   return {
-    init, run, skip, idle, walk, travel, setSpeed, setPaused, play, stepOnce, resize, FX,
+    init, run, skip, idle, walk, travel, setSpeed, setPaused, play, stepOnce, pauseAfterTurn, resize, FX,
     hold(on) { held = !!on; },
     set onEvent(fn) { onEvent = fn; },
     // items: use the item in a loadout slot (on a hero's id, for an item that needs one), as the player does
     useItem, tapItem,
     set onPause(fn) { onPause = fn; },
-    get paused() { return P.paused; }, get speed() { return P.speed; }, get stepping() { return stepping; },
+    // paused: the play clock is stopped. pausing: Pause was pressed, and the turn on screen is playing out first.
+    get paused() { return P.paused; }, get pausing() { return stepping && pausing; }, get speed() { return P.speed; }, get stepping() { return stepping; },
     get battle() { return B; }, get busy() { return !!B && !B.over; },
     // for tests: how far the current battle has played
     progress: () => (B ? { i: B.i, of: B.res.log.length, round: B.round, over: B.over, t: Math.round(P.t) } : null),
