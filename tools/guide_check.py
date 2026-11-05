@@ -97,6 +97,13 @@ window.__state = () => ({ screen: App.current, road: !!(Camp.scene && Camp.scene
 """
 
 
+class Server(socketserver.ThreadingTCPServer):
+    """A page asks for its forty-odd files at once, and --resume loads one page after another: a server that takes one
+    request at a time, with room for five waiting, could drop one under load (a script missing, the title never ready)."""
+    daemon_threads = True
+    request_queue_size = 64
+
+
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -109,7 +116,7 @@ def main():
     ap.add_argument('--resume', action='store_true', help='at every step, open the save as it stands in a new page')
     a = ap.parse_args()
     a.sizes = a.sizes or ('844x390' if a.resume else SIZES)
-    srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=ROOT))
+    srv = Server(('127.0.0.1', 0), functools.partial(Quiet, directory=ROOT))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     port = srv.server_address[1]
     fails, errors = [], []
@@ -182,13 +189,22 @@ def main():
                 want, screen = RESUME[moment]
                 dump = js("JSON.stringify(Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])))")
                 c2 = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1, is_mobile=touch, has_touch=touch)
-                c2.add_init_script("(() => { if (sessionStorage.getItem('__seeded')) return; const d = JSON.parse(%s); localStorage.clear(); for (const k in d) localStorage.setItem(k, d[k]); sessionStorage.setItem('__seeded', '1'); })()" % json.dumps(dump))
+                # the save as it stands, laid down before each boot of the probe's page (it only navigates to boot)
+                c2.add_init_script("(() => { const d = JSON.parse(%s); localStorage.clear(); for (const k in d) localStorage.setItem(k, d[k]); })()" % json.dumps(dump))
                 p2, errs = c2.new_page(), []
                 p2.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
                 p2.on('pageerror', lambda e: errs.append(str(e)))
                 try:
-                    p2.goto(f'http://127.0.0.1:{port}/index.html')
-                    p2.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+                    for attempt in (1, 2):  # a page that failed to boot (a file the busy machine didn't serve) gets one more go
+                        try:
+                            p2.goto(f'http://127.0.0.1:{port}/index.html')
+                            p2.wait_for_function("(() => { try { return typeof Title !== 'undefined' && Title.ready; } catch (e) { return false; } })()", timeout=30000, polling=50)
+                            break
+                        except Exception as e:
+                            if attempt == 2:
+                                raise
+                            print(f'    (the page for {moment} did not boot: {str(e).splitlines()[0]}; once more)')
+                            errs.clear()
                     p2.click('#title')
                     p2.evaluate(HELPERS)
                     got, t0 = None, time.time()
