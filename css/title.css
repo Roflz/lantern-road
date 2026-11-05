@@ -1,0 +1,69 @@
+/* Lantern Road · the title and loading screen, and the server picker (js/title.js), after docs/mockups/title.html.
+   It covers the whole landscape stage (js/frame.js), so it lays out in the frame's design pixels, 390 tall. */
+#title{position:absolute;inset:0;z-index:30;overflow:hidden;background:#07050b;cursor:pointer;outline:none;user-select:none;-webkit-user-select:none;transition:opacity .5s}
+#title.tt-out{opacity:0;pointer-events:none}
+#title .tt-cv{position:absolute;top:0;height:390px;image-rendering:pixelated}
+.tt-hide{opacity:0!important;animation:none!important;pointer-events:none!important}
+
+/* the logo, fading in once its font has loaded */
+.tt-logo{position:absolute;left:46px;top:30px;display:flex;align-items:center;gap:14px;opacity:0;transition:opacity .6s;pointer-events:none}
+.tt-logo.tt-in{opacity:1}
+.tt-logo img{width:42px;height:42px;image-rendering:pixelated;filter:drop-shadow(0 0 10px rgba(244,166,70,.8))}
+.tt-logo h1{margin:0;font:400 78px/1 var(--f-display);color:var(--bone);text-shadow:0 0 26px rgba(244,166,70,.5),0 3px 0 #000;white-space:nowrap}
+
+/* loading, then Tap to begin */
+.tt-load{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:grid;justify-items:center;gap:9px;transition:opacity .4s;pointer-events:none}
+.tt-lt{display:flex;gap:14px;font:700 10px/1 var(--f-pixel);letter-spacing:.22em;text-transform:uppercase;color:var(--ember);text-shadow:0 1px 0 #000;white-space:nowrap}
+.tt-lt .tt-pct{color:var(--bone);letter-spacing:.08em}
+.tt-bar{width:300px;height:5px;background:rgba(20,14,26,.85);border:1px solid #3a2c22;box-shadow:0 0 0 1px #000}
+.tt-bar i{display:block;width:0;height:100%;background:linear-gradient(90deg,#b8622a,var(--ember),#ffd68a);box-shadow:0 0 10px rgba(244,166,70,.8)}
+.tt-tap{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);font:400 32px/1 var(--f-display);color:var(--bone);text-shadow:0 0 18px rgba(244,166,70,.65),0 2px 0 #000;animation:ttpulse 1.8s ease-in-out infinite;white-space:nowrap;transition:opacity .5s;pointer-events:none}
+@keyframes ttpulse{50%{opacity:.5}}
+.tt-ver{position:absolute;right:26px;bottom:14px;font:400 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+
+/* the server pill, above Tap to begin */
+.tt-pill{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;height:38px;padding:0 5px 0 14px;background:rgba(14,10,20,.88);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 6px 18px rgba(0,0,0,.5);color:var(--bone);white-space:nowrap;cursor:pointer;transition:opacity .5s}
+.tt-pill:hover{border-color:var(--ember)}
+.tt-pill b{font:700 13px/1 var(--f-pixel);letter-spacing:.1em;color:var(--bone)}
+.tt-pill span{font:italic 400 16px/1 var(--f-body);color:#e6c79a}
+.tt-pill .tt-sw{margin-left:8px;font:700 9px/1 var(--f-pixel);font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:9px 11px}
+.tt-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.tt-dot.new{background:var(--good);box-shadow:0 0 6px rgba(180,222,152,.8)}
+.tt-dot.busy{background:#f08c76;box-shadow:0 0 6px rgba(240,140,118,.7)}
+.tt-dot.down{background:#7d7186}
+
+/* the servers dialog: a title tab, a round red ✕, the tabs on the left, a card per server */
+.tt-layer{position:absolute;inset:0;pointer-events:none}
+.tt-layer>*{pointer-events:auto;cursor:default}
+.tt-veil{position:absolute;inset:0;background:rgba(5,3,9,.74);animation:fadein .2s}
+.tt-dlg{position:absolute;left:92px;right:92px;top:44px;bottom:30px;background:linear-gradient(#1d1626,#130e19);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;grid-template-columns:150px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:12px;padding:34px 16px 16px;animation:rise .3s cubic-bezier(.2,.9,.3,1.1)}
+.tt-ttab{position:absolute;left:50%;top:-16px;transform:translateX(-50%);padding:6px 30px 7px;background:linear-gradient(#3a2512,#22160c);border:1px solid var(--ember);font:400 25px/1 var(--f-display);color:var(--bone);white-space:nowrap;box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.25)}
+.tt-x{position:absolute;right:-13px;top:-13px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;padding:0;background:#5a2420;border:2px solid #d4484a;color:#ffd8cc;font:700 12px/1 var(--f-pixel);box-shadow:0 0 0 1px #000;cursor:pointer}
+.tt-x:hover{background:#7a2a24}
+.tt-nav{grid-row:1/3;display:grid;gap:6px;align-content:start}
+.tt-nav button{display:flex;align-items:center;height:40px;padding:0 12px;font:700 9px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ash);background:#1a1320;border:1px solid var(--rule);text-align:left;cursor:pointer}
+.tt-nav button:hover{color:var(--bone)}
+.tt-nav button.on{color:#1a1008;background:var(--ember);border-color:var(--ember)}
+.tt-legend{display:flex;gap:20px;align-items:center;font:700 9px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.tt-legend span{display:inline-flex;align-items:center}
+.tt-legend .tt-dot{margin-right:7px}
+.tt-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start;min-height:0;overflow-y:auto;padding:10px;background:#0e0a13;border:1px solid #2a2233;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
+.tt-svr{display:flex;align-items:center;gap:10px;height:60px;padding:0 12px;background:#1a1320;border:1px solid var(--rule);color:var(--bone);cursor:pointer;text-align:left}
+.tt-svr:hover{border-color:#6b4a2a}
+.tt-svr.cur{border-color:var(--ember);background:linear-gradient(#2a1c14,#1a1320);box-shadow:inset 0 0 0 1px rgba(244,166,70,.25)}
+.tt-id{font:700 16px/1 var(--f-pixel);letter-spacing:.08em;color:var(--bone)}
+.tt-pf{margin-left:auto;position:relative;width:42px;height:42px;border:1px solid #6b4a2a;background:#0f0b14;display:grid;place-items:center}
+.tt-pf img{width:36px;height:36px;image-rendering:pixelated}
+.tt-pf em{position:absolute;right:-7px;bottom:-7px;font:700 8px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);padding:3px 4px;border:1px solid #000}
+
+/* a new server asks first */
+.tt-cf{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:420px;max-width:calc(100% - 32px);padding:24px 24px 18px;background:linear-gradient(#1d1626,#130e19);border:1px solid #6b4a2a;box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;gap:12px;text-align:center;animation:fadein .2s}
+.tt-cf h3{margin:0;font:400 28px/1.1 var(--f-display);color:var(--bone)}
+.tt-cf p{margin:0;color:var(--ash);font-size:16px;line-height:1.4}
+.tt-cf .tt-row{display:flex;gap:10px;margin-top:8px}
+.tt-cf .tt-row button{flex:1;height:44px;display:grid;place-items:center;font:700 10px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);background:#1a1320;border:1px solid var(--rule);cursor:pointer}
+.tt-cf .tt-row button:hover{border-color:#6b4a2a}
+.tt-cf .tt-row button.pri{border-color:var(--ember);background:linear-gradient(#3a2512,#22160c);box-shadow:0 0 14px rgba(244,166,70,.28)}
+
+.calm #title .tt-tap{animation:none}
+@media (prefers-reduced-motion:reduce){#title .tt-tap{animation:none}}

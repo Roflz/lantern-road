@@ -1,12 +1,12 @@
 """The play-through again, in the browser, through the game's own buttons (build step 7b).
 
 A new game is played through Region I the way a player taps it: the first pick, the Road tab's Next and the stage
-sheet's Set out, Skip in battle, the report's Home, the trip summary's new things, the Recruit Board, Build on an
-empty plot. No prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the
-camp's ticking does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would
-(Hero.autoBuild).
+sheet's Set out, Skip in battle, then the results popup (a tap skips its fill; Report and back on the first two trips;
+its New things, opening "+N" when there are more than it shows; Hearth), the Recruit Board, Build on an empty plot. No
+prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the camp's ticking
+does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would (Hero.autoBuild).
 
-It records every console error, every coach mark and tip as it appears, and every new thing the trip summary lists,
+It records every console error, every coach mark and tip as it appears, and every new thing the results popup shows,
 and fails when the road stops moving.
   python tools/playthrough_ui.py [pilgrim|sellsword|hexblade] [--shots DIR]
 """
@@ -87,6 +87,11 @@ def main():
                 build: Base.available(s).filter(id => Base.canPay(Base.cost(id, 1), s)).length > 0 && s.base.plots.some((x, i) => i < Base.plotsCleared(s) && !x),
                 trip: !!s.campaign.trip, cleared: s.campaign.cleared.length }; }""")
 
+        # ── the title (js/title.js): once it has loaded, a tap begins
+        page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+        shot('title')
+        if not tap('#title', None, 1500):
+            problems.append('no title to tap')
         # ── the first pick
         if not tap('.pickc', a.hero.capitalize()) and not tap('.pickc'):
             problems.append('no first pick on a new game')
@@ -144,10 +149,6 @@ def main():
                         tap('.sheet-x', None, 300)
             # the road: Next (or Farm after two losses there), then Set out
             tap('#tabbar .tab', 'Road', 900)
-            news = js("() => [...document.querySelectorAll('.tripcard .newrow b')].map(b => b.textContent)")
-            if news:
-                js('n => __seen.news.push(...n)', news)
-                shot('news')
             tap('.tripcard .small', 'Got it', 400)
             farm = js('() => window.__lost >= 2')
             if farm and tap('.mapcta .btn:not(.primary)', '^Farm', 800):
@@ -162,22 +163,38 @@ def main():
             trips += 1
             if trips <= 2:
                 shot('battle')
-            # the trip: Skip each battle; between battles the party walks on by itself; the report ends it
+            # the trip: Skip each battle; between battles the party walks on by itself; the results popup ends it
             for _ in range(80):
-                page.wait_for_selector('#bSkip:not([hidden]), #sheet:not([hidden])', timeout=20000)
+                # a battle under way, or a sheet (the results popup hides the battle's controls behind it)
+                page.wait_for_function("() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)", timeout=20000, polling=100)
                 page.wait_for_timeout(300)
+                if js("() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"):
+                    # a tap skips the fill; then what came home, a look at the report, and back to camp
+                    tap('#sheet .rs-banner', None, 400)
+                    won = js("() => document.querySelector('#sheet .rs-banner b').textContent === 'Victory'")
+                    js('w => { window.__lost = w ? 0 : (window.__lost || 0) + 1; }', won)
+                    if tap('#sheet .rs-new.more', None, 600):
+                        news = js("() => [...document.querySelectorAll('#sheet .rs-list .newrow b')].map(b => b.textContent)")
+                        tap('#sheet .rs-list .sheet-x', None, 500)
+                    else:
+                        news = js("() => [...document.querySelectorAll('#sheet .rs-new')].map(b => b.getAttribute('aria-label'))")
+                    if news:
+                        js('n => __seen.news.push(...n)', news)
+                        shot('news')
+                    if trips <= 2:
+                        shot('results')
+                        if tap('#sheet .rs-b[data-tut=report]', None, 800) and js("() => !!document.querySelector('#sheet .report-box')"):
+                            tap('#sheet .report-wrap > .sheet-x', None, 600)
+                        else:
+                            problems.append('Report on the results did not open the battle report')
+                    if not tap('#sheet .rs-b[data-tut=camp]', None, 1200):
+                        problems.append('no Hearth button on the results')
+                    break
                 if js("() => !document.getElementById('sheet').hidden"):
-                    if tap('#sheet .btn.primary', 'battle report', 700):
-                        pass
-                    if js("() => !!document.querySelector('#sheet .report-box')"):
-                        won = js("() => !!document.querySelector('#sheet .kicker.won')")
-                        js('w => { window.__lost = w ? 0 : (window.__lost || 0) + 1; }', won)
-                        tap('#sheet .btn.primary', 'Home', 1200)
-                        break
                     tap('#sheet .sheet-x', None, 400)
                     continue
                 tap('#bSkip', None, 900)
-                # between battles: wait for the walk, or for the report
+                # between battles: wait for the walk, or for the results
                 for _ in range(40):
                     if js("() => !document.getElementById('sheet').hidden || !!(Battle.busy && !document.querySelector('.between'))"):
                         break
@@ -186,12 +203,7 @@ def main():
                 problems.append('a trip did not end')
                 js("() => { Campaign.end({ k: 'called', text: 'test' }); App.go('map'); }")
 
-        # home from the last trip: the summary's new things
         tap('#tabbar .tab', 'Road', 900)
-        news = js("() => [...document.querySelectorAll('.tripcard .newrow b')].map(b => b.textContent)")
-        if news:
-            js('n => __seen.news.push(...n)', news)
-            shot('news')
         st = state()
         seen = js('() => window.__seen')
         shot('end')

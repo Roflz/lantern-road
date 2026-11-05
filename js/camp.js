@@ -244,13 +244,15 @@ const Camp = (() => {
     cardEl.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); click(); pick = -1; cam.pick = -1; goTo(stepFrom(nearest(), +b.dataset.step)); hideHint(); }));
     el.querySelectorAll('.bcard,.renown,.camp-chips').forEach(n => n.addEventListener('pointerdown', ev => ev.stopPropagation()));
     const hideHint = () => { if (hint) hint.style.opacity = 0; cam.hinted = true; };
-    el.addEventListener('pointerdown', ev => { dragging = true; downX = lastX = ev.clientX; lastT = performance.now(); moved = 0; vel = 0; target = null; try { el.setPointerCapture(ev.pointerId); } catch (e) { } });
-    el.addEventListener('pointermove', ev => { if (!dragging) return; const dx = ev.clientX - lastX, t = performance.now(); rot -= dx / 150; vel = -dx / 150 / Math.max(8, t - lastT) * 16; lastX = ev.clientX; lastT = t; moved = Math.max(moved, Math.abs(ev.clientX - downX)); if (moved > 6) { pick = -1; cam.pick = -1; hideHint(); } });
+    // Pointer positions in the landscape frame's design pixels (js/frame.js), so a drag follows the finger when the frame
+    // is scaled or turned.
+    el.addEventListener('pointerdown', ev => { dragging = true; downX = lastX = Frame.point(ev).x; lastT = performance.now(); moved = 0; vel = 0; target = null; try { el.setPointerCapture(ev.pointerId); } catch (e) { } });
+    el.addEventListener('pointermove', ev => { if (!dragging) return; const px = Frame.point(ev).x, dx = px - lastX, t = performance.now(); rot -= dx / 150; vel = -dx / 150 / Math.max(8, t - lastT) * 16; lastX = px; lastT = t; moved = Math.max(moved, Math.abs(px - downX)); if (moved > 6) { pick = -1; cam.pick = -1; hideHint(); } });
     const up = ev => {
       if (!dragging) return;
       dragging = false;
       if (moved < 6) {
-        const r = cv.getBoundingClientRect(), px = (ev.clientX - r.left) / S, py = (ev.clientY - r.top) / S;
+        const p = Frame.point(ev, cv), px = p.x / S, py = p.y / S;
         const hit = hits.slice().reverse().find(q => px >= q[0] && px <= q[2] && py >= q[1] && py <= q[3]);
         if (hit && hit[4].fire) { tapFire(); goTo(nearest()); return; }
         if (hit && hit[4].h != null) { pick = cam.pick = hit[4].h; react[pick] = performance.now(); click(); say(pick, hit[4].x * S, hit[4].y * S - 8); setCard(true); goTo(nearest()); return; }
@@ -587,8 +589,8 @@ const Camp = (() => {
     const wrap = h('div', { class: 'rwrap' }, h('button', { class: 'rdismiss', onclick: () => { click(); confirmDismiss(c.id); } }, 'Dismiss'), row);
     // a tap opens their sheet; a swipe left shows Dismiss
     let x0 = null, dx = 0, open = false;
-    row.addEventListener('pointerdown', e => { x0 = e.clientX; dx = 0; });
-    row.addEventListener('pointermove', e => { if (x0 == null) return; dx = e.clientX - x0; if (Math.abs(dx) > 8) row.style.transform = `translateX(${clamp((open ? -92 : 0) + dx, -92, 0)}px)`; });
+    row.addEventListener('pointerdown', e => { x0 = Frame.point(e).x; dx = 0; });
+    row.addEventListener('pointermove', e => { if (x0 == null) return; dx = Frame.point(e).x - x0; if (Math.abs(dx) > 8) row.style.transform = `translateX(${clamp((open ? -92 : 0) + dx, -92, 0)}px)`; });
     const end = () => { if (x0 == null) return; const moved = Math.abs(dx) > 8; x0 = null; if (!moved) return; open = (open ? -92 : 0) + dx < -46; row.style.transform = open ? 'translateX(-92px)' : ''; row.dataset.swiped = '1'; setTimeout(() => { delete row.dataset.swiped; }, 60); };
     row.addEventListener('pointerup', end); row.addEventListener('pointercancel', end);
     row.addEventListener('click', () => { if (row.dataset.swiped) return; if (open) { open = false; row.style.transform = ''; return; } click(); App.showCharacter(c.id); });

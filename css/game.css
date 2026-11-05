@@ -21,8 +21,14 @@ html{height:100%;box-sizing:border-box;background:var(--void)}
 *,*::before,*::after{box-sizing:inherit}
 [hidden]{display:none!important}
 body{height:100%;margin:0;background:var(--void);color:var(--bone);font-family:var(--f-body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
-#app{position:relative;height:100%;display:flex;justify-content:center;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:radial-gradient(ellipse at 50% 75%,#241629 0%,#130e1b 45%,var(--void) 75%)}
-#frame{position:relative;height:100%;width:360px;max-width:100%;overflow:hidden;background:var(--night);box-shadow:0 0 0 1px var(--rule),0 0 90px rgba(0,0,0,.9);--speed:1}
+/* The landscape frame (js/frame.js). #stage is 390 design pixels tall and 694–936 wide, scaled to fit the window and
+   letterboxed on #app, or drawn a quarter-turn on a touch phone held upright. #app's padding is the safe area, which
+   js/frame.js reads. #frame is where the current screen draws: the whole stage (the battle), or the centred column
+   the screens not yet redesigned keep their portrait layout in (.column). */
+#app{position:relative;height:100%;overflow:hidden;overflow:clip;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);background:radial-gradient(ellipse at 50% 75%,#241629 0%,#130e1b 45%,var(--void) 75%)}
+#stage{position:absolute;left:0;top:0;width:844px;height:390px;transform-origin:0 0;overflow:hidden;overflow:clip;background:radial-gradient(ellipse at 50% 70%,#1d1426 0%,#110c19 55%,var(--void) 100%);box-shadow:0 0 0 1px var(--rule),0 0 90px rgba(0,0,0,.9)}
+#frame{position:absolute;inset:0;overflow:hidden;overflow:clip;background:var(--night);container-type:inline-size;--speed:1}
+#frame.column{left:calc(50% - 195px);right:auto;width:390px;box-shadow:0 0 0 1px var(--rule),0 0 60px rgba(0,0,0,.8)}
 #world{position:absolute;top:0;left:0;display:block;image-rendering:crisp-edges;image-rendering:pixelated}
 #vig{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 85% 75% at 50% 55%,transparent 45%,rgba(10,6,20,.6) 100%)}
 #frame::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 70px rgba(212,72,74,0);transition:box-shadow .35s}
@@ -53,7 +59,10 @@ button{font:inherit;color:inherit}
 .plate.ko{opacity:.55}
 .plate.ko .bar{opacity:.5}
 @keyframes pulse{50%{opacity:.5}}
-.sts{display:flex;gap:2px;justify-content:center;flex-wrap:wrap;min-height:12px;margin-top:2px}
+/* statuses beside the health bars: left of a hero's, right of a foe's */
+.sts{position:absolute;top:-2px;display:flex;gap:2px;justify-content:center}
+.plate.hero .sts{right:calc(100% + 4px);flex-direction:row-reverse}
+.plate.foe .sts{left:calc(100% + 4px)}
 .sts .st{position:relative;display:inline-flex;align-items:center;padding:1px;background:rgba(7,5,11,.78);box-shadow:0 0 0 1px rgba(63,52,75,.9);animation:stin .3s cubic-bezier(.2,.9,.3,1.4)}
 .sts .st .ico{width:11px;height:11px}
 .sts .st b{position:absolute;right:-3px;bottom:-4px;font:700 8px/1 var(--f-pixel);color:#fff;text-shadow:1px 1px 0 #000,-1px 0 0 #000}
@@ -111,21 +120,8 @@ button{font:inherit;color:inherit}
 .flag .why b{font-weight:400;color:var(--gold);margin-right:5px}
 .flag .why.dim,.flag .why.dim b{color:#d4c0ae}
 
-/* Landscape battles: the stage and round in the top right, statuses beside the health bars, controls at the bottom */
-.land #hud{left:auto;right:0;width:auto;padding:6px 10px 10px 30px;background:linear-gradient(270deg,rgba(11,9,19,.9),rgba(11,9,19,.6) 75%,transparent)}
-.land .hud-top{flex-direction:column;align-items:flex-end;gap:5px;min-height:0}
-.land .hud-stage{font-size:18px}
-.land .sts{position:absolute;top:-2px;margin:0;min-height:0;flex-wrap:nowrap}
-.land .plate.hero .sts{right:calc(100% + 4px);flex-direction:row-reverse}
-.land .plate.foe .sts{left:calc(100% + 4px)}
-.land #controls{left:50%;right:auto;transform:translateX(-50%);padding:6px 8px 8px;background:none}
-.land .ctl{height:42px;min-width:44px}
-.land .ctl.wide{min-width:64px}
-.land #toasts{bottom:62px}
-.land #banner{top:34%}
-
 /* Big words: the stage name, Victory, Defeat, Enraged */
-#banner{position:absolute;left:0;right:0;top:40%;z-index:5;text-align:center;pointer-events:none;opacity:0}
+#banner{position:absolute;left:0;right:0;top:34%;z-index:5;text-align:center;pointer-events:none;opacity:0}
 #banner.show{animation:banner 1.5s forwards}
 #banner.win.show,#banner.lose.show{animation:bannerstay .6s forwards}
 #banner .t{font:52px/1 var(--f-display);text-shadow:0 0 26px rgba(244,166,70,.45),0 3px 0 #000}
@@ -139,10 +135,10 @@ button{font:inherit;color:inherit}
 @keyframes banner{0%{opacity:0;transform:translateY(10px) scale(.96)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
 @keyframes bannerstay{0%{opacity:0;transform:scale(1.25)}100%{opacity:1;transform:none}}
 
-/* HUD: the stage and the round */
-#hud{position:absolute;top:0;left:0;right:0;z-index:3;display:grid;gap:6px;padding:8px 10px 14px;background:linear-gradient(180deg,rgba(11,9,19,.92) 0%,rgba(11,9,19,.7) 70%,transparent)}
-.hud-top{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
-.hud-stage{display:flex;align-items:center;gap:7px;min-width:0;font:21px/1 var(--f-display);white-space:nowrap}
+/* HUD: the stage and the round, in the top right */
+#hud{position:absolute;top:0;right:0;z-index:3;display:grid;gap:6px;padding:6px 10px 10px 30px;background:linear-gradient(270deg,rgba(11,9,19,.9),rgba(11,9,19,.6) 75%,transparent)}
+.hud-top{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.hud-stage{display:flex;align-items:center;gap:7px;min-width:0;font:18px/1 var(--f-display);white-space:nowrap}
 .hud-stage .nm{overflow:hidden;text-overflow:ellipsis}
 .hud-stage b{font-weight:400;color:var(--ember)}
 .hud-stage .bossmark .ico{width:18px;height:14px}
@@ -153,11 +149,12 @@ button{font:inherit;color:inherit}
 .round.raging .enr{color:#ff9a8a}
 @keyframes ragepulse{50%{box-shadow:0 0 14px rgba(212,72,74,.6)}}
 
-/* Battle controls, in thumb's reach */
-#controls{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;gap:6px;justify-content:center;padding:10px 8px;background:linear-gradient(0deg,rgba(11,9,19,.88),rgba(11,9,19,.6) 70%,transparent)}
+/* Battle controls, along the bottom in the middle */
+#controls{position:absolute;left:50%;bottom:0;transform:translateX(-50%);z-index:3;display:flex;gap:6px;justify-content:center;padding:6px 8px 8px}
 .ctl{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:48px;height:48px;padding:0 10px;background:rgba(14,10,22,.82);border:2px solid var(--rule);color:var(--ash);font:11px var(--f-pixel);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .ctl svg{width:15px;height:15px;fill:currentColor}
-.ctl.wide{min-width:70px}
+#controls .ctl{height:42px;min-width:44px}
+#controls .ctl.wide{min-width:64px}
 .ctl:hover{border-color:var(--ember);color:var(--bone)}
 .ctl:active{transform:scale(.96)}
 .ctl.on{border-color:var(--ember);color:var(--ember);background:rgba(40,26,14,.85)}
@@ -174,7 +171,7 @@ button{font:inherit;color:inherit}
 .kicker{font:10px var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
 h1,h2{font-family:var(--f-display);font-weight:400;text-wrap:balance;margin:0}
 h2{font-size:29px;line-height:1.02}
-.camp{display:grid;gap:10px;padding-bottom:30vh}
+.camp{display:grid;gap:10px}
 .title{font-size:clamp(52px,15vw,72px);line-height:.86;text-shadow:0 0 30px rgba(244,166,70,.55),0 3px 0 #000;animation:titlein 1.2s ease-out both}
 @keyframes titlein{from{opacity:0;transform:translateY(8px)}}
 .tagline{margin:0;color:var(--ash);font-style:italic;line-height:1.45;max-width:34ch}
@@ -228,9 +225,14 @@ h2{font-size:29px;line-height:1.02}
 .page .note{color:var(--ash);font-style:italic;font-size:14px}
 /* The battle report: the result across the top, everyone ranked by one stat on the left, one character's fight on
    the right. Names in Pirata One, labels and numbers in pixel caps, the road's own voice in italic. */
-.land #sheet{align-items:center;justify-content:center;padding:8px}
+#frame:not(.column) #sheet{align-items:center;justify-content:center;padding:8px}
 #sheet.report{align-items:center;justify-content:center;padding:8px}
-.report-box{width:100%;max-width:900px;max-height:100%;padding:0;gap:0;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);grid-template-rows:auto minmax(0,1fr);border-bottom:2px solid var(--rule)}
+/* The whole report scrolls as one inside the frame, so nothing is cut off, and its close button stays in the corner;
+   its redesign comes later (onboarding spec §9). */
+.report-wrap{position:relative;display:flex;flex-direction:column;width:100%;max-width:900px;max-height:100%}
+.report-wrap>.sheet-x{z-index:2;top:6px;right:8px;width:36px;height:36px;display:grid;place-items:center;background:rgba(14,10,20,.88);border:1px solid var(--rule);box-shadow:0 0 0 1px #000}
+.report-box{flex:0 1 auto;min-height:0;width:100%;max-width:900px;max-height:100%;padding:0;gap:0;overflow:auto;overscroll-behavior:contain;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);grid-template-rows:auto auto;border-bottom:2px solid var(--rule)}
+.report-wrap .rhead{padding-right:50px}
 .report-box.quiet,.report-box.quiet *{animation:none!important}
 .rhead{grid-column:1/-1;display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:11px 14px 10px;border-bottom:1px solid var(--rule);background:linear-gradient(180deg,rgba(244,166,70,.07),transparent)}
 .rtitle{display:grid;gap:4px;min-width:0}
@@ -247,7 +249,7 @@ h2{font-size:29px;line-height:1.02}
 .report-box .actions .btn{width:auto;min-height:40px;padding:7px 10px;font-size:10px;text-align:center}
 .report-box .actions .btn.primary{background:linear-gradient(180deg,#3d2816,#2a1a0e)}
 .report-box .actions .btn .sub{font-size:12px;text-align:center}
-.report{min-height:0;overflow:auto;padding:10px 10px 8px 14px;display:grid;gap:6px;align-content:start;overscroll-behavior:contain}
+.report{padding:10px 10px 8px 14px;display:grid;gap:6px;align-content:start}
 .stabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:2px}
 .stabs .stats{display:flex;gap:4px}
 .stab{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 8px;font:8px var(--f-pixel);letter-spacing:.06em;text-transform:uppercase;color:var(--ash);background:rgba(14,10,22,.7);border:1px solid var(--rule);cursor:pointer}
@@ -283,7 +285,7 @@ h2{font-size:29px;line-height:1.02}
 .line.total{cursor:default;background:none;border-color:transparent;border-top:1px solid var(--rule);padding-top:7px}
 .line.total .nm{font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--ash)}
 .line.total>b{color:var(--ash)}
-.report-box .side{min-height:0;overflow:auto;padding:10px 14px 12px 10px;border-left:1px solid var(--rule);overscroll-behavior:contain}
+.report-box .side{padding:10px 14px 12px 10px;border-left:1px solid var(--rule)}
 .card{display:grid;gap:9px;padding:12px;background:linear-gradient(180deg,#221a2b,#1a1422);box-shadow:0 0 0 1px var(--rule),inset 0 1px 0 rgba(244,166,70,.18);animation:opendown .25s ease-out}
 @keyframes opendown{from{opacity:0;transform:translateY(-6px)}}
 .chead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
@@ -329,7 +331,6 @@ h2{font-size:29px;line-height:1.02}
 .moment b{display:block;font:400 9px/1.3 var(--f-pixel);letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
 .moment span{display:block;font:italic 13px/1.3 var(--f-body);color:var(--ash)}
 .seed{font:8px var(--f-pixel);color:var(--dim);text-align:center;letter-spacing:.08em;padding:4px 0}
-@media (max-width:600px) and (orientation:portrait){.report-box:not(.wide){grid-template-columns:1fr}}
 
 .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 12px;border-top:1px solid var(--rule);background:var(--stone)}
 .actions .btn.primary{grid-column:1/-1;text-align:center;background:linear-gradient(180deg,#3d2816,#2a1a0e)}

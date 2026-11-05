@@ -10,7 +10,10 @@ const Battle = (() => {
   const platesEl = $('#plates'), numsEl = $('#nums'), flagsEl = $('#flags'), hudEl = $('#hud');
 
   // ── scene
-  const S = { mode: 'camp', land: false, turned: false, W: 120, H: 260, scale: 3, ox: 0, oy: 0, region: 0, dist: 0, walkUntil: 0, units: {}, list: [], fx: [], parts: [], amb: [], active: null, flash: null };
+  const S = { mode: 'camp', W: 120, H: 260, scale: 3, ox: 0, oy: 0, region: 0, dist: 0, walkUntil: 0, units: {}, list: [], fx: [], parts: [], amb: [], active: null, flash: null };
+  // A battle is drawn side-on, across the whole landscape frame. The camp scene, behind the screens still in the
+  // frame's portrait column (js/frame.js), looks up the road from behind the party.
+  const sideOn = () => S.mode === 'battle';
   const P = { t: 0, speed: 1, paused: false };   // the play clock, in milliseconds at 1×
   // 1× plays at half the pace of the first prototype: the play clock runs at half real time, times the speed.
   const TEMPO = 0.5;
@@ -18,22 +21,11 @@ const Battle = (() => {
   let B = null;                                 // the battle being shown
   let last = 0, realT = 0;
 
-  // ── layout: logical pixels, scaled by a whole number so the pixel art stays crisp
+  // ── layout: logical pixels, scaled by a whole number so the pixel art stays crisp. #frame is in the landscape frame's
+  // design pixels (js/frame.js): the whole stage in battle, 390 tall, which makes the art 3×.
   function resize() {
-    const app = $('#app'), cs = getComputedStyle(app);
-    const aw = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = app.clientHeight;
-    let fw, fh;
-    S.turned = false;
-    if (!S.land) { fw = Math.floor(Math.min(aw, ah * 0.62, 520)); fh = ah; frame.style.cssText = `width:${fw}px`; }
-    else if (app.clientWidth >= ah) { fw = Math.floor(Math.min(aw, ah * 2.4)); fh = ah; frame.style.cssText = `width:${fw}px`; }
-    else {
-      // A phone held upright: the landscape battle is drawn turned on its side, to be read with the phone turned.
-      S.turned = true; fw = ah; fh = app.clientWidth;
-      frame.style.cssText = `position:absolute;left:0;top:0;width:${fw}px;height:${fh}px;max-width:none;transform-origin:0 0;transform:translateX(${fh}px) rotate(90deg)`;
-    }
-    frame.classList.toggle('land', S.land); frame.classList.toggle('turned', S.turned);
-    frame.classList.toggle('narrow', S.land && fw < 720); // a small phone on its side: compact controls (css/polish.css)
-    S.scale = S.land ? Math.max(2, Math.floor(fh / 118)) : Math.max(2, Math.floor(fw / 110));
+    const fw = frame.clientWidth || Frame.W, fh = frame.clientHeight || Frame.H;
+    S.scale = Math.max(2, Math.floor(fh / 118));
     S.W = Math.floor(fw / S.scale); S.H = Math.floor(fh / S.scale);
     cv.width = S.W; cv.height = S.H; mask.width = S.W; mask.height = S.H;
     cv.style.width = S.W * S.scale + 'px'; cv.style.height = S.H * S.scale + 'px';
@@ -52,7 +44,7 @@ const Battle = (() => {
     return { cx: gutter + half, k: Math.min(1, (half - 9) / 45) };
   }
   function place(u) {
-    if (S.land) {
+    if (sideOn()) {
       const first = Math.ceil(56 / S.scale) + 21, last = S.H - 10, sp = (last - first) / 3, i = u.slot - 2;
       let x = u.slot >= 2 ? S.W * 0.12 + (i % 2 ? 7 : -5) : S.W * 0.29;
       const y = u.slot >= 2 ? first + i * sp : lerp(first, last, u.slot ? 0.76 : 0.3);
@@ -67,7 +59,7 @@ const Battle = (() => {
   }
   const css = (x, y) => [S.ox + x * S.scale, S.oy + y * S.scale];
   // Heroes are drawn in their gear (js/art.js, heroCanvas); thralls from the side, facing the foes.
-  const sprOf = u => (u.thrall ? (S.land ? thrallSide(u.key) : foeSprite(u.art || 'bones')) : u.hero ? (S.land ? heroSide(u.key, u.step || 0, u.look) : heroSprite(u.key, u.step || 0, u.look)) : foeSprite(u.key));
+  const sprOf = u => (u.thrall ? (sideOn() ? thrallSide(u.key) : foeSprite(u.art || 'bones')) : u.hero ? (sideOn() ? heroSide(u.key, u.step || 0, u.look) : heroSprite(u.key, u.step || 0, u.look)) : foeSprite(u.key));
   const lampOf = u => (u.thrall || !u.hero ? null : sprOf(u).lamp);
   const faceOf = u => (u.thrall ? portraitURL('thrall:' + u.key, false) : portraitURL(u.key, u.side === 0, u.look));
   // The body's size, without a raised weapon: where numbers float and projectiles land.
@@ -153,7 +145,7 @@ const Battle = (() => {
   function screenFlash(color, alpha = .5, dur = 260) { if (!noMotion()) S.flash = { color, alpha, t0: P.t, dur }; }
   function shake(level) {
     if (noMotion() || !level) return;
-    const el = S.turned ? cv : frame;
+    const el = frame; // the stage around it carries the frame's scale and turn, so the shake's transform is free
     el.classList.remove('shake1', 'shake2', 'shake3'); void el.offsetWidth; el.classList.add('shake' + Math.min(3, level));
     setTimeout(() => el.classList.remove('shake1', 'shake2', 'shake3'), 480);
   }
@@ -170,7 +162,7 @@ const Battle = (() => {
     if (!u.popAt || now - u.popAt > 260) u.popN = 0;
     u.popAt = now;
     // In battle, a pop rises about 34px: keep it clear of the turn flags along the top (about 52px).
-    const k = u.popN++ % 4, [x, y0] = css(u.x, headY(u) - 1), top = S.land && B ? 88 : 0;
+    const k = u.popN++ % 4, [x, y0] = css(u.x, headY(u) - 1), top = sideOn() && B ? 88 : 0;
     const y = y0 - k * 13 >= top ? y0 - k * 13 : top + k * 13; // near the top, stack downward instead
     const el = h('div', { class: 'num ' + cls, text });
     el.style.left = x + 'px'; el.style.top = y + 'px';
@@ -358,7 +350,7 @@ const Battle = (() => {
         for (const tg of targets) { tx += tg.x; ty += tg.y; }
         tx /= n; ty /= n;
         // stop short of the target, at its feet
-        if (S.land) tx += actor.hero ? -10 : 10; else ty += actor.hero ? 6 : -10;
+        if (sideOn()) tx += actor.hero ? -10 : 10; else ty += actor.hero ? 6 : -10;
         const out = dash ? 220 : 160, share = dash ? 0.9 : 0.6;
         at(T0, () => { lunge(actor, tx, ty, share, out, 60, dash ? 260 : 200); if (dash) { burst(actor.x, actor.y, '#d8c8a8', 6, 20, 300); } });
         say(F.sfx, out - 30);
@@ -597,7 +589,7 @@ const Battle = (() => {
         const t = U[e.who], v = U[e.tgt];
         // Thorns: Mother Bramble doesn't lunge; her thorns bite whoever hit her
         if (t && e.why === 'thorns') { if (v) { pop(v, 'Thorns', 'tag thorns'); const [x, y] = midOf(v); burst(x, y, '#c8a070', 9, 26, 420); addFx({ type: 'link', a: t, b: v, dur: 260, color: '#a07a4a' }); } sfx('claw', .6); break; }
-        if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (S.land ? (t.hero ? -10 : 10) : 0), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
+        if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (sideOn() ? (t.hero ? -10 : 10) : 0), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
         break;
       }
       case 'saved': {
@@ -812,10 +804,10 @@ const Battle = (() => {
     S.region = stage.region;
     setMusicKey(SCALES[stage.region]);
     // Heroes march from where they stand into formation; foes rise out of the dark.
-    const wasLand = S.land;
-    S.mode = 'battle'; S.land = true; resize();
+    const fromCamp = S.mode === 'camp';
+    S.mode = 'battle'; resize();
     setUnits(res.start);
-    if (!wasLand) for (const u of S.list) if (u.hero) u.march = { t0: P.t, dur: 900, fx: u.bx - S.W * 0.4, fy: u.by };
+    if (fromCamp) for (const u of S.list) if (u.hero) u.march = { t0: P.t, dur: 900, fx: u.bx - S.W * 0.4, fy: u.by };
     platesEl.classList.add('away');
     for (const u of S.list) if (!u.hero) { u.alpha = 0; u.fade = { t0: P.t + 380, dur: 480, rise: true, enter: true }; }
     // The first time the party walks into a region, its name comes up before the stage's (campaign spec §7).
@@ -1118,7 +1110,7 @@ const Battle = (() => {
     return lights;
   }
   function drawGround() {
-    if (S.land) return drawGroundLand();
+    if (sideOn()) return drawGroundLand();
     const A = REGION_ART[S.region], W = S.W, H = S.H, dist = Math.floor(S.dist);
     const rc = Math.round(S.roadCx == null ? W / 2 : S.roadCx), half = Math.round(W * 0.34);
     const RL = Math.max(3, rc - half), RR = Math.min(W - 3, rc + half);
@@ -1188,7 +1180,7 @@ const Battle = (() => {
     if (u.recoil) {
       const e = P.t - u.recoil.t0;
       if (e > 200) u.recoil = null;
-      else if (S.land) x += Math.round(Math.sin(Math.PI * e / 200) * 2 * (u.hero ? -1 : 1));
+      else if (sideOn()) x += Math.round(Math.sin(Math.PI * e / 200) * 2 * (u.hero ? -1 : 1));
       else y += Math.round(Math.sin(Math.PI * e / 200) * 2 * u.recoil.dir), x += Math.round(Math.sin(Math.PI * e / 100) * (e < 100 ? 1 : 0));
     }
     u.x = x; u.y = y;
@@ -1344,7 +1336,7 @@ const Battle = (() => {
       n -= 1;
     }
     const scroll = P.t < S.walkUntil ? 14 : 0;
-    for (const p of S.amb) { p.x += (p.vx - (S.land ? scroll : 0) + (p.sway != null ? Math.sin(realT / 700 + p.sway) * 6 : 0)) * dt / 1000; p.y += (p.vy + (S.land ? 0 : scroll)) * dt / 1000; p.life -= dt; }
+    for (const p of S.amb) { p.x += (p.vx - (sideOn() ? scroll : 0) + (p.sway != null ? Math.sin(realT / 700 + p.sway) * 6 : 0)) * dt / 1000; p.y += (p.vy + (sideOn() ? 0 : scroll)) * dt / 1000; p.life -= dt; }
     S.amb = S.amb.filter(p => p.life > 0 && p.y < S.H + 6 && p.x > -6 && p.x < S.W + 34);
     // sparks, motes and ash run on the play clock
     const pdt = P.paused ? 0 : dt * P.speed * TEMPO;
@@ -1362,7 +1354,7 @@ const Battle = (() => {
     const fxl = drawFx();
     // lights: each hero carries a small lantern, the Lamplighter a big one; foes glow faintly
     const flick = noMotion() ? 0 : Math.sin(realT / 90) * .8 + Math.sin(realT / 42) * .5;
-    lights.push(S.land ? [W / 2, H * .6, W * .45, .32, false] : [W / 2, H * .52, W * .62, .32, false]);
+    lights.push(sideOn() ? [W / 2, H * .6, W * .45, .32, false] : [W / 2, H * .52, W * .62, .32, false]);
     for (const u of S.list) {
       if (!u.alive && u.gone) continue;
       const [x, y] = midOf(u);
@@ -1406,7 +1398,7 @@ const Battle = (() => {
       if (q >= 1) S.flash = null;
       else { ctx.globalAlpha = S.flash.alpha * (1 - q); ctx.fillStyle = S.flash.color; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     }
-    if (B && B.enrage) { ctx.globalAlpha = .08 + .04 * Math.sin(realT / 300); ctx.fillStyle = '#e5574a'; if (S.land) ctx.fillRect(Math.round(W / 2), 0, W, H); else ctx.fillRect(0, 0, W, S.rows[2] + 6); ctx.globalAlpha = 1; }
+    if (B && B.enrage) { ctx.globalAlpha = .08 + .04 * Math.sin(realT / 300); ctx.fillStyle = '#e5574a'; if (sideOn()) ctx.fillRect(Math.round(W / 2), 0, W, H); else ctx.fillRect(0, 0, W, S.rows[2] + 6); ctx.globalAlpha = 1; }
   }
   // Projectiles and slashes drawn again above the darkness, so they glow.
   function drawFxTop() {
@@ -1479,7 +1471,7 @@ const Battle = (() => {
   // The party waits on the road with no foes in sight: the camp, before a march.
   function idle(region = 0) {
     B = null; queue = []; S.fx = []; S.active = null; stepping = false; clearFlags(); hideBanner();
-    S.region = region; S.mode = 'camp'; S.land = false; resize(); setMusicKey(HEARTH_SCALE); platesEl.classList.remove('away');
+    S.region = region; S.mode = 'camp'; resize(); setMusicKey(HEARTH_SCALE); platesEl.classList.remove('away');
     const form = typeof Save !== 'undefined' && Save.state ? Save.state.party.map(id => Save.char(id)) : PARTY.map(k => ({ cls: k, name: CLASSES[k].name }));
     setUnits(form.map((c, i) => (c ? { id: 'p' + i, side: 0, slot: i, key: c.cls, name: c.name, look: c.gear && typeof Items !== 'undefined' ? Items.look(c) : null, hp: 1, maxHp: 1, mp: 0, maxMp: 0, alive: true, st: {}, rules: [] } : null)).filter(Boolean));
     for (const u of S.list) u.plate.hidden = true;
@@ -1502,8 +1494,7 @@ const Battle = (() => {
   }
   function init() {
     resize();
-    window.addEventListener('resize', resize);
-    if (window.ResizeObserver) new ResizeObserver(resize).observe($('#app'));
+    Frame.on(resize); // the frame changed size, or the screen moved between the column and the whole stage
     requestAnimationFrame(loop);
   }
   return {
@@ -1513,7 +1504,7 @@ const Battle = (() => {
     useItem, tapItem,
     set onPause(fn) { onPause = fn; },
     get paused() { return P.paused; }, get speed() { return P.speed; }, get stepping() { return stepping; },
-    get battle() { return B; }, get busy() { return !!B && !B.over; }, get land() { return S.land; },
+    get battle() { return B; }, get busy() { return !!B && !B.over; },
     // for tests: how far the current battle has played
     progress: () => (B ? { i: B.i, of: B.res.log.length, round: B.round, over: B.over, t: Math.round(P.t) } : null),
   };

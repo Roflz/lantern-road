@@ -242,11 +242,13 @@ const Campaign = (() => {
   function setOut(i, s = store()) {
     if (!s || !STAGES[i] || stateOf(i, s) === 'dark' || !fit(s).length) return null;
     const farm = isLit(STAGES[i].id, s);
+    // fatigue and from: each hero's fatigue, and level and XP, as they set out, for the trip's results (js/results.js).
+    // totals.fought: the stages fought, in order; totals.pieces: the gear found, { uid, id, sold }.
     s.campaign.trip = {
       stage: i, farm, keep: has('keepgoing', s) && s.campaign.road.keepGoing, home: false, out: [], started: Date.now(), battles: 0,
-      totals: { won: 0, lit: [], xp: 0, gold: 0, mats: {}, items: {}, gear: 0, sold: 0, unlocks: [] }, fatigue: {},
+      totals: { won: 0, lit: [], xp: 0, gold: 0, mats: {}, items: {}, gear: 0, sold: 0, unlocks: [], fought: [], pieces: [] }, fatigue: {}, from: {},
     };
-    for (const c of fit(s)) s.campaign.trip.fatigue[c.id] = c.fatigue || 0;
+    for (const c of fit(s)) { s.campaign.trip.fatigue[c.id] = c.fatigue || 0; s.campaign.trip.from[c.id] = { level: c.level, xp: c.xp }; }
     return s.campaign.trip;
   }
   // After each battle on a trip: settle it, then decide whether the party walks on. Returns
@@ -264,6 +266,9 @@ const Campaign = (() => {
     for (const k in r.mats) tt.mats[k] = (tt.mats[k] || 0) + r.mats[k];
     for (const k in r.items) tt.items[k] = (tt.items[k] || 0) + r.items[k];
     tt.unlocks.push(...r.unlocks);
+    // (a trip that set out before the results popup has no list of stages or pieces)
+    if (tt.fought) tt.fought.push(stage.id);
+    if (tt.pieces) for (const g of r.gear) tt.pieces.push({ uid: g.piece.uid, id: g.piece.id, sold: g.sold || 0 });
     // A hero who reached Spent walks home alone; the rest carry on (campaign spec §7.4).
     const left = [];
     for (const c of chars(s)) if (r.fatigue[c.id] && !T.out.includes(c.id) && spent(c)) { T.out.push(c.id); left.push(c.id); }
@@ -305,7 +310,7 @@ const Campaign = (() => {
   function end(why, s = store()) {
     const T = s.campaign.trip;
     if (!T) return null;
-    const heroes = Object.keys(T.fatigue).map(id => { const c = s.roster.find(x => x.id === id); return c ? { id, name: c.name, before: T.fatigue[id], after: c.fatigue || 0, out: T.out.includes(id) } : null; }).filter(Boolean);
+    const heroes = Object.keys(T.fatigue).map(id => { const c = s.roster.find(x => x.id === id); return c ? { id, name: c.name, before: T.fatigue[id], after: c.fatigue || 0, out: T.out.includes(id), from: (T.from && T.from[id]) || null } : null; }).filter(Boolean);
     // Closed while out: home from the moment the app closed, so resting counts from then (home-base spec §4).
     const away = why && why.k === 'closed' && typeof Save !== 'undefined' && Save.info && Save.info.awayMs > 0 ? Save.info.awayMs : 0;
     s.campaign.lastTrip = Object.assign({ at: Date.now() - away, battles: T.battles, why: why || { k: 'called', text: 'The party came home.' }, heroes, seen: false }, T.totals);
