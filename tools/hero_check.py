@@ -183,7 +183,7 @@ def main():
             char = lambda k, expr: js(f"(() => {{ const c = Save.char('{ids[k]}'); return {expr}; }})()")
             exists = lambda sel: js(f"!!document.querySelector('{sel}')")
             count = lambda sel: js(f"document.querySelectorAll('{sel}').length")
-            tip_text = lambda: js("(() => { const t = document.querySelector('.tip-box'); return t ? t.textContent : ''; })()")
+            tip_text = lambda: js("(() => { const t = document.querySelector('.tp'); return t ? t.textContent : ''; })()")
 
             # in: the camp's grid opens Formation, a tap on Agnes's portrait opens her
             tap('.cv-tile[data-slot="2"]', wait=500)

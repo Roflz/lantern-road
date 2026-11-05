@@ -419,7 +419,7 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 372 |
-| straight apostrophes | curly ones (’) |  | js/bag.js 276 · js/data.js 295 |
+| straight apostrophes | curly ones (’) |  | js/bag.js 271 · js/data.js 295 |
 | Ossuary, the Gravecaller’s first path | Charnel Host | The Boneward path ends in Charnel Fortress. | js/classes-late.js: CLASSES.gravecaller.paths[0] |
 | Surgeon, the Barber-Surgeon’s second path | Sawbones |  | js/classes-late.js: CLASSES.surgeon.paths[1] |
 | Bastion, the Warden’s second path | Unbroken | Unbroken is also a skill on that path, and the status the skill gives. | js/classes.js: CLASSES.warden.paths[1] |

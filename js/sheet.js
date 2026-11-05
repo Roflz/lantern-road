@@ -1,7 +1,7 @@
 'use strict';
 // Lantern Road · the hero card (screen 8), after docs/mockups/hero-card.html (mockup D1, approved 2026-11-05) and
 // docs/ui-rules.md: one page on the whole landscape stage, one big hero, plain lists on a dark ground under header
-// plates, and names and explanations in tooltips (Tip, below: hover on a computer, a long press on a phone).
+// plates, and names and explanations in tooltips (js/tip.js: a hover on a computer, a press held on a phone).
 //   the left    ‹ back; the name, with a pencil to rename (12 letters at most); the class; ◂ ▸ through the party, then
 //               the resting. The hero full length in a stone arch (the art below, after docs/mockups/hearth-art.js),
 //               wearing their gear or what is being tried on (SpriteStage, js/stage.js); the level banner with XP
@@ -30,64 +30,26 @@
 // HeroSheet.placing: the points placed while spending and not yet kept; HeroSheet.mode: 'card', 'spend', 'dress',
 // 'pick' or 'tree'. Styles in css/hero.css (hr-) and css/gear.css (gc-, pc-).
 
-// ── tooltips: an element's data-tip ("Title|What it does") shows in a small card by it, on hover with a mouse and on a
-// long press with a finger. A tap on something with a tooltip and nothing else to do (a stat, a resistance) shows it
-// too. Tip.attach(root) once per screen; the card goes in the screen's view.
-const Tip = (() => {
-  const PRESS = 450;
-  let box = null, at = null, t = 0, hideT = 0, x0 = 0, y0 = 0, kind = 'mouse';
-  function hide() { clearTimeout(hideT); if (box) box.remove(); box = null; at = null; }
-  function show(el, ms) {
-    const s = el && el.dataset.tip;
-    if (!s || !el.isConnected) return;
-    const host = el.closest('.view') || document.getElementById('frame');
-    hide();
-    const [title, body] = s.split('|');
-    box = h('div', { class: 'tip-box', role: 'tooltip' }, h('b', { text: title }), body ? h('span', { text: body }) : null);
-    host.append(box); at = el;
-    const b = Frame.box(el, host), W = host.clientWidth, H = host.clientHeight, w = box.offsetWidth, hh = box.offsetHeight;
-    let top = b.top - hh - 8;
-    if (top < 8) top = b.bottom + 8;
-    if (top + hh > H - 8) top = Math.max(8, H - 8 - hh);
-    box.style.left = clamp(b.left + b.width / 2 - w / 2, 16, Math.max(16, W - 16 - w)) + 'px';
-    box.style.top = top + 'px';
-    if (ms) hideT = setTimeout(hide, ms);
+// ── tooltips (js/tip.js): every element a screen marks with data-tip ("Title|What it does") gets its tooltip, on a
+// hover with a mouse and a press held with a finger. One with nothing else to do (a stat, a resistance, the level
+// banner) shows it at a tap too, until the next press. tipsFor(root) after each build; the hero card, the Bag
+// (js/bag.js) and the Heroes list use it.
+let tipKind = 'mouse';
+document.addEventListener('pointerdown', e => { tipKind = e.pointerType || 'mouse'; }, true);
+function tipsFor(root) {
+  for (const el of root.querySelectorAll('[data-tip]')) {
+    if (el.dataset.tipOn) continue;
+    el.dataset.tipOn = '1';
+    const what = () => { const [t, l] = String(el.dataset.tip || '').split('|'); return t ? [t, l] : null; };
+    Tip.on(el, what);
+    if (el.closest('button, a, input, [role=button]')) continue;
+    el.addEventListener('click', () => {
+      if (tipKind === 'mouse' || !Tip.show(el, what)) return;
+      const off = () => { document.removeEventListener('pointerdown', off, true); Tip.hide(); };
+      setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+    });
   }
-  function attach(root) {
-    root.addEventListener('pointerover', e => {
-      if (e.pointerType !== 'mouse') return;
-      const el = e.target.closest('[data-tip]');
-      if (el && root.contains(el) && el !== at) show(el);
-    });
-    root.addEventListener('pointerout', e => {
-      if (e.pointerType !== 'mouse') return;
-      const el = e.target.closest('[data-tip]');
-      if (el && el === at && !(e.relatedTarget && el.contains(e.relatedTarget))) hide();
-    });
-    root.addEventListener('pointerdown', e => {
-      kind = e.pointerType || 'mouse';
-      clearTimeout(t); t = 0;
-      if (kind === 'mouse') return;
-      const el = e.target.closest('[data-tip]');
-      if (!el) return;
-      const p = Frame.point(e); x0 = p.x; y0 = p.y;
-      t = setTimeout(() => { t = 0; show(el); el.dataset.tipped = '1'; }, PRESS);
-    });
-    root.addEventListener('pointermove', e => { if (!t) return; const p = Frame.point(e); if (Math.abs(p.x - x0) > 8 || Math.abs(p.y - y0) > 8) { clearTimeout(t); t = 0; } });
-    const up = () => { clearTimeout(t); t = 0; if (box && kind !== 'mouse') { clearTimeout(hideT); hideT = setTimeout(hide, 1600); } };
-    root.addEventListener('pointerup', up);
-    root.addEventListener('pointercancel', up);
-    // the tap that ends a long press does nothing else; a tap on a stat or a resistance shows its tooltip
-    root.addEventListener('click', e => {
-      const held = e.target.closest('[data-tipped]');
-      if (held) { delete held.dataset.tipped; e.stopImmediatePropagation(); e.preventDefault(); return; }
-      const el = e.target.closest('[data-tip]');
-      if (!el || el.closest('button, a, input, [role=button]') || kind === 'mouse') return;
-      if (at === el) hide(); else show(el, 2400);
-    }, true);
-  }
-  return { attach, show, hide };
-})();
+}
 
 const HeroSheet = (() => {
   const ui = {
@@ -312,6 +274,7 @@ const HeroSheet = (() => {
     v.replaceChildren(h('div', { class: 'hc-edge' }, ['tl', 'tr', 'bl', 'br'].map(k => h('i', { class: 'cn ' + k }))),
       ...left(c), ...(cover ? [cover] : [gearS(c), resS(c), skillsS(c), ui.pick ? pickS(c) : tacticsS(c)]));
     for (const [k, y] of keepScroll) { const el = v.querySelector(`[data-scroll="${k}"]`); if (el) el.scrollTop = y; }
+    tipsFor(v);
     ui.fresh = false;
   }
 
@@ -643,7 +606,6 @@ const HeroSheet = (() => {
     render(p) {
       if (p && p.id && p.id !== ui.id) reset(p.id);
       ui.view = h('div', { class: 'hr-view hc' });
-      Tip.attach(ui.view);
       ui.fresh = true;
       build(ui.view);
       return ui.view;
