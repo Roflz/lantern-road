@@ -26,13 +26,13 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | [The basics](#the-basics) | 8 |
 | [Battle](#battle) | 36 |
 | [Rules](#rules) | 56 |
-| [Heroes](#heroes) | 34 |
+| [Heroes](#heroes) | 35 |
 | [Gear](#gear) | 19 |
 | [The Hearth](#the-hearth) | 36 |
 | [The road](#the-road) | 25 |
 | [Statuses](#statuses) | 57 |
 | [Resources](#resources) | 7 |
-| **All** | **278** |
+| **All** | **279** |
 
 ## The basics
 
@@ -154,7 +154,8 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | Name | Line | More, for the Codex | Id · icon |
 |---|---|---|---|
 | **Class** | What a hero is, like Sellsword or Pilgrim: their stats, weapon and skills. | There are twelve. Six are on the Recruit Board from the start, and six join as the road goes on. | `class` · helm |
-| **XP** | Experience from battles and training; enough of it brings a new level. | Battle XP is a share of a level at the stage’s level, so a hero below it catches up fast. | `xp` · star |
+| **XP** | Experience from battles and training; enough of it brings a new level. | Battle XP is a share of a level at the stage’s level, so a hero below it catches up fast. A first clear pays at least 30% of a level at your top hero’s level. | `xp` · star |
+| **Too easy** | A stage that pays a hero under 10% of their own level in XP. | A stage below a hero’s level pays less of theirs. New stages on the road pay more. | `too_easy` · star |
 | **Level** | How far a hero has grown, from 1 up to 200. | Each level brings a stat point and the class’s own growth. Every fifth brings a skill point. | `level` · star |
 | **Stat point** | One for every level: spend it on a stat or a resistance. | Speed, Crit, Dodge and each resistance take 25 points at most. | `stat_point` · plus |
 | **Skill point** | One for every fifth level: learn a skill, or raise one a level. |  | `skill_point` · plus |
@@ -395,15 +396,15 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 586 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 396 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 586 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 405 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
-| Come home when | Return when… | The stage sheet’s chips. | js/map.js 368 |
+| Come home when | Return when… | The stage sheet’s chips. | js/map.js 374 |
 | turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 576, 582 · js/firstsession.js 109 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 299 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 338 |
-| spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 278 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 534, 688 · js/hero.js 31 · js/items.js 53 · js/map.js 316 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 317 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 344 |
+| spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 534, 688 · js/hero.js 31 · js/items.js 53 · js/map.js 317 |
 | Foe: highest attack | Foe: highest Power |  | js/data.js 288, 505 |
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 510 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |

@@ -18,7 +18,9 @@
 //   Campaign.onUnlock(fn(id, state))          every unlock (buildings become blueprints)
 //   Campaign.onFirstClear(fn(stage, state))   each first clear
 //   Campaign.onSettle(fn(r, stage, res, state))  the end of every battle's settling: r is what it earned (gold, xpLv,
-//                                             xp, mats, items, gear, fatigue, turns { charId: turns }, unlocks, first)
+//                                             xp, floor, mats, items, gear, fatigue, turns { charId: turns }, unlocks,
+//                                             first). xpLv is the stage's own share of a level (Renown counts it); xp
+//                                             is what each hero gets, which a first clear's floor can raise.
 //   Campaign.onHome(fn(lastTrip, state))      a trip is over and the party is home
 // Fatigue.battle(res, state), when the home base defines it, replaces the plain fatigue count (same result shape).
 
@@ -137,16 +139,32 @@ const Campaign = (() => {
     if (r.first && stage.firstXp) r.xpLv = Math.max(r.xpLv, stage.firstXp);
     r.spoilsGold = Math.round(r.spoilsGold); r.clearGold = Math.round(r.clearGold);
     r.gold = r.spoilsGold + r.clearGold;
+    // XP: the stage's share of a level at its level (r.xpLv, which Renown counts), and on a first clear at least the
+    // floor, a share of a level at the party's top hero's level (r.floor: that level, when the floor paid more)
     r.xp = Math.round(r.xpLv * Hero.xpToNext(L));
+    if (r.first) { const top = o.top || topLevel(res), f = floorXp(top); if (f > r.xp) { r.xp = f; r.floor = top; } }
     return r;
   }
-  // A rough preview of a stage's rewards, for the stage sheet: gold for clearing it with every foe defeated.
-  function preview(stage, first) {
+  // ── XP for each hero (regions study §5.3): every hero gets the same XP, and its share of their own level differs
+  // The party's top hero's level, from the heroes who started the battle.
+  const topLevel = res => Math.max(1, ...res.start.filter(u => u.side === 0 && !u.thrall).map(u => u.lv || 1));
+  // The first-clear floor: XP_FLOOR of a level at that level (a hero at the cap counts as one level below it).
+  const floorXp = top => Math.round(XP_FLOOR * Hero.xpToNext(clamp(Math.round(top) || 1, 1, HERO.CAP - 1)));
+  // XP as a share of a hero's own level (null at the cap, where XP does nothing), and whether that is Too easy.
+  const share = (xp, level) => (level >= HERO.CAP ? null : xp / Hero.xpToNext(level));
+  const tooEasy = (xp, level) => { const k = share(xp, level); return k != null && k < XP_TOO_EASY; };
+  // A rough preview of a stage's rewards, for the stage sheet: gold for clearing it with every foe defeated, and the XP
+  // each hero who would set out gets (heroes: those heroes; the fit party when left out). each: [{ c, share, easy }].
+  function preview(stage, first, heroes) {
     const S = GOLD_SCALE(stage.level), C = CLEAR[stage.tier];
     const foes = stage.foes.filter(Boolean).map(x => FOES[foeKey(x)]);
     const spoils = foes.reduce((a, F) => a + SPOILS[foeRank(F)].gold * S, 0), xpLv = foes.reduce((a, F) => a + SPOILS[foeRank(F)].xp, 0) + C.xp;
     const k = first ? 2 : 1, xpL = first && stage.firstXp ? Math.max(xpLv, stage.firstXp) : xpLv;
-    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp: Math.round(xpL * Hero.xpToNext(stage.level)), xpLv: xpL, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
+    const list = heroes || fit(), top = Math.max(1, ...list.map(c => c.level));
+    let xp = Math.round(xpL * Hero.xpToNext(stage.level)), floor = null;
+    if (first) { const f = floorXp(top); if (f > xp) { xp = f; floor = top; } }
+    const each = list.map(c => ({ c, share: share(xp, c.level), easy: tooEasy(xp, c.level) }));
+    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp, xpLv: xpL, floor, each, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
   }
 
   // ── fatigue (home-base spec §6): +1 for each turn a hero took, times their gear's multiplier. The home base's
@@ -344,7 +362,7 @@ const Campaign = (() => {
 
   return {
     ensure, has, isLit, frontier, stateOf, litIn, reached, regionBuilt, chars, fit, spent, readiness, battleTactics, setup,
-    earn, preview, defeated, fatigue, unlock, settle, setOut, afterBattle, end, callHome, trip, setFor, chooseSet, tip, restAll,
+    earn, preview, topLevel, floorXp, share, tooEasy, defeated, fatigue, unlock, settle, setOut, afterBattle, end, callHome, trip, setFor, chooseSet, tip, restAll,
     onUnlock: fn => unlockHooks.push(fn), onFirstClear: fn => clearHooks.push(fn), onSettle: fn => settleHooks.push(fn), onHome: fn => homeHooks.push(fn),
   };
 })();

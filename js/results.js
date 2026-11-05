@@ -2,10 +2,12 @@
 // Lantern Road · the results popup, after every battle that brings the party home (onboarding spec §9, play-test notes
 // 1.7 and 1.27), after docs/mockups/results.html. It sits in the landscape frame over the dimmed battlefield:
 //   the banner   Victory, or Driven back after a loss. Under it the stage's id and name, and First clear.
-//   the heroes   a row each, in two columns past three: the face with its level, the name, Level up and +XP. The XP
-//                bar fills from where the hero was; a level fills it, flashes, lights Level up, empties it and fills
-//                it again, level after level. The fatigue bar grows from before to after, with marks at Weary (50) and
-//                Exhausted (75); its number turns gold, then red, and a tap on it says what that means.
+//   the heroes   a row each, in two columns past three: the face with its level, the name, Level up, +XP and what
+//                that is as a share of the hero's own level, with Too easy (a tap says why) when a win paid them
+//                little (Campaign.tooEasy; per battle, on a trip). The XP bar fills from where the hero was; a level
+//                fills it, flashes, lights Level up, empties it and fills it again, level after level. The fatigue
+//                bar grows from before to after, with marks at Weary (50) and Exhausted (75); its number turns gold,
+//                then red, and a tap on it says what that means.
 //   the loot     gold, materials, party items and gear (rarity on the frame) pop in one by one, then New for each
 //                first-clear unlock. A tap on gear opens its card; on New, it does what the trip summary's row does.
 //   the buttons  Report · Hearth · Fight again · Next ›, or after a loss Report · Hearth · Try again · Farm the stage
@@ -40,18 +42,26 @@ const Results = (() => {
         const c = Save.char(x.id);
         if (!c) return null;
         const from = x.from || { level: c.level, xp: c.xp };
-        return { c, lv0: from.level, xp0: from.xp, lv1: c.level, xp1: c.xp, gain: Math.max(0, Hero.xpBetween(from.level, c.level) - from.xp + c.xp), f0: x.before, f1: x.after };
+        const gain = Math.max(0, Hero.xpBetween(from.level, c.level) - from.xp + c.xp);
+        return { c, lv0: from.level, xp0: from.xp, lv1: c.level, xp1: c.xp, gain, f0: x.before, f1: x.after, ...shareOf(gain, from.level, won, T.battles) };
       }).filter(Boolean);
       return { won, i, hint, ids: T.fought && T.fought.length ? T.fought : [STAGES[i].id], first: T.lit.length, heroes,
         loot: { gold: T.gold, mats: T.mats, items: T.items, gear: T.pieces || [], unlocks: T.unlocks } };
     }
     const heroes = res.gains.map(x => {
       const f = r.fatigue[x.c.id] || { before: x.c.fatigue || 0, after: x.c.fatigue || 0 };
-      return { c: x.c, lv0: x.before.level, xp0: x.before.xp, lv1: x.g.to, xp1: x.c.xp, gain: x.g.xp, f0: f.before, f1: f.after };
+      return { c: x.c, lv0: x.before.level, xp0: x.before.xp, lv1: x.g.to, xp1: x.c.xp, gain: x.g.xp, f0: f.before, f1: f.after, ...shareOf(x.g.xp, x.before.level, won, 1) };
     });
     return { won, i, hint, ids: [STAGES[i].id], first: r.first ? 1 : 0, heroes,
       loot: { gold: r.gold, spoils: r.spoilsGold, clear: r.clearGold, mats: r.mats, items: r.items, gear: r.gear.map(g => ({ uid: g.piece.uid, id: g.piece.id, sold: g.sold || 0 })), unlocks: r.unlocks } };
   }
+  // XP as a share of the hero's level before it (share: null at the cap), and whether a win paid them little: on a
+  // trip, measured per battle.
+  function shareOf(gain, level, won, battles) {
+    const share = Campaign.share(gain, level);
+    return { share, easy: won && share != null && Campaign.tooEasy(gain / Math.max(1, battles), level) };
+  }
+  const pctOf = k => `${Math.round(k * 100)}%`;
   // A hero's level and the bar's fill (0–1) at q of the way: the bar rolls over at each level gained.
   function xpAt(x, q) {
     const n = x.lv1 - x.lv0, f0 = fracOf(x.lv0, x.xp0), f1 = fracOf(x.lv1, x.xp1);
@@ -87,6 +97,9 @@ const Results = (() => {
     exhausted: 'At 75 fatigue a hero loses 15% of their Power, Defence and Speed.',
     spent: 'At 100 fatigue a hero can’t fight until they rest below 50.',
   };
+  function easyTip(x) {
+    toast(`${x.c.name}: ${pctOf(x.share)} of a level at level ${x.lv0}. A stage below a hero’s level pays less of theirs; new stages on the road pay more.`);
+  }
   function fatigueTip(x) {
     const f = x.f1, k = f >= FATIGUE.SPENT ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exhausted' : f >= FATIGUE.WEARY ? 'weary' : 'fresh';
     const G = typeof GLOSSARY !== 'undefined' && GLOSSARY[k], line = G ? G.line : FAT_LINES[k];
@@ -116,12 +129,14 @@ const Results = (() => {
     const bars = [];
     const heroRow = (x, k) => {
       const em = h('em', { text: String(x.lv0) }), lvup = h('span', { class: 'lvup', text: 'Level up' }), xpn = h('span', { class: 'xpn', text: '+0 XP' });
+      const xpp = x.share != null ? h('span', { class: 'xpp', title: `${pctOf(x.share)} of a level at level ${x.lv0}`, text: '0%' }) : null;
+      const easy = x.easy ? h('button', { class: 'rs-easy', type: 'button', 'aria-label': `${x.c.name}: too easy`, onclick: () => { sfx('click'); easyTip(x); } }, 'Too easy') : null;
       const fill = h('i'), bar = h('span', { class: 'rs-bar', 'data-tut': k === 0 ? 'xp' : null }, fill);
       const ffill = h('i'), fv = h('span', { class: 'fv' });
-      bars.push({ x, em, lvup, xpn, fill, bar, ffill, fv, lv: x.lv0 });
+      bars.push({ x, em, lvup, xpn, xpp, easy, fill, bar, ffill, fv, lv: x.lv0 });
       return h('div', { class: 'rs-hr' },
         h('span', { class: 'face' }, h('img', { src: heroPortrait(x.c), alt: '' }), em),
-        h('span', { class: 'top' }, h('span', { class: 'nm', text: x.c.name }), lvup, xpn),
+        h('span', { class: 'top' }, h('span', { class: 'nm', text: x.c.name }), lvup, easy, xpn, xpp),
         bar,
         h('button', { class: 'rs-fat', type: 'button', 'data-tut': k === 0 ? 'fatigue' : null, 'aria-label': `${x.c.name}: fatigue`, onclick: () => { sfx('click'); fatigueTip(x); } },
           ico('fatigue'), h('span', { class: 'rs-fbar' }, ffill, h('s', { style: 'left:50%' }), h('s', { style: 'left:75%' })), fv));
@@ -168,6 +183,8 @@ const Results = (() => {
         const x = B.x, q = clamp((p - k * stag) / FILL, 0, 1), at = xpAt(x, q);
         B.fill.style.width = (at.frac * 100).toFixed(1) + '%';
         B.xpn.textContent = `+${fmt(Math.round(x.gain * q))} XP`;
+        if (B.xpp) B.xpp.textContent = pctOf(x.share * q);
+        if (B.easy) B.easy.classList.toggle('on', q >= 1);
         if (at.lv !== B.lv) {
           B.lv = at.lv;
           B.em.textContent = String(at.lv);

@@ -1148,9 +1148,33 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const won = (stage, L, seed = 1) => { for (let k = 0; k < 50; k++) { const r = simulate(refSetup(stage, seed + k, REF.ORDERS[0], L)); if (r.winner === 0) return r; } return null; };
   const r4 = won(st('1-4'), 4), e4 = Campaign.earn(r4, st('1-4'), { first: true }), S4 = GOLD_SCALE(2);
   ok(e4.foes === 3 && e4.spoilsGold === Math.round(3 * 8 * S4) && e4.clearGold === Math.round(20 * S4 * 2) && e4.mats.bone_dust >= 6 && e4.gear.some(g => g.why === 'clear'), `a first clear of 1-4: spoils, a doubled Standard reward and a certain gear roll (${JSON.stringify({ g: e4.gold, m: e4.mats })})`);
-  ok(e4.xp === Math.round((3 * 0.06 + 0.15) * Hero.xpToNext(2)), `XP is a share of a level at the stage's level (${e4.xp})`);
   const e4b = Campaign.earn(r4, st('1-4'));
   ok(e4b.clearGold === Math.round(20 * S4) && JSON.stringify(Campaign.earn(r4, st('1-4'))) === JSON.stringify(e4b), 'a replay pays the plain clear reward, and the same battle always earns the same');
+  // XP (regions study §5.3): a share of a level at the stage's level; a first clear pays every hero at least XP_FLOOR of
+  // a level at the party's top hero's level, and replays keep the plain rule
+  const plain4 = Math.round((3 * 0.06 + 0.15) * Hero.xpToNext(2));
+  ok(e4b.xp === plain4 && !e4b.floor, `a replay: XP is a share of a level at the stage's level (${e4b.xp})`);
+  ok(Campaign.topLevel(r4) === 4 && e4.xp === Math.round(XP_FLOOR * Hero.xpToNext(4)) && e4.floor === 4 && e4.xpLv === e4b.xpLv,
+    `a first clear with a level 4 party pays the floor, ${Math.round(XP_FLOOR * 100)}% of a level at level 4 (${e4.xp} XP, not ${plain4}), and Renown still counts the stage's own share`);
+  const e4lo = Campaign.earn(r4, st('1-4'), { first: true, top: 2 });
+  ok(e4lo.xp === plain4 && !e4lo.floor, `a first clear that pays more than the floor keeps its own XP (${e4lo.xp})`);
+  const e4cap = Campaign.earn(r4, st('1-4'), { first: true, top: HERO.CAP });
+  ok(Number.isFinite(e4cap.xp) && e4cap.xp === Math.round(XP_FLOOR * Hero.xpToNext(HERO.CAP - 1)), `a top hero at the cap: the floor stays finite (${e4cap.xp})`);
+  {
+    const r1 = won(st('1-1'), 1), e1 = Campaign.earn(r1, st('1-1'), { first: true });
+    ok(e1.xp === Math.round(st('1-1').firstXp * Hero.xpToNext(1)) && e1.xp >= Hero.xpToNext(1), `1-1's first clear still brings the first level (${e1.xp} XP)`);
+    // the play-test's case: after 1-1, a level 2 hero at 1-2
+    const r2 = won(st('1-2'), 2), first2 = Campaign.earn(r2, st('1-2'), { first: true }), again2 = Campaign.earn(r2, st('1-2'));
+    ok(first2.xp === Math.round(XP_FLOOR * Hero.xpToNext(2)) && Campaign.share(first2.xp, 2) >= XP_FLOOR - 0.01 && !Campaign.tooEasy(first2.xp, 2),
+      `1-2's first clear pays a level 2 hero ${Math.round(100 * Campaign.share(first2.xp, 2))}% of a level (${first2.xp} XP of ${Hero.xpToNext(2)})`);
+    ok(again2.xp < first2.xp && Campaign.tooEasy(again2.xp, 2) && !Campaign.tooEasy(again2.xp, 1), `a replay of 1-2 is Too easy for a level 2 hero (${again2.xp} XP, ${Math.round(100 * Campaign.share(again2.xp, 2))}%), not for a level 1 one`);
+    // the stage sheet's preview measures it for the party's heroes, with the same floor
+    const hero = lv => ({ name: 'H' + lv, level: lv }), pf = Campaign.preview(st('1-2'), true, [hero(2), hero(1)]), pr = Campaign.preview(st('1-2'), false, [hero(2), hero(1)]);
+    ok(pf.xp === first2.xp && pf.floor === 2 && pf.each.length === 2 && Math.abs(pf.each[0].share - first2.xp / Hero.xpToNext(2)) < 1e-9 && pf.each[1].share > pf.each[0].share && !pf.each.some(x => x.easy),
+      `the stage sheet: 1-2's first clear, ${pf.xp} XP each: ${pf.each.map(x => Math.round(100 * x.share) + '%').join(' and ')} of a level for heroes at level 2 and 1`);
+    ok(pr.xp === again2.xp && !pr.floor && pr.each[0].easy && !pr.each[1].easy, `the stage sheet: a replay of 1-2 is Too easy for the level 2 hero only`);
+    ok(Campaign.share(100, HERO.CAP) === null && !Campaign.tooEasy(0, HERO.CAP), 'a hero at the cap has no share, and nothing is Too easy for them');
+  }
   const lost = (() => { for (let k = 0; k < 60; k++) { const r = simulate(refSetup(st('1-9'), 900 + k, REF.ORDERS[1], 3)); if (r.winner === 1) return r; } return null; })();
   const el = Campaign.earn(lost, st('1-9'), { first: true });
   ok(lost && !el.clearGold && !el.mats.bone_dust && el.gold === el.spoilsGold, 'a loss keeps the spoils of the foes defeated, and no clear reward');

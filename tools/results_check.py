@@ -7,17 +7,20 @@ popup, as a player sees it):
   six     a six-hero win at 1-16: three rows of heroes, the tightest fit
   loss    driven back at 1-9's wall, with four heroes: Wick gives the stage's hint, and Farm 1-8 is offered
   trip    a trip of three battles with Keep going on (1-6, 1-7, 1-8), then Come home between battles: the trip's totals
+  easy    a replay of 1-2 by a level 5 hero: Too easy, and a tap on it says why
+Every hero shows their XP as a share of their own level; Too easy shows only on the easy scene (first clears pay at
+least 30% of a level at the top hero's level, and a loss never says it).
 At each size it checks what the popup says and that it sits inside the frame with nothing spilling over, the guide's
 data-tut hooks, that a tap during the fill skips to the end without pressing what it landed on, and the buttons and
 taps: a fatigue bar and a piece of loot say what they are, Report opens the battle report (which scrolls) and Back
 returns, and Hearth, Next, Farm and New go where they should. Taps land where the element is drawn on the screen, so
 in the turned frame (390x844 with touch) they go through the quarter-turn.
-  python tools/results_check.py [--sizes 844x390,667x375t,1280x720,900x800,390x844t] [--scenes first,four,six,loss,trip]
+  python tools/results_check.py [--sizes 844x390,667x375t,1280x720,900x800,390x844t] [--scenes first,four,six,loss,trip,easy]
                                 [--shots docs/screens/results]
 A size ending in t has a touch screen (and 390x844t is turned). Screenshots are <scene>-<w>x<h>.png, and four-mid-...
 for the fill under way.
 """
-import argparse, functools, http.server, json, os, socketserver, sys, threading
+import argparse, functools, http.server, json, os, re, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
 
 sys.stdout.reconfigure(encoding='utf-8')  # the checks quote the game's text (’, ›), which a Windows console can't print
@@ -57,6 +60,9 @@ SETUP = """
     for (const c of s.roster) c.fatigue = 20;
     // three stages with no elite (1-9's Gravewarden can beat even this party), so Keep going is given rather than lit
     light(5); Campaign.unlock('keepgoing', s); stage = 5; s.campaign.road.keepGoing = true;
+  } else if (scene === 'easy') {
+    P('sellsword', 'Fulke', 5, 0.3);
+    light(3); stage = 1; s.campaign.road.keepGoing = false;
   }
   Base.tick(s);
   Save.commit();
@@ -77,7 +83,7 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--sizes', default=SIZES)
-    ap.add_argument('--scenes', default='first,four,six,loss,trip')
+    ap.add_argument('--scenes', default='first,four,six,loss,trip,easy')
     ap.add_argument('--shots', default='')
     a = ap.parse_args()
     srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=ROOT))
@@ -173,7 +179,7 @@ def main():
                   return {
                     banner: document.querySelector('.rs-banner b').textContent, sub: document.querySelector('.rs-sub').textContent,
                     heroes: q('.rs-hr').length, cols: getComputedStyle(document.querySelector('.rs-heroes')).gridTemplateColumns.split(' ').length,
-                    ups: q('.rs-hr .lvup.on').length, xp: q('.rs-hr .xpn').map(e => e.textContent), fat: q('.rs-hr .fv').map(e => e.textContent + (e.className.includes('exh') ? '!' : e.className.includes('weary') ? '~' : '')),
+                    ups: q('.rs-hr .lvup.on').length, xp: q('.rs-hr .xpn').map(e => e.textContent), xpp: q('.rs-hr .xpp').map(e => e.textContent), easy: q('.rs-easy.on').length, fat: q('.rs-hr .fv').map(e => e.textContent + (e.className.includes('exh') ? '!' : e.className.includes('weary') ? '~' : '')),
                     lvls: q('.rs-hr .face em').map(e => +e.textContent), loot: q('.rs-it').length, lootIn: q('.rs-it.in').length, news: q('.rs-new').map(e => e.textContent),
                     acts: q('.rs-b').map(e => e.textContent), pri: (document.querySelector('.rs-b.pri') || {}).textContent || '',
                     tut: q('[data-tut]').map(e => e.dataset.tut),
@@ -186,13 +192,16 @@ def main():
                     boxW: Math.round(Frame.box(box).width), boxTop: Math.round(Frame.box(document.querySelector('.rs-banner')).top), boxBottom: Math.round(Frame.box(box).bottom),
                   };
                 }""")
-                print('   ', json.dumps({k: info[k] for k in ('banner', 'sub', 'heroes', 'cols', 'ups', 'lvls', 'xp', 'fat', 'loot', 'news', 'acts', 'boxW', 'boxTop', 'boxBottom')}, ensure_ascii=False))
+                print('   ', json.dumps({k: info[k] for k in ('banner', 'sub', 'heroes', 'cols', 'ups', 'lvls', 'xp', 'xpp', 'easy', 'fat', 'loot', 'news', 'acts', 'boxW', 'boxTop', 'boxBottom')}, ensure_ascii=False))
                 check(info['inside'], f'{tag}: the popup, its banner and Wick sit inside the frame (banner top {info["boxTop"]}, bottom {info["boxBottom"]})')
                 check(not info['spill'] and info['actsIn'], f'{tag}: nothing spills over: the loot, the buttons, the names, the subline ({info["spill"]})')
                 check(info['lootIn'] == info['loot'], f'{tag}: every piece of loot is in at the end ({info["lootIn"]}/{info["loot"]})')
+                check(len(info['xpp']) == info['heroes'] and all(re.fullmatch(r'\d+%', x) for x in info['xpp']), f'{tag}: each hero shows their XP as a share of their level ({info["xpp"]})')
+                check(info['easy'] == (1 if scene == 'easy' else 0), f'{tag}: Too easy shows {"once" if scene == "easy" else "nowhere"} ({info["easy"]})')
                 need = ['xp', 'fatigue', 'report', 'camp', 'again'] + (['next'] if len(info['acts']) == 4 else []) + (['new'] if info['news'] else [])
                 check(all(t in info['tut'] for t in need), f'{tag}: the guide\'s hooks are there: {", ".join(need)} ({info["tut"]})')
                 if scene == 'first':
+                    check(info['xpp'] == ['107%'], f'{tag}: 1-1 pays Fulke 107% of a level ({info["xpp"]})')
                     check(info['banner'] == 'Victory' and '1-1' in info['sub'] and 'First clear' in info['sub'] and info['heroes'] == 1 and info['cols'] == 1, f'{tag}: Victory at 1-1, First clear, one hero in one column')
                     check(info['ups'] == 1 and info['lvls'] == [2], f'{tag}: Fulke levels up to 2')
                     check(any('Tactics' in n for n in info['news']), f'{tag}: New: Tactics ({info["news"]})')
@@ -216,6 +225,12 @@ def main():
                     check(info['banner'] == 'Driven back' and '1-9' in info['sub'] and 'First clear' not in info['sub'], f'{tag}: Driven back at 1-9')
                     check(info['wick'] == js('STAGES[8].hint') and info['bubbleClear'], f'{tag}: Wick gives 1-9\'s hint, clear of the heroes and the banner')
                     check(info['acts'][:3] == ['Report', 'Hearth', 'Try again'] and info['pri'].startswith('Farm 1-8'), f'{tag}: Report · Hearth · Try again · Farm 1-8 ({info["acts"]})')
+                elif scene == 'easy':
+                    check(info['banner'] == 'Victory' and '1-2' in info['sub'] and 'First clear' not in info['sub'] and int(info['xpp'][0][:-1]) < 10, f'{tag}: a replay of 1-2 pays a level 5 hero under 10% of a level ({info["xpp"]})')
+                    tap('.rs-easy.on', 0, wait=300)
+                    check(js(r"[...document.querySelectorAll('#toasts .toast')].some(t => /Fulke: \d+% of a level at level 5\. A stage below/.test(t.textContent))"), f'{tag}: a tap on Too easy says why')
+                    if w == 844:
+                        shot('easy')
                 elif scene == 'trip':
                     check(info['banner'] == 'Victory' and '1-6 · 1-7 · 1-8' in info['sub'], f'{tag}: the subline names the stages fought ({info["sub"]})')
                     tot = js("(() => { const T = Save.state.campaign.lastTrip; return T.heroes.map(x => { const c = Save.char(x.id); return Hero.xpBetween(x.from.level, c.level) - x.from.xp + c.xp; }); })()")
