@@ -1,29 +1,30 @@
 'use strict';
-// Lantern Road · gear on screen (build step 4): the item card, choosing who wears a piece, and the Bag.
-// After the screen mockups (docs/mockups/index.html, "Equipment"). The hero sheet's Gear tab (js/sheet.js) uses the
-// card and the try-on. Every change goes through the item model (js/items.js) and is saved.
-//   The card    a Now and With pair of sprites, then the bands Always, Costs and When (a row condition is checked
-//               against where the hero stands) and its enchantment lines, what it changes against what they wear, and
-//               Equip, Unequip or Sell. Star pips sit bottom right on the card's icon and on every tile (the gear study
-//               §4.1).
-//   The Bag     every piece not worn, filtered by slot, with selling and the prototype's gear roll.
+// Lantern Road · gear on screen: the tall card and the piece's card, the item card's sheet, and the Bag.
+//   The tall card   a piece in its rarity's frame (GearUI.tall), and its card's lines (GearUI.pieceLines), after
+//                   docs/mockups/hero-card.html: the hero card's Gear and dressing (js/sheet.js) use them, and the Bag
+//   The item card   GearUI.card, a sheet from the bottom (build step 4, the screen mockups' "Equipment"): a Now and
+//                   With pair of sprites, the bands Always, Costs and When, its enchantment lines, what it changes
+//                   against what's worn, and Equip, Unequip or Sell. The results popup (js/results.js) and the guide's
+//                   Relic line open it
+//   The Bag         (screen 9, the mockup's Bag state, to docs/ui-rules.md) every piece not worn as tall cards; the
+//                   sorts are icons with tooltips (what fits, rarity, name, slot); the portraits choose whose ▲ ▼ the
+//                   cards show; a tap shows the piece's card, with Give to (the hero card, dressing, with the piece
+//                   tried on) and Sell (a second tap sells). The guide's anchors: bag-back, bag-sort-<key>,
+//                   bag-piece (each, with data-uid), bag-give, bag-sell, bag-for (each portrait, with data-id).
+// Every change goes through the item model (js/items.js) and is saved. Styles in css/gear.css (gc-, pc-, bg-).
 
 const GearUI = (() => {
-  const ui = { filter: 'all', sort: 'rarity', region: 0, rank: 'normal', confirm: null, stages: [] };
+  const ui = { sort: 'fits', sel: null, picked: false, for: null, back: 'home', view: null, region: 0, rank: 'normal', confirm: null, stages: [] };
   const click = () => sfx('click');
-  const RANK_ORDER = { relic: 0, rare: 1, fine: 2, common: 3 };
   const rowOf = c => { const i = Save.state.party.indexOf(c.id); return i < 0 ? null : i < 2 ? 'front' : 'back'; };
   const rowWord = r => (r === 'front' ? 'front row' : r === 'back' ? 'back row' : 'resting');
-  // The order pieces show in: by slot, then rarity, then level.
-  const byOrder = (a, b) => SLOTS.indexOf(Items.def(a).slot) - SLOTS.indexOf(Items.def(b).slot) || RANK_ORDER[Items.rarity(a)] - RANK_ORDER[Items.rarity(b)] || b.lv - a.lv;
-  const sorted = list => list.slice().sort(ui.sort === 'level' ? (a, b) => b.lv - a.lv || byOrder(a, b) : ui.sort === 'new' ? (a, b) => (b.fresh ? 1 : 0) - (a.fresh ? 1 : 0) || byOrder(a, b) : byOrder);
   const stopStages = () => { ui.stages.forEach(s => s.stop()); ui.stages = []; };
 
   // A piece's stars as pips: one small gold star each (none at ★0).
   const pips = n => (n > 0 ? h('span', { class: 'pips', 'aria-hidden': 'true' }, Array.from({ length: n }, () => h('i'))) : null);
   const starWord = n => (n === 1 ? '1 star' : `${n} stars`);
   // ── the tall card and the piece's card (docs/mockups/hero-card.html, docs/ui-rules.md): the hero card's Gear and
-  // its dressing (js/sheet.js), and the Bag. A piece's name and lines are in its tooltip (data-tip, js/sheet.js's Tip)
+  // its dressing (js/sheet.js), and the Bag. A piece's name and lines are in its tooltip (data-tip; tipsFor, js/sheet.js)
   // and on its card; the rarity's colour is on the frame only. The gear stars show as pips at the tall card's bottom
   // right (x.st, 0–4), and their enchantment lines as a band of short lines on the piece's card.
   const fmtStat = (k, v) => (k === 'spd' ? (Math.round(v * 10) / 10).toFixed(1) : k === 'crit' || k === 'dodge' ? Math.round(v) + '%' : String(Math.round(v)));
@@ -78,20 +79,6 @@ const GearUI = (() => {
   }
   // The head of a piece's card: its name, then its rarity and who can use it.
   const pieceHead = x => { const D = Items.def(x); return [h('b', { class: 'pc-nm', text: D.name }), h('span', { class: 'pc-kind', text: `${RARITY_NAMES[D.rarity]} · ${whoFor(x)}` })]; };
-
-  // ── a piece's tile: its icon in a frame of its rarity's colour, with its level and stars, and what it means against
-  // what is worn. o: { c (the hero it is compared with), sel, onclick }
-  function tile(x, o = {}) {
-    const D = Items.def(x), c = o.c, worn = c && c.gear[D.slot] && c.gear[D.slot].uid === x.uid;
-    const can = !c || Items.canUse(c, x);
-    let mark = null;
-    if (c && can && !worn) {
-      const now = c.gear[D.slot], d = Items.score(x) - (now ? Items.score(now) : 0);
-      mark = d > 0.5 ? h('span', { class: 'up', text: '▲' }) : d < -0.5 ? h('span', { class: 'dn', text: '▼' }) : null;
-    }
-    return h('button', { class: `gr-it r-${D.rarity}${o.sel ? ' sel' : ''}${can ? '' : ' no'}`, 'aria-label': `${D.name}, ${RARITY_NAMES[D.rarity]}, level ${x.lv}${x.st ? ', ' + starWord(x.st) : ''}${worn ? ', worn' : ''}`, onclick: o.onclick },
-      gearIco(x.id, 'l'), x.fresh ? h('span', { class: 'nw' }) : null, mark, worn ? h('span', { class: 'worn', text: 'ON' }) : null, h('span', { class: 'lv', text: String(x.lv) }), pips(x.st || 0));
-  }
 
   // ── the bands: Always, Costs, When, and the enchantment lines (one short line each; a tap or hover says what it is)
   function bandsEl(x, where) {
@@ -218,7 +205,7 @@ const GearUI = (() => {
       btn('Back to the card', () => card(x.uid, o))), 'sheet-bottom');
   }
 
-  // ── the Bag
+  // ── the prototype's gear rolls (the Prototype tools panel, js/proto.js)
   const levelOf = region => [[1, 10], [11, 30], [31, 50], [51, 75], [76, 100]][region];
   function rollPrototype(n, classes) {
     const st = Save.state, [a, b] = levelOf(ui.region), got = [];
@@ -239,41 +226,85 @@ const GearUI = (() => {
     const x = Items.grantRelic(st, id);
     Save.commit(); sfx('region'); toast(`A Relic: ${Items.def(x).name}`);
   }
-  function bagView() {
-    const st = Save.state, all = st.inventory.items;
-    const list = sorted(all.filter(x => ui.filter === 'all' || Items.def(x).slot === ui.filter));
-    const commons = all.filter(x => Items.rarity(x) === 'common');
-    const chip = (k, n) => h('button', { class: 'chip' + (ui.filter === k ? ' on' : ''), onclick: () => { click(); ui.filter = k; App.refresh(); } }, n);
-    const worn = st.roster.filter(c => SLOTS.some(k => c.gear[k]));
-    return h('div', { class: 'bag' },
-      h('div', { class: 'kicker', text: `${all.length} of ${ITEM.BAG} pieces` }), h('h1', { text: 'The Bag' }),
-      h('p', { class: 'tagline', text: 'Gear not being worn. Tap a piece for its card: who it suits, what it costs, and what it sells for.' }),
-      h('div', { class: 'gr-filters' }, chip('all', 'All'), chip('weapon', 'Weapons'), chip('armor', 'Armour'), chip('accessory', 'Accessories'),
-        h('button', { class: 'chip sort', onclick: () => { click(); ui.sort = { rarity: 'level', level: 'new', new: 'rarity' }[ui.sort]; App.refresh(); } }, 'Sort · ' + { rarity: 'rarity', level: 'level', new: 'new' }[ui.sort])),
-      h('div', { class: 'gr-meter' }, h('i', { style: `width:${Math.min(100, 100 * all.length / ITEM.BAG)}%` + (all.length >= ITEM.BAG ? ';background:var(--bad)' : '') })),
-      list.length ? h('div', { class: 'gr-inv' }, list.map(x => tile(x, { onclick: () => { click(); card(x.uid, { after: () => App.refresh() }); } })))
-        : h('p', { class: 'ph-note' }, all.length ? 'Nothing of that kind.' : 'The Bag is empty. Gear drops on the road: foes carry some, and a stage’s first clear often gives a piece.'),
-      all.length >= ITEM.BAG ? h('div', { class: 'hs-banner' }, ico('bag', 'm'), h('span', { class: 'txt', text: 'The Bag is full. New gear is sold where it drops until you make room.' })) : null,
-      commons.length ? btn(`Sell every Common piece · ${fmt(commons.reduce((a, x) => a + Items.sellPrice(x, st), 0))} gold`, () => confirmSellCommons(commons), '', `${commons.length} piece${commons.length === 1 ? '' : 's'}. Fine, Rare and Relics stay.`) : null,
-      h('h3', { class: 'sect', text: 'Worn by your heroes' }),
-      h('div', { class: 'gr-worn' }, (worn.length ? worn : st.roster).map(c => h('button', { class: 'rrow gr-wrow', onclick: () => { click(); App.actions.hero(c.id, 'gear'); } },
-        h('img', { src: heroPortrait(c), alt: '' }),
-        h('span', { class: 'nm' }, h('b', { text: c.name }), h('span', { text: CLASSES[c.cls].name + ' · Lv ' + c.level })),
-        h('span', { class: 'gr-three' }, SLOTS.map(k => (c.gear[k] ? h('span', { class: 'gr-mini-it r-' + Items.rarity(c.gear[k]) }, gearIco(c.gear[k].id)) : h('span', { class: 'gr-mini-it none' })))),
-        h('span', { class: 'chev', 'aria-hidden': 'true' })))),
-      h('div', { class: 'proto-only' }, prototypeBox(() => App.refresh())));
+  // ── the Bag: every piece not worn, as tall cards; a piece's card beside them; whose ▲ ▼ below it
+  const RANK = { relic: 0, rare: 1, fine: 2, common: 3 };
+  const SORTS = [['fits', 'what fits'], ['rarity', 'rarity', 'star'], ['name', 'name', 'book'], ['slot', 'slot', 'helm']];
+  // the heroes the portraits offer: the party in its order, then the resting
+  const heroes = () => { const s = Save.state, p = s.party.map(id => id && Save.char(id)).filter(Boolean); return p.concat(s.roster.filter(c => !p.includes(c))); };
+  const forHero = () => { const list = heroes(); return list.find(c => c.id === ui.for) || list[0] || null; };
+  function sortBag(list, c) {
+    const fit = x => (c && Items.canUse(c, x) ? 0 : 1);
+    const gain = x => { if (!c) return 0; const now = c.gear[Items.def(x).slot]; return Items.score(x) - (now ? Items.score(now) : 0); };
+    const by = {
+      fits: (a, b) => fit(a) - fit(b) || gain(b) - gain(a) || RANK[Items.rarity(a)] - RANK[Items.rarity(b)],
+      rarity: (a, b) => RANK[Items.rarity(a)] - RANK[Items.rarity(b)] || b.lv - a.lv,
+      name: (a, b) => Items.def(a).name.localeCompare(Items.def(b).name) || b.lv - a.lv,
+      slot: (a, b) => SLOTS.indexOf(Items.def(a).slot) - SLOTS.indexOf(Items.def(b).slot) || RANK[Items.rarity(a)] - RANK[Items.rarity(b)] || b.lv - a.lv,
+    }[ui.sort] || (() => 0);
+    return list.slice().sort(by);
   }
-  function confirmSellCommons(list) {
-    const st = Save.state, total = list.reduce((a, x) => a + Items.sellPrice(x, st), 0);
-    openSheet(h('div', { class: 'box' },
-      h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
-      h('div', { class: 'kicker', text: 'Sell' }), h('h2', { text: `${list.length} Common piece${list.length === 1 ? '' : 's'}` }),
-      h('p', { class: 'flavor', text: `For ${fmt(total)} gold. Gear your heroes wear isn't touched.` }),
-      btn(`Sell them · ${fmt(total)} gold`, () => { let g = 0; for (const x of list) g += Items.sell(st, x.uid); Save.commit(); sfx('coin'); closeSheet(); toast(`Sold for ${fmt(g)} gold`); App.refresh(); }, 'primary'),
-      btn('Keep them', closeSheet)), 'sheet-bottom');
+  const tip = (title, body) => (body ? title + '|' + body : title);
+  const ib = (ic, label, fn, o = {}) => h('button', { class: 'hc-ib' + (o.on ? ' on' : '') + (o.cls ? ' ' + o.cls : ''), type: 'button', 'data-tip': label, 'aria-label': label.split('|')[0], 'data-tut': o.tut || null, onclick: e => { e.stopPropagation(); if (!o.quiet) click(); fn(); } },
+    typeof ic === 'string' ? icon(ic, 16) : ic);
+  function draw() { if (ui.view && ui.view.isConnected && App.current === 'bag') build(ui.view); }
+  function pick(uid) {
+    click();
+    ui.sel = ui.sel === uid ? null : uid; ui.picked = true; ui.confirm = null;
+    draw();
   }
-  // Prototype (js/proto.js): roll gear by hand, at a region's rates and levels, without the road. Shown in the Bag and in
-  // the Prototype tools panel; redraw() rebuilds whichever holds it.
+  // Sell takes two taps: the first shows the price on a gold button, the second sells.
+  function sell(x) {
+    if (ui.confirm !== x.uid) {
+      ui.confirm = x.uid; click(); draw();
+      setTimeout(() => { if (ui.confirm === x.uid) { ui.confirm = null; draw(); } }, 2600);
+      return;
+    }
+    ui.confirm = null;
+    const g = Items.sell(Save.state, x.uid);
+    if (g) { Save.commit(); sfx('coin'); toast(`Sold for ${fmt(g)} gold`); }
+    ui.sel = null; draw();
+  }
+  function build(v) {
+    const st = Save.state, c = forHero(), all = st.inventory.items.filter(x => Items.def(x)), list = sortBag(all, c);
+    if (ui.sel && !all.some(x => x.uid === ui.sel)) ui.sel = null;
+    if (!ui.sel && !ui.picked && list.length) ui.sel = list[0].uid;
+    const sel = ui.sel && all.find(x => x.uid === ui.sel);
+    if (sel && sel.fresh) { delete sel.fresh; Save.commit(); }
+    Tip.hide();
+    const sortB = ([k, label, ic]) => ib(k === 'fits' ? (c ? pxImg(heroPortrait(c), 16) : icon('helm', 16)) : ic, k === 'fits' && c ? `Sort by what fits ${c.name}` : `Sort by ${label}`,
+      () => { ui.sort = k; draw(); }, { on: ui.sort === k, tut: 'bag-sort-' + k });
+    const full = all.length >= ITEM.BAG;
+    const out = [
+      h('div', { class: 'hc-edge' }, ['tl', 'tr', 'bl', 'br'].map(k => h('i', { class: 'cn ' + k }))),
+      h('button', { class: 'hc-back hc-ib', type: 'button', 'aria-label': 'Back', 'data-tip': 'Back', 'data-tut': 'bag-back', onclick: () => { click(); App.go(ui.back || 'home'); } }, h('span', { class: 'gl', text: '‹' })),
+      h('div', { class: 'hc-title hc-in' }, h('b', { text: 'The Bag' }),
+        h('span', { class: full ? 'full' : null, 'data-tip': tip(`${all.length} of ${ITEM.BAG} places`, full ? 'Full: new gear sells where it drops' : 'Gear that’s worn doesn’t count'), text: `${all.length} / ${ITEM.BAG}` })),
+      h('div', { class: 'hc-sorts hc-in' }, SORTS.map(sortB)),
+      list.length ? h('div', { class: 'bg-grid hc-in', style: '--d:40ms', 'data-scroll': 'grid' }, list.map(x => tall(x, { c, size: 'md', sel: sel === x, tut: 'bag-piece', onclick: () => pick(x.uid) })))
+        : h('div', { class: 'bg-grid none' }, h('span', { class: 'bg-none', text: 'Empty' })),
+    ];
+    // the piece's card, as Darkest Dungeon's: its name, rarity and who can use it, its lines, then Give to and Sell
+    let side = h('div', { class: 'pc bg-card' });
+    if (sel) {
+      const D = Items.def(sel), can = c && Items.canUse(c, sel), price = Items.sellPrice(sel, st), armed = ui.confirm === sel.uid;
+      side = h('div', { class: 'pc bg-card hc-in', style: '--d:80ms' }, ...pieceHead(sel), ...pieceLines(sel, null),
+        D.flavor ? h('p', { class: 'pc-fl', text: D.flavor }) : null,
+        h('div', { class: 'hc-row c' },
+          !c ? null : can ? h('button', { class: 'hc-btn', type: 'button', 'data-tut': 'bag-give', onclick: () => { click(); HeroSheet.dress(c.id, sel.uid); } }, `Give to ${c.name}`)
+            : h('span', { class: 'bg-no', 'data-tip': tip('Can’t use', Items.whyNot(c, sel)), text: 'Can’t use' }),
+          !price ? null : armed ? h('button', { class: 'hc-btn', type: 'button', 'data-tut': 'bag-sell', onclick: () => sell(sel) }, `Sell · ${fmt(price)}`)
+            : ib('coin', tip('Sell', `For ${fmt(price)} gold`), () => sell(sel), { tut: 'bag-sell', quiet: true })));
+    }
+    out.push(side, h('div', { class: 'bg-for hc-in', style: '--d:120ms' }, heroes().map(x => h('button', { class: 'bg-face' + (c === x ? ' on' : ''), type: 'button', 'data-tut': 'bag-for', 'data-id': x.id, 'data-tip': tip(x.name, 'Compare with'), 'aria-label': x.name,
+      onclick: () => { click(); ui.for = x.id; draw(); } }, pxImg(heroPortrait(x), 24)))));
+    const keep = [...v.querySelectorAll('[data-scroll]')].map(el => [el.dataset.scroll, el.scrollTop]);
+    v.replaceChildren(...out);
+    for (const [k, y] of keep) { const el = v.querySelector(`[data-scroll="${k}"]`); if (el) el.scrollTop = y; }
+    tipsFor(v);
+    v.classList.remove('hc-enter');
+  }
+  // Prototype (js/proto.js): roll gear by hand, at a region's rates and levels, without the road, in the Prototype tools
+  // panel; redraw() rebuilds it.
   function prototypeBox(redraw) {
     const again = () => { App.refresh(); if (redraw) redraw(); };
     const chip = (on, label, fn) => h('button', { class: 'chip' + (on ? ' on' : ''), onclick: () => { click(); fn(); again(); } }, label);
@@ -288,10 +319,26 @@ const GearUI = (() => {
         h('button', { class: 'small', onclick: () => { rollPrototype(6); again(); } }, 'Roll 6'),
         h('button', { class: 'small', onclick: () => { grantNextRelic(); again(); } }, ico('star'), 'A Relic')));
   }
+  // Opened from the Hearth (Back goes home), or from the Heroes list ({ back: 'party' }).
   App.screen('bag', {
-    tab: true,
-    render() { stopStages(); return bagView(); },
-    enter() { App.rest(); },
+    tab: true, full: true, bare: true,
+    render(p) {
+      stopStages();
+      ui.back = (p && p.back) || 'home';
+      ui.picked = false; ui.confirm = null;
+      ui.view = h('div', { class: 'bg-view hc' });
+      build(ui.view);
+      ui.view.classList.add('hc-enter');
+      return ui.view;
+    },
+    refresh() { draw(); },
+    leave() { Tip.hide(); ui.confirm = null; },
   });
-  return { card, tile, pips, tall, pieceLines, pieceHead, pieceTip, effectWords, whoFor, fmtStat, fmtDelta, SLOT_ICON, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
+  // Escape goes back
+  document.addEventListener('keydown', ev => {
+    if (App.current !== 'bag' || ev.key !== 'Escape' || !$('#sheet').hidden || (ev.target.closest && ev.target.closest('input,textarea,select'))) return;
+    ev.preventDefault(); click(); App.go(ui.back || 'home');
+  });
+  return { card, pips, tall, pieceLines, pieceHead, pieceTip, effectWords, whoFor, fmtStat, fmtDelta, SLOT_ICON, pickHero, rollPrototype, prototypeBox, stopStages, rowOf,
+    get sel() { return ui.sel; }, get sort() { return ui.sort; }, get for() { const c = forHero(); return c && c.id; } };
 })();
