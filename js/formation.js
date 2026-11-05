@@ -13,7 +13,7 @@
 // (the battle has them Defend, js/sim.js); the Oathbound Gorget still keeps its wearer in front (App.frontLocked).
 // Auto fills open places with resting heroes who aren't Spent: front-row classes in front, the highest level first.
 // The guide's step 12 points at it through data-tut: formation-front and formation-back (the two rows),
-// formation-open (the first open place) and formation-roster (the strip).
+// formation-open (the first open place), formation-roster (the strip), formation-auto and formation-done.
 // Styles in css/formation.css, classes prefixed fm-.
 
 const Formation = (() => {
@@ -62,6 +62,7 @@ const Formation = (() => {
     const line = h('div', { class: 'fm-line' }), strip = h('div', { class: 'fm-strip', 'data-tut': 'formation-roster', 'aria-label': 'The roster' });
     const who = h('div', { class: 'fm-who' });
     const auto = Kit.button('Auto', fill, true), done = Kit.button('Done', close);
+    auto.dataset.tut = 'formation-auto'; done.dataset.tut = 'formation-done';
     auto.classList.add('fm-auto'); done.classList.add('fm-done');
     K.body.append(h('div', { class: 'fm-body' }, line, h('div', { class: 'fm-side' }, who, h('div', { class: 'fm-btns' }, auto, done))), strip);
     const root = h('div', { class: 'fm-root' }, K.root);

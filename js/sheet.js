@@ -19,7 +19,8 @@
 // A threshold, the tree and a respec open as framed panels in the panel's place, so the arch stays in sight. Every change
 // goes through the hero model (js/hero.js) or the item model (js/items.js), and is saved.
 // The guide points into it through data-tut: hero-tab-stats, hero-tab-skills, hero-tab-gear, hero-tab-rules (the tabs),
-// hero-points (the "to place" plate), hero-auto, hero-autoequip, hero-rules (the rules list) and hero-next (›).
+// hero-points (the "to place" plate), hero-auto, hero-autoequip, hero-rules (the rules list), hero-next (›) and
+// hero-back (‹).
 // Styles in css/hero.css, classes prefixed hr-.
 
 const HeroSheet = (() => {
@@ -211,7 +212,7 @@ const HeroSheet = (() => {
     const many = order().length > 1, s = S();
     const cur = (ic, n, label) => h('div', { class: 'hr-cur', title: label }, h('span', { class: 'hr-ci' }, icon(ic, 20)), h('span', { class: 'hr-cv', text: fmt(n) }));
     return [
-      h('button', { class: 'hr-back', 'aria-label': 'Back', onclick: back }, '‹'),
+      h('button', { class: 'hr-back', 'aria-label': 'Back', 'data-tut': 'hero-back', onclick: back }, '‹'),
       h('div', { class: 'hr-who' },
         h('button', { class: 'hr-arr', 'aria-label': 'Previous hero', disabled: !many, onclick: () => step(-1) }, '‹'),
         h('div', { class: 'hr-nm' }, h('b', { text: c.name }), h('span', { text: `${c.classes.map(k => CLASSES[k].name).join(' + ')} · ${rowOf(c)}` })),

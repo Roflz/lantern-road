@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Hearth</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* The Hearth in detail (docs/darkest-dungeon-study.md §3; play-test note 1.29). The camp views, with Darkest
+   Dungeon's patterns in our own pixel art: bigger buildings with their own silhouettes, a terrace, the Old Beacon on
+   the skyline, names when you look, heroes who talk, the crest, menus as drawn objects, framed panels, parchment. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a; --iron:#6e7480;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.band>p{margin:0 0 14px;color:var(--ash);max-width:62ch}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+.toggles{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:10px;color:var(--ash);font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--rule)}
+.seg button{padding:5px 11px;font:700 9px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.seg button.on{background:var(--ember);color:#1a1008}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;font-size:15px;user-select:none;touch-action:none}
+.frame.live{cursor:grab}.frame.live:active{cursor:grabbing}
+.frame canvas{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+.shade-t{position:absolute;inset:0 0 auto 0;height:90px;background:linear-gradient(rgba(6,4,10,.75),rgba(6,4,10,0));pointer-events:none}
+.shade-b{position:absolute;inset:auto 0 0 0;height:84px;background:linear-gradient(rgba(6,4,10,0),rgba(6,4,10,.7));pointer-events:none}
+.layer{position:absolute;inset:0;pointer-events:none}
+.dot{position:absolute;top:0;right:2px;width:12px;height:12px;border-radius:50%;background:var(--blood);border:2px solid #120c16;box-shadow:0 0 6px rgba(212,72,74,.8)}
+
+/* top left: the Hearth's crest and banner, you beneath it, then the next goal */
+.crest{position:absolute;left:8px;top:4px;width:64px;height:64px;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 12px rgba(244,166,70,.35))}
+.banner{position:absolute;left:66px;top:9px;height:27px;padding:0 20px 0 16px;display:grid;place-items:center;font:400 21px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000;background:linear-gradient(#5a2028,#2e0e14);clip-path:polygon(0 0,100% 0,calc(100% - 9px) 50%,100% 100%,0 100%,7px 50%);box-shadow:inset 0 1px 0 #b0844a,inset 0 -1px 0 #b0844a}
+.me{position:absolute;left:70px;top:40px;display:flex;align-items:center;gap:7px;height:26px;padding:0 9px 0 2px;background:var(--panel);border:1px solid var(--rule)}
+.me .face{position:relative;width:22px;height:22px;display:grid;place-items:center;background:#0f0b14;border:1px solid var(--trim)}
+.me .face img{width:20px;height:20px}
+.me .nm{font:400 16px/1 var(--f-display);color:var(--bone)}
+.me em{min-width:17px;height:15px;padding:0 3px;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
+.meter{display:block;width:62px;height:4px;background:#241b2c;border:1px solid #33283d}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,#c97a2c,var(--ember))}
+.pnl{background:var(--panel);border:1px solid var(--rule)}
+.goal{position:absolute;left:18px;top:72px;display:flex;align-items:center;gap:9px;height:30px;padding:0 4px 0 9px}
+.goal .gk{font:700 7px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.goal .gt{font:600 13px/1.1 var(--f-body);color:var(--bone);white-space:nowrap}
+.goal .go{margin-left:2px;font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:7px 8px}
+
+/* top right: what you hold, then the Codex and Settings, as a book and a candle */
+.purse{position:absolute;right:122px;top:17px;display:flex;gap:24px}
+.cur{position:relative;display:flex;align-items:center;height:26px;min-width:118px;padding:0 4px 0 30px;border-radius:13px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,inset 0 1px 0 rgba(255,220,160,.08)}
+.cur .ci{position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cur .ci img{width:22px;height:22px}
+.cur .cv{flex:1;text-align:center;font:700 11px/1 var(--f-pixel);letter-spacing:.04em;color:var(--bone)}
+.cur .cv.gold{color:var(--gold)}
+.cur .plus{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:700 13px/1 var(--f-pixel);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000}
+.objs{position:absolute;right:12px;top:5px;display:flex;gap:4px}
+.obj{position:relative;width:48px;height:48px;display:grid;place-items:center;background:radial-gradient(circle,rgba(20,14,26,.9) 0,rgba(20,14,26,.55) 52%,rgba(20,14,26,0) 70%)}
+.obj img{filter:drop-shadow(0 1px 0 #000)}
+
+/* bottom right: the menus as things on a shelf, and the corner's big button */
+.dock{position:absolute;right:14px;bottom:8px;display:flex;align-items:flex-end;gap:12px}
+.shelf{position:relative;display:flex;align-items:flex-end;gap:2px;padding:0 6px 0}
+.shelf::before{content:"";position:absolute;left:-2px;right:-2px;bottom:19px;height:7px;background:linear-gradient(#6a4a30,#2e2219);border-top:1px solid #9a7448;box-shadow:0 2px 0 #000,0 0 0 1px #000}
+.shelf::after{content:"";position:absolute;left:8px;right:8px;bottom:12px;height:7px;background:repeating-linear-gradient(90deg,#2e2219 0 4px,transparent 4px 52px);opacity:.9}
+.ob{position:relative;z-index:1;display:grid;justify-items:center;gap:6px;width:60px}
+.ob img{filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 8px rgba(0,0,0,.9))}
+.ob span{font:400 15px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
+.ob .dot{top:-2px;right:6px}
+.big{position:relative;display:grid;justify-items:center;gap:3px;width:84px}
+.big .orb{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;border:2px solid #ffd68a;box-shadow:0 0 0 2px #000,0 0 22px rgba(244,166,70,.55),inset 0 3px 0 rgba(255,240,200,.35),inset 0 -6px 10px rgba(0,0,0,.45);background:radial-gradient(circle at 50% 30%,#f7b85a,#b8622a 70%)}
+.big .orb img{width:34px;height:34px;filter:drop-shadow(0 1px 0 #000)}
+.big span{font:400 16px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000,0 0 6px #000}
+.big.collect .orb{border-color:#d8f0b0;background:radial-gradient(circle at 50% 30%,#bfe6a0,#4e8a34 72%);box-shadow:0 0 0 2px #000,0 0 22px rgba(180,222,152,.45),inset 0 3px 0 rgba(240,255,220,.35),inset 0 -6px 10px rgba(0,0,0,.4)}
+.big .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:5px;height:20px;padding:0 7px;white-space:nowrap;font:700 9px/1 var(--f-pixel);letter-spacing:.06em;color:var(--bone);background:#120c14;border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.big .tag .el{display:inline-block;width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
+.big .tag img{width:12px;height:12px}
+
+/* right: the formation, as it stands in battle (moved from the left, play-test note 1.30) */
+.form{position:absolute;right:14px;top:62px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule)}
+.form .tv{position:relative;width:40px;height:46px;display:grid;justify-items:center;align-content:start;gap:3px}
+.form .fc{position:relative;width:40px;height:40px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
+.form .fc img{width:34px;height:34px}
+.form .fc em{position:absolute;left:-1px;top:-1px;height:13px;padding:0 3px;display:grid;place-items:center;font:700 7px/1 var(--f-pixel);font-style:normal;color:var(--bone);background:#0b0810;border:1px solid #4a3a52}
+.form .ft{width:40px;height:3px;background:#241b2c}
+.form .ft i{display:block;height:100%}
+.form .front .fc,.form .front .fc em{border-color:var(--ember)}
+.form .empty .fc{border-style:dashed;border-color:#3a3044;color:#4a4054;font:700 14px/1 var(--f-pixel)}
+
+/* following the scene: plaques, what's waiting, names when you look, and what the heroes say */
+.plq{position:absolute;transform:translateX(-50%);height:18px;padding:0 6px;display:grid;place-items:center;background:linear-gradient(#2a1d14,#160f0c);border:1px solid #7a5a36;box-shadow:0 0 0 1px #000,0 2px 6px rgba(0,0,0,.5);font:400 14px/1 var(--f-display);color:#f2e1c0;white-space:nowrap;text-shadow:0 1px 0 #000;pointer-events:none;transition:opacity .15s}
+.plq.empty{color:var(--dim);background:rgba(12,8,16,.8);border-color:#2e2636}
+.wait{position:absolute;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:22px;padding:0 7px 0 5px;background:var(--ember);border:1px solid #000;font:700 10px/1 var(--f-pixel);color:#1a1008;box-shadow:0 0 12px rgba(244,166,70,.55);pointer-events:none}
+.wait img{width:13px;height:13px}
+.wait::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--ember);border-bottom:0}
+.look{position:absolute;transform:translate(-50%,-100%);min-width:150px;padding:6px 14px 8px;text-align:center;background:linear-gradient(#1e1622,#110c15);border:1px solid #8a6a3a;box-shadow:0 0 0 1px #000,0 8px 20px rgba(0,0,0,.65);pointer-events:none;white-space:nowrap}
+.look::before,.look::after{content:"";position:absolute;top:-4px;width:7px;height:7px;background:var(--iron);border:1px solid #000}
+.look::before{left:-4px}.look::after{right:-4px}
+.look b{display:block;font:400 20px/1.05 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.look i{display:block;margin-top:5px;padding-top:5px;border-top:1px solid #3e2e22;font:italic 400 13px/1.2 var(--f-body);color:var(--ash)}
+.bark{position:absolute;transform:translate(-50%,-100%);padding:5px 10px 6px;background:#24101a;border:1px solid #9a3a34;box-shadow:0 0 0 1px #000,0 4px 12px rgba(0,0,0,.55);font:italic 400 14px/1.2 var(--f-body);color:#f6e6c4;white-space:nowrap;pointer-events:none;animation:barkIn .25s ease-out}
+.bark::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-6px;border:6px solid transparent;border-top-color:#9a3a34;border-bottom:0}
+@keyframes barkIn{from{opacity:0;translate:0 6px}}
+.say{position:absolute;transform:translateX(-50%);width:30px;height:20px;display:flex;align-items:center;justify-content:center;gap:3px;background:#f2e7d0;border:1px solid #000;border-radius:10px;pointer-events:none}
+.say i{width:4px;height:4px;background:#2a1a10}
+
+/* a framed panel: iron corners, a header plate, the red ✕ */
+.modal{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(5,3,9,.62)}
+.fp{position:relative;width:560px;background:linear-gradient(#1c1521,#120d17);border:3px solid #3a2a1c;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 18px 44px rgba(0,0,0,.75)}
+.fp .cn{position:absolute;width:18px;height:18px;border:3px solid var(--iron);box-shadow:0 0 0 1px #000}
+.fp .cn::after{content:"";position:absolute;width:4px;height:4px;background:#c8ccd4;border:1px solid #000}
+.fp .cn.tl{left:-7px;top:-7px;border-right:0;border-bottom:0}.fp .cn.tl::after{left:1px;top:1px}
+.fp .cn.tr{right:-7px;top:-7px;border-left:0;border-bottom:0}.fp .cn.tr::after{right:1px;top:1px}
+.fp .cn.bl{left:-7px;bottom:-7px;border-right:0;border-top:0}.fp .cn.bl::after{left:1px;bottom:1px}
+.fp .cn.br{right:-7px;bottom:-7px;border-left:0;border-top:0}.fp .cn.br::after{right:1px;bottom:1px}
+.plate{display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;background:linear-gradient(#34303c,#1c1922);border-bottom:2px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 0 #7a5a36}
+.plate img{width:26px;height:26px}
+.plate h3{margin:0;font:400 26px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.plate .lv{font:700 9px/1 var(--f-pixel);letter-spacing:.1em;color:#1a1008;background:var(--gold);padding:4px 6px;border:1px solid #000}
+.xx{position:absolute;right:-14px;top:-14px;width:32px;height:32px;display:grid;place-items:center;font:700 15px/1 var(--f-pixel);color:#f6e6c4;background:radial-gradient(circle at 50% 35%,#b8342e,#6a1418);border:2px solid #000;border-radius:50%;box-shadow:0 0 0 2px #8a6a3a}
+.fpb{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:16px 18px 18px}
+.arch{position:relative;height:200px;display:grid;place-items:end center;padding-bottom:10px;border:2px solid #4a3a2a;border-radius:85px 85px 4px 4px;background:radial-gradient(ellipse 80% 60% at 50% 85%,#3a2418 0,#1a1220 60%,#0e0a12 100%);box-shadow:inset 0 0 0 1px #000,inset 0 0 30px rgba(0,0,0,.6);overflow:hidden}
+.rows{display:grid;align-content:start;gap:12px}
+.sect{display:grid;gap:7px}
+.sect>h4{margin:0;display:flex;align-items:center;gap:8px;font:400 10px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.sect>h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#6b4a2a,transparent)}
+.line{margin:0;font:italic 400 15px/1.3 var(--f-body);color:var(--ash)}
+.bar{position:relative;height:18px;background:#160f14;border:1px solid #4a3424;box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
+.bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#f7c46a,#c8822a)}
+.bar span{position:absolute;inset:0;display:grid;place-items:center;font:700 10px/1 var(--f-pixel);color:#1a1008;text-shadow:0 1px 0 rgba(255,240,200,.5)}
+.rowb{display:flex;align-items:center;gap:10px}
+.cost{display:flex;align-items:center;gap:5px;font:700 11px/1 var(--f-pixel);color:var(--bone)}
+.cost img{width:16px;height:16px}
+.btn{height:34px;padding:0 16px;font:400 18px/1 var(--f-display);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000;box-shadow:0 0 0 1px #8a5a2a,inset 0 1px 0 rgba(255,255,255,.5)}
+.btn.green{background:linear-gradient(#cfeeb2,#5e9a3e)}
+.sp{flex:1}
+
+/* parchment, for Wick's news */
+.parch{position:relative;width:460px;padding:20px 30px 20px 128px;color:#2a1a10;background:radial-gradient(ellipse 90% 80% at 50% 45%,#f0e2c0 0,#e2cc9c 62%,#c4a472 100%);box-shadow:0 0 0 1px #4a3018,0 12px 34px rgba(0,0,0,.65),inset 0 0 26px rgba(120,80,30,.5)}
+.parch::before,.parch::after{content:"";position:absolute;left:-10px;right:-10px;height:14px;border-radius:7px;background:linear-gradient(#a8844e,#e2cc9c 40%,#8a6a3c);box-shadow:0 0 0 1px #4a3018,0 2px 4px rgba(0,0,0,.4)}
+.parch::before{top:-9px}.parch::after{bottom:-9px}
+.parch h3{margin:0 0 10px;font:400 27px/1 var(--f-display);color:#3a1c10}
+.parch .rw{display:flex;align-items:center;gap:9px;padding:5px 0;border-top:1px dashed rgba(90,60,30,.35);font:600 15px/1.2 var(--f-body)}
+.parch .rw img{width:18px;height:18px}
+.parch .rw .n{font:700 11px/1 var(--f-pixel);min-width:58px}
+.parch .rw .k{color:#6a4a2a;font-weight:400;font-style:italic}
+.parch .wk{position:absolute;left:-22px;bottom:-12px;width:136px;height:184px;filter:drop-shadow(0 4px 0 rgba(0,0,0,.45))}
+.parch .go{margin-top:12px;display:flex;justify-content:flex-end}
+
+/* the buildings, close up */
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.sheet figure{margin:0;display:grid;justify-items:center;align-content:end;gap:8px;padding:14px 8px 10px;background:radial-gradient(ellipse 80% 40% at 50% 100%,#2a1c1a 0,#140f18 70%);border:1px solid var(--rule)}
+.sheet figcaption{display:grid;justify-items:center;gap:1px;text-align:center}
+.sheet figcaption b{font:400 18px/1.1 var(--f-display);color:var(--bone)}
+.sheet figcaption i{font:italic 400 13px/1.2 var(--f-body);color:var(--ash)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">The Hearth · in detail</div>
+    <h1>The Hearth</h1>
+    <p class="lede">The camp views with Darkest Dungeon’s patterns, in our pixel art: buildings three times the size, a terrace, the Old Beacon on the skyline, names when you look, heroes who talk. The top frame is live: drag to turn, hover a building (press and hold on a phone), tap one to open it.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame live" data-f="live"></div></div></div>
+    <figcaption><b>Live</b> Drag either way round the fire. Heroes speak now and then in the party view.</figcaption>
+    <div class="toggles">
+      <span>The Hearth <span class="seg" data-seg="state"><button class="on" data-v="mid">Region I</button><button data-v="late">Later</button></span></span>
+      <span>Names <span class="seg" data-seg="names"><button class="on" data-v="always">Always</button><button data-v="look">When you look</button></span></span>
+    </div>
+  </figure>
+
+  <section class="band">
+    <h2>The views</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="party"></div></div></div><figcaption><b>H1</b> The party view. The crest and banner at top left; the menus as a helm, a war table and a satchel on a shelf; the Codex and Settings as a book and a candle. The Pilgrim says how she is.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="build"></div></div></div><figcaption><b>H2</b> The buildings view, mid Region I: three buildings, two plots ready. The lower row fills first; the terrace opens after.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="late"></div></div></div><figcaption><b>H3</b> Later, every plot built: six below, eight on the terrace, the steps up the middle toward the Old Beacon. Names here come when you look.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>Closer</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="look"></div></div></div><figcaption><b>H4</b> Names when you look: hover a building, or press and hold it, and it’s outlined, with its name and one line of what it does.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="sheet"></div></div></div><figcaption><b>H5</b> A framed panel: iron corners, a header plate, the red ✕. Tap a building to open its panel.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="news"></div></div></div><figcaption><b>H6</b> Parchment, for Wick’s news. Here, what came in while you were away.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>The buildings, close up</h2>
+    <p>Each drawn in code from one kit (stone, timber, shingles, slate, windows, lanterns), so new buildings come quickly and match.</p>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <section class="band">
+    <h2>What changed</h2>
+    <ul class="notes">
+      <li><b>The buildings</b> are about three times the size, each with its own silhouette, lit windows and smoke from its chimney.</li>
+      <li><b>The plots:</b> six below, either side of the fire, and eight on a terrace behind, with steps up the middle. The lower row opens first, from the fire out; then the terrace, from the steps out.</li>
+      <li><b>The Old Beacon</b> stands on the skyline against moonlit cloud, an ember still in it.</li>
+      <li><b>Depth:</b> mist along the foot of the terrace and over the graves; lamp posts and braziers; a dead tree and a lamp framing the buildings view.</li>
+      <li><b>The crest</b> (a lantern in an iron ring) and the Hearth’s banner sit at top left, with you beneath.</li>
+      <li><b>The menus are things:</b> a helm for Heroes, a war table for Tactics, a satchel for the Bag, a book for the Codex, a candle for Settings.</li>
+      <li><b>Names when you look:</b> an outline, the name, one line of what it does. The plaques can stay, or go to when you look (the toggle under the live frame).</li>
+      <li><b>Heroes talk</b> now and then, a line about how they are.</li>
+      <li><b>Framed panels and parchment</b> for every sheet and notice from here on.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>For you</h2>
+    <ol class="notes qs">
+      <li><b>Plaques:</b> always on, or only when you look?</li>
+      <li><b>The Old Beacon:</b> a working name. Keep it as scenery, or make relighting it a late goal?</li>
+      <li><b>Barks:</b> one every half a minute or so, with an off switch in Settings?</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+// js/camp.js holds the building art. Its screen code needs the rest of the game, so it gets stand-ins that do nothing.
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script src="hearth-art.js"></script>
+<script src="hearth-scene.js"></script>
+<script>
+'use strict';
+HearthScene.install();
+(() => {
+  const C = HearthArt.C;
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const big = (c, k) => { const o = document.createElement('canvas'); o.width = c.width * k; o.height = c.height * k; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL(); };
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  const stageOf = id => STAGES.find(s => s.id === id);
+
+  // ── the drawn things: the crest, and the menus
+  const draw = (w, h, fn) => { const P = HearthArt.painter(w, h); fn(P); return P.finish({ warm: 0 }); };
+  const ART = {
+    crest: draw(32, 32, P => {
+      P.disc(16, 16, 15, (x, y, d) => (d > 12.2 ? (d > 14 ? C.i1 : x + y < 31 ? C.i3 : C.i2) : null));
+      for (const [x, y] of [[15, 1], [15, 29], [1, 15], [29, 15]]) P.rect(x, y, 2, 2, C.i4);
+      P.disc(16, 16, 12.2, (x, y, d) => (d < 12.2 ? (d > 10.8 ? '#120c16' : '#22182a') : null));
+      P.disc(16, 6.6, 1.7, (x, y, d) => (d > 0.8 ? C.i3 : null));
+      P.rect(12, 8, 9, 2, C.i2); P.hl(12, 20, 8, C.i3);
+      P.rect(11, 10, 11, 11, C.i1); P.rect(12, 11, 9, 9, C.y2); P.rect(13, 12, 7, 6, C.y3); P.rect(15, 13, 3, 3, C.y4); P.vl(16, 11, 19, C.y1);
+      P.rect(10, 21, 13, 2, C.i2); P.hl(10, 22, 21, C.i3); P.rect(12, 23, 9, 1, C.i1);
+    }),
+    helm: draw(22, 22, P => {
+      P.pat([[10, 6], [11, 1], [16, 0], [18, 2], [14, 6]], (x) => (x < 14 ? C.x3 : C.x2));
+      P.pat([[3, 21], [3, 11], [5, 7], [11, 4.5], [17, 7], [19, 11], [19, 21]], (x) => (x < 8 ? C.i4 : x < 15 ? C.i3 : C.i2));
+      P.hl(4, 18, 11, C.i0); P.hl(4, 18, 12, C.i1); P.vl(11, 6, 20, C.i2); P.px(11, 5, C.i4);
+      for (let y = 15; y <= 19; y += 2) { P.px(14, y, C.i0); P.px(16, y, C.i0); }
+      P.hl(3, 19, 21, C.i1); P.px(6, 8, C.b3); P.px(5, 9, C.i4);
+    }),
+    table: draw(26, 22, P => {
+      P.vl(4, 15, 21, C.w2); P.vl(21, 15, 21, C.w1); P.vl(8, 14, 19, C.w1); P.vl(18, 14, 19, C.w1);
+      P.pat([[4, 9], [20, 9], [24, 15], [1, 15]], () => C.w3); P.hl(1, 24, 15, C.w2); P.hl(1, 24, 16, C.w1); P.line(4, 9, 20, 9, C.w4);
+      P.pat([[6, 10], [18, 10], [21, 14], [4, 14]], () => C.b2); P.line(7, 13, 11, 11, C.x2); P.line(11, 11, 15, 12, C.x2); P.px(16, 12, C.x3); P.px(8, 11, C.q2); P.px(17, 13, C.e3);
+      P.vl(15, 3, 11, C.i2); P.rect(16, 3, 5, 3, C.x2); P.hl(16, 20, 3, C.x3);
+      P.rect(6, 6, 2, 4, C.b3); P.px(6, 5, C.w0); P.px(6, 4, C.y2); P.px(6, 3, C.y3); P.px(7, 4, C.y3);
+    }),
+    satchel: draw(22, 21, P => {
+      P.line(5, 9, 8, 2, C.w2); P.line(16, 9, 13, 2, C.w2); P.hl(8, 13, 1, C.w2); P.hl(8, 13, 2, C.w3);
+      P.rect(3, 9, 16, 11, C.w3); P.vl(3, 9, 19, C.w4); P.vl(18, 9, 19, C.w2); P.hl(3, 18, 19, C.w2);
+      P.pat([[3, 9], [19, 9], [18, 14], [11, 16], [3, 14]], () => C.w4); P.line(3, 14, 11, 16, C.w2); P.line(11, 16, 18, 14, C.w2);
+      for (let x = 5; x < 17; x += 2) P.px(x, 10, C.w2);
+      P.rect(10, 14, 3, 3, C.g2); P.px(11, 15, C.w2); P.px(10, 14, C.g3);
+    }),
+    book: draw(20, 22, P => {
+      P.rect(5, 3, 12, 17, C.b2); for (let y = 4; y < 19; y += 2) P.hl(15, 16, y, C.b1);
+      P.rect(3, 2, 12, 18, C.x1); P.vl(3, 2, 19, C.x0); P.hl(4, 14, 2, C.x2); P.vl(4, 3, 18, C.x2);
+      for (const [x, y] of [[4, 3], [13, 3], [4, 18], [13, 18]]) P.px(x, y, C.g2);
+      P.rect(8, 7, 2, 1, C.g1); P.rect(7, 8, 4, 1, C.g1); P.rect(7, 9, 4, 4, C.y2); P.px(8, 10, C.y3); P.rect(7, 13, 4, 1, C.g1);
+      P.rect(14, 9, 3, 4, C.g1); P.px(15, 10, C.g3);
+    }),
+    candle: draw(14, 22, P => {
+      P.hl(1, 12, 21, C.i1); P.hl(2, 11, 20, C.g1); P.hl(3, 10, 19, C.g2); P.px(12, 19, C.g1); P.px(13, 18, C.g1); P.px(12, 17, C.g1);
+      P.rect(5, 9, 4, 10, C.b3); P.vl(8, 9, 18, C.b2); P.px(9, 11, C.b2); P.px(9, 12, C.b2); P.px(4, 10, C.b2);
+      P.px(6, 8, C.w0); P.rect(5, 5, 3, 3, C.y2); P.px(6, 6, C.y4); P.px(6, 4, C.y3); P.px(6, 3, C.y3);
+    }),
+  };
+  const art = (k, z) => pxImg(big(ART[k], z), ART[k].width * z, ART[k].height * z);
+  const bld = (k, z) => { const c = HearthArt.building(k); return pxImg(big(c, z), c.width * z, c.height * z); };
+
+  // what each building does, in a line, for when you look
+  const DOES = { toll: 'Gold from travellers on your road', infirmary: 'Tired heroes rest faster', yard: 'XP for heroes at the Hearth', shop: 'Party items and gear', tactician: 'New rules and slots', scav: 'Brings back materials', barracks: 'Room for more heroes', pit: 'Digs up gear of the kind you choose', hall: 'Skill and rule slots', shrine: 'Unlearn and start again', whet: 'Every hero hits harder', ossuary: 'Every hero stands longer', hexing: 'Harmful effects land more often', bell: 'Every hero resists more', plot: 'Build here', board: 'New faces for the road' };
+  const ICON = { toll: 'coin', infirmary: 'cross', yard: 'sword', shop: 'bag', tactician: 'book', scav: 'bone', barracks: 'shield', pit: 'bag', hall: 'star', shrine: 'holy', whet: 'sword', ossuary: 'skull', hexing: 'curse', bell: 'bell' };
+  // what heroes say, now and then
+  const BARKS = { pilgrim: ['My feet need the fire tonight.', 'Sit a while longer. Please.'], sellsword: ['Level six. Pay rises next?', 'One more stage. Then sleep.'], warden: ['That tent’s a blessing.', 'I’ll take first watch.'], crossbowman: ['Three new names on the Board…', 'Bolts are low. Just saying.'], hexblade: ['The stone hums tonight.'], lamplighter: ['Another lamp lit. Good.'] };
+
+  // ── the Hearth now and later
+  const MID = { heroes: ['sellsword', 'pilgrim', 'warden', 'crossbowman'], lit: 8, wick: true, boardChip: ['scroll', '3'],
+    plots: [{ art: 'toll', chip: ['coin', '610'] }, { art: 'infirmary' }, { art: 'yard', chip: ['star', '2'] }, { empty: true }, { empty: true }, null, null, null, null, null, null, null, null, null] };
+  const LATE_ART = ['shop', 'infirmary', 'toll', 'whet', 'hall', 'shrine', 'yard', 'pit', 'tactician', 'barracks', 'ossuary', 'bell', 'hexing', 'scav'];
+  const LATE = { heroes: ['sellsword', 'pilgrim', 'warden', 'crossbowman', 'hexblade', 'lamplighter'], lit: 17, wick: true, boardChip: ['scroll', '5'],
+    plots: LATE_ART.map(a => ({ art: a, chip: { toll: ['coin', '4,820'], scav: ['bone', '96'], yard: ['star', '6'] }[a] })) };
+  const CREW = [{ cls: 'warden', lv: 5, fat: 22 }, { cls: 'sellsword', lv: 6, fat: 41 }, { cls: 'crossbowman', lv: 4, fat: 18 }, { cls: 'pilgrim', lv: 6, fat: 56 }, null, null];
+  const CREW_LATE = [{ cls: 'warden', lv: 31, fat: 12 }, { cls: 'sellsword', lv: 33, fat: 30 }, { cls: 'crossbowman', lv: 30, fat: 8 }, { cls: 'pilgrim', lv: 32, fat: 44 }, { cls: 'hexblade', lv: 29, fat: 20 }, { cls: 'lamplighter', lv: 28, fat: 15 }];
+  const fatCol = f => (f >= 75 ? 'var(--bad)' : f >= 50 ? 'var(--gold)' : 'var(--good)');
+  const BASE = { me: { cls: 'sellsword', name: 'Roflz', renown: 4, bar: 62 }, goal: 'Spend 3 stat points', gold: '1,240', bone: '34', crew: CREW, next: '1-9', collect: [['coin', '610'], ['star', '2']] };
+  const LATER = { me: { cls: 'sellsword', name: 'Roflz', renown: 23, bar: 40 }, goal: 'Raise the Bell Tower to Lv 4', gold: '48,210', bone: '1,904', crew: CREW_LATE, next: '1-9', collect: [['coin', '4,820'], ['bone', '96'], ['star', '6']] };
+  const copy = S => ({ ...S, plots: S.plots.map(p => (p ? { ...p } : p)) });
+  const FRAMES = {
+    live: { ...BASE, S: copy(MID), yaw: 0, live: true },
+    party: { ...BASE, S: MID, yaw: 0, bark: [1, 'My feet need the fire tonight.'] },
+    build: { ...BASE, S: MID, yaw: 180 },
+    late: { ...LATER, S: LATE, yaw: 180, plaques: 'look' },
+    look: { ...LATER, S: { ...LATE, focus: 'plot3' }, yaw: 180, look: 'plot3', plaques: 'look' },
+    sheet: { ...BASE, S: MID, yaw: 180, sheet: 'toll' },
+    news: { ...BASE, S: MID, yaw: 0, news: true },
+  };
+
+  // ── the HUD
+  function topBar(F) {
+    const M = F.me;
+    const cur = (ic, v, cls) => h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon(ic, 22)), h('span', { class: 'cv ' + (cls || ''), text: v }), h('span', { class: 'plus', text: '+' }));
+    return [
+      art('crest', 2), h('div', { class: 'banner', text: 'The Hearth' }),
+      h('div', { class: 'me' }, h('span', { class: 'face' }, pxImg(portraitURL(M.cls, true, LOOK(M.cls)), 20, 20)), h('span', { class: 'nm', text: M.name }), h('span', { class: 'meter' }, h('i', { style: `width:${M.bar}%` })), h('em', { text: String(M.renown) })),
+      h('div', { class: 'pnl goal' }, h('span', { class: 'gk', text: 'Next' }), h('span', { class: 'gt', text: F.goal }), h('span', { class: 'go', text: 'Go' })),
+      h('div', { class: 'purse' }, cur('coin', F.gold, 'gold'), cur('bone', F.bone)),
+      h('div', { class: 'objs' }, h('button', { class: 'obj', title: 'Codex' }, art('book', 2)), h('button', { class: 'obj', title: 'Settings' }, art('candle', 2))),
+    ].map(n => { if (n.tagName === 'IMG') n.classList.add('crest'); return n; });
+  }
+  function shelf() {
+    const ob = (k, label, dot) => h('button', { class: 'ob' }, art(k, 2), dot ? h('i', { class: 'dot' }) : null, h('span', { text: label }));
+    return h('div', { class: 'shelf' }, ob('helm', 'Heroes', true), ob('table', 'Tactics'), ob('satchel', 'Bag', true));
+  }
+  function partyHud(F) {
+    const Cw = F.crew, st = stageOf(F.next), elite = st.kind !== 'road';
+    const tile = (c, front) => c
+      ? h('span', { class: 'tv' + (front ? ' front' : '') }, h('span', { class: 'fc' }, pxImg(portraitURL(c.cls, true, LOOK(c.cls)), 34, 34), h('em', { text: String(c.lv) })), h('span', { class: 'ft' }, h('i', { style: `width:${c.fat}%;background:${fatCol(c.fat)}` })))
+      : h('span', { class: 'tv empty' + (front ? ' front' : '') }, h('span', { class: 'fc', text: '+' }));
+    const form = h('div', { class: 'form nodrag' }, tile(Cw[2]), tile(Cw[3]), tile(Cw[0], true), tile(Cw[4]), tile(Cw[5]), tile(Cw[1], true));
+    const go = h('button', { class: 'big' }, h('span', { class: 'tag' }, elite ? h('i', { class: 'el' }) : null, st.id), h('span', { class: 'orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
+    return [form, go];
+  }
+  const collectBtn = F => h('button', { class: 'big collect' }, h('span', { class: 'tag' }, ...F.collect.flatMap(([ic, n]) => [icon(ic, 12), n])), h('span', { class: 'orb' }, icon('coin', 34)), h('span', { text: 'Collect' }));
+
+  // a building's framed panel
+  function panel(k, onClose) {
+    const name = Camp3D.NAMES[k] || 'Recruit Board', toll = k === 'toll';
+    const x = h('button', { class: 'xx', text: '✕', 'aria-label': 'Close' }); if (onClose) x.onclick = e => { e.stopPropagation(); onClose(); };
+    return h('div', { class: 'fp nodrag' }, ...['tl', 'tr', 'bl', 'br'].map(c => h('i', { class: 'cn ' + c })), x,
+      h('div', { class: 'plate' }, icon(ICON[k] || 'scroll', 26), h('h3', { text: name }), h('span', { class: 'lv', text: 'LV 2' })),
+      h('div', { class: 'fpb' },
+        h('div', { class: 'arch' }, bld(k, 3)),
+        h('div', { class: 'rows' },
+          h('p', { class: 'line', text: DOES[k] }),
+          toll ? h('div', { class: 'sect' }, h('h4', { text: 'Stored' }), h('div', { class: 'bar' }, h('i', { style: 'width:76%' }), h('span', { text: '610 / 800' })), h('div', { class: 'rowb' }, h('span', { class: 'cost' }, icon('coin', 16), '40 / h'), h('span', { class: 'sp' }), h('button', { class: 'btn green', text: 'Collect' }))) : null,
+          h('div', { class: 'sect' }, h('h4', { text: 'Lv 3' }), h('div', { class: 'rowb' }, h('span', { class: 'cost' }, toll ? '+25% gold' : '+1 rank'), h('span', { class: 'sp' }), h('span', { class: 'cost' }, icon('coin', 16), '1,200'), h('span', { class: 'cost' }, icon('wax', 16), '4'), h('button', { class: 'btn', text: 'Upgrade' }))))));
+  }
+  function news() {
+    const rw = (ic, n, k) => h('div', { class: 'rw' }, icon(ic, 18), h('span', { class: 'n', text: n }), h('span', { class: 'k', text: k }));
+    return h('div', { class: 'parch nodrag' }, pxImg(big(wickPortrait(), 3), 120, 162, 'px wk'),
+      h('h3', { text: 'While you were away' }),
+      rw('coin', '+610', 'Toll House'), rw('star', '+2', 'Training Yard'), rw('bone', '+18', 'Scavengers'), rw('cross', 'Rested', 'Pilgrim'),
+      h('div', { class: 'go' }, h('button', { class: 'btn green', text: 'Collect all' })));
+  }
+
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+
+  for (const el of document.querySelectorAll('.frame')) {
+    const F = FRAMES[el.dataset.f];
+    const cv = h('canvas', { width: Camp3D.IW, height: Camp3D.IH, 'aria-hidden': 'true' });
+    const marks = h('div', { class: 'layer' });
+    const [form, go] = partyHud(F), collect = collectBtn(F);
+    const dock = h('div', { class: 'dock nodrag' }, shelf(), go, collect);
+    el.append(cv, h('div', { class: 'shade-t' }), h('div', { class: 'shade-b' }), marks, form, dock, ...topBar(F));
+    const api = Camp3D.live(cv, el, F.S, { yaw: F.yaw, drag: !!F.live });
+    const opt = { plaques: F.plaques || 'always', look: F.look || null, bark: F.bark ? { j: F.bark[0], text: F.bark[1], until: Infinity } : null };
+    let modal = null;
+    const openModal = node => { if (modal) modal.remove(); modal = h('div', { class: 'modal' }, node); modal.onpointerdown = e => { if (e.target === modal) { e.stopPropagation(); closeModal(); } }; el.append(modal); };
+    const closeModal = () => { if (modal) modal.remove(); modal = null; };
+    if (F.sheet) openModal(panel(F.sheet));
+    if (F.news) openModal(news());
+
+    // live: hover (or press and hold) to look, tap to open, the toggles under the frame, heroes talking
+    let anchors = [], hold = null, view = 1;
+    const hit = (px, py) => { let best = null; for (const a of anchors) { if (!a.w || !(a.id.startsWith('plot') || a.id === 'board')) continue; if (Math.abs(px - a.x) < a.w / 2 && py > a.top && py < a.y + 4 && (!best || a.d < best.d)) best = a; } return best; };
+    const local = e => { const r = el.getBoundingClientRect(), k = r.width / 844; return [(e.clientX - r.left) / k, (e.clientY - r.top) / k]; };
+    const setLook = a => { opt.look = a ? a.id : null; F.S.focus = a ? a.id : null; };
+    if (F.live) {
+      el.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; setLook(hit(...local(e))); });
+      el.addEventListener('pointerleave', () => setLook(null));
+      el.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || e.target.closest('.nodrag')) return; const p = local(e); clearTimeout(hold); hold = setTimeout(() => { setLook(hit(...p)); hold = 'shown'; }, 380); });
+      el.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' && hold && hold !== 'shown') clearTimeout(hold); }, { capture: true });
+      el.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') { if (hold === 'shown') setTimeout(() => setLook(null), 900); else clearTimeout(hold); } });
+      api.onTap = p => { if (hold === 'shown') { hold = null; return; } const a = hit(p.x, p.y); if (!a) return; const k = a.id === 'board' ? 'board' : a.art; if (k === 'plot') return; openModal(panel(k, closeModal)); };
+      for (const seg of document.querySelectorAll('[data-seg]')) seg.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        if (seg.dataset.seg === 'names') opt.plaques = b.dataset.v;
+        else { const S = copy(b.dataset.v === 'late' ? LATE : MID); Object.assign(F.S, S); }
+      });
+      const talk = () => {
+        if (view < 0.3 && !modal) { const hs = F.S.heroes, j = Math.floor(Math.random() * hs.length), L = BARKS[hs[j]] || ['…']; opt.bark = { j, text: L[Math.floor(Math.random() * L.length)], until: performance.now() + 3800 }; }
+        setTimeout(talk, 7000 + Math.random() * 5000);
+      };
+      setTimeout(talk, 2500);
+    }
+
+    const pool = new Map();
+    api.onFrame = out => {
+      anchors = out.anchors;
+      const w = out.cam.w; view = w;
+      const wp = Math.max(0, 1 - 2 * w), wb = Math.max(0, 2 * w - 1);
+      form.style.opacity = wp; form.style.visibility = wp < 0.02 ? 'hidden' : 'visible';
+      go.style.display = w < 0.5 ? '' : 'none'; collect.style.display = w < 0.5 ? 'none' : '';
+      go.style.opacity = Math.max(wp, 0.001); collect.style.opacity = Math.max(wb, 0.001);
+      if (opt.bark && performance.now() > opt.bark.until) opt.bark = null;
+      const seen = new Set();
+      for (const a of out.anchors) {
+        const op = a.view === 'build' ? wb : a.view === 'party' ? wp : 1, want = [], looking = opt.look === a.id;
+        if (a.name && op > 0.02 && !looking && (opt.plaques === 'always' || a.chip)) want.push(['plq', a.id, () => h('span', { class: 'plq' + (a.empty ? ' empty' : ''), text: a.name }), a.x, a.y - 2, op * (opt.plaques === 'always' ? 1 : 0)]);
+        if (a.chip && op > 0.02) want.push(['wait', a.id, () => h('span', { class: 'wait' }, icon(a.chip[0], 13), a.chip[1]), a.x, a.top - 30, op]);
+        if (looking && a.name) want.push(['look' + a.id, a.id, () => h('div', { class: 'look' }, h('b', { text: a.name }), h('i', { text: DOES[a.art || 'board'] })), a.x, a.top - (a.chip ? 34 : 8), 1]);
+        if (a.id === 'wick' && wp > 0.02) want.push(['say', a.id, () => h('span', { class: 'say' }, h('i'), h('i'), h('i')), a.x + 4, a.top - 26, wp]);
+        if (opt.bark && a.id === 'hero' + opt.bark.j && wp > 0.3) want.push(['bark' + opt.bark.text, a.id, () => h('span', { class: 'bark', text: opt.bark.text }), a.x, a.top - 10, wp]);
+        for (const [cls, id, make, x, y, o] of want) {
+          const key = cls + id; seen.add(key);
+          let node = pool.get(key); if (!node) { node = make(); pool.set(key, node); marks.append(node); }
+          node.style.left = Math.round(x) + 'px'; node.style.top = Math.round(y) + 'px'; node.style.opacity = o;
+        }
+      }
+      for (const [key, node] of pool) if (!seen.has(key)) { if (key.startsWith('bark') || key.startsWith('look')) { node.remove(); pool.delete(key); } else node.style.opacity = 0; }
+    };
+  }
+
+  // ── the buildings, close up
+  const sheet = document.getElementById('sheet');
+  for (const k of [...LATE_ART, 'board', 'plot']) {
+    const c = HearthArt.building(k);
+    sheet.append(h('figure', {}, pxImg(big(c, 3), c.width * 3, c.height * 3), h('figcaption', {}, h('b', { text: Camp3D.NAMES[k] || (k === 'board' ? 'Recruit Board' : 'Empty plot') }), h('i', { text: DOES[k] }))));
+  }
+})();
+</script>
+</body>
+</html>

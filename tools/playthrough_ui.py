@@ -1,6 +1,8 @@
 """The play-through again, in the browser, through the game's own buttons (build step 7b).
 
-A new game is played through Region I the way a player taps it: the first pick; at the Hearth (screen 2, views around
+A new game is played through Region I the way a player taps it: Wick's first session (js/firstsession.js), every
+forced step by touch where it is lit: his welcome and the name box, the first pick at the Recruit Board, 1-1 and 1-2
+with his pauses, the results, the hero's tactics, the free recruit and the drag in Formation; then at the Hearth (screen 2, views around
 the fire) the corner's Set out for the first trip, then a tap on the road in the scene; either flies up the road to the
 frontier's card (the road view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in
 battle, then the results popup (a tap skips its fill; Report and back on the first two trips; its New things, opening
@@ -34,6 +36,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # the flows --quick waits for, each once; in the order a new game first meets them
 FLOWS = {
+    'guide': "Wick's first session, every forced step",
     'pick': 'the first pick',
     'set out': "Set out at the Hearth, up the road to the frontier's card",
     'battle': 'a battle, skipped',
@@ -76,6 +79,15 @@ ROAD_STILL = """() => { const L = Camp.scene, b = document.querySelector('.cv-ro
 IN_BATTLE = "() => !!(Battle.busy && !document.getElementById('controls').hidden)"
 SHEET_OR_BATTLE = "() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)"
 RESULTS = "() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"
+# Wick's first session: one of his forced steps is up (js/wick.js), or the session is over. His gate holds back the
+# synthetic clicks tap() makes, so his steps are answered with real touches where they are drawn.
+WICK_UP = "() => { const g = Wick.step; return !FirstSession.on || !!(g && !g.closed && g.root.classList.contains('in')); }"
+WICK_NOW = """() => { const g = Wick.step; if (!g || g.closed) return null;
+  const m = el => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; };
+  return { step: FirstSession.step, tap: g.tap, hole: m(g.root.querySelector('.wk-hole')) }; }"""
+# the middle of an element on the screen, and a point in the stage's design pixels on the screen (through the turn)
+MID = "sel => { const el = typeof sel === 'string' ? document.querySelector(sel) : sel; if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; }"
+TO_CLIENT = "([x, y]) => { const r = document.getElementById('stage').getBoundingClientRect(), k = Frame.k; return Frame.turned ? [r.left + (Frame.H - y) * k, r.top + x * k] : [r.left + x * k, r.top + y * k]; }"
 # The guide's coach marks in battle and between battles (js/guide.js) come with time on screen: until each has shown,
 # battles play (at 4×) before Skip, and the walk between battles takes its time.
 WATCH_KEYS = ['c:flags', 'c:items', 'c:rule']
@@ -205,16 +217,92 @@ def main():
         # ── the title (js/title.js): once it has loaded, a tap begins
         page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
         shot('title')
-        if not tap('#title', None, "() => [...document.querySelectorAll('.pickc')].some(e => e.offsetWidth)", timeout=10000):
-            problems.append('no title to tap, or no first pick after it')
-        # ── the first pick
-        if not tap('.pickc', a.hero.capitalize(), settle=50) and not tap('.pickc', settle=50):
-            problems.append('no first pick on a new game')
-        shot('pick')
-        if tap('.page.pick .btn.primary', then=VIEW_STILL, arg='party', timeout=10000):
-            ran('pick')
+        if not tap('#title', None, WICK_UP, timeout=10000):
+            problems.append(f"no title to tap, or no step of Wick's after it: now {where()}")
+
+        # ── Wick's first session (js/firstsession.js): every forced step, answered as a player would
+        def press(c):
+            if c:
+                page.touchscreen.tap(c[0], c[1])
+            return bool(c)
+
+        def stage_point(x, y):
+            return js(TO_CLIENT, [x, y])
+
+        def drag(d0, d1, steps=14):
+            """A finger from one point to another in design pixels: up first, so it lifts a hero off Formation's strip."""
+            pts = [(d0[0], d0[1]), (d0[0], d0[1] - 14)] + [(d0[0] + (d1[0] - d0[0]) * i / steps, d0[1] - 14 + (d1[1] - d0[1] + 14) * i / steps) for i in range(1, steps + 1)]
+            pts = [stage_point(*q) for q in pts]
+            cdp = ctx.new_cdp_session(page)
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': pts[0][0], 'y': pts[0][1]}]})
+            for q in pts[1:]:
+                cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': q[0], 'y': q[1]}]})
+                page.wait_for_timeout(16)
+            page.wait_for_timeout(120)
+            cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+            cdp.detach()
+
+        def board(pick):
+            """The Recruit Board's panel (js/firstpick.js): a card, Hire, then the reveal, each by touch."""
+            cards = js("() => [...document.querySelectorAll('#sheet .fp [data-tut=pick-card]')].map(c => c.dataset.cls)")
+            if len(cards) != 3:
+                problems.append(f'the Recruit Board shows {len(cards)} faces, not three')
+                return False
+            k = cards.index(pick) if pick in cards else 0
+            press(js(f"() => ({MID})(document.querySelectorAll('#sheet .fp [data-tut=pick-card]')[{k}])"))
+            if not until("() => !!document.querySelector('[data-tut=pick-hire]')", None, 3000):
+                problems.append('no Hire on the Recruit Board after a tap on a face')
+                return False
+            press(js(f"() => ({MID})('[data-tut=pick-hire]')"))
+            if not until("() => !!document.querySelector('[data-tut=pick-reveal]')", None, 3000):
+                problems.append(f'no reveal after Hire: {where()}')
+                return False
+            page.wait_for_timeout(550)  # the reveal takes a tap only after half a second
+            press(stage_point(js('() => Frame.W') / 2, 200))
+            return until("() => !document.querySelector('#sheet .fp')", None, 3000)
+
+        steps = []
+        while js('() => FirstSession.on') and time.time() < t_end:
+            if not until(WICK_UP, None, 60000):
+                problems.append(f"Wick's step after {steps[-1] if steps else 'the title'} never came: now {where()}")
+                break
+            if not js('() => FirstSession.on'):
+                break
+            page.wait_for_timeout(450)  # it has risen and settled on what it lights (a tap sooner is taken for a stray one)
+            w = js(WICK_NOW)
+            if not w:
+                continue
+            sid = w['step']
+            steps.append(sid)
+            shot('wick-' + sid)
+            if sid == 'name':
+                press(js(f"() => ({MID})('.wk-name input')"))
+                page.keyboard.type('Roflz')
+                press(js(f"() => ({MID})('[data-tut=name-ok]')"))
+            elif sid in ('pick', 'hire'):
+                if board(a.hero if sid == 'pick' else 'pilgrim') and sid == 'pick':
+                    ran('pick')
+            elif sid == 'place':
+                fresh = js("() => Save.state.roster.find(c => !Save.state.party.includes(c.id)).id")
+                d0 = js(f"() => {{ const b = Frame.box(document.querySelector('.fm-port[data-id=\"{fresh}\"] .fm-pf'), document.getElementById('stage')); return [b.left + b.width / 2, b.top + b.height / 2]; }}")
+                to = js("() => { const h = document.querySelector('#wk .wk-hand'); return [parseFloat(h.style.left) + 6 + parseFloat(h.style.getPropertyValue('--dx')), parseFloat(h.style.top) + 4 + parseFloat(h.style.getPropertyValue('--dy'))]; }")
+                drag(d0, to)
+            elif sid == 'speed':
+                press(js(f"() => ({MID})('[data-tut=battle-speed]')"))
+            elif w['tap'] == 'any':
+                press(stage_point(js('() => Frame.W') / 2, 60))
+            else:
+                press(w['hole'])
+            if not until("prev => !FirstSession.on || FirstSession.step !== prev || !Wick.step", sid, 15000):
+                problems.append(f"Wick's step {sid} did not go on after its tap: now {where()}")
+                break
+        if js('() => !FirstSession.on && Save.state.guide.done'):
+            ran('guide')
         else:
-            problems.append(f'no Begin button on the first pick, or no Hearth after it: now {where()}')
+            problems.append(f"Wick's first session did not finish: {len(steps)} steps, the last {steps[-1] if steps else None}")
+            t_end = time.time()  # the road can't be played past a session stuck at the Hearth
+        print(f"Wick's first session: {len(steps)} forced steps ({', '.join(steps)})")
+        until(VIEW_STILL, 'party', 10000)
         shot('camp')
 
         trips, last_fr, still, battles = 0, -1, 0, 0

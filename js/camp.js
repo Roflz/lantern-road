@@ -9,11 +9,12 @@
 // The road view (docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the camera flies up the
 // road to the frontier with its stage's card open. Drag up or down (or the wheel, or ↑ ↓) to look along it a stage at
 // a time; tap a stage for its card. Drag back past the first stage, or tap ‹, and it flies home.
-// Also here: the first pick of a new game, "While you were away", the Renown track, the roster rows on the Party
-// screen, and the building art. Building screens are js/buildings.js; the model is js/base.js.
+// Also here: "While you were away", the Renown track, the roster rows on the Party screen, and the building art. A new
+// game's first pick is the Recruit Board's own panel (js/firstpick.js), led by Wick (js/firstsession.js). Building screens are js/buildings.js; the model is js/base.js.
 
 // ── building art: pixel maps in one palette. Most come from the screen mockups; the Shop, the Masters' Hall and the
-// four passive-bonus buildings are new, in the same style.
+// four passive-bonus buildings are new, in the same style. The Hearth's scene draws js/hearthart.js's buildings instead;
+// these stay for the building sheets (js/buildings.js) and the road's sign.
 const BP = { w: '#5a4030', W: '#7a5a3a', d: '#2e2219', r: '#4a2228', R: '#6b3238', s: '#5f6266', S: '#7d8088', t: '#3a3c41', p: '#d8d0bc', y: '#f4a646', Y: '#ffe2a0', c: '#bfb29a', C: '#8a7e6a', x: '#a83a2a', g: '#e8c24a', b: '#2c3b55', B: '#3a4f75', h: '#c8a050', k: '#0d0911', m: '#9a8ea4', n: '#d8a878', v: '#6a3fa0', V: '#c9a6ff', e: '#5d7a34', E: '#86a84a' };
 const BUILD_ART = {
   board: ['...rrrrrrrrrrrrrr...', '..rRRRRRRRRRRRRRRr..', '.rrrrrrrrrrrrrrrrrr.', '...d............d...', '...dwwwwwwwwwwwwd...', '...dwppwwpppwwpwd...', '...dwppwwpxpwwpwd...', '...dwppwwpppwwwwd...', '...dwwwwwwwwwppwd...', '...dwwpppwwwwppwd...', '...dwwpppwwwwwwwd...', '...dwwwwwwwwwwwwd...', '...d............d...', '...d......y.....d...', '...d.....yYy....d...', '..ddd.....y....ddd..'],
@@ -61,7 +62,7 @@ const CAMP_LINES = {
   cutpurse: ['Didn’t take anything. Promise.', 'Pockets are for emptying.', 'Shh. Listen.'],
 };
 const CAMP_TIRED = ['I could sleep for a week.', 'My feet are lead.', 'Give me an hour by the fire.'];
-// What Wick says when tapped, until the guide comes (onboarding spec §6): placeholders, tune.
+// What Wick says when tapped at the fire, once his first session is over (js/firstsession.js): placeholders, tune.
 const WICK_LINES = ['Keep the fire fed. The road remembers who lit it.', 'Every lantern lit pushes the dark back a step.', 'Rest them well. The road is long.', 'Mind the graves past the posts. They listen.', 'I’ve tended this fire longer than I’ve had a name.'];
 
 const Camp = (() => {
@@ -91,7 +92,8 @@ const Camp = (() => {
     const stages = R.list.map(st => ({ kind: st.boss ? 'boss' : st.elite ? 'elite' : 'road', lit: Campaign.isLit(st.id, s), foes: foesOf(st) }));
     const total = BASE.START_PLOTS + BASE.PLOT_RENOWN.length, open = Base.plotsCleared(s);
     const plots = Array.from({ length: total }, (_, i) => (i >= open ? null : s.base.plots[i] ? { id: s.base.plots[i], art: BUILDINGS[s.base.plots[i]].art } : { empty: true }));
-    const board = { open: Base.boardOpen(s) }, gate = R.region + 1 < REGIONS.length;
+    // the board stands lit for a new game's first pick (screen 3), then dark until 1-2 opens it
+    const board = { open: Base.boardOpen(s) || !s.roster.length }, gate = R.region + 1 < REGIONS.length;
     const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), R.region, stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open].join('|');
     return { heroes, region: R.region, stages, front: R.front, gate, plots, board, sig };
   }
@@ -129,6 +131,7 @@ const Camp = (() => {
   }
   // The next goal, from today's state (onboarding spec §6.3, without its rewards yet): the first of these that applies.
   function goal(s, W) {
+    if (!s.roster.length) return { text: 'Recruit your first hero', go: () => FirstPick.open({ mode: 'pick' }) };
     if (Base.boardOpen(s) && s.board.free && s.board.picks > 0 && s.board.recruits.length) return { text: 'Hire a free recruit', go: () => Buildings.open('recruitboard') };
     const team = [...s.party.map(id => Save.char(id)).filter(Boolean), ...s.roster.filter(c => !s.party.includes(c.id))];
     for (const c of team) {
@@ -188,10 +191,11 @@ const Camp = (() => {
     const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
     const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
     const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');
-    const me = h('button', { class: 'cv-pnl cv-me', onclick: () => { click(); showRenown(); } }, face, h('span', { class: 'cv-t' }, h('span', { class: 'cv-nm', text: 'Traveller' }), h('span', { class: 'cv-meter' }, bar)));
+    const nm = h('span', { class: 'cv-nm', text: 'Traveller' });
+    const me = h('button', { class: 'cv-pnl cv-me', 'data-tut': 'hearth-me', onclick: () => { click(); showRenown(); } }, face, h('span', { class: 'cv-t' }, nm, h('span', { class: 'cv-meter' }, bar)));
     face.append(lvl);
     const goalText = h('span', { class: 'cv-gt' });
-    const goalBtn = h('button', { class: 'cv-pnl cv-goal' }, h('span', { class: 'cv-gk', text: 'Next' }), goalText, h('span', { class: 'cv-go', text: 'Go' }));
+    const goalBtn = h('button', { class: 'cv-pnl cv-goal', 'data-tut': 'hearth-goal' }, h('span', { class: 'cv-gk', text: 'Next' }), goalText, h('span', { class: 'cv-go', text: 'Go' }));
     const gold = h('span', { class: 'cv-cv gold' }), bone = h('span', { class: 'cv-cv' });
     const purse = h('div', { class: 'cv-purse' },
       h('div', { class: 'cv-cur', title: 'Gold' }, h('span', { class: 'cv-ci' }, icon('coin', 22)), gold, h('button', { class: 'cv-plus', 'aria-label': 'Earn more gold', onclick: () => { click(); earnMore('tollhouse'); } }, '+')),
@@ -199,17 +203,17 @@ const Camp = (() => {
     const corner = h('div', { class: 'cv-corner' },
       h('button', { class: 'cv-round', 'aria-label': 'Help', onclick: () => { click(); showHow(() => closeScreen()); } }, '?'),
       h('button', { class: 'cv-round', 'aria-label': 'Settings', onclick: () => { click(); App.openSettings(); } }, icon('gear', 18)));
-    const proto = h('button', { class: 'chip proto proto-only cv-proto', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
-    const rb = (ic, label, fn) => h('button', { class: 'cv-rb', onclick: () => { click(); fn(); } }, h('span', { class: 'cv-orb' }, icon(ic, 26), h('i', { class: 'cv-dot', hidden: true })), h('span', { text: label }));
+    const proto = h('button', { class: 'chip proto proto-only cv-proto', 'data-wk-free': '', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
+    const rb = (ic, label, fn) => h('button', { class: 'cv-rb', 'data-tut': 'hearth-' + label.toLowerCase(), onclick: () => { click(); fn(); } }, h('span', { class: 'cv-orb' }, icon(ic, 26), h('i', { class: 'cv-dot', hidden: true })), h('span', { text: label }));
     const heroesB = rb('helm', 'Heroes', () => App.go('party'));
     const tacticsB = rb('scroll', 'Tactics', () => { const c = leader(Save.state); App.actions.tactics(c ? c.id : 'party', 'home'); });
     const bagB = rb('bag', 'Bag', () => App.go('bag'));
     const goTag = h('span', { class: 'cv-tag' }), colTag = h('span', { class: 'cv-tag' });
-    const go = h('button', { class: 'cv-big' }, goTag, h('span', { class: 'cv-orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
-    const collect = h('button', { class: 'cv-big collect', hidden: true }, colTag, h('span', { class: 'cv-orb' }, icon('coin', 34)), h('span', { text: 'Collect' }));
+    const go = h('button', { class: 'cv-big', 'data-tut': 'hearth-setout' }, goTag, h('span', { class: 'cv-orb' }, icon('boot', 34)), h('span', { text: 'Set out' }));
+    const collect = h('button', { class: 'cv-big collect', 'data-tut': 'hearth-collect', hidden: true }, colTag, h('span', { class: 'cv-orb' }, icon('coin', 34)), h('span', { text: 'Collect' }));
     go.addEventListener('click', () => { click(); setOut(); });
     collect.addEventListener('click', () => { click(); gatherAll(); });
-    const form = h('div', { class: 'cv-form cv-nodrag', role: 'group', 'aria-label': 'The formation' });
+    const form = h('div', { class: 'cv-form cv-nodrag', 'data-tut': 'hearth-formation', role: 'group', 'aria-label': 'The formation' });
     // the road view (docs/mockups/road-view.html): back to the Hearth, the region with ‹ ›, and the chosen stage's card
     // with its big button (Set out, Farm or Locked)
     const back = h('button', { class: 'cv-round cv-back', 'data-tut': 'road-back', 'aria-label': 'Back to the Hearth', onclick: () => { click(); home(); } }, '‹');
@@ -233,6 +237,7 @@ const Camp = (() => {
       const R = Base.renown(s), lead = leader(s), W = waiting(s);
       face.replaceChildren(lead ? pxImg(heroPortrait(lead), 32) : icon('lantern', 22), lvl);
       lvl.textContent = String(R.level);
+      nm.textContent = (s.name || '').trim() || 'Traveller';
       bar.style.width = Math.round(100 * R.into / R.need) + '%';
       me.setAttribute('aria-label', `Renown ${R.level}: open the Renown track`);
       goalNow = goal(s, W);
@@ -340,7 +345,7 @@ const Camp = (() => {
         if (a.stage != null) {
           const st = Rv.list[a.stage], x = Math.round(a.x * K), ty = Math.round(a.top * K) - 4;
           if (!st || ty < 84 || ty > 296) continue;
-          if (a.front) { tag('co' + a.stage, () => h('span', { class: 'cv-call' }, st.kind !== 'road' ? h('i', { class: 'cv-el' }) : null, h('b', { text: st.id }), st.name.replace(/^The /, '')), x, ty - 8, wr); seen.add('co' + a.stage); }
+          if (a.front) { tag('co' + a.stage, () => h('span', { class: 'cv-call', 'data-tut': 'road-frontier' }, st.kind !== 'road' ? h('i', { class: 'cv-el' }) : null, h('b', { text: st.id }), st.name.replace(/^The /, '')), x, ty - 8, wr); seen.add('co' + a.stage); }
           else if (a.kind === 'boss') { tag('boss', () => h('span', { class: 'cv-bossname', text: Reg.boss }), x, ty - 6, wr).textContent = Reg.boss; seen.add('boss'); }
           else if (a.s > 0.42) { const n = tag('id' + a.stage, () => h('span', { class: 'cv-sid' }, st.id), x, ty - 4, wr * Math.min(1, (a.s - 0.42) * 6)); n.className = 'cv-sid' + (a.on ? ' lit' : ' dark') + (st.kind === 'elite' ? ' elite' : '') + (out.sel === a.stage ? ' sel' : ''); n.textContent = st.id; seen.add('id' + a.stage); }
           const ua = ahead.find(([k]) => k === a.stage);
@@ -424,7 +429,8 @@ const Camp = (() => {
     function act(a) {
       if (a.id === 'road') { click(); toRoad(); return; }
       if (a.id === 'stage') { click(); live.panTo(a.stage); return; }
-      if (a.id === 'board') { click(); Buildings.open('recruitboard'); return; }
+      // the first pick and the first session's free recruit open the board's own panel (js/firstpick.js)
+      if (a.id === 'board') { click(); if (!FirstSession.boardTap()) Buildings.open('recruitboard'); return; }
       if (a.id === 'fire') { click(); tapFire(); return; }
       if (a.id === 'wick') { click(); say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
       if (a.hero != null) {
@@ -518,9 +524,8 @@ const Camp = (() => {
       form.dataset.dragged = d.moved ? '1' : '';
     };
     form.addEventListener('pointerup', fup); form.addEventListener('pointercancel', fup);
-    form.addEventListener('click', ev => {
-      const tile = ev.target.closest('.cv-tile');
-      if (!tile) return;
+    // (a tap between the tiles opens it too: the panel is one thing to tap)
+    form.addEventListener('click', () => {
       if (form.dataset.dragged) { form.dataset.dragged = ''; return; }
       click();
       Formation.open(); // screen 5, js/formation.js
@@ -556,7 +561,8 @@ const Camp = (() => {
       const s = Save.state;
       if (typeof Battle !== 'undefined' && Battle.hold) Battle.hold(true); // the camp covers the battle's field
       if (ui) ui.start();
-      if (!s.roster.length) { showPick(); return; }
+      // a new game: Wick's first session takes it from here (js/firstsession.js), or, without it, the first pick
+      if (!s.roster.length) { if (!FirstSession.on) showPick(); return; }
       if (s.renown.newPlot) { toast(`Renown cleared plot ${s.renown.newPlot}: build on it`); s.renown.newPlot = 0; s.renown.up = 0; Save.commit(); }
       else if (s.renown.up) { toast(`Renown ${s.renown.up}`); s.renown.up = 0; Save.commit(); }
     },
@@ -579,33 +585,8 @@ const Camp = (() => {
     }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); ui.turn(e.key === 'ArrowRight' ? 1 : -1); }
   });
-  // ── the first pick: a new game starts with one of three
-  const PICK_LINES = {
-    sellsword: 'A mercenary who fights for the kill: the hardest single blows in melee.',
-    hexblade: 'Lays curses that tick and spread, and takes apart foe healers.',
-    pilgrim: 'Heals and raises the fallen, and burns the undead with holy fire.',
-  };
-  function showPick(sel) {
-    const choose = cls => { click(); showPick(cls); };
-    const begin = () => {
-      const s = Save.state, c = Base.newGame(sel, s);
-      if (!c) return;
-      Tactics.owner(c.id); // their starter rules
-      Base.tick(s);
-      Save.commit(); sfx('kindle');
-      closeScreen();
-      App.go('home', {}, { instant: true });
-      toast(`${c.name} the ${CLASSES[c.cls].name} takes up the lantern`);
-    };
-    setScreen(h('div', { class: 'page pick' },
-      h('div', { class: 'kicker', text: 'A new road' }),
-      h('h1', { text: 'Who carries the lantern?' }),
-      h('p', { class: 'flavor', text: 'Choose your first hero. The rest you will meet on the road, at the Recruit Board.' }),
-      h('div', { class: 'picks' }, STARTERS.map(cls => h('button', { class: 'pickc' + (cls === sel ? ' on' : ''), 'aria-pressed': cls === sel ? 'true' : 'false', onclick: () => choose(cls) },
-        h('span', { class: 'pspr' }, h('img', { src: heroImgURL(cls, [Items.starter(cls, 1).id, null, null]), alt: '' })),
-        h('span', { class: 'nm', text: CLASSES[cls].name }), h('span', { class: 'role', text: CLASSES[cls].role }), h('span', { class: 'ln', text: PICK_LINES[cls] })))),
-      sel ? h('button', { class: 'btn primary', onclick: begin }, `Begin with the ${CLASSES[sel].name}`, h('span', { class: 'sub', text: 'You start with 100 gold and three empty plots.' })) : h('p', { class: 'hint', text: 'Tap a hero to choose.' })));
-  }
+  // ── the first pick: a new game starts with one of three, at the Recruit Board (js/firstpick.js)
+  function showPick() { FirstPick.open({ mode: 'pick' }); }
 
   // ── "While you were away" (home-base spec §4)
   function showAway(ms) {

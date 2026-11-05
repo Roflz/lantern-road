@@ -37,6 +37,7 @@ SETUP = """
     return c;
   };
   closeScreen();
+  if (typeof FirstSession !== 'undefined') FirstSession.skip(); // Wick's first session (tools/guide_check.py walks it)
   s.settings.tips = false;
   const ids = {};
   if (scene === 'first') {

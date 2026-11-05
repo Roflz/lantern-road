@@ -143,7 +143,7 @@ def main():
 
         # 2. a new game: the camp fills the stage with its scene at 2x; its Set out, tapped where it is drawn, flies up the
         # road to the frontier with its card open (tools/road_check.py checks the road view itself)
-        js("Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
+        js("if (typeof FirstSession !== 'undefined') FirstSession.skip(); Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1200)
         shot('camp')
         cv = js("(() => { const cv = document.querySelector('.camp .cv-scene'), b = Frame.box(cv); return [cv.width, cv.height, b.width, b.height, document.getElementById('frame').className, getComputedStyle(document.getElementById('tabbar')).display]; })()")
@@ -303,7 +303,7 @@ def main():
         shot('title-s2')
         tap_at(to_client(200, 120))
         page.wait_for_timeout(800)
-        js("Base.newGame('pilgrim', Save.state); Tactics.owner(Save.state.roster[0].id); Save.state.currencies.gold = 4321; Save.commit(); 'ok'")
+        js("if (typeof FirstSession !== 'undefined') FirstSession.skip(); Base.newGame('pilgrim', Save.state); Tactics.owner(Save.state.roster[0].id); Save.state.currencies.gold = 4321; Save.commit(); 'ok'")
         title_up()
         check(js("Save.server === 2 && Save.state.currencies.gold === 4321 && Save.state.roster[0].cls === 'pilgrim'"), 'the next boot opens on S2, the last server used, with its save')
         tap_el('.tt-pill')
