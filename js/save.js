@@ -16,7 +16,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
@@ -223,6 +223,15 @@ const MIGRATIONS = {
   // in the Bag or worn, rises to it.
   6: old => {
     for (const x of savedPieces(old)) if (GEAR[x.id].rarity === 'relic') x.lv = Math.max(Number(x.lv) || 1, Items.relicLevel(x.id));
+    return old;
+  },
+  // Version 7 (the gear study's build step 1): stars and enchantment lines. Every piece owned is ★0 with no lines, but a
+  // Relic, which always has STARS.RELIC stars: its lines roll from the save and the Relic, as a new one's would.
+  7: old => {
+    for (const x of savedPieces(old)) {
+      x.st = 0; x.en = [];
+      if (GEAR[x.id].rarity === 'relic') Items.enchantRelic(x, old);
+    }
     return old;
   },
 };

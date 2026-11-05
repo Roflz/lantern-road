@@ -74,16 +74,25 @@ const Hero = (() => {
     for (const k of RES_KEYS) out[k] = C.res[k] + HERO.RES_GROWTH * (c.level - 1) + (c.alloc.res[k] || 0) * HERO.RES_POINT;
     return out;
   }
-  // With the plain stats of the gear they wear (js/items.js).
+  // With the plain stats of the gear they wear (js/items.js), then its enchantment lines: a percent line is a share of
+  // that total, as the Whetstone's is; Crit, Dodge and Speed lines add points.
   function geared(c) {
-    const s = stats(c), g = Items.gearStats(c);
+    const s = stats(c), g = Items.gearStats(c), L = Items.lineStats(c);
     for (const k of STAT_KEYS) s[k] += g[k] || 0;
+    for (const k in L.pct) s[k] = k === 'hp' ? Math.round(s[k] * (1 + L.pct[k] / 100)) : s[k] * (1 + L.pct[k] / 100);
+    for (const k in L.add) s[k] += L.add[k];
     return s;
+  }
+  // Resistances with the gear's enchantment lines.
+  function gearedRes(c) {
+    const r = res(c), L = Items.lineStats(c).res;
+    for (const k in L) r[k] = (r[k] || 0) + L[k];
+    return r;
   }
   // As the hero sheet shows them: with their gear and the stat changes of the passives they know (Thick Hide, Light
   // Feet...) and of the gear they wear (Witch-iron's −10% health...). row: the row they stand in, for those that care.
   function sheet(c, row = CLASSES[c.cls].row) {
-    const s = geared(c), u = { maxHp: s.hp, maxMp: s.mp, pow: s.pow, def: s.def, spd: s.spd, crit: s.crit, dodge: s.dodge, row, res: res(c) };
+    const s = geared(c), u = { maxHp: s.hp, maxMp: s.mp, pow: s.pow, def: s.def, spd: s.spd, crit: s.crit, dodge: s.dodge, row, res: gearedRes(c) };
     for (const id in c.skills) {
       const sk = SKILLS[id];
       if (sk && sk.stat && sk.kind !== 'active') sk.stat(u, skillLevel(c.skills[id], c.awakened.includes(id)));
@@ -269,7 +278,7 @@ const Hero = (() => {
   function spec(c, rules) {
     const s = geared(c);
     const out = {
-      key: c.cls, name: c.name, char: c.id, lv: c.level, stats: s, res: res(c),
+      key: c.cls, name: c.name, char: c.id, lv: c.level, stats: s, res: gearedRes(c),
       equip: fixEquip(c).filter(Boolean), sl: clone(c.skills), awk: c.awakened.slice(), rules: rules || CLASSES[c.cls].rules,
       gear: Items.effects(c), look: Items.look(c),
     };
@@ -327,6 +336,6 @@ const Hero = (() => {
 
   return {
     xpToNext, xpBetween, roll, create, stats, res, sheet, points, allocate, placed, capOf, skill, learn, awaken, awakenOpen,
-    activeSlots, ruleSlots, ruleMax, mods, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, autoPoints, geared,
+    activeSlots, ruleSlots, ruleMax, mods, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, autoPoints, geared, gearedRes,
   };
 })();

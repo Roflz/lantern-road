@@ -19,8 +19,9 @@
 //            balance test can see every effect fire
 //   fatigue  fatigue gained × this (build step 5 reads it)
 //   region   a Relic's region, or a region gear piece's (regional: true): the line that drops only there
-// ── A piece you own (an instance): { uid, id, lv }, plus fresh: true until you have seen it in the Bag.
-//   lv is the level of the stage it dropped from. Its rarity is its item's.
+// ── A piece you own (an instance): { uid, id, lv, st, en }, plus fresh: true until you have seen it in the Bag.
+//   lv is the level of the stage it dropped from. Its rarity is its item's. st: its stars, 0–4, fixed for life; en: its
+//   enchantment lines, one a star (ENCHANT, below).
 
 const ITEM = {
   BAG: 60,                     // the Bag holds 60 pieces; equipped gear doesn't count (home-base spec, decided overnight)
@@ -646,23 +647,149 @@ regionPiece(1, 'wickendring', 'accessory', 'rare', 'Wick-end Ring', {
 // Each region's line, by region: [[ids of Region I], [ids of Region II], [], [], []].
 const REGION_GEAR = [0, 1, 2, 3, 4].map(r => GEAR_ORDER.filter(id => GEAR[id].regional && GEAR[id].region === r));
 
+// ═══════════════════════════════════════════════════════════════════ Enchantment lines
+// The gear study §4.3 (build step 1: the plain-stat kinds). A piece's stars (STARS in js/data.js) say how many lines it
+// has, rolled with it from its own seeded rng. A line is a small share of the wearer's own Power, Health, Defence or
+// Mana, applied as the Whetstone's is (js/hero.js, Hero.geared), or a few points of Crit, Dodge, Speed or one
+// resistance, on top of the piece's own bonus and cost.
+//   v  the line's value at sizes I–IV, which roll at SIZES' weights. w: how often the kind rolls.
+//   A Pair is two of the single kinds at PAIR of their size each, and counts as both. A Bargain gains one of Power,
+//   Health, Defence or Mana and loses BARGAIN of another, and counts as both. A piece has one line of each kind.
+// When, Upkeep, Reward and Signature lines are later steps (study §6, step 2).
+const ENCHANT = {
+  SIZES: [35, 30, 20, 15],
+  PAIR: 0.6,
+  BARGAIN: 3,
+  KINDS: {
+    pow: { stat: 'pow', pct: true, v: [1, 2, 3, 4], w: 10 },
+    hp: { stat: 'hp', pct: true, v: [2, 3, 4, 6], w: 10 },
+    def: { stat: 'def', pct: true, v: [2, 3, 4, 6], w: 10 },
+    mp: { stat: 'mp', pct: true, v: [3, 4, 6, 8], w: 8 },
+    crit: { stat: 'crit', v: [1, 1.5, 2, 3], w: 8 },
+    dodge: { stat: 'dodge', v: [1, 1.5, 2, 3], w: 8 },
+    spd: { stat: 'spd', v: [0.1, 0.2, 0.3, 0.4], w: 4 },
+    res: { v: [3, 5, 7, 10], w: 8 },
+    pair: { w: 8 },
+    bargain: { v: [3, 4, 5, 6], w: 6 },
+  },
+};
+const ENCHANT_SINGLE = ['pow', 'hp', 'def', 'mp', 'crit', 'dodge', 'spd', 'res'];
+const ENCHANT_PCT = ['pow', 'hp', 'def', 'mp'];
+const SIZE_NAMES = ['I', 'II', 'III', 'IV'];
+const RES_ICONS = { stun: 'stun', move: 'boot', bleed: 'bleed', blight: 'poison', curse: 'doom', debuff: 'weak' };
+
 // ═══════════════════════════════════════════════════════════════════ The model
 const Items = (() => {
   let seq = 0;
   const def = x => GEAR[typeof x === 'string' ? x : x && x.id] || null;
   const uid = () => 'g' + Date.now().toString(36) + (++seq).toString(36) + Math.floor(Math.random() * 1296).toString(36);
-  // A new piece: { uid, id, lv }.
+  // A new piece: { uid, id, lv, st, en }, with no stars until enchant() rolls them.
   function make(id, lv = 1) {
     if (!GEAR[id]) return null;
-    return { uid: uid(), id, lv: clamp(Math.round(lv) || 1, 1, 999) };
+    return { uid: uid(), id, lv: clamp(Math.round(lv) || 1, 1, 999), st: 0, en: [] };
   }
   // Saved data, checked. slot: the slot it must fit, if any.
   function valid(x, slot) {
     if (!x || typeof x !== 'object' || !GEAR[x.id]) return null;
     if (slot && GEAR[x.id].slot !== slot) return null;
     const o = { uid: typeof x.uid === 'string' && x.uid ? x.uid : uid(), id: x.id, lv: clamp(Math.round(x.lv) || 1, 1, 999) };
+    const en = (Array.isArray(x.en) ? x.en : []).map(validLine).filter(Boolean).slice(0, STARS.MAX);
+    o.st = Number.isInteger(x.st) ? clamp(x.st, 0, STARS.MAX) : en.length;
+    o.en = en;
     if (x.fresh) o.fresh = true;
     return o;
+  }
+
+  // ── stars and enchantment lines (the gear study §4.2–4.3)
+  // A saved line, checked: { k, s } and its kind's fields. A kind this build doesn't know (a later step's) is kept as
+  // it is, and does nothing here.
+  function validLine(l) {
+    if (!l || typeof l !== 'object' || typeof l.k !== 'string') return null;
+    const s = clamp(Math.round(l.s) || 1, 1, 4);
+    if (!ENCHANT.KINDS[l.k]) return Object.assign({}, l, { s });
+    const o = { k: l.k, s };
+    if (l.k === 'pair') {
+      if (!Array.isArray(l.p) || l.p.length !== 2 || l.p[0] === l.p[1] || !l.p.every(k => ENCHANT_SINGLE.includes(k))) return null;
+      o.p = l.p.slice();
+    }
+    if (l.k === 'bargain') {
+      if (!ENCHANT_PCT.includes(l.up) || !ENCHANT_PCT.includes(l.dn) || l.up === l.dn) return null;
+      o.up = l.up; o.dn = l.dn;
+    }
+    if (l.k === 'res' || (o.p && o.p.includes('res'))) { if (!RES_KEYS.includes(l.r)) return null; o.r = l.r; }
+    if (l.lk) o.lk = true;
+    return o;
+  }
+  // Stars: from the floor, each step up at its chance (STARS.STEPS), tried only once the step before has passed.
+  function rollStars(rng = Math.random, floor = 0) {
+    let n = clamp(floor | 0, 0, STARS.MAX);
+    while (n < STARS.MAX && rng() < STARS.STEPS[n]) n++;
+    return n;
+  }
+  // n lines: kinds by weight, one of each (a Pair and a Bargain count as both their stats), sizes by weight.
+  function rollLines(n, rng = Math.random) {
+    const K = ENCHANT.KINDS, out = [], used = new Set(), byW = list => list.map(k => [k, K[k].w]);
+    for (let i = 0; i < n; i++) {
+      const free = ENCHANT_SINGLE.filter(k => !used.has(k)), freePct = ENCHANT_PCT.filter(k => !used.has(k));
+      const open = Object.keys(K).filter(k => !used.has(k) && (k === 'pair' ? free.length >= 2 : k === 'bargain' ? freePct.length >= 2 : true));
+      if (!open.length) break;
+      const k = pickW(rng, byW(open)), l = { k, s: 1 + pickW(rng, ENCHANT.SIZES.map((w, j) => [j, w])) };
+      used.add(k);
+      if (k === 'pair') { const a = pickW(rng, byW(free)), b = pickW(rng, byW(free.filter(x => x !== a))); l.p = [a, b]; used.add(a); used.add(b); }
+      if (k === 'bargain') { const up = pickW(rng, byW(freePct)), rest = freePct.filter(x => x !== up), dn = rest[Math.floor(rng() * rest.length)]; l.up = up; l.dn = dn; used.add(up); used.add(dn); }
+      if (k === 'res' || (l.p && l.p.includes('res'))) l.r = RES_KEYS[Math.floor(rng() * RES_KEYS.length)];
+      out.push(l);
+    }
+    return out;
+  }
+  // Rolls a new piece's stars and lines from one draw of rng, so what rolls after it doesn't depend on how many lines it
+  // got. o: { stars (exactly this many: the first session's ★0 pieces), minStars (a floor: STARS.FLOOR) }
+  function enchant(inst, rng = Math.random, o = {}) {
+    if (!inst) return inst;
+    const sub = makeRng(((rng() * 4294967296) >>> 0) || 1);
+    const n = o.stars != null ? clamp(o.stars | 0, 0, STARS.MAX) : rollStars(sub, Math.max(0, o.minStars | 0));
+    inst.st = n;
+    inst.en = rollLines(n, sub);
+    return inst;
+  }
+  // A line's parts: [{ stat, pct, v }] for a stat (pct: a percent of the hero's own), or [{ res, v }]; [] for a kind
+  // this build doesn't know.
+  function lineParts(l) {
+    const K = ENCHANT.KINDS, D = l && K[l.k];
+    if (!D) return [];
+    const i = clamp(l.s | 0, 1, 4) - 1, r2 = v => Math.round(v * 100) / 100;
+    const one = (k, m) => (k === 'res' ? { res: l.r, v: r2(K.res.v[i] * m) } : { stat: K[k].stat, pct: !!K[k].pct, v: r2(K[k].v[i] * m) });
+    if (l.k === 'pair') return l.p.map(k => one(k, ENCHANT.PAIR));
+    if (l.k === 'bargain') return [{ stat: l.up, pct: true, v: D.v[i] }, { stat: l.dn, pct: true, v: -ENCHANT.BARGAIN }];
+    return [one(l.k, 1)];
+  }
+  // What the lines on everything a hero wears add up to: { pct: { pow, hp, def, mp } (percent of their own stat), add:
+  // { crit, dodge, spd }, res: { bleed, .. } }. js/hero.js applies it.
+  function lineStats(c) {
+    const out = { pct: {}, add: {}, res: {} };
+    for (const x of worn(c)) for (const l of x.en || []) for (const p of lineParts(l)) {
+      if (p.res) out.res[p.res] = (out.res[p.res] || 0) + p.v;
+      else { const o = p.pct ? out.pct : out.add; o[p.stat] = (o[p.stat] || 0) + p.v; }
+    }
+    return out;
+  }
+  // The card's lines: [{ icon, text, tip, s }], one short line each; the tip says what it is.
+  const partText = p => {
+    const v = Math.abs(p.v), sg = p.v < 0 ? '−' : '+';
+    return p.res ? `${sg}${v}% ${RESISTS[p.res].name} resistance` : p.stat === 'spd' ? `${sg}${v} Speed` : `${sg}${v}% ${GEAR_STAT_NAMES[p.stat]}`;
+  };
+  function lineTip(l) {
+    const size = `Enchantment, size ${SIZE_NAMES[l.s - 1]} of IV.`, N = GEAR_STAT_NAMES;
+    if (l.k === 'pair') return `${size} A Pair: two stats at ${Math.round(ENCHANT.PAIR * 100)}% each.`;
+    if (l.k === 'bargain') return `${size} A Bargain: more ${N[l.up]} for a little ${N[l.dn]}, each a share of the wearer’s own.`;
+    if (ENCHANT.KINDS[l.k].pct) return `${size} A share of the wearer’s own ${N[l.k]}, so it grows as they do.`;
+    return size;
+  }
+  function enchantLines(x) {
+    return (x && x.en ? x.en : []).filter(l => ENCHANT.KINDS[l.k]).map(l => {
+      const parts = lineParts(l), a = parts[0];
+      return { icon: a.res ? RES_ICONS[a.res] : GEAR_STAT_ICONS[a.stat], text: parts.map(partText).join(' · '), tip: lineTip(l), s: l.s };
+    });
   }
 
   // ── what a piece gives
@@ -741,7 +868,8 @@ const Items = (() => {
   const pickW = (rng, entries) => { const tot = entries.reduce((a, [, w]) => a + w, 0); let x = rng() * tot; for (const [k, w] of entries) { if ((x -= w) < 0) return k; } return entries[entries.length - 1][0]; };
   // A random piece of the general pool (never a region's own line) from a stage of this level, in this region (0–4).
   // o: { rank: 'normal' | 'elite' | 'boss', classes: class ids on the roster (weapons and class-only accessories follow
-  //      them, weighted by how many of each; every class when left out), slot, rarity (to force either) }
+  //      them, weighted by how many of each; every class when left out), slot, rarity (to force either), minStars (a
+  //      star floor: STARS.FLOOR, e.g. STARS.FLOOR.jobs for the daily jobs' bonus), stars (exactly this many) }
   function roll(level, region, rng = Math.random, o = {}) {
     const od = odds(region, o.rank);
     const rar = o.rarity || pickW(rng, [['common', od.common], ['fine', od.fine], ['rare', od.rare]]);
@@ -757,7 +885,7 @@ const Items = (() => {
     if (!pool.length) pool = general.filter(id => GEAR[id].slot === slot && GEAR[id].rarity === rar);
     const inst = make(pool[Math.floor(rng() * pool.length)], level);
     inst.fresh = true;
-    return inst;
+    return enchant(inst, rng, o);
   }
   // A gear roll on the road (regions study §3.1): the region's own line first, at ITEM.LINE[rank], then the general
   // pool. A roll with a set rarity or slot (the Cage Mimic's) stays general. o: as roll's.
@@ -779,7 +907,7 @@ const Items = (() => {
     const slot = pickW(rng, SLOTS.filter(k => pool.some(id => GEAR[id].slot === k)).map(k => [k, ITEM.SLOT_ODDS[k]]));
     const list = pool.filter(id => GEAR[id].slot === slot), inst = make(list[Math.floor(rng() * list.length)], level);
     inst.fresh = true;
-    return inst;
+    return enchant(inst, rng, o);
   }
   // The region whose own line a piece belongs to (0–4), or null for the general pool and Relics.
   const regionOf = x => { const D = def(x); return D && D.regional ? D.region : null; };
@@ -798,8 +926,8 @@ const Items = (() => {
     return out;
   }
   const owns = (state, id) => everything(state).some(x => x.id === id);
-  // What a piece sells for: gold by rarity × S (S = 1 + level ÷ 5), and the Cutpurse's Fence in the party adds to it.
-  // Relics don't sell.
+  // What a piece sells for: gold by rarity × S (S = 1 + level ÷ 5) × (1 + STARS.SELL × stars), and the Cutpurse's Fence
+  // in the party adds to it. Relics don't sell.
   function sellPrice(x, state) {
     const D = def(x);
     if (!D || D.rarity === 'relic') return 0;
@@ -808,7 +936,7 @@ const Items = (() => {
       const c = id && state.roster.find(r => r.id === id);
       if (c && c.skills && c.skills.fence && typeof SKILLS !== 'undefined' && SKILLS.fence) k = Math.max(k, 1 + skillLevel(c.skills.fence, false).v([0.1, 0.3]));
     }
-    return Math.max(1, Math.round(ITEM.SELL[D.rarity] * (1 + (x.lv || 1) / 5) * k));
+    return Math.max(1, Math.round(ITEM.SELL[D.rarity] * (1 + (x.lv || 1) / 5) * (1 + STARS.SELL * (x.st || 0)) * k));
   }
   // A new piece goes into the Bag. When the Bag is full it is sold where it dropped: { added } or { sold: gold }.
   // A Relic always finds room.
@@ -824,10 +952,13 @@ const Items = (() => {
     const D = def(x), st = D && D.rarity === 'relic' && typeof STAGES !== 'undefined' ? STAGES.find(s => s.boss && s.region === D.region) : null;
     return st ? st.level : 1;
   }
+  // A Relic's stars and lines (always STARS.RELIC stars), rolled from the save and the Relic, so they never change.
+  const relicRng = (state, id) => makeRng((strSeed(`${(state && state.created) || 1}:relic:${id}`) >>> 0) || 5);
+  const enchantRelic = (x, state) => enchant(x, relicRng(state, x.id), { stars: STARS.RELIC });
   // A boss's Relic on its first clear, at its boss's level: given once, never again.
   function grantRelic(state, id) {
     if (!GEAR[id] || GEAR[id].rarity !== 'relic' || owns(state, id)) return null;
-    const x = make(id, relicLevel(id));
+    const x = enchantRelic(make(id, relicLevel(id)), state);
     x.fresh = true;
     add(state, x);
     return x;
@@ -875,11 +1006,11 @@ const Items = (() => {
     return true;
   }
 
-  // ── what the card says: the bands Always, Costs and When
+  // ── what the card says: the bands Always, Costs and When, and the enchantment lines
   // where: { row } for checking row conditions. Returns { good: [{ icon, text, later }], bad: [...], when: [{ tag, icon,
-  // text, on, cost, later }] }.
+  // text, on, cost, later }], stars, lines: [{ icon, text, tip, s }] }.
   function bands(x, where) {
-    const D = def(x), s = stats(x), out = { good: [], bad: [], when: [] };
+    const D = def(x), s = stats(x), out = { good: [], bad: [], when: [], stars: x.st || 0, lines: enchantLines(x) };
     const fmtS = (k, v) => `${v > 0 ? '+' : '−'}${Math.abs(k === 'spd' ? Math.round(v * 10) / 10 : Math.round(v))}${k === 'crit' || k === 'dodge' ? '%' : ''} ${GEAR_STAT_NAMES[k]}`;
     for (const k of STAT_ORDER) if (s[k]) (s[k] > 0 ? out.good : out.bad).push({ icon: GEAR_STAT_ICONS[k], text: fmtS(k, s[k]), stat: k });
     for (const l of D.lines) {
@@ -890,17 +1021,31 @@ const Items = (() => {
     }
     return out;
   }
-  // A rough worth, for the ▲ ▼ marks against what's worn: plain stats, plus a little for each effect and its rarity.
+  // A rough worth, for the ▲ ▼ marks against what's worn, Best and Auto-equip: plain stats, a little for each effect
+  // and its rarity, and the enchantment lines, a percent line weighed against a typical hero of the piece's level.
+  const SCORE_W = { hp: 0.1, mp: 0.15, pow: 1, def: 0.8, spd: 2.5, crit: 0.35, dodge: 0.35 }, SCORE_RES = 0.1;
   function score(x) {
     const s = stats(x), D = def(x);
     if (!D) return 0;
-    const w = { hp: 0.1, mp: 0.15, pow: 1, def: 0.8, spd: 2.5, crit: 0.35, dodge: 0.35 };
     let n = 0;
-    for (const k in s) n += (w[k] || 0) * s[k];
+    for (const k in s) n += (SCORE_W[k] || 0) * s[k];
+    const ref = typicalHero(x.lv || 1);
+    for (const l of x.en || []) for (const p of lineParts(l)) n += p.res ? SCORE_RES * p.v : SCORE_W[p.stat] * (p.pct ? ref[p.stat] * p.v / 100 : p.v);
     return n + { common: 0, fine: 1, rare: 2, relic: 4 }[D.rarity];
+  }
+  // A typical hero's Power, Health, Defence and Mana at a level: the classes' average roll and growth, and a level's stat
+  // point as the auto plan spreads it (about 0.45 Power, 3.5 Health, 0.1 Defence and 0.5 Mana). Cached by level.
+  const typicalCache = {};
+  function typicalHero(lv) {
+    const L = clamp(Math.round(lv) || 1, 1, 999);
+    if (typicalCache[L]) return typicalCache[L];
+    const cls = CLASS_ORDER.filter(k => CLASSES[k]), out = {}, per = { pow: 0.45, hp: 3.5, def: 0.1, mp: 0.5 };
+    for (const k in per) out[k] = cls.reduce((a, c) => { const [lo, hi, g] = CLASSES[c].stats[k]; return a + (lo + hi) / 2 + g * (L - 1); }, 0) / cls.length + per[k] * (L - 1);
+    return (typicalCache[L] = out);
   }
   return {
     make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, fixedFront, odds, roll, loot, rollLine, regionOf, starter,
+    rollStars, rollLines, enchant, enchantRelic, lineParts, lineStats, enchantLines, validLine, typicalHero,
     room, everything, owns, sellPrice, add, relicLevel, grantRelic, relicOf, sell, find, equip, unequip, bands, score, uid,
   };
 })();

@@ -8,8 +8,9 @@
 //                fills it, flashes, lights Level up, empties it and fills it again, level after level. The fatigue
 //                bar grows from before to after, with marks at Weary (50) and Exhausted (75); its number turns gold,
 //                then red, and a tap on it says what that means.
-//   the loot     gold, materials, party items and gear (rarity on the frame) pop in one by one, then New for each
-//                first-clear unlock. A tap on gear opens its card; on New, it does what the trip summary's row does.
+//   the loot     gold, materials, party items and gear (rarity on the frame, stars as pips) pop in one by one, then
+//                New for each first-clear unlock. A tap on gear opens its card; on New, it does what the trip
+//                summary's row does.
 //   the buttons  Report · Hearth · Fight again · Next ›, or after a loss Report · Hearth · Try again · Farm the stage
 //                before (js/main.js decides what is offered, and does it). After a loss Wick gives the stage's hint.
 // About 4 seconds, the heroes staggered and the numbers counting; a tap anywhere skips to the end, and reduced motion
@@ -53,7 +54,7 @@ const Results = (() => {
       return { c: x.c, lv0: x.before.level, xp0: x.before.xp, lv1: x.g.to, xp1: x.c.xp, gain: x.g.xp, f0: f.before, f1: f.after, ...shareOf(x.g.xp, x.before.level, won, 1) };
     });
     return { won, i, hint, ids: [STAGES[i].id], first: r.first ? 1 : 0, heroes,
-      loot: { gold: r.gold, spoils: r.spoilsGold, clear: r.clearGold, mats: r.mats, items: r.items, gear: r.gear.map(g => ({ uid: g.piece.uid, id: g.piece.id, sold: g.sold || 0 })), unlocks: r.unlocks } };
+      loot: { gold: r.gold, spoils: r.spoilsGold, clear: r.clearGold, mats: r.mats, items: r.items, gear: r.gear.map(g => ({ uid: g.piece.uid, id: g.piece.id, st: g.piece.st || 0, sold: g.sold || 0 })), unlocks: r.unlocks } };
   }
   // XP as a share of the hero's level before it (share: null at the cap), and whether a win paid them little: on a
   // trip, measured per battle.
@@ -107,7 +108,7 @@ const Results = (() => {
   }
   function gearTap(g) {
     const D = GEAR[g.id];
-    if (g.sold) return toast(`${D.name}: sold for ${fmt(g.sold)} gold, the Bag was full`);
+    if (g.sold) return toast(`${D.name}${g.st ? ' ' + '★'.repeat(g.st) : ''}: sold for ${fmt(g.sold)} gold, the Bag was full`);
     if (!Items.find(Save.state, g.uid)) return toast(D.name);
     GearUI.card(g.uid, { after: reopen });
   }
@@ -143,11 +144,11 @@ const Results = (() => {
     };
     // the loot: gold, materials, party items and gear, then New
     const tiles = [];
-    const tile = (cls, img, count, label, tap) => { const el = h('button', { class: 'rs-it' + (cls ? ' ' + cls : ''), type: 'button', 'aria-label': label, onclick: () => { sfx('click'); tap(); } }, img, count != null ? h('em', { text: count }) : null); tiles.push(el); return el; };
+    const tile = (cls, img, count, label, tap, extra) => { const el = h('button', { class: 'rs-it' + (cls ? ' ' + cls : ''), type: 'button', 'aria-label': label, onclick: () => { sfx('click'); tap(); } }, img, count != null ? h('em', { text: count }) : null, extra); tiles.push(el); return el; };
     if (L.gold) tile('', ico('coin'), short(L.gold), `${fmt(L.gold)} gold`, () => toast(L.clear ? `${fmt(L.gold)} gold: ${fmt(L.spoils)} from the foes, ${fmt(L.clear)} for the clear` : `${fmt(L.gold)} gold`));
     for (const mt of MATERIALS) if (L.mats[mt.id]) tile('', ico(matIcon(mt.id)), short(L.mats[mt.id]), `${mt.name} ×${L.mats[mt.id]}`, () => toast(`${mt.name} ×${fmt(L.mats[mt.id])}${mt.trophy ? '. ' + matUse(mt.id) : ''}`));
     for (const id in L.items) if (ITEMS[id] && L.items[id]) tile('', ico(ITEMS[id].icon), String(L.items[id]), `${ITEMS[id].name} ×${L.items[id]}`, () => toast(`${ITEMS[id].name}: ${ITEMS[id].tip}`));
-    for (const g of L.gear) if (GEAR[g.id]) tile('gear r-' + GEAR[g.id].rarity + (g.sold ? ' sold' : ''), gearIco(g.id), g.sold ? 'sold' : null, GEAR[g.id].name, () => gearTap(g));
+    for (const g of L.gear) if (GEAR[g.id]) tile('gear r-' + GEAR[g.id].rarity + (g.sold ? ' sold' : ''), gearIco(g.id), g.sold ? 'sold' : null, GEAR[g.id].name + (g.st ? `, ${g.st} star${g.st === 1 ? '' : 's'}` : ''), () => gearTap(g), GearUI.pips(g.st || 0));
     const ids = [...new Set(L.unlocks || [])].filter(id => UNLOCKS[id] && Guide.newThing(id));
     const chip = (id, k) => { const nt = Guide.newThing(id); return h('button', { class: 'rs-new', type: 'button', 'data-tut': k === 0 ? 'new' : null, 'aria-label': nt.name, onclick: () => { sfx('click'); newTap(nt); } }, ico(nt.icon), h('b', { text: 'New' }), h('span', { text: shortName(UNLOCKS[id]) })); };
     const more = k => h('button', { class: 'rs-new more', type: 'button', 'aria-label': `${k} more new`, onclick: () => { sfx('click'); newList(ids); } }, h('b', { text: '+' + k }));

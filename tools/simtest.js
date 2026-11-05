@@ -633,7 +633,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 6, 'save version 6');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 7, 'save version 7');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -658,9 +658,19 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v5.inventory.items = [{ uid: 'r1', id: 'bishopscrozier', lv: 1 }, { uid: 'n1', id: 'notchedsword', lv: 3 }, { uid: 'r2', id: 'hollowcrown', lv: 120 }];
   const lamp = v5.roster.find(c => c.cls === 'lamplighter'); lamp.gear.accessory = { uid: 'r3', id: 'gravediggersspade', lv: 1 };
   const s6 = upgrade(v5), bagLv = id => s6.inventory.items.find(x => x.id === id).lv;
-  ok(s6.v === 6 && bagLv('bishopscrozier') === 30 && bagLv('notchedsword') === 3 && bagLv('hollowcrown') === 120 && s6.roster.find(c => c.cls === 'lamplighter').gear.accessory.lv === 10,
+  ok(s6.v === SAVE_VERSION && bagLv('bishopscrozier') === 30 && bagLv('notchedsword') === 3 && bagLv('hollowcrown') === 120 && s6.roster.find(c => c.cls === 'lamplighter').gear.accessory.lv === 10,
     `version 5 → 6: owned Relics rise to their boss's level (${JSON.stringify(s6.inventory.items)})`);
-  console.log('Save migration checked: version 1 → 6 (characters, their rules, gear, the road, the camp, Relics), 2 → 6, 3 → 6, 5 → 6 and 0 → 6.');
+  // version 6 → 7: stars. Every piece owned is ★0 with no lines, but a Relic, which has STARS.RELIC stars and their lines,
+  // rolled from the save, so loading it again changes nothing
+  const v6 = JSON.parse(JSON.stringify(protoState()));
+  v6.v = 6; v6.created = 4242;
+  v6.inventory.items = [{ uid: 'r1', id: 'bishopscrozier', lv: 30 }, { uid: 'n1', id: 'notchedsword', lv: 3 }];
+  const s7 = upgrade(JSON.parse(JSON.stringify(v6))), pieces = Items.everything(s7), relic7 = s7.inventory.items.find(x => x.id === 'bishopscrozier');
+  ok(s7.v === 7 && pieces.every(x => Number.isInteger(x.st) && Array.isArray(x.en) && x.en.length === x.st) && pieces.filter(x => x !== relic7).every(x => x.st === 0) && relic7.st === STARS.RELIC,
+    `version 6 → 7: every piece ★0, a Relic ★${STARS.RELIC} (${JSON.stringify(relic7)})`);
+  ok(JSON.stringify(upgrade(JSON.parse(JSON.stringify(v6))).inventory.items.find(x => x.id === 'bishopscrozier').en) === JSON.stringify(relic7.en) && JSON.stringify(upgrade(JSON.parse(JSON.stringify(s7))).inventory.items) === JSON.stringify(s7.inventory.items),
+    'a Relic\'s lines come from the save, and a version 7 save loads unchanged');
+  console.log('Save migration checked: version 1 → 7 (characters, their rules, gear, the road, the camp, Relics, stars), 2 → 7, 3 → 7, 5 → 7, 6 → 7 and 0 → 7.');
 }
 
 // ── The Tactics model
@@ -1014,7 +1024,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     v4.roster[0].lessons = { skill: 0, rule: 1 };
     const s5 = upgrade(v4);
     const elite = STAGES.find(x => x.id === '1-9').kind === 'elite';
-    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 6 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
+    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 7 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
     ok(s5.base.legacySlots.party === 4 && s5.base.legacySlots.loadout === 3 && s5.roster[0].lessons.rule === 1, 'slots opened in the prototype stay');
     ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !s5.board.free && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
     const n = JSON.parse(JSON.stringify(s5));
@@ -1494,9 +1504,10 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const B = Quests.claimBonus(S);
   ok(B && ['fine', 'rare'].includes(Items.rarity(B.piece)) && B.piece.lv === fr.level && S.inventory.items.length === bag0 + 1 && S.inventory.items.includes(B.piece) && Object.values(S.inventory.potions).reduce((a, n) => a + n, 0) === pots0 + 1, `quests: the bonus is a ${B ? Items.rarity(B.piece) : '?'} piece at level ${fr.level} in the Bag, and a party item`);
   ok(S.quests.daily.bonus && Quests.claimBonus(S) === null, 'quests: the bonus is claimed once');
-  let fines = 0;
-  for (let d = 1; d <= 30; d++) { const U = protoState(); U.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; U.base.skew = d * 24 * HOUR; Quests.ensure(U); for (const j of Quests.today(U).jobs) j.done = j.need; if (['fine', 'rare'].includes(Items.rarity(Quests.claimBonus(U).piece))) fines++; }
+  let fines = 0, starred = 0;
+  for (let d = 1; d <= 30; d++) { const U = protoState(); U.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; U.base.skew = d * 24 * HOUR; Quests.ensure(U); for (const j of Quests.today(U).jobs) j.done = j.need; const bp = Quests.claimBonus(U).piece; if (['fine', 'rare'].includes(Items.rarity(bp))) fines++; if (bp.st >= STARS.FLOOR.jobs && bp.st >= 1) starred++; }
   ok(fines === 30, 'quests: the bonus piece is never Common');
+  ok(starred === 30, `quests: the bonus piece always has a star or more (the gear study's floor for the daily jobs: ${starred} of 30)`);
   // a new day: new jobs, at local midnight
   const day0 = S.quests.daily.day, left = Quests.resetIn(S);
   ok(left > 0 && left <= 24 * HOUR, `quests: new jobs in ${Math.round(left / 60000)} minutes`);
@@ -1517,6 +1528,94 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   for (const x of STAGES.filter(x => x.region === 0)) P3.campaign.cleared.push(x.id);
   ok(Quests.story(P3).state === 'offered' && Quests.accept(P3) && Quests.story(P3).state === 'done', 'quests: accepted after the Sexton already fell, it’s done at once');
   console.log('Quests checked: the save and its migration, Bess’s arrival, The Gravedigger and its plan, and the daily jobs (drawn, counted, claimed, the bonus and a new day).');
+}
+
+// ── Stars and enchantment lines (the gear study §4.2–4.4, build step 1): the odds and floors, the lines, what they do
+// to a hero, prices and Best, and a ★4 kit's worth at the walls
+{
+  const rr = makeRng(77), M0 = 60000, t = [0, 0, 0, 0, 0];
+  let bad = 0;
+  const uses = l => (l.k === 'pair' ? ['pair', ...l.p] : l.k === 'bargain' ? ['bargain', l.up, l.dn] : [l.k]);
+  for (let i = 0; i < M0; i++) {
+    const x = Items.roll(10, i % 5, rr);
+    t[x.st]++;
+    const all = x.en.flatMap(uses);
+    if (x.en.length !== x.st || new Set(all).size !== all.length || x.en.some(l => !Items.validLine(l) || JSON.stringify(Items.validLine(l)) !== JSON.stringify(l))) bad++;
+  }
+  const atLeast = k => t.slice(k).reduce((a, b) => a + b, 0) / M0;
+  ok(Math.abs(atLeast(1) - 0.4) < 0.01 && Math.abs(atLeast(2) - 0.12) < 0.006 && Math.abs(atLeast(3) - 0.024) < 0.003 && t[4] > 0,
+    `stars: 40% of pieces ★1 or more, 12% ★2, 2.4% ★3, a few ★4 (${t.join(' / ')} of ${M0})`);
+  ok(!bad, `one line a star, one of each kind (a Pair and a Bargain count as both their stats), every line valid (${bad} bad)`);
+  const floor1 = Array.from({ length: 3000 }, () => Items.roll(10, 0, rr, { minStars: 1 }).st), exact0 = Array.from({ length: 300 }, () => Items.loot(10, 0, rr, { minStars: 1, stars: 0 }).st);
+  ok(Math.min(...floor1) === 1 && floor1.some(n => n >= 2) && exact0.every(n => n === 0), 'a floor raises the fewest stars a roll gives, and an exact count overrides it');
+  const same = () => { const x = Items.loot(30, 1, makeRng(99), { rank: 'elite', minStars: 2 }); return JSON.stringify([x.id, x.lv, x.st, x.en]); };
+  ok(same() === same(), 'stars and lines roll from the piece\'s seeded rng');
+  // what the lines do: a share of the hero's own stat (after gear, as the Whetstone's), or points
+  const hc = Hero.autoBuild(Hero.create('sellsword', 'st1', { rng: makeRng(8), level: 40 })), base = Hero.sheet(hc), sp0 = Hero.spec(hc);
+  hc.gear.weapon = Object.assign(Items.make('notchedsword', 40), { st: 4, en: [{ k: 'pow', s: 4 }, { k: 'res', s: 2, r: 'bleed' }, { k: 'pair', s: 1, p: ['crit', 'hp'] }, { k: 'bargain', s: 3, up: 'mp', dn: 'def' }] });
+  const was = Object.assign({}, hc.gear.weapon, { st: 0, en: [] }), withSt = Hero.sheet(hc), sp4 = Hero.spec(hc);
+  hc.gear.weapon = was;
+  const plain = Hero.sheet(hc);
+  ok(Math.abs(withSt.pow / plain.pow - 1.04) < 1e-6 && Math.abs(withSt.hp - plain.hp * 1.012) <= 2 && Math.abs(withSt.crit - plain.crit - 0.6) < 1e-6 && Math.abs(withSt.mp / plain.mp - 1.05) < 1e-6 && Math.abs(withSt.def / plain.def - 0.97) < 1e-6 && Math.abs(withSt.res.bleed - plain.res.bleed - 5) < 1e-6,
+    `lines: +4% Power, +5 Bleed resistance, a Pair of +0.6 Crit and +1.2% Health, and a Bargain of +5% Mana for −3% Defence (${JSON.stringify(Items.lineStats({ gear: { weapon: Object.assign({}, was, { en: [{ k: 'pow', s: 4 }] }) } }))})`);
+  ok(Math.abs(sp4.stats.pow / sp0.stats.pow - 1.04) < 1e-6 && Math.abs(sp4.res.bleed - sp0.res.bleed - 5) < 1e-6 && Math.abs(base.pow - plain.pow) < 1e-6, 'the battle reads the lines too');
+  const lines = Items.enchantLines({ en: [{ k: 'pow', s: 2 }, { k: 'bargain', s: 1, up: 'hp', dn: 'pow' }, { k: 'res', s: 4, r: 'curse' }, { k: 'when', s: 2 }] });
+  ok(lines.length === 3 && lines[0].text === '+2% Power' && lines[1].text === '+3% Health · −3% Power' && lines[2].text === '+10% Curse resistance' && lines.every(l => l.tip && l.icon), `the card: one short line each, a kind this build doesn't know left out (${lines.map(l => l.text).join(' | ')})`);
+  // prices, Best and Relics
+  const p0 = Items.make('gravecutter', 10), p2 = Object.assign(Items.make('gravecutter', 10), { st: 2, en: [{ k: 'pow', s: 1 }, { k: 'crit', s: 1 }] });
+  ok(Items.sellPrice(p0) === 180 && Items.sellPrice(p2) === 360 && Items.score(p2) > Items.score(p0), `a ★2 sells for twice a ★0 (${Items.sellPrice(p2)}), and Best and Auto-equip count its lines (${Items.score(p0).toFixed(1)} → ${Items.score(p2).toFixed(1)})`);
+  const SR = protoState(), rel = Items.grantRelic(SR, 'hollowcrown');
+  ok(rel.st === STARS.RELIC && rel.en.length === STARS.RELIC && rel.lv === Items.relicLevel('hollowcrown'), `a Relic comes ★${STARS.RELIC}, at its boss's level (${JSON.stringify(rel.en)})`);
+  // floors on the road: elites and bosses ★1, a Cage Mimic ★1, 1-1's first clear ★0
+  const stg = id => STAGES.find(x => x.id === id), fake = (k, foes, won = true) => ({ seed: k, winner: won ? 0 : 1, start: [{ side: 0, lv: 10 }], final: foes.map(key => ({ side: 1, alive: false, key, boss: !!FOES[key].boss, elite: !!FOES[key].elite })), loot: null, stats: {} });
+  const piecesOf = (stage, foes, n, o = {}) => { const out = []; for (let k = 0; k < n; k++) out.push(...Campaign.earn(fake(k, foes, o.won !== false), stage, o).gear); return out; };
+  const elite = piecesOf(stg('1-15'), stg('1-15').foes.filter(Boolean).map(foeKey), 200), boss = piecesOf(stg('2-17'), stg('2-17').foes.filter(Boolean).map(foeKey), 100);
+  const road = piecesOf(stg('1-4'), ['shambler', 'shambler'], 400), mimic = piecesOf(stg('1-4'), ['mimic'], 200, { won: false }).filter(g => g.why === 'mimic'), first11 = piecesOf(stg('1-1'), stg('1-1').foes.filter(Boolean).map(foeKey), 100, { first: true });
+  ok(elite.length && boss.length && elite.concat(boss).every(g => g.piece.st >= 1), `elite and boss stages give ★1 or more (${elite.length + boss.length} pieces)`);
+  ok(road.length && road.some(g => g.piece.st === 0) && mimic.length && mimic.every(g => g.piece.st >= 1), `a road stage's pieces can be ★0; a Cage Mimic's are ★1 or more (${mimic.length})`);
+  ok(first11.length && first11.every(g => g.piece.st === 0), `1-1's first clear gives ★0 pieces (${first11.length})`);
+  // A ★4 kit at the walls: the reference party, with Prayer Beads added, in ★0, ★1 and ★4 kits (every piece at those
+  // stars, the lines rolled for each battle), against the ★0 party up to five levels higher
+  const KM = Math.max(10, Math.round(N / 15));
+  const kitParty = (order, n, L, stars, krng) => {
+    const party = [null, null, null, null, null, null], front = [0, 1], back = [2, 3, 4, 5];
+    order.slice(0, n).forEach((cls, i) => {
+      const c = JSON.parse(JSON.stringify(refHero(cls, L, 'c' + (i + 1))));
+      c.gear.accessory = Items.make('prayerbeads', L);
+      for (const k of SLOTS) if (c.gear[k]) Items.enchant(c.gear[k], krng, { stars });
+      const slot = CLASSES[cls].row === 'front' && front.length ? front.shift() : back.length ? back.shift() : front.shift();
+      party[slot] = Hero.spec(c, refRules(cls, L));
+    });
+    return party;
+  };
+  const kitWin = (stage, L, stars) => {
+    let w = 0, n = 0;
+    REF.ORDERS.forEach((order, oi) => {
+      for (let i = 0; i < KM; i++) {
+        const items = stage.index >= 2, seed = strSeed(`kit:${stage.id}:${oi}:${i}`);
+        const tac = { party: kitParty(order, stage.party, L, stars, makeRng(seed ^ 0x5eed)), partyRules: items ? [{ if: 'ally_hp_lt', n: 50, do: 'draught' }] : [], loadout: items ? ['draught', 'draught'] : [] };
+        const res = simulate(stageSetup(stage, seed, tac, { replay: false }));
+        check(res, stage);
+        if (res.stalled) totalStalls++;
+        n++; if (res.winner === 0) w++;
+      }
+    });
+    return w / n;
+  };
+  // the levels the ★0 party needs to win as often (interpolated; 6 when even five more fall short)
+  const levelsOf = (win, ladder) => { if (win <= ladder[0]) return 0; for (let d = 0; d < ladder.length - 1; d++) if (ladder[d + 1] >= win) return d + (ladder[d + 1] > ladder[d] ? Math.max(0, win - ladder[d]) / (ladder[d + 1] - ladder[d]) : 1); return ladder.length; };
+  console.log(`\nStars at the walls (${KM * REF.ORDERS.length} battles each; the reference party with Prayer Beads, every piece at ★0, ★1 or ★4)`);
+  console.log('   ' + pad('stage', 30) + pad('lv', 5) + lpad('★0', 6) + lpad('★1', 6) + lpad('★4', 6) + '   ★0 at +1 … +5' + lpad('★1 ≈', 12) + lpad('★4 ≈', 8));
+  const eq4 = [], eq1 = [];
+  for (const id of ['1-15', '1-18', '2-17', '3-17', '4-18', '5-18']) {
+    const stage = stg(id), ladder = [0, 1, 2, 3, 4, 5].map(d => kitWin(stage, stage.level + d, 0)), k1 = kitWin(stage, stage.level, 1), k4 = kitWin(stage, stage.level, 4);
+    const e1 = levelsOf(k1, ladder), e4 = levelsOf(k4, ladder);
+    eq1.push(e1); eq4.push(e4);
+    console.log('   ' + pad(`${id} ${stage.name}`, 30) + pad(stage.level, 5) + [ladder[0], k1, k4].map(x => lpad(Math.round(100 * x) + '%', 6)).join('') + '   ' + ladder.slice(1).map(x => Math.round(100 * x) + '%').join(' ').padEnd(20) + lpad(e1.toFixed(1) + ' lv', 9) + lpad(e4.toFixed(1) + ' lv', 8));
+  }
+  const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+  console.log(`   A ★1 kit is worth about ${mean(eq1).toFixed(1)} levels at these walls, a ★4 kit about ${mean(eq4).toFixed(1)} (more in later regions, where a level is a smaller share of a hero's stats).`);
+  ok(mean(eq4) >= 1 && mean(eq4) <= 5 && mean(eq1) < mean(eq4), `a ★4 kit should be worth a few levels at the walls, not more (${mean(eq4).toFixed(1)}; a ★1 kit ${mean(eq1).toFixed(1)})`);
 }
 
 // ── The reference party, every stage of every region against its target (campaign spec §5.6). Off-target stages are
