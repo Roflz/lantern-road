@@ -200,8 +200,8 @@ Your guided walkthrough, from a fresh server.
 
 | ID | Screen | Note | Type | Plan | Status |
 |---|---|---|---|---|---|
-| 2.1 | The welcome | There's no background or story at all, so it makes no sense, and the guide introduces the game poorly. Compare it with Idle Heroes. | Onboarding | `docs/tutorial-study.md`: the research, the comparison, how Wick should lead, and the first session with the story (§5), approved with §7's picks 3–5 | Built in PR #TBD |
-| 2.2 | Every screen | Help and Settings (top right) should work while the tutorial is running. | Onboarding | The guide lets them through; Wick steps aside while one is open and comes back when it closes | Built in PR #TBD |
+| 2.1 | The welcome | There's no background or story at all, so it makes no sense, and the guide introduces the game poorly. Compare it with Idle Heroes. | Onboarding | `docs/tutorial-study.md`: the research, the comparison, how Wick should lead, and the first session with the story (§5), approved with §7's picks 3–5 | Built in PR #35 |
+| 2.2 | Every screen | Help and Settings (top right) should work while the tutorial is running. | Onboarding | The guide lets them through; Wick steps aside while one is open and comes back when it closes | Built in PR #35 |
 | 2.3 | The story | The lantern-lighting premise got old long ago and is frankly stupid now. It was something to build on; now the game needs a real plot and story. | Story | `docs/story.md`: spine A, "the Fallen Kingdom", written in its own session | Decided |
 | 2.4 | The story | Option 1 made lighter "makes absolutely no sense, it is complete nonsense words." | Story | Start again from a story that makes sense, told plainly, with the humour in the voices rather than the world's rules | Done: `docs/story.md` |
 

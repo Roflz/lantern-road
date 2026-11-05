@@ -109,7 +109,7 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 
 ### 6.4 The first session: about 10 minutes
 
-**Built** (the `guide` build, PR #31, 2026-11-04; rebuilt around the story in the first-session build, PR #TBD, 2026-11-05, after `docs/tutorial-study.md` §5 with the picks in its §7): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts, the hand, and soft steps), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's stage markers). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game, and on through 1-3's unlock visit (§6.5).
+**Built** (the `guide` build, PR #31, 2026-11-04; rebuilt around the story in the first-session build, PR #35, 2026-11-05, after `docs/tutorial-study.md` §5 with the picks in its §7): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts, the hand, and soft steps), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's stage markers). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game, and on through 1-3's unlock visit (§6.5).
 
 Wick's lines are the story's (`docs/story.md`, the opening) and the study's. It follows the built screens: the Hearth's party view (`camp-views.html`), the road view (`road-view.html`), the hero screen (PR #29) and Formation (`formation.html`).
 
@@ -160,7 +160,7 @@ Every first-clear unlock in campaign spec §5.3 gets three things:
 2. **Wick's card back at camp:** icon, name, one line, with **Show me** (a guided visit of two to four steps) or **Later**.
 3. **The next goal** uses it.
 
-**Built: Party items, at 1-3's first clear** (the first-session build, PR #TBD; `js/visits.js`). It merges the Party items visit with Tactics, which moved here from the first session (the study's §7, item 3): problem first, answer second, as campaign spec §8.1 has it.
+**Built: Party items, at 1-3's first clear** (the first-session build, PR #35; `js/visits.js`). It merges the Party items visit with Tactics, which moved here from the first session (the study's §7, item 3): problem first, answer second, as campaign spec §8.1 has it.
 1. **The results popup:** its New chip, "New: Party items". A tap on it starts the visit as well.
 2. **Wick's card, back at the Hearth:** the flask, "Party items", "Two Healing Draughts, and a tactic that uses them.", with **Show me** and **Later**. While it's up nothing else takes a press, except Help and Settings. It waits until the Hearth is still with nothing over it, and never comes while the first session runs.
 3. **Show me** opens Tactics on the Party. Wick's steps there are soft: a press anywhere goes on, and nothing is held back.
