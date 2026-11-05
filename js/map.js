@@ -410,5 +410,5 @@ const RoadMap = (() => {
   }
 
   App.screen('map', { tab: true, render, enter: () => App.rest() });
-  return { render, stageSheet, wholeRoad, show: r => { region = r; App.go('map'); } };
+  return { render, stageSheet, wholeRoad, setOut, show: r => { region = r; App.go('map'); } };
 })();

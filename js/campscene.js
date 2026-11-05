@@ -704,23 +704,40 @@ const CampScene = (() => {
     x.globalAlpha = 1;
   }
 
-  // ── a live scene: drag to turn, release to settle on the nearer view
+  // ── a live scene: drag to turn, release to settle on the nearer view; on the road, drag along it
   //   opts.yaw       where the camera starts
-  //   opts.reduce    () => true for reduced motion: the views switch without the swing
+  //   opts.reduce    () => true for reduced motion: the views switch without the swing, and the flight is a cut
   //   api.state      the state to draw (see the top of this file); set it again when the save changes
   //   api.locked     true keeps the camera in the party view: it nudges back
-  //   api.onFrame    (out) => void after every frame: out.cam.w (0 party … 1 buildings), out.anchors, out.v (bumped
-  //                  when the anchors move), out.yaw
+  //   api.sel        the stage whose card shows on the road: drawn with a ring
+  //   api.onFrame    (out) => void after every frame: out.cam.w (0 party … 1 buildings), out.road (0 at the fire … 1 on
+  //                  the road), out.anchors, out.v (bumped when the anchors move), out.yaw
+  //   api.onSnap     (k) => void when the road view settles on a stage (k), or heads home (null)
+  // Panning moves along the road in stages, not ground: every stage is the same drag away, whether the lanterns stand
+  // close together near camp or far apart in the hills. u is that place: 0 at the first stage, the boss's index at the
+  // boss, and below 0 the pull back toward camp. Drag back past PULL_HOME and let go, and the camera flies home.
+  // Past the boss a held drag goes on far enough to show the next region's gate (the mockup stopped short of it), and
+  // springs back to the boss when let go.
+  const PX_PER_STAGE = 64, PULL_HOME = 1.3, UMIN = -3, UOVER = 1.15, ZOVER = 300;
+  // The inverse of ease(), so a flight can be picked up where it stands.
+  const unease = v => { let k = clamp(v, 0, 1); for (let i = 0; i < 8; i++) { const f = k * k * (3 - 2 * k) - v, d = 6 * k * (1 - k) + 1e-6; k = clamp(k - f / d, 0, 1); } return k; };
   function live(canvas, opts = {}) {
     const x = canvas.getContext('2d');
     let IW = 0, yaw = opts.yaw || 0, target = yaw, vel = 0, dragging = false, lastX = 0, lastT = 0, rest = 1, alive = true, last = 0;
     let raw = 0, moved = 0, cache = null, out = null, v = 0, y0 = 0;
+    // the road: how far the camera has flown (roadK, heading for roadTo), where it looks along the road (uc, easing to
+    // uTo), a flick's speed, and how far a pull back past the first stage has turned it toward home
+    let roadK = 0, roadTo = 0, uc = 0, uVel = 0, uTo = null, pullK = 0, lastY = 0, onRoad = false, sel = null;
     const react = [];
     const reduce = () => (opts.reduce ? opts.reduce() : false);
     const pxPerDeg = () => (IW * K / 2) / 180; // half the frame's width turns 180°
     const nearest = (a, vv = 0) => Math.round((a + vv * 18) / 180) * 180;
     const times = [];
     let count = 0;
+    // each stage's resting place on the road (the camera looks a little short of its lantern), and between them
+    const last1 = () => Math.max(0, api.state.stages.length - 1);
+    const zOf = k => { const Z = stageZ(last1() + 1); return Z[clamp(k, 0, Z.length - 1)] - 20; };
+    const zAtU = u => { const L = last1(); if (u <= 0) return zOf(0) + u * 40; if (u >= L) return zOf(L) + (u - L) * 260; const k = Math.floor(u); return lerp(zOf(k), zOf(k + 1), u - k); };
     function size() {
       const W = Math.max(2, Math.ceil((opts.width ? opts.width() : canvas.parentNode ? canvas.parentNode.clientWidth : REF * K) / K));
       if (W === IW) return;
@@ -728,12 +745,24 @@ const CampScene = (() => {
       canvas.style.width = IW * K + 'px'; canvas.style.height = IH * K + 'px';
       cache = null;
     }
+    // The camera now: the orbit, the road, or the flight between them.
+    function camNow(r) {
+      const k3 = ease(roadK) * (1 - pullK);
+      if (k3 <= 0) return camera(IW, yaw, r);
+      return camera(IW, blendParams(orbitParams(yaw), roadParams(clamp(zAtU(uc), zOf(0), zOf(last1()) + ZOVER)), k3), r);
+    }
+    const snap = k => { if (api.onSnap) api.onSnap(k); };
     const api = {
       state: opts.state || { heroes: [], stages: [], front: -1, plots: [], board: { open: false }, sig: '' },
-      locked: !!opts.locked, onFrame: null,
+      locked: !!opts.locked, onFrame: null, onSnap: null,
       get yaw() { return yaw; },
       get view() { return weightOf(target == null ? yaw : target) > 0.5 ? 'build' : 'party'; },
       get w() { return ease(weightOf(yaw)); },
+      // on the road, or heading there
+      get onRoad() { return roadTo > 0.5; },
+      get road() { return roadK; },
+      get stage() { return uTo != null ? uTo : uc; },
+      get sel() { return sel; }, set sel(k) { sel = k; },
       // Turn to a view: the nearer way round, or at once with reduced motion (or when asked).
       go(view, instant) {
         if (view === 'build' && api.locked) { api.nudge(1); return; }
@@ -745,17 +774,53 @@ const CampScene = (() => {
       },
       // The other view, turning the way the arrow points.
       turn(dir) {
+        if (roadTo > 0.5) return;
         if (api.locked) { api.nudge(dir); return; }
         target = nearest(target == null ? yaw : target) + 180 * dir; vel = 0;
         if (reduce()) { yaw = target; rest = 1; }
       },
       // A little turn that eases back: the camera can't go there yet.
       nudge(dir) { if (reduce()) return; yaw = nearest(yaw) + 9 * (dir || 1); target = nearest(yaw); rest = 0; },
-      dragStart(px) { dragging = true; lastX = px; lastT = performance.now(); vel = 0; raw = 0; moved = 0; y0 = nearest(target == null ? yaw : target); target = null; },
-      dragMove(px) {
+      // Fly from the fire up the road to stage k (turning back to the party first, if need be); home again; along the
+      // road to stage k. With reduced motion each is a cut.
+      toRoad(k = 0, instant) {
+        if (Math.abs(((yaw % 360) + 360) % 360) > 1) api.go('party', instant);
+        k = clamp(Math.round(k), 0, last1());
+        roadTo = 1; uc = k; uTo = null; uVel = 0; sel = k;
+        if (instant || reduce()) { roadK = 1; rest = 1; }
+        snap(k);
+      },
+      toCamp(instant) {
+        if (pullK > 0) { roadK = unease(ease(roadK) * (1 - pullK)); pullK = 0; }
+        roadTo = 0; uVel = 0; uTo = null; sel = null;
+        if (instant || reduce()) { roadK = 0; uc = 0; rest = 1; }
+        snap(null);
+      },
+      panTo(k) {
+        k = clamp(Math.round(k), 0, last1());
+        uTo = k; uVel = 0; sel = k;
+        if (reduce()) { uc = k; uTo = null; }
+        snap(k);
+      },
+      // One stage along (the mouse wheel, the arrow keys); back from the first stage, home.
+      step(dir) { const k = Math.round(api.stage) + dir; if (k < 0) api.toCamp(); else api.panTo(k); },
+      dragStart(px, py = 0) {
+        dragging = true; lastX = px; lastY = py; lastT = performance.now(); vel = 0; uVel = 0; raw = 0; moved = 0;
+        onRoad = roadTo > 0.5;
+        if (onRoad) return;
+        y0 = nearest(target == null ? yaw : target); target = null;
+      },
+      dragMove(px, py = 0) {
         if (!dragging) return;
-        const dx = px - lastX, now = performance.now();
-        lastX = px; raw += dx; moved = Math.max(moved, Math.abs(raw));
+        const dx = px - lastX, dy = py - lastY, now = performance.now();
+        lastX = px; lastY = py;
+        if (onRoad) {
+          raw += dy; moved = Math.max(moved, Math.abs(raw));
+          if (moved > 6) { const du = dy / PX_PER_STAGE; uc = clamp(uc + du, UMIN, last1() + UOVER); uVel = du / Math.max(8, now - lastT) * 16; uTo = null; }
+          lastT = now;
+          return;
+        }
+        raw += dx; moved = Math.max(moved, Math.abs(raw));
         if (reduce()) return;
         if (api.locked) { const L = 14, r = -raw / pxPerDeg(); yaw = y0 + Math.sign(r) * L * (1 - Math.exp(-Math.abs(r) / L)); lastT = now; return; }
         yaw -= dx / pxPerDeg(); vel = -dx / pxPerDeg() / Math.max(8, now - lastT) * 16; lastT = now;
@@ -763,6 +828,14 @@ const CampScene = (() => {
       dragEnd() {
         if (!dragging) return;
         dragging = false;
+        if (onRoad) {
+          // a pan settles on the nearest stage, carried on a little by a flick; pulled back past the first, it goes home.
+          // A finger that stopped before letting go sends no more moves: its flick is over.
+          if (performance.now() - lastT > 90) uVel = 0;
+          if (moved > 6) { if (uc < -PULL_HOME) api.toCamp(); else api.panTo(uc + uVel * 6); }
+          uVel = 0;
+          return;
+        }
         if (api.locked) { target = y0; return; }
         if (reduce()) { target = Math.abs(raw) > 40 ? nearest(yaw) + (raw < 0 ? 180 : -180) : nearest(yaw); yaw = target; rest = 1; return; }
         target = nearest(yaw, vel);
@@ -772,10 +845,21 @@ const CampScene = (() => {
       get out() { return out; },
       // A hero hops when tapped.
       hop(j) { react[j] = performance.now(); },
-      // What's drawn at a point on the canvas (canvas pixels): the nearest anchor whose box holds it, else the road.
+      // What's drawn at a point on the canvas (canvas pixels): the nearest anchor whose box holds it, else the road. On
+      // the road, the stage at that point (or the nearest one close by), and nothing else.
       hit(px, py) {
         if (!out) return null;
         const list = out.anchors;
+        if (roadTo > 0.5) {
+          let best = null, bd = 22;
+          for (const a of list) {
+            if (a.stage == null || !a.box) continue;
+            const b = a.box, inside = px >= b[0] - 4 && px <= b[2] + 4 && py >= b[1] - 4 && py <= b[3] + 4;
+            const d = inside ? 0 : Math.hypot(a.x - px, (a.y + a.top) / 2 - py);
+            if (d < bd || (d === bd && best && a.d < best.d)) { bd = d; best = a; }
+          }
+          return best ? { id: 'stage', stage: best.stage } : null;
+        }
         for (let i = list.length - 1; i >= 0; i--) {
           const a = list[i], b = a.box, op = opacityOf(a, out.cam.w);
           if (b && op > 0.5 && px >= b[0] && px <= b[2] && py >= b[1] && py <= b[3] && !/^stage/.test(a.id)) return a;
@@ -784,7 +868,7 @@ const CampScene = (() => {
         return api.hitRoad(px, py) ? { id: 'road' } : null;
       },
       hitRoad(px, py) {
-        const cam = camera(IW, yaw, rest), A = sidesAt(ROAD_W / 2 + 3), q = new Array(8);
+        const cam = out && out.cam.road < 0.02 ? out.cam : camera(IW, yaw, rest), A = sidesAt(ROAD_W / 2 + 3), q = new Array(8);
         let prev = null;
         for (let i = 0; i < EDGES.length; i++) {
           const j = i * 6;
@@ -805,12 +889,12 @@ const CampScene = (() => {
     };
     // Draws the frame whole: while the camera moves, or once to fill the cache when it comes to rest.
     function full(cam, t, still) {
-      const S = api.state, Wd = worldFor(IW), B = build(cam, Wd, S, reduce());
+      const S = api.state, Wd = worldFor(IW), B = build(cam, Wd, S, reduce(), sel);
       drawGround(x, cam, Wd, S, t, still);
       for (const it of B.items) drawItem(x, it, t, react);
       for (const f of B.over) f(x);
       x.globalCompositeOperation = 'lighter'; x.imageSmoothingEnabled = true;
-      drawLights(x, B.lights, B.pools);
+      drawLights(x, B.lights, B.pools, B.glows);
       x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
       drawLive(x, cam, B, t, Wd);
       return B;
@@ -818,7 +902,7 @@ const CampScene = (() => {
     // At rest: the sky, the ground and every billboard behind the party and the fire go into one picture, and the
     // still lights into another. Each frame then draws those two, the few things in front, and what flickers.
     function makeCache(cam, t) {
-      const S = api.state, Wd = worldFor(IW), B = build(cam, Wd, S, reduce());
+      const S = api.state, Wd = worldFor(IW), B = build(cam, Wd, S, reduce(), sel);
       const bg = document.createElement('canvas'); bg.width = IW; bg.height = IH;
       const bx = bg.getContext('2d');
       drawGround(bx, cam, Wd, S, t, true);
@@ -828,16 +912,17 @@ const CampScene = (() => {
       const lit = document.createElement('canvas'); lit.width = IW; lit.height = IH;
       const lx = lit.getContext('2d');
       lx.globalCompositeOperation = 'lighter'; lx.imageSmoothingEnabled = true;
-      drawLights(lx, B.lights, B.pools);
+      drawLights(lx, B.lights, B.pools, B.glows);
       return { key: key(), bg, lit, near, B, cam };
     }
-    const key = () => `${IW}|${((Math.round(yaw) % 360) + 360) % 360}|${api.state.sig}`;
+    const key = () => `${IW}|${((Math.round(yaw) % 360) + 360) % 360}|${roadK.toFixed(3)}|${uc.toFixed(3)}|${sel}|${api.state.sig}`;
+    const roadStill = () => roadK === roadTo && uTo == null && pullK === 0;
     let drawn = -1e9;
     function frame(t) {
       if (!alive) return;
       if (!canvas.isConnected) { alive = false; return; }
       // At rest only the fire, the lights and the fireflies move: thirty frames a second is plenty (and kinder to a phone).
-      if (rest >= 1 && cache && !dragging && target === yaw && t - drawn < 30 && cache.key === key()) { requestAnimationFrame(frame); return; }
+      if (rest >= 1 && cache && !dragging && target === yaw && roadStill() && t - drawn < 30 && cache.key === key()) { requestAnimationFrame(frame); return; }
       drawn = t;
       const dt = Math.min(50, t - last || 16); last = t;
       size();
@@ -846,12 +931,18 @@ const CampScene = (() => {
         yaw += d * (1 - Math.pow(0.88, dt / 16.7));
         if (Math.abs(d) < 0.05) yaw = target;
       }
-      const settled = !dragging && target != null && Math.abs(target - yaw) < 0.05;
+      // along the road, and the flight to it and back
+      if (!dragging && uTo != null) { const d = uTo - uc; uc += d * (1 - Math.pow(0.84, dt / 16.7)); if (Math.abs(d) < 0.004) { uc = uTo; uTo = null; } }
+      // pulled back past the first stage, the camera starts back toward the fire
+      pullK = roadTo > 0.5 ? Math.min(0.6, Math.max(0, -uc) / 2.2) : 0;
+      { const dk = roadTo - roadK; roadK = Math.abs(dk) < 0.002 ? roadTo : roadK + dk * (1 - Math.pow(0.93, dt / 16.7)); }
+      if (roadK === 0 && roadTo === 0 && uc !== 0 && uTo == null) uc = 0;
+      const settled = !dragging && target != null && Math.abs(target - yaw) < 0.05 && roadStill();
       rest = settled ? Math.min(1, rest + dt / 200) : 0;
       const t0 = performance.now();
       let B, cam;
       if (rest >= 1) {
-        if (!cache || cache.key !== key()) { cache = makeCache(camera(IW, yaw, 1), t); v++; }
+        if (!cache || cache.key !== key()) { cache = makeCache(camNow(1), t); v++; }
         cam = cache.cam; B = cache.B;
         x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
         x.drawImage(cache.bg, 0, 0);
@@ -861,14 +952,14 @@ const CampScene = (() => {
         drawLive(x, cam, B, t, worldFor(IW));
       } else {
         cache = null;
-        cam = camera(IW, yaw, rest);
+        cam = camNow(rest);
         B = full(cam, t, false);
         v++;
       }
       times.push(performance.now() - t0);
       if (times.length > 240) times.shift();
       count++;
-      out = { cam, anchors: B.anchors, v, yaw, still: rest >= 1, K };
+      out = { cam, anchors: B.anchors, v, yaw, still: rest >= 1, K, road: cam.road, roadTo, stage: uc, sel };
       if (api.onFrame) api.onFrame(out);
       requestAnimationFrame(frame);
     }
@@ -878,5 +969,5 @@ const CampScene = (() => {
     return api;
   }
 
-  return { K, IH, VIEWS, weightOf, opacityOf, live, camera, worldFor, seated };
+  return { K, IH, VIEWS, weightOf, opacityOf, live, camera, worldFor, seated, stageZ, PX_PER_STAGE };
 })();

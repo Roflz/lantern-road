@@ -6,6 +6,9 @@
 // mockup: you and your Renown, the next goal, gold and bone dust, help and settings, the formation, plaques and chips
 // on what's in the scene, and the corner's ribbon and big button (Set out, or Collect). Taps in the scene open what
 // was tapped. Until the first blueprint the camera stays with the party.
+// The road view (docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the camera flies up the
+// road to the frontier with its stage's card open. Drag up or down (or the wheel, or ↑ ↓) to look along it a stage at
+// a time; tap a stage for its card. Drag back past the first stage, or tap ‹, and it flies home.
 // Also here: the first pick of a new game, "While you were away", the Renown track, the roster rows on the Party
 // screen, and the building art. Building screens are js/buildings.js; the model is js/base.js.
 
@@ -71,22 +74,26 @@ const Camp = (() => {
   const firstOpenPlot = s => { const open = Base.plotsCleared(s); return s.base.plots.findIndex((p, i) => i < open && !p); };
 
   // ── what the camp shows, read from the save
-  // The road: the frontier stage, its region's stages, and where it stands among them (-1 once every stage is lit).
-  function road(s) {
+  // The road: the frontier stage, a region's stages (the frontier's, unless another is asked for), and where the
+  // frontier stands among them: -1 once every one of them is lit, the list's length when none can be lit yet.
+  function road(s, r) {
     const fi = Campaign.frontier(s), done = fi >= STAGES.length, st = STAGES[Math.min(fi, STAGES.length - 1)];
-    const list = STAGES.filter(x => x.region === st.region);
-    return { st, done, list, front: done ? -1 : list.indexOf(st) };
+    const region = r == null ? st.region : r, list = STAGES.filter(x => x.region === region);
+    const front = done || region < st.region ? -1 : region > st.region ? list.length : list.indexOf(st);
+    return { st, done, list, front, region };
   }
+  // A stage's foes, each kind once, the boss first.
+  const foesOf = st => [...new Set(st.foes.filter(Boolean).map(foeKey))].filter(k => FOE_ART[k] && FOES[k]).sort((a, b) => (FOES[b].boss ? 1 : 0) - (FOES[a].boss ? 1 : 0));
   // What the scene draws (js/campscene.js): the party at the fire, the road's stages, the plots and the board.
-  function sceneState(s) {
-    const R = road(s);
+  function sceneState(s, r) {
+    const R = road(s, r);
     const heroes = s.party.map(id => Save.char(id)).filter(Boolean).slice(0, 6).map(c => ({ c, spent: Fatigue.spent(c) }));
-    const stages = R.list.map(st => ({ kind: st.boss ? 'boss' : st.elite ? 'elite' : 'road', lit: Campaign.isLit(st.id, s) }));
+    const stages = R.list.map(st => ({ kind: st.boss ? 'boss' : st.elite ? 'elite' : 'road', lit: Campaign.isLit(st.id, s), foes: foesOf(st) }));
     const total = BASE.START_PLOTS + BASE.PLOT_RENOWN.length, open = Base.plotsCleared(s);
     const plots = Array.from({ length: total }, (_, i) => (i >= open ? null : s.base.plots[i] ? { id: s.base.plots[i], art: BUILDINGS[s.base.plots[i]].art } : { empty: true }));
-    const board = { open: Base.boardOpen(s) };
-    const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open].join('|');
-    return { heroes, stages, front: R.front, plots, board, sig };
+    const board = { open: Base.boardOpen(s) }, gate = R.region + 1 < REGIONS.length;
+    const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), R.region, stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open].join('|');
+    return { heroes, region: R.region, stages, front: R.front, gate, plots, board, sig };
   }
   // The buildings view opens with the first blueprint: until then the camera stays with the party.
   const locked = s => !BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (Base.built(id, s) || Base.blueprint(id, s)));
@@ -139,9 +146,11 @@ const Camp = (() => {
   const anyWaiting = s => Object.keys(waiting(s).chips).length > 0;
 
   // ── actions
-  // Set out: today's Road map, with the frontier stage's sheet open. (The road view replaces this later.)
+  // Set out: the camera flies up the road to the frontier, with its card open; one more tap sets out. (Away from the
+  // camp, the Road map with the frontier's sheet, as before.)
   function setOut() {
     const s = Save.state;
+    if (ui && ui.live && App.current === 'home') { ui.toRoad(); return; }
     App.go('map');
     if (typeof RoadMap !== 'undefined') RoadMap.stageSheet(Math.min(Campaign.frontier(s), STAGES.length - 1));
   }
@@ -201,11 +210,22 @@ const Camp = (() => {
     go.addEventListener('click', () => { click(); setOut(); });
     collect.addEventListener('click', () => { click(); gatherAll(); });
     const form = h('div', { class: 'cv-form cv-nodrag', role: 'group', 'aria-label': 'The formation' });
-    camp.append(canvas, marks, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, h('div', { class: 'cv-dock' }, heroesB, tacticsB, bagB, go, collect), me, goalBtn, purse, corner, proto);
+    // the road view (docs/mockups/road-view.html): back to the Hearth, the region with ‹ ›, and the chosen stage's card
+    // with its big button (Set out, Farm or Locked)
+    const back = h('button', { class: 'cv-round cv-back', 'data-tut': 'road-back', 'aria-label': 'Back to the Hearth', onclick: () => { click(); home(); } }, '‹');
+    const rk = h('span', { class: 'cv-rk' }), rn = h('span', { class: 'cv-rn' });
+    const prevR = h('button', { class: 'cv-arw', 'aria-label': 'The region before', onclick: () => otherRegion(-1) }, '‹');
+    const nextR = h('button', { class: 'cv-arw', 'aria-label': 'The next region', onclick: () => otherRegion(1) }, '›');
+    const cardBox = h('div', { class: 'cv-cardbox' });
+    const roadHud = h('div', { class: 'cv-roadhud' }, back, h('div', { class: 'cv-region' }, h('div', { class: 'cv-rt' }, rk, rn), prevR, nextR), cardBox);
+    const dock = h('div', { class: 'cv-dock' }, heroesB, tacticsB, bagB, go, collect);
+    const labels = h('div', { class: 'cv-labels', 'aria-hidden': 'true' });
+    camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), h('div', { class: 'cv-shade b' }), form, dock, me, goalBtn, roadHud, purse, corner, proto);
     const el = h('div', { class: 'camp-view' }, camp);
 
-    let live = null, chips = {}, goalNow = null, placed = { v: -1, w: -1, sig: '' }, alive = true;
-    const pool = new Map();
+    let live = null, chips = {}, goalNow = null, placed = { v: -1, w: -1, sig: '', r: -1, sel: null }, alive = true;
+    let region = null, ahead = [], cardFor = null; // the region on the road (null: the frontier's), stages ahead with something new, the card's stage
+    const pool = new Map(), tags = new Map();
     // ── from the save into the HUD and the scene
     function sync() {
       const s = Save.state;
@@ -238,8 +258,99 @@ const Camp = (() => {
           c ? h('span', { class: 'cv-ft' }, h('i', { style: `width:${Math.min(100, Math.round(c.fatigue || 0))}%;background:${fatCol(c)}` })) : null);
         return tile;
       }));
-      if (live) { live.state = sceneState(s); live.locked = locked(s); }
+      if (live) { live.state = sceneState(s, region); live.locked = locked(s); }
+      // the road view: the region's name and how much of it is lit, which way ‹ › can go, the stages ahead whose first
+      // clear brings something new, and the card again (the party or the save may have changed)
+      const Rv = road(s, region), lit = Rv.list.filter(x => Campaign.isLit(x.id, s)).length, Reg = REGIONS[Rv.region];
+      rk.textContent = `Region ${Reg.num} · ${lit} of ${Rv.list.length} lit`;
+      rn.textContent = Reg.name;
+      prevR.classList.toggle('shut', Rv.region <= 0);
+      nextR.classList.toggle('shut', Rv.region >= Rd.st.region);
+      ahead = [];
+      if (Rv.front >= 0) for (let k = Rv.front; k < Rv.list.length && ahead.length < 3; k++) {
+        const u = (Rv.list[k].first || []).map(id => UNLOCKS[id]).find(x => x && x.kind !== 'condition');
+        if (u) ahead.push([k, u.icon || 'star']);
+      }
+      if (cardFor != null) showCard(cardFor);
       placed.sig = '';
+    }
+    // ── the road view
+    // Fly up the road to stage k of the region on show (the frontier when not given), with its card open.
+    function toRoad(k) {
+      if (!live) return;
+      const s = Save.state;
+      if (region != null) { region = null; sync(); }
+      const Rd = road(s);
+      if (k == null) k = Rd.front < 0 ? Rd.list.length - 1 : Math.min(Rd.front, Rd.list.length - 1);
+      live.toRoad(k);
+    }
+    // Home to the fire; the road shows the frontier's region again once the camera lands.
+    function home() { if (live) live.toCamp(); }
+    // ‹ › beside the region's name: the region before, or the next once its gate is open.
+    function otherRegion(dir) {
+      const s = Save.state, cur = road(s, region), fr = road(s).st.region, r = cur.region + dir;
+      if (r < 0 || r > fr || !live) return;
+      click();
+      region = r === fr ? null : r;
+      sync();
+      const R = road(s, region);
+      live.toRoad(R.front < 0 ? R.list.length - 1 : Math.min(R.front, R.list.length - 1), true);
+    }
+    // A stage's card: its id and name, the level and party it wants (green when you have them), its foes (shadows
+    // until it's reached), what it gives (a first clear's unlocks marked), and the big button.
+    // Built again only when something on it changes, so a tap on it is never lost to the camp's refresh.
+    function showCard(k) {
+      cardFor = k;
+      const s = Save.state, st = k == null ? null : road(s, region).list[k];
+      if (!st) { cardBox.replaceChildren(); cardBox.dataset.sig = ''; return; }
+      const state = Campaign.stateOf(st.index), lit = state === 'lit', front = state === 'frontier';
+      const fit = Campaign.fit(s), low = fit.length ? Math.min(...fit.map(c => c.level)) : 0;
+      const sig = [st.id, state, fit.length, low].join('|');
+      if (cardBox.dataset.sig === sig) return;
+      cardBox.dataset.sig = sig;
+      const firsts = lit ? [] : (st.first || []).map(id => UNLOCKS[id]).filter(Boolean).slice(0, 2);
+      const card = h('button', { class: 'cv-card', 'data-tut': 'stage-card', 'aria-label': `${st.id} ${st.name}: the stage in full`, onclick: () => { click(); RoadMap.stageSheet(st.index); } },
+        h('span', { class: 'cv-hd' },
+          st.boss ? icon('skull', 14) : st.elite ? h('i', { class: 'cv-el' }) : null,
+          h('span', { class: 'cv-id' + (lit ? ' lit' : ''), text: st.id }), h('span', { class: 'cv-cn', text: st.name }),
+          h('span', { class: 'cv-chip ' + (fit.length && low >= st.level ? 'ok' : 'no') }, icon('star', 12), `Lv ${st.level}`),
+          h('span', { class: 'cv-chip ' + (fit.length >= st.party ? 'ok' : 'no') }, icon('helm', 12), String(st.party))),
+        h('span', { class: 'cv-foes' }, foesOf(st).slice(0, 5).map(f => h('span', { class: state === 'dark' ? 'dark' : '' }, pxImg(portraitURL(f, false), 32)))),
+        h('span', { class: 'cv-loot' }, icon('coin', 20), icon(Base.matIcon(REGIONS[st.region].mat), 20), icon('bag', 20),
+          firsts.map(u => h('span', { class: 'first', title: u.name }, icon(u.icon || 'star', 20), pxImg(iconURL('star'), 14, 'cv-star')))));
+      const big = front ? h('button', { class: 'cv-big cv-roadgo', 'data-tut': 'road-go', 'aria-label': `Set out for ${st.id}`, onclick: () => RoadMap.setOut(st.index) }, h('span', { class: 'cv-orb' }, icon('boot', 34)), h('span', { text: 'Set out' }))
+        : lit ? h('button', { class: 'cv-big cv-roadgo farm', 'data-tut': 'road-go', 'aria-label': `Farm ${st.id}`, onclick: () => RoadMap.setOut(st.index) }, h('span', { class: 'cv-orb' }, icon('sword', 30)), h('span', { text: 'Farm' }))
+          : h('button', { class: 'cv-big cv-roadgo shut', 'data-tut': 'road-go', 'aria-disabled': 'true', 'aria-label': `${st.id} is locked` }, h('span', { class: 'cv-orb' }, icon('lock', 30)), h('span', { text: 'Locked' }));
+      cardBox.replaceChildren(card, big);
+    }
+    // Labels that follow the road: each stage's id, the frontier's callout, the boss's name, bubbles over stages whose
+    // first clear brings something new, and the gate to the next region.
+    function tag(key, make, x, y, op) {
+      let n = tags.get(key);
+      if (!n) { n = make(); n._at = {}; tags.set(key, n); labels.append(n); }
+      const A = n._at, o = Math.round(op * 50) / 50;
+      if (A.x !== x || A.y !== y) { A.x = x; A.y = y; n.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`; }
+      if (A.o !== o) { A.o = o; n.style.opacity = o; }
+      return n;
+    }
+    function roadLabels(out, wr, seen) {
+      if (wr <= 0.02) return;
+      const S = live.state, Rv = road(Save.state, region), Reg = REGIONS[Rv.region], next = REGIONS[Rv.region + 1];
+      for (const a of out.anchors) {
+        if (a.stage != null) {
+          const st = Rv.list[a.stage], x = Math.round(a.x * K), ty = Math.round(a.top * K) - 4;
+          if (!st || ty < 84 || ty > 296) continue;
+          if (a.front) { tag('co' + a.stage, () => h('span', { class: 'cv-call' }, st.kind !== 'road' ? h('i', { class: 'cv-el' }) : null, h('b', { text: st.id }), st.name.replace(/^The /, '')), x, ty - 8, wr); seen.add('co' + a.stage); }
+          else if (a.kind === 'boss') { tag('boss', () => h('span', { class: 'cv-bossname', text: Reg.boss }), x, ty - 6, wr).textContent = Reg.boss; seen.add('boss'); }
+          else if (a.s > 0.42) { const n = tag('id' + a.stage, () => h('span', { class: 'cv-sid' }, st.id), x, ty - 4, wr * Math.min(1, (a.s - 0.42) * 6)); n.className = 'cv-sid' + (a.on ? ' lit' : ' dark') + (st.kind === 'elite' ? ' elite' : '') + (out.sel === a.stage ? ' sel' : ''); n.textContent = st.id; seen.add('id' + a.stage); }
+          const ua = ahead.find(([k]) => k === a.stage);
+          if (ua && !a.front) { const n = tag('ul' + a.stage, () => h('span', { class: 'cv-unl' }), x, ty - 26, wr); if (n.dataset.ic !== ua[1]) { n.dataset.ic = ua[1]; n.replaceChildren(icon(ua[1], 16)); } seen.add('ul' + a.stage); }
+        }
+        if (a.id === 'gate' && S.gate && next) {
+          const top = Math.round(a.top * K);
+          if (top > 70 && top < 320) { const n = tag('gate', () => h('span', { class: 'cv-gate' }), Math.round(a.x * K), top - 4, wr); const want = next.num + next.name; if (n.dataset.sig !== want) { n.dataset.sig = want; n.replaceChildren(icon('lock', 14), h('b', { text: `Region ${next.num}` }), next.name); } seen.add('gate'); }
+        }
+      }
     }
     // ── plaques, chips and Wick's word, following the scene
     function mark(key, cls, id, make) {
@@ -258,17 +369,26 @@ const Camp = (() => {
     const nameOf = a => (a.id === 'board' ? 'Recruit Board' : a.plot != null ? (live.state.plots[a.plot].empty ? 'Empty plot' : BUILDINGS[live.state.plots[a.plot].id].name) : null);
     const chipOf = a => (a.id === 'board' ? chips.board : a.id === 'fire' ? chips.fire : a.plot != null && !live.state.plots[a.plot].empty ? chips[live.state.plots[a.plot].id] : null);
     function place(out) {
-      const w = out.cam.w, sig = Object.entries(chips).map(([k, v]) => k + v.join('')).join(',');
-      if (out.v === placed.v && w === placed.w && sig === placed.sig) return;
-      placed.v = out.v; placed.w = w; placed.sig = sig;
-      const wp = Math.max(0, 1 - 2 * w), wb = Math.max(0, 2 * w - 1);
+      const w = out.cam.w, R = out.road, sig = Object.entries(chips).map(([k, v]) => k + v.join('')).join(',');
+      if (out.v === placed.v && w === placed.w && sig === placed.sig && R === placed.r && out.sel === placed.sel) return;
+      placed.v = out.v; placed.w = w; placed.sig = sig; placed.r = R; placed.sel = out.sel;
+      // the camp's HUD goes in the first half of the flight up the road, the road's comes in the second
+      const wc = Math.max(0, 1 - 2 * R), wr = Math.max(0, 2 * R - 1);
+      const wp = Math.max(0, 1 - 2 * w) * wc, wb = Math.max(0, 2 * w - 1) * wc;
       fade(form, wp, true);
+      for (const el2 of [me, goalBtn, proto]) fade(el2, wc, true);
+      fade(dock, wc, true); fade(roadHud, wr, true);
+      if (camp.classList.contains('on-road') !== R > 0.5) camp.classList.toggle('on-road', R > 0.5);
       if (go.hidden !== (w >= 0.5)) { go.hidden = w >= 0.5; collect.hidden = w < 0.5; }
       fade(go, Math.max(wp, 0.02)); fade(collect, Math.max(wb, 0.02));
-      const seen = new Set();
+      // once the camera is home, the road shows the frontier's region again
+      if (R === 0 && out.roadTo === 0 && region != null) { region = null; sync(); }
+      const seen = new Set(), seenTags = new Set();
+      roadLabels(out, wr, seenTags);
+      for (const [key, node] of tags) if (!seenTags.has(key) && node._at.o !== 0) { node._at.o = 0; node.style.opacity = 0; }
       for (const a of out.anchors) {
         // nearer things' plaques and chips lie over farther ones'
-        const op = CampScene.opacityOf(a, w), x = Math.round(a.x * K), y = Math.round(a.y * K), top = Math.round(a.top * K), z = Math.max(1, Math.round(4000 - a.d) * 2);
+        const op = CampScene.opacityOf(a, w) * wc, x = Math.round(a.x * K), y = Math.round(a.y * K), top = Math.round(a.top * K), z = Math.max(1, Math.round(4000 - a.d) * 2);
         if (op <= 0.02) continue;
         const nm = nameOf(a);
         if (nm) {
@@ -302,7 +422,8 @@ const Camp = (() => {
       if (noMotion()) setTimeout(() => d.remove(), 2800);
     }
     function act(a) {
-      if (a.id === 'road') { click(); App.go('map'); return; }
+      if (a.id === 'road') { click(); toRoad(); return; }
+      if (a.id === 'stage') { click(); live.panTo(a.stage); return; }
       if (a.id === 'board') { click(); Buildings.open('recruitboard'); return; }
       if (a.id === 'fire') { click(); tapFire(); return; }
       if (a.id === 'wick') { click(); say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
@@ -335,10 +456,19 @@ const Camp = (() => {
       if (ev.button > 0 || down || ev.target.closest('button, .cv-nodrag')) return;
       const p = Frame.point(ev, camp);
       down = { x: p.x, y: p.y, id: ev.pointerId };
-      live.dragStart(p.x);
+      live.dragStart(p.x, p.y);
       try { camp.setPointerCapture(ev.pointerId); } catch (e) { }
     });
-    camp.addEventListener('pointermove', ev => { if (down && ev.pointerId === down.id) live.dragMove(Frame.point(ev, camp).x); });
+    camp.addEventListener('pointermove', ev => { if (down && ev.pointerId === down.id) { const p = Frame.point(ev, camp); live.dragMove(p.x, p.y); } });
+    // on the road the wheel steps one stage at a time; back from the first, it goes home
+    let wheelAt = 0;
+    camp.addEventListener('wheel', ev => {
+      if (!live || !live.onRoad) return;
+      ev.preventDefault();
+      const now = performance.now();
+      if (now - wheelAt < 180) return;
+      wheelAt = now; live.step(ev.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
     const up = ev => {
       if (!down || ev.pointerId !== down.id) return;
       const p = Frame.point(ev, camp), far = Math.hypot(p.x - down.x, p.y - down.y);
@@ -402,13 +532,14 @@ const Camp = (() => {
       live = CampScene.live(canvas, { yaw: cam.yaw, reduce: noMotion, width: () => Frame.W, state: sceneState(s), locked: locked(s) });
       sync();
       live.onFrame = place;
+      live.onSnap = k => showCard(k);
       if (live.out) place(live.out);
     }
     function stop() {
       alive = false;
       if (live) { cam.yaw = live.view === 'build' ? 180 : 0; live.stop(); live = null; }
     }
-    return { el, camp, start, stop, sync, at, turnTo: v => live && live.go(v), turn: d => live && live.turn(d), get live() { return live; } };
+    return { el, camp, start, stop, sync, at, toRoad, home, turnTo: v => live && live.go(v), turn: d => live && live.turn(d), get live() { return live; } };
   }
 
   App.screen('home', {
@@ -437,10 +568,16 @@ const Camp = (() => {
   Base.onChange(() => { if (ui) ui.sync(); });
   // The numbers keep moving while the camp is open: what the buildings hold, the goal, the board.
   setInterval(() => { if (ui && !document.hidden && App.current === 'home') ui.sync(); }, 2000);
-  // ← and → turn between the views.
+  // ← and → turn between the views; ↑ and ↓ step along the road.
   document.addEventListener('keydown', e => {
     if (!ui || App.current !== 'home' || (typeof Title !== 'undefined' && Title.up)) return;
     if (!document.getElementById('sheet').hidden || !document.getElementById('screen').hidden) return;
+    // on the road: ↑ and ↓ step along it, Escape flies home
+    if (ui.live && ui.live.onRoad) {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); ui.live.step(e.key === 'ArrowUp' ? 1 : -1); }
+      else if (e.key === 'Escape') { e.preventDefault(); ui.home(); }
+      return;
+    }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); ui.turn(e.key === 'ArrowRight' ? 1 : -1); }
   });
   // ── the first pick: a new game starts with one of three

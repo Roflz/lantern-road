@@ -1,9 +1,10 @@
 """The play-through again, in the browser, through the game's own buttons (build step 7b).
 
 A new game is played through Region I the way a player taps it: the first pick; at the Hearth (screen 2, views around
-the fire) the corner's Set out for the first trip, then a tap on the road in the scene for the Road map; the Road tab's
-Next (or Farm) and the stage sheet's Set out, Skip in battle, then the results popup (a tap skips its fill; Report and
-back on the first two trips; its New things, opening "+N" when there are more than it shows; Hearth); the Recruit
+the fire) the corner's Set out for the first trip, then a tap on the road in the scene; either flies up the road to the
+frontier's card (the road view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in
+battle, then the results popup (a tap skips its fill; Report and back on the first two trips; its New things, opening
+"+N" when there are more than it shows; Hearth); the Recruit
 Board, tapped in the Hearth's party view; and Build, by turning to the buildings view and tapping an empty plot. No
 prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the camp's ticking
 does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would (Hero.autoBuild).
@@ -208,36 +209,40 @@ def main():
                     problems.append(f'a tap on an empty plot at camp did not open its build sheet: touched {t}, now {where()}')
                     shot('missed-plot')
                     tap('.sheet-x', None, 300)
-            # the road: the first trip by the camp's Set out (the Road with the frontier's sheet open); after that a tap
-            # on the road in the camp's scene opens the Road map: Next (or Farm after two losses there), then Set out
+            # the road view: the first trip by the camp's Set out, after that a tap on the road in the camp's scene; the
+            # camera flies up the road to the frontier with its card open. Its Set out, or after two losses there, a
+            # step back down the road (↓) and Farm.
             to_camp('party')
             if trips == 0:
-                if not tap('.camp .cv-big', 'Set out', 1200) or not js("() => App.current === 'map' && !!document.querySelector('.stagebox')"):
-                    problems.append("the camp's Set out did not open the Road with the stage sheet")
+                if not tap('.camp .cv-dock .cv-big', 'Set out', 2000):
+                    problems.append("no Set out at the Hearth")
                     break
             else:
                 pt = road_point()
                 if pt:
                     page.touchscreen.tap(pt[0], pt[1])
-                    page.wait_for_timeout(1000)
-                if js("() => App.current") != 'map':
-                    problems.append(f"a tap on the road at camp did not open the Road map: touched {pt}, now {where()}")
-                    shot('missed-road')
-                    tap('.sheet-x', None, 300)
-                    if js("() => App.current") == 'home':
-                        tap('.camp .cv-big', 'Set out', 1200)
-                        tap('.sheet-x', None, 300)
-                    tap('#tabbar .tab', 'Road', 900)
-                tap('.tripcard .small', 'Got it', 400)
-                farm = js('() => window.__lost >= 2')
-                if farm and tap('.mapcta .btn:not(.primary)', '^Farm', 800):
+                    page.wait_for_timeout(2000)
+            on_road = js("() => !!(Camp.scene && Camp.scene.onRoad && Camp.scene.out.road === 1)")
+            front = js("() => { const fr = Campaign.frontier(); return Camp.scene.sel === STAGES.filter(x => x.region === STAGES[fr].region).indexOf(STAGES[fr]); }") if on_road else False
+            if not on_road or not front:
+                problems.append(f"{'the Hearth' + chr(39) + 's Set out' if trips == 0 else 'a tap on the road at camp'} did not fly up the road to the frontier: now {where()}, on the road {on_road}")
+                shot('missed-road')
+                if not on_road:
+                    tap('.camp .cv-dock .cv-big', 'Set out', 2000)
+            if trips < 2:
+                shot('road')
+            farm = js('() => window.__lost >= 2 && Campaign.frontier() % 18 > 0')
+            if farm:
+                page.keyboard.press('ArrowDown')
+                page.wait_for_timeout(900)
+                if tap('.cv-roadgo', '^Farm$', 1500):
                     js('() => { window.__lost = 1; }')
-                elif not tap('.mapcta .btn.primary', 'Next', 800):
-                    problems.append(f"no Next button on the Road tab at stage {st['fr'] + 1}")
-                    break
-            if not tap('.stagebox .btn.go', None, 1500):
-                problems.append(f"no Set out on the stage sheet at stage {st['fr'] + 1}")
-                tap('.sheet-x', None, 300)
+                else:
+                    problems.append(f"no Farm a stage back from {st['fr'] + 1}")
+                    farm = False
+            if not farm and not tap('.cv-roadgo', '^Set out$', 1500):
+                problems.append(f"no Set out on the road at stage {st['fr'] + 1}: the button says {js('() => (document.querySelector(`.cv-roadgo`) || {}).textContent')}")
+                js("() => Camp.scene && Camp.scene.toCamp(true)")
                 continue
             trips += 1
             if trips <= 2:

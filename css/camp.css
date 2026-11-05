@@ -90,11 +90,72 @@
 .cv-line::after{content:"";position:absolute;left:50%;bottom:-8px;margin-left:-5px;border:5px solid transparent;border-top-color:var(--rule)}
 @keyframes cvline{0%{opacity:0;transform:translate(-50%,-85%)}10%{opacity:1;transform:translate(-50%,-100%)}80%{opacity:1}100%{opacity:0}}
 
+/* the road view (docs/mockups/road-view.html): back to the Hearth and the region at the top left, the stage's card and
+   its big button along the bottom, and labels that follow the road */
+.cv-roadhud{position:absolute;inset:0;pointer-events:none;visibility:hidden;opacity:0}
+.cv-roadhud button,.cv-roadhud .cv-region{pointer-events:auto}
+.camp .cv-round.cv-back{position:absolute;left:18px;top:13px;width:44px;height:44px;font:400 34px/1 var(--f-display);color:var(--ember)}
+.cv-region{position:absolute;left:72px;top:11px;display:flex;align-items:center;gap:8px}
+.cv-rt{display:grid;justify-items:start;gap:3px;padding:6px 14px 7px;background:var(--panel);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cv-rk{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.cv-rn{font:400 25px/1 var(--f-display);color:var(--bone);white-space:nowrap}
+.camp .cv-arw{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--trim);font:400 22px/1 var(--f-display);color:var(--ember)}
+.camp .cv-arw.shut{color:#4a4054;border-color:#2e2636;cursor:default}
+.camp .cv-card{position:absolute;left:18px;bottom:12px;width:min(560px,calc(100% - 136px));padding:10px 12px 11px;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;text-align:left;background:linear-gradient(#1d1626,#120d18);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 10px 26px rgba(0,0,0,.5)}
+.cv-card .cv-hd{grid-column:1/3;display:flex;align-items:center;gap:9px;min-width:0}
+.cv-card .cv-id{font:700 12px/1 var(--f-pixel);color:var(--ember)}
+.cv-card .cv-id.lit{color:var(--gold)}
+.cv-card .cv-el{display:inline-block;width:9px;height:9px;flex:none;background:var(--blood);transform:rotate(45deg)}
+.cv-card .cv-hd>img{width:14px;height:14px}
+.cv-card .cv-cn{font:400 23px/1 var(--f-display);color:var(--bone);margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cv-chip{display:flex;align-items:center;gap:5px;height:22px;padding:0 7px;flex:none;font:700 9px/1 var(--f-pixel);letter-spacing:.06em;border:1px solid var(--rule);background:#150f1b;color:var(--ash)}
+.cv-chip.ok{color:var(--good);border-color:#3e5a34}
+.cv-chip.no{color:var(--bad);border-color:#5a342e}
+.cv-chip img{width:12px;height:12px}
+.cv-foes{display:flex;gap:4px}
+.cv-foes>span{width:36px;height:36px;display:grid;place-items:center;background:#0f0b14;border:1px solid #4a3a52}
+.cv-foes>span.dark img{filter:brightness(0);opacity:.75}
+.cv-foes img{width:32px;height:32px}
+.cv-loot{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.cv-loot>img,.cv-loot>span{position:relative;width:32px;height:32px;padding:5px;display:grid;place-items:center;background:#150f1b;border:1px solid var(--rule);box-sizing:border-box}
+.cv-loot>span{padding:0}
+.cv-loot>span>img:first-child{width:20px;height:20px}
+.cv-loot>span.first{border-color:var(--ember);box-shadow:0 0 8px rgba(244,166,70,.4)}
+.cv-loot .cv-star{position:absolute;left:-5px;top:-6px;width:14px;height:14px}
+.camp .cv-big.cv-roadgo{position:absolute;right:18px;bottom:10px}
+.cv-big.farm .cv-orb{border-color:#d8c8a0;background:radial-gradient(circle at 50% 30%,#a88c6a,#5a4630 72%);box-shadow:0 0 0 2px #000,0 0 16px rgba(216,200,160,.3),inset 0 3px 0 rgba(255,240,200,.25),inset 0 -6px 10px rgba(0,0,0,.45)}
+.cv-big.shut .cv-orb{border-color:#4a4054;background:radial-gradient(circle at 50% 30%,#2e2636,#17121c 72%);box-shadow:0 0 0 2px #000}
+.cv-big.shut .cv-orb img{width:30px;height:30px}
+.camp .cv-big.shut{cursor:default}
+.camp .cv-big.shut>span:last-child{color:var(--dim)}
+.camp .cv-big.shut:active .cv-orb{transform:none}
+/* a 16:9 frame (694 wide): the purse draws in a little, clear of the region's ‹ › */
+@container (max-width:779px){.camp.on-road .cv-purse{gap:14px}.camp.on-road .cv-cur{min-width:100px}}
+.cv-labels{position:absolute;inset:0;z-index:0;pointer-events:none}
+.cv-labels>*{position:absolute;left:0;top:0;will-change:transform;white-space:nowrap}
+.cv-sid{height:16px;padding:0 5px;display:grid;place-items:center;background:rgba(12,8,16,.86);border:1px solid #4a3a2a;font:700 8px/1 var(--f-pixel);letter-spacing:.04em;color:#e6d6b8}
+.cv-sid.lit{color:var(--gold);border-color:#7a5a36}
+.cv-sid.dark{color:var(--dim);border-color:#2e2636}
+.cv-sid.elite{color:var(--bad)}
+.cv-sid.sel{border-color:var(--ember);box-shadow:0 0 10px rgba(244,166,70,.5)}
+.cv-call{display:flex;align-items:center;gap:7px;height:24px;padding:0 9px;background:linear-gradient(#2a1d14,#160f0c);border:1px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 14px rgba(244,166,70,.45);font:400 16px/1 var(--f-display);color:#f2e1c0}
+.cv-call b{font:700 9px/1 var(--f-pixel);color:var(--ember)}
+.cv-call .cv-el{display:inline-block;width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
+.cv-bossname{font:400 20px/1 var(--f-display);color:#f08c76;text-shadow:0 1px 0 #000,0 0 10px rgba(212,72,74,.6)}
+.cv-unl{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#fff6e0,#d8c8a0);border:2px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 12px rgba(244,166,70,.5)}
+.cv-unl{animation:cvbob 1.6s ease-in-out infinite}
+.cv-unl img{width:16px;height:16px}
+.cv-unl::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-4px;border:4px solid transparent;border-top:5px solid var(--ember);border-bottom:0}
+@keyframes cvbob{50%{translate:0 -4px}}
+.cv-gate{display:flex;align-items:center;gap:7px;height:26px;padding:0 10px;background:rgba(12,10,20,.9);border:1px solid #3a4a6a;box-shadow:0 0 0 1px #000;font:400 17px/1 var(--f-display);color:#9ab0d0}
+.cv-gate img{width:14px;height:14px}
+.cv-gate b{font:700 8px/1 var(--f-pixel);letter-spacing:.12em;color:#6a7a98}
+
 /* what opens over the camp: toasts under the purse, sheets as a centred panel, help and the first pick in a column */
 #frame:has(.view.camp-view:not(.out)) #toasts{bottom:auto;top:60px}
 #frame:has(.view.camp-view:not(.out)) #sheet .box{max-width:440px}
 #frame:has(.view.camp-view:not(.out)) #sheet.sheet-bottom .box{border-bottom:2px solid var(--rule)}
 #frame:has(.view.camp-view:not(.out)) #screen>.page{width:100%;max-width:520px;margin:0 auto}
 
-@media (prefers-reduced-motion:reduce){.cv-line{animation:none}}
-.calm .cv-line{animation:none}
+@media (prefers-reduced-motion:reduce){.cv-line,.cv-unl{animation:none}}
+.calm .cv-line,.calm .cv-unl{animation:none}
