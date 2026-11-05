@@ -1,5 +1,6 @@
 'use strict';
-// Lantern Road · equipment: the 92 items of the content spec (§6), the pieces you own, loot rolls and the Bag.
+// Lantern Road · equipment: the 92 items of the content spec (§6), each region's own line (the regions study), the
+// pieces you own, loot rolls and the Bag.
 // docs/content-spec.md §6 is the source of truth; every number here is a starting value to tune.
 // It touches no page, so tools/simtest.js tests it in Node. The art for every item lives in js/art.js (GEAR_ART).
 //
@@ -17,6 +18,7 @@
 //   fx       its effect, as passive hooks (js/sim.js lists them). An action hook returns true when it acted, so the
 //            balance test can see every effect fire
 //   fatigue  fatigue gained × this (build step 5 reads it)
+//   region   a Relic's region, or a region gear piece's (regional: true): the line that drops only there
 // ── A piece you own (an instance): { uid, id, lv }, plus fresh: true until you have seen it in the Bag.
 //   lv is the level of the stage it dropped from. Its rarity is its item's.
 
@@ -28,6 +30,9 @@ const ITEM = {
   // Rarity by region (content spec §6): Common, Fine, Rare. Elite stages move 10 points from Common to Rare, bosses 20.
   RATES: [[70, 25, 5], [55, 35, 10], [45, 40, 15], [35, 45, 20], [25, 50, 25]],
   RANK_SHIFT: { normal: 0, elite: 10, boss: 20 },
+  // A gear roll on the road tries the region's own line first, at this chance by the stage's rank (regions study §3.1,
+  // tune); otherwise, and in a region with no line yet, it rolls the general pool.
+  LINE: { normal: 0.4, elite: 0.7, boss: 1 },
 };
 const RARITY_NAMES = { common: 'Common', fine: 'Fine', rare: 'Rare', relic: 'Relic' };
 const SLOTS = ['weapon', 'armor', 'accessory'];
@@ -57,7 +62,7 @@ const GEAR_ORDER = [];
 // For the balance test: when set to an object, every item effect that acts counts itself here.
 const GEAR_TRACK = { on: null };
 // What a hook returns when it changes nothing; anything else counts as the effect firing.
-const HOOK_NEUTRAL = { out: 1, taken: 1, healOut: 1, healIn: 1, dotOut: 1, dotIn: 1, pushMul: 1, stealMul: 1, aIn: 1, crit: 0, dodge: 0, critX: 0, healCap: 1 };
+const HOOK_NEUTRAL = { out: 1, taken: 1, healOut: 1, healIn: 1, dotOut: 1, dotIn: 1, pushMul: 1, pushIn: 1, stealMul: 1, aIn: 1, crit: 0, dodge: 0, critX: 0, healCap: 1 };
 function trackHook(id, k, fn) {
   return function (...a) {
     const r = fn(...a), T = GEAR_TRACK.on;
@@ -569,6 +574,76 @@ defItem('hollowcrown', {
 });
 const RELICS = ['gravediggersspade', 'bishopscrozier', 'barkofoldgod', 'marshalsblade', 'hollowcrown'];
 
+// ═══════════════════════════════════════════════════════════════════ Region gear
+// Each region's own line (regions study §3.1–3.3): five pieces that drop only in that region, beside the 92 general
+// items, which keep rolling everywhere. A piece carries its region (regional: true, region: 0–4) and its card names it.
+// Weapons and armour are Fine or Rare, accessories Rare (tune). Regions III–V's lines wait for the play-test of I and II.
+const regionPiece = (region, id, slot, rarity, name, o) => defItem(id, Object.assign({ name, slot, rarity, region, regional: true }, o));
+// I. Gravefields: grave goods. Endurance and comebacks.
+regionPiece(0, 'pallbearerssabre', 'weapon', 'fine', 'Pall-bearer’s Sabre', {
+  type: 'sword', stats: { pow: 6 }, cost: { spd: -1 },
+  lines: [W('While an ally has fallen', '+25% damage', 'skull')],
+  fx: { out: (E, u, t, p, c) => (direct(c) && E.fallen(u).length ? 1.25 : 1) },
+  flavor: 'Carried at the head of every procession. It has seen the end of all of them.',
+});
+regionPiece(0, 'sextonscrook', 'weapon', 'fine', 'Sexton’s Crook', {
+  type: 'stave', stats: { pow: 5, mp: 8 },
+  lines: [W('On a kill', 'Restore 8 mana', 'mana'), X('Max health −8%', 'heart')],
+  fx: Object.assign(killMana(8), maxHpCut(0.08)),
+  flavor: 'For lifting lids, and for holding them down.',
+});
+regionPiece(0, 'shroudcoat', 'armor', 'fine', 'Shroud Coat', {
+  weight: 'light', stats: { hp: 12, dodge: 5 },
+  lines: [B('The first hit each battle deals half damage', 'shield'), X('Fatigue gained +10%', 'fatigue', LATER_FATIGUE)], fatigue: 1.1,
+  fx: { taken: (E, u, src, p, c) => { if (c.dot || u._shroud) return 1; u._shroud = true; return 0.5; } },
+  flavor: 'Cut from a winding sheet. The first blow always seems to find only cloth.',
+});
+regionPiece(0, 'headstonemantle', 'armor', 'rare', 'Headstone Mantle', {
+  weight: 'heavy', stats: { hp: 24, def: 4 }, cost: { spd: -2 },
+  lines: [W('At half health or less', 'Fortified: 20% less damage taken', 'fort')],
+  fx: { turnStart: (E, u) => (E.pct(u) <= 0.5 ? E.status(u, u, 'fortified', { turns: 1, sure: true, raw: true }) : false) },
+  flavor: 'A slab of the old churchyard, cut thin and strapped on.',
+});
+regionPiece(0, 'coffinnaillocket', 'accessory', 'rare', 'Coffin-nail Locket', {
+  stats: { hp: 15 }, cost: { crit: -3 },
+  lines: [B('+25% Bleed resistance', 'bleed')],
+  fx: { stat: u => { u.res.bleed += 25; } },
+  flavor: 'Three nails from a lid that would not stay shut.',
+});
+// II. Drowned Chapel: bell and font. Sustain, mana and steadiness against control.
+regionPiece(1, 'tollbell', 'weapon', 'rare', 'Tollbell', {
+  type: 'handbell', stats: { pow: 4, mp: 12 },
+  lines: [B('Skills cost 10% less mana', 'mana'), X('Healing done −10%', 'cross')],
+  fx: { cost: (E, u, sk, p, c) => { if (sk.cost) { c.mul *= 0.9; return true; } }, healOut: () => 0.9 },
+  flavor: 'It rang under the water for a hundred years, and never once went flat.',
+});
+regionPiece(1, 'fontwatercenser', 'weapon', 'fine', 'Font-water Censer', {
+  type: 'censer', stats: { pow: 3, mp: 10 },
+  lines: [B('Healing done +15%', 'cross'), X('Max health −5%', 'heart')],
+  fx: Object.assign({ healOut: () => 1.15 }, maxHpCut(0.05)),
+  flavor: 'Filled at the drowned font. Its smoke comes up wet.',
+});
+regionPiece(1, 'waxsealedvestments', 'armor', 'fine', 'Wax-sealed Vestments', {
+  weight: 'light', stats: { hp: 14, mp: 12 }, cost: { dodge: -4 },
+  lines: [B('+30% Debuff resistance', 'silence')],
+  fx: { stat: u => { u.res.debuff += 30; } },
+  flavor: 'Sealed against the flood. Curses run off them like water.',
+});
+regionPiece(1, 'reliquaryplate', 'armor', 'rare', 'Reliquary Plate', {
+  weight: 'heavy', stats: { hp: 20, def: 5 }, cost: { spd: -2 },
+  lines: [B('Push-backs on the wearer are halved', 'hourglass')],
+  fx: { pushIn: (E, u, src) => (src && src.side !== u.side ? 0.5 : 1) },
+  flavor: 'Each plate holds a saint’s knucklebone. The bells cannot shift them.',
+});
+regionPiece(1, 'wickendring', 'accessory', 'rare', 'Wick-end Ring', {
+  stats: { mp: 6 }, cost: { def: -2 },
+  lines: [B('+3 mana at the start of each turn', 'mana')],
+  fx: { turnStart: (E, u) => E.mana(u, 3) > 0 },
+  flavor: 'A candle stub set in tin. It burns down, and never out.',
+});
+// Each region's line, by region: [[ids of Region I], [ids of Region II], [], [], []].
+const REGION_GEAR = [0, 1, 2, 3, 4].map(r => GEAR_ORDER.filter(id => GEAR[id].regional && GEAR[id].region === r));
+
 // ═══════════════════════════════════════════════════════════════════ The model
 const Items = (() => {
   let seq = 0;
@@ -662,7 +737,7 @@ const Items = (() => {
     return { common: r[0] - sh, fine: r[1], rare: r[2] + sh };
   }
   const pickW = (rng, entries) => { const tot = entries.reduce((a, [, w]) => a + w, 0); let x = rng() * tot; for (const [k, w] of entries) { if ((x -= w) < 0) return k; } return entries[entries.length - 1][0]; };
-  // A random piece from a stage of this level, in this region (0–4).
+  // A random piece of the general pool (never a region's own line) from a stage of this level, in this region (0–4).
   // o: { rank: 'normal' | 'elite' | 'boss', classes: class ids on the roster (weapons and class-only accessories follow
   //      them, weighted by how many of each; every class when left out), slot, rarity (to force either) }
   function roll(level, region, rng = Math.random, o = {}) {
@@ -671,16 +746,41 @@ const Items = (() => {
     const slot = o.slot || pickW(rng, Object.entries(ITEM.SLOT_ODDS));
     const classes = (o.classes && o.classes.length ? o.classes : CLASS_ORDER).filter(k => CLASSES[k]);
     let pool;
+    const general = GEAR_ORDER.filter(id => !GEAR[id].regional);
     if (slot === 'weapon') {
       const cls = classes[Math.floor(rng() * classes.length)];
-      pool = GEAR_ORDER.filter(id => GEAR[id].slot === 'weapon' && GEAR[id].rarity === rar && GEAR[id].type === WEAPON_OF[cls]);
-    } else if (slot === 'armor') pool = GEAR_ORDER.filter(id => GEAR[id].slot === 'armor' && GEAR[id].rarity === rar);
-    else pool = GEAR_ORDER.filter(id => GEAR[id].slot === 'accessory' && GEAR[id].rarity === rar && (!GEAR[id].cls || classes.includes(GEAR[id].cls)));
-    if (!pool.length) pool = GEAR_ORDER.filter(id => GEAR[id].slot === slot && GEAR[id].rarity === rar);
+      pool = general.filter(id => GEAR[id].slot === 'weapon' && GEAR[id].rarity === rar && GEAR[id].type === WEAPON_OF[cls]);
+    } else if (slot === 'armor') pool = general.filter(id => GEAR[id].slot === 'armor' && GEAR[id].rarity === rar);
+    else pool = general.filter(id => GEAR[id].slot === 'accessory' && GEAR[id].rarity === rar && (!GEAR[id].cls || classes.includes(GEAR[id].cls)));
+    if (!pool.length) pool = general.filter(id => GEAR[id].slot === slot && GEAR[id].rarity === rar);
     const inst = make(pool[Math.floor(rng() * pool.length)], level);
     inst.fresh = true;
     return inst;
   }
+  // A gear roll on the road (regions study §3.1): the region's own line first, at ITEM.LINE[rank], then the general
+  // pool. A roll with a set rarity or slot (the Cage Mimic's) stays general. o: as roll's.
+  function loot(level, region, rng = Math.random, o = {}) {
+    const line = REGION_GEAR[region];
+    if (line && line.length && !o.rarity && !o.slot && rng() < (ITEM.LINE[o.rank || 'normal'] || 0)) {
+      const x = rollLine(level, region, rng, o);
+      if (x) return x;
+    }
+    return roll(level, region, rng, o);
+  }
+  // A piece of a region's own line, by the slot odds, among those the roster can use (weapons and class-only pieces
+  // follow o.classes, as roll's do). null when none fits.
+  function rollLine(level, region, rng = Math.random, o = {}) {
+    const classes = (o.classes && o.classes.length ? o.classes : CLASS_ORDER).filter(k => CLASSES[k]);
+    const fits = id => { const D = GEAR[id]; return D.slot === 'weapon' ? classes.includes(WEAPON_TYPES[D.type].cls) : !D.cls || classes.includes(D.cls); };
+    const pool = (REGION_GEAR[region] || []).filter(fits);
+    if (!pool.length) return null;
+    const slot = pickW(rng, SLOTS.filter(k => pool.some(id => GEAR[id].slot === k)).map(k => [k, ITEM.SLOT_ODDS[k]]));
+    const list = pool.filter(id => GEAR[id].slot === slot), inst = make(list[Math.floor(rng() * list.length)], level);
+    inst.fresh = true;
+    return inst;
+  }
+  // The region whose own line a piece belongs to (0–4), or null for the general pool and Relics.
+  const regionOf = x => { const D = def(x); return D && D.regional ? D.region : null; };
   // The Common weapon a recruit carries.
   function starter(cls, lv = 1) {
     const id = GEAR_ORDER.find(k => GEAR[k].slot === 'weapon' && GEAR[k].rarity === 'common' && GEAR[k].type === WEAPON_OF[cls]);
@@ -793,7 +893,7 @@ const Items = (() => {
     return n + { common: 0, fine: 1, rare: 2, relic: 4 }[D.rarity];
   }
   return {
-    make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, fixedFront, odds, roll, starter,
+    make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, fixedFront, odds, roll, loot, rollLine, regionOf, starter,
     room, everything, owns, sellPrice, add, grantRelic, relicOf, sell, find, equip, unequip, bands, score, uid,
   };
 })();

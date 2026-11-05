@@ -85,7 +85,8 @@ const App = (() => {
     const s = Save.state, reached = Math.max(0, ...s.campaign.cleared.map(id => (STAGES.find(x => x.id === id) || { region: 0 }).region));
     purse.replaceChildren(
       h('span', { class: 'coin', title: 'Gold' }, h('i', { class: 'goldpip' }), h('b', { text: fmt(s.currencies.gold) })),
-      ...MATERIALS.filter(m => m.region <= reached || (s.currencies.mats[m.id] || 0) > 0).map(m => h('span', { class: 'coin mat', title: m.name }, ico(typeof Base !== 'undefined' ? Base.matIcon(m.id) : 'bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
+      // the staples of the regions reached, and a Trophy once you have one (its tooltip says what it is for)
+      ...MATERIALS.filter(m => (!m.trophy && m.region <= reached) || (s.currencies.mats[m.id] || 0) > 0).map(m => h('span', { class: 'coin mat', title: m.trophy ? `${m.name}: ${matUse(m.id)}` : m.name }, ico(typeof Base !== 'undefined' ? Base.matIcon(m.id) : 'bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
   }
 
   TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, 'data-tut': 'tab-' + t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));

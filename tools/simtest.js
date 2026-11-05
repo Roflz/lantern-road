@@ -376,17 +376,21 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const NEEDS = { shutteredlantern: ['kindle'], bonfirelantern: ['kindle'], wickshears: ['lighttheway'], blackbolts: ['aimed'], repeater: ['rapidfire', 'aimed'], fencingglove: ['challenge'], philosopherspebble: ['quickbrew'],
     bellrope: ['toll'], vesperbell: ['toll'], chapelbell: ['knell'], surgeonskit: ['stitch', 'tonic'], butcherssaw: ['stitch'], surgeonsapron: ['stitch', 'tonic'], emberthurible: ['mend'], chapelcenser: ['mend'], drownedcenser: ['mend'],
     witchsknot: ['hexswarm', 'contagion'], hexedkris: ['doom'], witchironsickle: ['doom'], mourningblade: ['doom'], twinstilettos: ['backstab'], widowskiss: ['envenom'], fencesledger: ['pickpocket'], oathboundgorget: ['guard', 'cover'],
-    watchmansflail: ['guard'], bastionplate: ['guard'], gravecutter: ['cleave'], fingerbone: ['rites'], bishopscrozier: ['rites'], penitentsrags: ['mend'], ossuaryrod: [CLASSES.gravecaller.starter], barrowkingstaff: [CLASSES.gravecaller.starter], phylactery: [CLASSES.gravecaller.starter] };
+    watchmansflail: ['guard'], bastionplate: ['guard'], gravecutter: ['cleave'], fingerbone: ['rites'], bishopscrozier: ['rites'], penitentsrags: ['mend'], fontwatercenser: ['mend'], ossuaryrod: [CLASSES.gravecaller.starter], barrowkingstaff: [CLASSES.gravecaller.starter], phylactery: [CLASSES.gravecaller.starter] };
   // Who wears it: a weapon's class, a class-only accessory's class, or a hero that suits the effect.
   const WEARER = { halberdiershook: 'sellsword', huntershauberk: 'warden', thornmail: 'warden', ashenplate: 'warden', drownedmail: 'sellsword', bastionplate: 'warden', sellswordsjack: 'sellsword', vanguardsbadge: 'sellsword',
-    penitentsrags: 'pilgrim', mothsilk: 'lamplighter', gravediggersleathers: 'duellist', shadowweave: 'duellist', courierspur: 'crossbowman', earstoppers: 'hexblade', ironboundcollar: 'sellsword', gravediggersspade: 'crossbowman', hollowcrown: 'hexblade' };
-  const STAGE_FOR = { huntershauberk: ['1-4', '1-15'], mothlure: ['1-10', '1-13', '1-17'], earstoppers: ['1-18'], ironboundcollar: ['T-1'], drownedmail: ['T-2'], marshalsblade: ['1-6', '1-7', '1-10'] };
+    penitentsrags: 'pilgrim', mothsilk: 'lamplighter', gravediggersleathers: 'duellist', shadowweave: 'duellist', courierspur: 'crossbowman', earstoppers: 'hexblade', ironboundcollar: 'sellsword', gravediggersspade: 'crossbowman', hollowcrown: 'hexblade',
+    shroudcoat: 'duellist', headstonemantle: 'warden', coffinnaillocket: 'sellsword', waxsealedvestments: 'pilgrim', reliquaryplate: 'warden', wickendring: 'pilgrim' };
+  const STAGE_FOR = { huntershauberk: ['1-4', '1-15'], mothlure: ['1-10', '1-13', '1-17'], earstoppers: ['1-18'], ironboundcollar: ['T-1'], drownedmail: ['T-2'], marshalsblade: ['1-6', '1-7', '1-10'], reliquaryplate: ['T-1'] };
   const ownerOf = id => { const D = GEAR[id]; return D.slot === 'weapon' ? WEAPON_TYPES[D.type].cls : D.cls || WEARER[id] || pickOf(CLASS_ORDER); };
-  const withFx = GEAR_ORDER.filter(id => GEAR[id].fx);
+  // Region gear (the regions study) is worn after the fuzz below, so the general items' random battles stay as they were.
+  const withFx = GEAR_ORDER.filter(id => GEAR[id].fx), generalFx = withFx.filter(id => !GEAR[id].regional);
   GEAR_TRACK.on = {};
   let runs = 0;
-  const HARD = ['fingerbone', 'bishopscrozier', 'gravediggersspade'], PLAIN = HARD.concat(['drownedmail', 'ironboundcollar']);
-  for (const id of withFx) {
+  // (the Pall-bearer's Sabre needs an ally to fall, the Headstone Mantle its wearer at half health, and the Reliquary
+  // Plate its wearer pushed back)
+  const HARD = ['fingerbone', 'bishopscrozier', 'gravediggersspade', 'pallbearerssabre'], PLAIN = HARD.concat(['drownedmail', 'ironboundcollar', 'headstonemantle', 'reliquaryplate']);
+  function wearTest(id) {
     for (let i = 0; i < (HARD.includes(id) ? 16 : 8); i++) {
       const cls = ownerOf(id), c = PLAIN.includes(id) ? plain(cls, 'w0') : full(cls, 'w0');
       const acts = Hero.actives(c), need = (NEEDS[id] || []).filter(x => c.skills[x]);
@@ -408,6 +412,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
       catch (e) { problems.push(`item ${id}: ${e.stack.split('\n').slice(0, 3).join(' | ')}`); }
     }
   }
+  generalFx.forEach(wearTest);
   // Gear in a fuzz of random builds: random pieces on random characters of every class.
   let fz = 0;
   for (let i = 0; i < Math.max(150, N); i++) {
@@ -420,7 +425,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
       c.equip = acts.slice(0, Hero.activeSlots(c));
       for (const slot of SLOTS) {
         if (rng() < 0.15) { c.gear[slot] = null; continue; }
-        const pool = GEAR_ORDER.filter(g => GEAR[g].slot === slot && Items.canUse(c, Items.make(g)));
+        const pool = GEAR_ORDER.filter(g => !GEAR[g].regional && GEAR[g].slot === slot && Items.canUse(c, Items.make(g)));
         c.gear[slot] = Items.make(pickOf(pool), 1 + Math.floor(rng() * 150));
       }
       party.push(Hero.spec(c, c.equip.map(a => ({ if: pickOf(['always', 'front_foe', 'foe_lowest', 'ally_hp_lt', 'self_hp_lt', 'ally_fallen']), n: 50, do: a }))));
@@ -432,6 +437,23 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     check(res, stage); fz++;
     if (res.stalled) totalStalls++;
     if (i < 10 && JSON.stringify(simulate(setup).log) !== JSON.stringify(res.log)) problems.push(`gear fuzz ${i}: not deterministic`);
+  }
+  // Region gear: each piece worn by a hero who uses it, then a fuzz of it on random parties in Regions I and II's own
+  // stages, at about their levels
+  withFx.filter(id => GEAR[id].regional).forEach(wearTest);
+  const rgRng = makeRng(4141);
+  for (let i = 0; i < 80; i++) {
+    const region = i % 2, stages = STAGES.filter(x => x.region === region), stage = stages[Math.floor(rgRng() * stages.length)], party = [];
+    for (let s = 0; s < 6; s++) {
+      const cls = CLASS_ORDER[Math.floor(rgRng() * CLASS_ORDER.length)], c = Hero.autoBuild(Hero.create(cls, 'rg' + s, { rng: rgRng, level: Math.max(1, stage.level + Math.floor(rgRng() * 5) - 1) }));
+      for (const slot of SLOTS) { const pool = REGION_GEAR[region].filter(g => GEAR[g].slot === slot && Items.canUse(c, Items.make(g))); if (pool.length && rgRng() < 0.8) c.gear[slot] = Items.make(pool[Math.floor(rgRng() * pool.length)], stage.level); }
+      party.push(Hero.spec(c, CLASSES[cls].rules));
+    }
+    const setup = stageSetup(stage, 7000 + i, { party, partyRules: PARTY_RULES.rules, loadout: ['draught', 'salts'] });
+    let res;
+    try { res = simulate(setup); } catch (e) { problems.push(`region gear fuzz ${i}: ${e.stack.split('\n').slice(0, 3).join(' | ')}`); continue; }
+    check(res, stage); fz++;
+    if (res.stalled) totalStalls++;
   }
   const fired = GEAR_TRACK.on, never = withFx.filter(id => !fired[id]);
   GEAR_TRACK.on = null;
@@ -476,8 +498,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(table['1-18:rare'].w >= table['1-18:common'].w - 0.05, 'Rare weapons should win 1-18 about as often as Common ones, or more');
 
   // The item model
-  ok(GEAR_ORDER.length === 92, `92 items (got ${GEAR_ORDER.length})`);
-  const count = f => GEAR_ORDER.filter(f).length;
+  const GENERAL = GEAR_ORDER.filter(id => !GEAR[id].regional);
+  ok(GENERAL.length === 92 && GEAR_ORDER.length === 102, `92 general items and 10 of region gear (got ${GENERAL.length} and ${GEAR_ORDER.length - GENERAL.length})`);
+  const count = f => GENERAL.filter(f).length;
   ok(count(id => GEAR[id].slot === 'weapon' && GEAR[id].rarity !== 'relic') === 42 && count(id => GEAR[id].slot === 'armor' && GEAR[id].rarity !== 'relic') === 15 && count(id => GEAR[id].slot === 'accessory' && GEAR[id].rarity !== 'relic') === 30 && count(id => GEAR[id].cls) === 12 && RELICS.length === 5, 'the content spec’s counts: 42 weapons, 15 armour, 30 accessories (12 class-only), 5 Relics');
   for (const cls of CLASS_ORDER) for (const r of ['common', 'fine', 'rare']) ok(count(id => GEAR[id].type === WEAPON_OF[cls] && GEAR[id].rarity === r) >= 1, `${cls} has a ${r} weapon`);
   for (const id of GEAR_ORDER) { const b = Items.bands(Items.make(id, 1), { row: 'front' }); ok(b.good.length + b.bad.length + b.when.length > 0, id + ': the card says something'); }
@@ -1183,6 +1206,50 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(loot / rolls > 0.07 && loot / rolls < 0.2, `normal foes drop loot about 10% of the time (${(100 * loot / rolls).toFixed(1)}%, clear items included)`);
   const rb = won(st('1-18'), 13), eb = Campaign.earn(rb, st('1-18'), { first: true });
   ok(eb.gear.filter(g => g.why === 'loot').length + Object.values(eb.items).reduce((a, b) => a + b, 0) >= 2 && eb.mats.bone_dust >= 40, 'the boss drops 2 loot rolls, and its first clear 40 Bone Dust');
+  // Region gear (regions study §3.1–3.3): each region's own line drops only in its region, region first; the general
+  // pool never rolls it
+  {
+    const rr2 = makeRng(31), line = r => REGION_GEAR[r];
+    ok(line(0).length === 5 && line(1).length === 5 && !line(2).length && line(0).concat(line(1)).every(id => GEAR[id].regional && Items.regionOf(Items.make(id)) === GEAR[id].region && ['fine', 'rare'].includes(GEAR[id].rarity) && (GEAR[id].slot !== 'accessory' || GEAR[id].rarity === 'rare')),
+      `Regions I and II have five pieces each, Fine or Rare, accessories Rare (${line(0).join(', ')}; ${line(1).join(', ')})`);
+    ok(Items.regionOf(Items.make('notchedsword')) === null && Items.regionOf(Items.make('gravediggersspade')) === null, 'a general piece or a Relic has no region line');
+    let general = 0;
+    for (let i = 0; i < 3000; i++) if (GEAR[Items.roll(5, i % 5, rr2, { rank: ['normal', 'elite', 'boss'][i % 3] }).id].regional) general++;
+    ok(!general, `the general pool never rolls region gear (${general} of 3000)`);
+    const tallyLine = (region, rank, n = 4000) => { const t = { own: 0, other: 0, general: 0 }; for (let i = 0; i < n; i++) { const D = GEAR[Items.loot(5, region, rr2, { rank }).id]; if (!D.regional) t.general++; else if (D.region === region) t.own++; else t.other++; } return t; };
+    for (const [region, rank, want] of [[0, 'normal', ITEM.LINE.normal], [0, 'elite', ITEM.LINE.elite], [0, 'boss', ITEM.LINE.boss], [1, 'normal', ITEM.LINE.normal], [1, 'boss', ITEM.LINE.boss]]) {
+      const t = tallyLine(region, rank);
+      ok(!t.other && Math.abs(t.own / 4000 - want) < 0.03, `Region ${REGIONS[region].num}, ${rank}: ${Math.round(100 * t.own / 4000)}% of gear rolls are its own line (want ${Math.round(want * 100)}%), none from another region`);
+    }
+    const t2 = tallyLine(2, 'boss');
+    ok(!t2.own && !t2.other, 'Thornwood has no line yet: its gear rolls stay general');
+    let unusable = 0;
+    for (let i = 0; i < 600; i++) { const x = Items.loot(5, 0, rr2, { rank: 'boss', classes: ['pilgrim'] }); if (GEAR[x.id].slot === 'weapon' && WEAPON_TYPES[GEAR[x.id].type].cls !== 'pilgrim') unusable++; }
+    ok(!unusable, `a region line's weapons follow the roster: a lone Pilgrim gets no Gravefields sword or staff (${unusable})`);
+    // through the campaign: every piece of region gear that drops on a stage is from that stage's region
+    const byRegion = { 0: { own: 0, gear: 0, other: 0 }, 1: { own: 0, gear: 0, other: 0 } };
+    for (const sid of ['1-4', '1-9', '1-12', '1-18', '2-2', '2-8', '2-17']) {
+      const stage = st(sid), res = won(stage, stage.level + 2);
+      if (!res) continue;
+      for (let k = 0; k < 120; k++) {
+        const e = Campaign.earn(Object.assign({}, res, { seed: k * 7 + 1 }), stage, { first: k % 2 === 0 });
+        for (const g of e.gear) { const B = byRegion[stage.region], rg = Items.regionOf(g.piece); B.gear++; if (rg === stage.region) B.own++; else if (rg != null) B.other++; }
+      }
+    }
+    ok(!byRegion[0].other && !byRegion[1].other && byRegion[0].own > 0 && byRegion[1].own > 0, `on the road, region gear drops only in its own region (Region I: ${byRegion[0].own} of ${byRegion[0].gear} pieces; Region II: ${byRegion[1].own} of ${byRegion[1].gear})`);
+  }
+  // Trophies (regions study §3.1): elites and the boss always drop their region's, its signature foes sometimes, and
+  // nothing else does
+  {
+    const trophies = st => { let n = 0, runs = 0, other = 0; const R = REGIONS[st.region], res = won(st, st.level + 2); if (!res) return null; for (let k = 0; k < 200; k++) { const e = Campaign.earn(Object.assign({}, res, { seed: k * 13 + 5 }), st); runs++; if (e.mats[R.trophy] > 0) n++; for (const m of MATERIALS) if (m.trophy && m.id !== R.trophy && e.mats[m.id]) other++; } return { share: n / runs, other }; };
+    ok(MATERIALS.filter(m => m.trophy).map(m => m.id).join() === 'burial_coin,bell_bronze' && REGIONS[0].trophy === 'burial_coin' && REGIONS[1].trophy === 'bell_bronze' && !REGIONS[2].trophy, 'two Trophies so far: Burial Coin for the Gravefields, Bell Bronze for the Drowned Chapel');
+    const t19 = trophies(st('1-9')), t118 = trophies(st('1-18')), t112 = trophies(st('1-12')), t14 = trophies(st('1-4')), t25 = trophies(st('2-5')), t28 = trophies(st('2-8')), t31 = trophies(st('3-1'));
+    ok(t19.share === 1 && t118.share === 1 && t28.share === 1, `the Gravewarden, the Sexton and the Choir of Silt always drop their Trophy (${t19.share}, ${t118.share}, ${t28.share})`);
+    ok(t112.share > 0.1 && t112.share < 0.5 && t25.share > 0.2 && t25.share < 0.75, `Gravediggers and Mourners (1-12: ${Math.round(100 * t112.share)}%), and three Bell Wraiths (2-5: ${Math.round(100 * t25.share)}%), drop theirs sometimes`);
+    ok(!t14.share && !t31.share && !t19.other && !t25.other && !t118.other, 'the rats of 1-4 drop none, Thornwood has none yet, and no region drops another’s');
+    const sexton = Campaign.earn(won(st('1-18'), 12), st('1-18'));
+    ok(sexton.mats.burial_coin >= TROPHY.boss, `the Sexton drops ${TROPHY.boss} or more (${sexton.mats.burial_coin})`);
+  }
 
   // a save of its own: unlocks, fatigue and trips
   const S = protoState(); S.currencies.gold = 0; // the prototype's six, with no gold yet
@@ -1262,6 +1329,24 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   // Lesson II (the Tactician's level 3) teaches its conditions and the Gather action
   Base.rec('tactician', S).level = 3; Base.teach(S);
   ok(Tactics.isKnown({ if: 'self_hp_gt', n: 50 }) && Tactics.isKnown({ if: 'battle_start' }) && Tactics.actions(c0.id).includes('gather'), 'Lesson II teaches its conditions and the Gather action');
+  // First finds (regions study §4): a region's first Trophy, and its first piece of region gear, each bring a New card
+  // once. (On a save of their own, replaying 1-9, so no first-clear unlocks join in.)
+  {
+    const SF = protoState(); Campaign.ensure(SF); SF.campaign.cleared.push(...STAGES.slice(0, 9).map(x => x.id));
+    const w9 = won(st('1-9'), 7), a = Campaign.settle(Object.assign({}, w9), 8, SF), b = Campaign.settle(Object.assign({}, w9, { seed: w9.seed + 1 }), 8, SF);
+    ok(a.unlocks.includes('find:burial_coin') && !b.unlocks.includes('find:burial_coin') && SF.unlocks['find:burial_coin'] && SF.currencies.mats.burial_coin === a.mats.burial_coin + b.mats.burial_coin && SF.currencies.mats.burial_coin >= 2,
+      `the first Burial Coin is a New find once, and Trophies go to the purse (${SF.currencies.mats.burial_coin})`);
+    const SG = protoState(); Campaign.ensure(SG); SG.campaign.cleared.push(...STAGES.slice(0, 9).map(x => x.id));
+    let firstAt = -1, wrong = 0;
+    for (let k = 0; k < 40; k++) {
+      const before = !!SG.unlocks['find:gear:0'], r = Campaign.settle(Object.assign({}, w9, { seed: 500 + k }), 8, SG);
+      const has = r.gear.some(g => Items.regionOf(g.piece) === 0), news = r.unlocks.includes('find:gear:0');
+      if (news && has && !before) firstAt = k;
+      else if (news || (has && !before)) wrong++;
+    }
+    ok(firstAt >= 0 && !wrong && SG.unlocks['find:gear:0'] && !SG.unlocks['find:gear:1'], `the first piece of Gravefields gear is a New find once (battle ${firstAt + 1})`);
+    ok(Object.keys(UNLOCKS).filter(id => id.startsWith('find:')).length === 4 && Object.keys(UNLOCKS).filter(id => id.startsWith('find:')).every(id => UNLOCKS[id].kind === 'find' && UNLOCKS[id].name && UNLOCKS[id].line && (typeof UI_ICONS === 'undefined' || UI_ICONS[UNLOCKS[id].icon])), 'every first find has a name, a line and an icon');
+  }
   // a save from build step 6 that beat the Sexton gets the records Region II opens with
   const S6 = defaultState();
   S6.unlocks['region:1'] = Date.now();

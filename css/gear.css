@@ -83,6 +83,9 @@
 .gr-head>div{display:grid;gap:4px;min-width:0}
 .gr-head h2{margin:0;font:400 26px/1 var(--f-display)}
 .gr-kind{font:9px var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--rc)}
+/* a region's own gear: its region (regions study §3.1) */
+.gr-region{justify-self:start;display:inline-flex;align-items:center;gap:4px;padding:2px 6px 2px 4px;font:8px var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--ember);background:#2a1d0c;border:1px solid #6b4520}
+.gr-region .ico{width:10px;height:10px}
 .gr-eff{display:grid;gap:5px}
 .gr-eff .band{font:9px var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
 .gr-eff .band.g{color:var(--good)}.gr-eff .band.b{color:var(--bad)}.gr-eff .band.e{color:var(--ember)}

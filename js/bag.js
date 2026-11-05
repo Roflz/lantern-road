@@ -96,8 +96,10 @@ const GearUI = (() => {
     const top = can
       ? h('div', { class: 'gr-duo' }, miniStage(c, Items.look(c), `${c.name} now`), miniStage(c, mine ? Items.look(c) : lookWith(c, x), mine ? 'Wearing it' : 'With it', true))
       : null;
+    // A region's own gear (regions study §3.1) names its region: "Gravefields line"
+    const rg = Items.regionOf(x), line = rg != null ? h('span', { class: 'gr-region', title: `Drops only in the ${REGIONS[rg].name}` }, ico('lantern'), `${REGIONS[rg].name} line`) : null;
     const head = h('div', { class: 'gr-head' }, h('span', { class: 'gr-well r-' + D.rarity }, gearIco(x.id, 'xl')),
-      h('div', {}, h('h2', { text: D.name }), h('span', { class: 'gr-kind r-' + D.rarity, text: Items.kind(x) }),
+      h('div', {}, h('h2', { text: D.name }), h('span', { class: 'gr-kind r-' + D.rarity, text: Items.kind(x) }), line,
         h('span', { class: 'hs-kv', text: `Item level ${x.lv}${D.rarity === 'relic' ? ' · unique' : price ? ` · sells for ${fmt(price)} gold` : ''}` })));
     const kids = [h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); done(); } }, '×'), top,
       h('div', { class: 'gr-card r-' + D.rarity }, head, bandsEl(x, where), D.flavor ? h('p', { class: 'gr-flavor', text: `“${D.flavor}”` }) : null)];
@@ -156,7 +158,7 @@ const GearUI = (() => {
     const st = Save.state, [a, b] = levelOf(ui.region), got = [];
     let sold = 0;
     for (let i = 0; i < n; i++) {
-      const x = Items.roll(a + Math.floor(Math.random() * (b - a + 1)), ui.region, Math.random, { rank: ui.rank, classes: classes || st.roster.map(c => c.cls) });
+      const x = Items.loot(a + Math.floor(Math.random() * (b - a + 1)), ui.region, Math.random, { rank: ui.rank, classes: classes || st.roster.map(c => c.cls) });
       const r = Items.add(st, x);
       if (r.added) got.push(x); else sold += r.sold || 0;
     }

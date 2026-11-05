@@ -229,6 +229,10 @@ says('threshold', HERO.THRESHOLDS.slice(0, -1).join(', ') + ' and ' + last(HERO.
 says('level', `up to ${HERO.CAP}`);
 says('xp', `at least ${pct(XP_FLOOR)} of a level`);
 says('too_easy', `under ${pct(XP_TOO_EASY)}`);
+says('region_gear', `${pct(ITEM.LINE.normal)} of them on the road`, `${pct(ITEM.LINE.elite)} at elites`);
+holds('region_gear', ITEM.LINE.boss === 1, 'every gear roll at a boss tries its line');
+// Each Trophy's entry names the foes that sometimes drop it, as its region's trophyFrom lists them.
+REGIONS.forEach(R => { if (R.trophy) says(R.trophy, ...R.trophyFrom.map(k => FOES[k].name.replace(/^The /, '') + 's')); });
 says('combine', `level ${HERO.COMBINE_AT[0]}`, `at ${HERO.COMBINE_AT[1]}`);
 says('awakening', `${HERO.AWAKEN_COST} more skill points`, `level ${HERO.AWAKEN_FROM}`);
 says('tier', `${HERO.TIERS} tiers`);

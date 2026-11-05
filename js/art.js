@@ -367,6 +367,17 @@ const GEAR_ART = {
   fencesledger: { at: 'belt', dx: -2, map: ['bB'], pal: { b: '#6b2b22', B: '#e8e0cc' } },
   gravediggersspade: { at: 'back', back: true, dx: -1, dy: -8, map: ['sS', 'ss', '.w', '.w', '.w', '.w', '.w', '.w'], pal: { s: '#9aa0a8', S: '#e0e4ea', w: '#6b4a2e' } },
   hollowcrown: { at: 'head', dx: -2, dy: -2, map: ['y.y.y', 'yRyky'], pal: { y: '#e8c24a', R: '#c43b3b', k: '#2a1a30' }, glow: '#f7d36a' },
+  // Region gear (js/items.js): the Gravefields' grave goods, then the Drowned Chapel's bell and font
+  pallbearerssabre: { pal: WAP({ k: '#3a3440', f: '#1e1824' }), map: ['.......W', '......Wv', '.....Wv.', '....Wv..', '...Wv...', '.kkkk...', '..+f....', '..h.f...', '.k...f..'] },
+  sextonscrook: { pal: { s: '#a7adb8', S: '#eceaf2', h: '#a07a4a', y: '#d8d0bc' }, map: ['.sSs.', 's...s', 's...S', '....s', '....h', '....h', '....h', '....h', '....h', '....h', '....+', '....h', '....h', '...yy'] },
+  tollbell: { pal: { h: '#3a3440', y: '#a0703a', Y: '#e0a860', k: '#2a2230', g: '#5aa88a' }, map: ['...+...', '..hhh..', '..yyy..', '.yYyyg.', '.yYygy.', '.yyyyg.', 'yyygyyy', '...k...'] },
+  fontwatercenser: { pal: { h: '#4a3a30', y: '#d8c890', l: '#d8c890', v: '#5a8aa8', t: '#8cc4e6', g: '#e8f6ff' }, glow: '#8cc4e6', smoke: true, map: ['.hyy.', '.h..l', '.h..l', '.h.vtv', '.h.tgt', '.h..v.', '.h....', '.+....', '.h....', '.h....'] },
+  shroudcoat: { hood: true, pal: { c: '#c8c4b8', C: '#8e8a80', a: '#c8c4b8', d: '#6e6a62', s: '#dedad0', S: '#a8a498', h: '#c8c4b8', H: '#e8e4da', 4: '#8a8478' }, pattern: 'tatters' },
+  waxsealedvestments: { pal: { c: '#e8dcc0', C: '#b8a888', a: '#e8dcc0', d: '#8a7a5a', s: '#f2ead6', S: '#c8b898', 5: '#a83a2e' }, pattern: 'spots' },
+  headstonemantle: { pal: { 1: '#6a6e72', 2: '#4a4e52', 3: '#9aa0a4', 5: '#5a7a3a' }, pattern: 'rust' },
+  reliquaryplate: { pal: { 1: '#5a8a7a', 2: '#3a5a50', 3: '#8ac0b0', 4: '#e8c24a' }, pattern: 'trim' },
+  coffinnaillocket: { at: 'neck', dy: 1, map: ['k', 's', 's'], pal: { k: '#6b4a2e', s: '#a7adb8' } },
+  wickendring: { at: 'hand', top: true, dy: -1, map: ['o', 's'], pal: { o: '#ffb04a', s: '#c3c8d0' } },
 };
 // Icons for the Bag. Weapons use their own art; armour a shirt of its weight in its colours; accessories these.
 const ARMOUR_ICON = {
@@ -407,6 +418,8 @@ const ACC_ICON = {
   fencesledger: { map: ['.bbbbb.', '.bwwwwB', '.bwkkwB', '.bwwwwB', '.bwkkwB', '.bwwwwB', '.bbbbb.'], pal: { b: '#6b2b22', B: '#4a1c16', w: '#e8e0cc', k: '#7d7186' } },
   gravediggersspade: { map: ['...w...', '...w...', '...w...', '..sss..', '.sSsss.', '.sssss.', '..sss..'], pal: { w: '#6b4a2e', s: '#9aa0a8', S: '#e0e4ea' } },
   hollowcrown: { map: ['.......', 'y..y..y', 'yy.y.yy', 'yyyyyyy', 'ykyRyky', 'yyyyyyy', '.......'], pal: { y: '#e8c24a', k: '#2a1a30', R: '#c43b3b' } },
+  coffinnaillocket: { map: ['...k...', '..k.k..', '.s.s.s.', '.s.s.s.', '.s.s.s.', '.v.v.v.', '.......'], pal: { k: '#6b4a2e', s: '#a7adb8', v: '#5a5e66' } },
+  wickendring: { map: ['...o...', '...y...', '..www..', '..www..', '.sssss.', 's.....s', '.sssss.'], pal: { o: '#ffb04a', y: '#fff0c0', w: '#e8dcc0', s: '#a7adb8' } },
 };
 
 // The Gravecaller's thralls, seen from the side and facing the foes.
@@ -718,6 +731,9 @@ const UI_ICONS = {
   boss: { map: ["x...x...x", "xx.xxx.xx", "xxxxxxxxx", "xyxxyxxyx", "xxxxxxxxx", "xxxxxxxxx"], pal: { x: '#e8c24a', y: '#c43b3b' } },
   // stats and the hero sheet (from the screen mockups)
   coin: { map: ["..yyy..", ".yYyyy.", "yYyyyyy", "yyyddyy", "yyyyyyy", ".yyyyd.", "..ddd.."], pal: { y: '#e8c24a', Y: '#fff0a8', d: '#a8822a' } },
+  // the regions' Trophies (js/save.js MATERIALS): a tarnished coin for the ferryman, and a scrap of drowned bell
+  burialcoin: { map: ["..kkk..", ".kCcck.", "kCccvck", "kcc.cck", "kcvccck", ".kccck.", "..kkk.."], pal: { k: '#5a4a2a', c: '#a8925a', C: '#e0cc90', v: '#6a8a5a' } },
+  bellbronze: { map: ["...k...", "..bbb..", ".bBbbg.", ".bBbgb.", ".bbbbg.", "bbgbbbb", "...k..."], pal: { b: '#b0783a', B: '#f0b870', g: '#5aa88a', k: '#5a3a1a' } },
   star: { map: ["...y...", "...y...", "yyywyyy", ".yyyyy.", "..yyy..", ".y...y.", "y.....y"], pal: { y: '#f7d36a', w: '#fff3c8' } },
   boot: { map: ["...bb..", "...bb..", "...bb..", "...bbb.", "w..bbbb", ".w.bbbb", "......."], pal: { b: '#a8784a', w: '#b4a8b6' } },
   feather: { map: ["......w", "....wwW", "...wwW.", "..wwW..", ".wwW...", "wW.....", "w......"], pal: { w: '#c9e8ff', W: '#7aa6c8' } },

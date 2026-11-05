@@ -21,6 +21,7 @@
 //   basic(E,u,p)                 the id u's basic attack becomes       canUse(E,u,sk,p)  false forbids a skill
 //   used(E,u,sk,p,c)             after u used a skill                  dot / dotOut / dotIn  damage over time
 //   healIn(E,u,src,p)            × healing u receives                  stealMul(E,u,t,p)  × gold u steals
+//   pushMul(E,u,sk,p)            × push-backs u gives                  pushIn(E,u,src,p)  × push-backs u takes
 //   hook(E,u)                    true: u's melee skills work from the back row (Halberdier's Hook)
 // Global hooks watch everyone (o is the owner): aIn, aOut, aDodge, aCost, aStat, aFall, aSave, aHurt, aStatus, aTurn,
 // aMiss, aRes, aNoCrit, and aAim(E,o,u,p,plan): a unit o draws u's single-target attack to (the Moth-lure Lantern).
@@ -791,6 +792,7 @@ function simulate(setup) {
     if (src && src.side !== t.side && !lands(src, t, SIM.MOVE_RES, 100)) { resisted(t, 'push'); return false; }
     let m = 1;
     if (src) for (const x of src.h.pushMul || []) m *= x.sk.pushMul(E, src, E.cur.sk || {}, x.p);
+    for (const x of t.h.pushIn || []) m *= x.sk.pushIn(E, t, src, x.p);
     t.next += interval(t) * frac * m;
     emit({ t: 'delay', who: t.id, queue: projectQueue() });
     if (src) fire(src, 'pushed', t);

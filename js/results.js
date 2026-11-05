@@ -145,7 +145,7 @@ const Results = (() => {
     const tiles = [];
     const tile = (cls, img, count, label, tap) => { const el = h('button', { class: 'rs-it' + (cls ? ' ' + cls : ''), type: 'button', 'aria-label': label, onclick: () => { sfx('click'); tap(); } }, img, count != null ? h('em', { text: count }) : null); tiles.push(el); return el; };
     if (L.gold) tile('', ico('coin'), short(L.gold), `${fmt(L.gold)} gold`, () => toast(L.clear ? `${fmt(L.gold)} gold: ${fmt(L.spoils)} from the foes, ${fmt(L.clear)} for the clear` : `${fmt(L.gold)} gold`));
-    for (const mt of MATERIALS) if (L.mats[mt.id]) tile('', ico(matIcon(mt.id)), short(L.mats[mt.id]), `${mt.name} ×${L.mats[mt.id]}`, () => toast(`${mt.name} ×${fmt(L.mats[mt.id])}`));
+    for (const mt of MATERIALS) if (L.mats[mt.id]) tile('', ico(matIcon(mt.id)), short(L.mats[mt.id]), `${mt.name} ×${L.mats[mt.id]}`, () => toast(`${mt.name} ×${fmt(L.mats[mt.id])}${mt.trophy ? '. ' + matUse(mt.id) : ''}`));
     for (const id in L.items) if (ITEMS[id] && L.items[id]) tile('', ico(ITEMS[id].icon), String(L.items[id]), `${ITEMS[id].name} ×${L.items[id]}`, () => toast(`${ITEMS[id].name}: ${ITEMS[id].tip}`));
     for (const g of L.gear) if (GEAR[g.id]) tile('gear r-' + GEAR[g.id].rarity + (g.sold ? ' sold' : ''), gearIco(g.id), g.sold ? 'sold' : null, GEAR[g.id].name, () => gearTap(g));
     const ids = [...new Set(L.unlocks || [])].filter(id => UNLOCKS[id] && Guide.newThing(id));

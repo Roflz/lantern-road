@@ -1576,6 +1576,22 @@ The first five Fine accessories are the design's own examples.
 | Marshal's Ashen Blade | Sword: Sellsword | The Burnt Marshal (IV) | +12 Power. Each hit also deals 25% of its damage to the other front-row foe. Loses 2% of max health at the start of each turn. |
 | The Hollow Crown | Accessory | The Hollow King (V) | Every stat +10%. Fatigue gained ×2. |
 
+### Region gear *(tune)*
+Each region has its own line of five pieces, beside the 92 items above, which drop only in that region (`docs/regions-study.md` §3, approved 2026-11-05). Regions I and II are built; III–V wait until those two have been play-tested. The item card names a piece's region ("Gravefields line").
+
+| Piece | Region | Slot | Rarity | Stats | Effect |
+|---|---|---|---|---|---|
+| Pall-bearer's Sabre | I | Sword: Sellsword | Fine | +6 Power | +25% damage while an ally has fallen. Speed −1. |
+| Sexton's Crook | I | Bone staff: Gravecaller | Fine | +5 Power, +8 Mana | Restore 8 mana on a kill. Max health −8%. |
+| Shroud Coat | I | Light armour | Fine | +12 Health, +5% Dodge | The first hit each battle deals half damage. Fatigue gained +10%. |
+| Headstone Mantle | I | Heavy armour | Rare | +24 Health, +4 Defense | At half health or less, Fortified (20% less damage taken). Speed −2. |
+| Coffin-nail Locket | I | Accessory | Rare | +15 Health | +25% Bleed resistance. Crit −3%. |
+| Tollbell | II | Handbell: Bellringer | Rare | +4 Power, +12 Mana | Skills cost 10% less mana. Healing done −10%. |
+| Font-water Censer | II | Censer: Pilgrim | Fine | +3 Power, +10 Mana | Healing done +15%. Max health −5%. |
+| Wax-sealed Vestments | II | Light armour | Fine | +14 Health, +12 Mana | +30% Debuff resistance. Dodge −4%. |
+| Reliquary Plate | II | Heavy armour | Rare | +20 Health, +5 Defense | Push-backs on the wearer are halved. Speed −2. |
+| Wick-end Ring | II | Accessory | Rare | +6 Mana | +3 mana at the start of each turn. Defense −2. |
+
 ## 7. Fatigue and content
 
 Fatigue is **+1 for each turn a character takes**, and nothing else adds any for now *(tune)*. That's your rule, from 2026-11-04. The home-base spec (section 6) sets the thresholds and recovery, and the campaign spec (section 5.8) what each stage costs. A stage costs the turns its battle takes, so over a long trip two things decide how tired a character gets: how many turns they take, and how quickly the party ends its battles.

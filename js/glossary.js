@@ -200,6 +200,7 @@ const GLOSSARY = (() => {
     fine: { name: 'Fine', icon: 'star', line: 'A step above Common, and worth more gold.', see: ['rarity'] },
     rare: { name: 'Rare', icon: 'star', line: 'Hard to find, and among the strongest gear on the road.', see: ['rarity'] },
     relic: { name: 'Relic', icon: 'star', line: 'A boss’s one-of-a-kind treasure: you can only ever own one.', more: 'Each boss gives its Relic on the first clear. Relics never sell, and always find room in the Bag.', see: ['boss', 'rarity'] },
+    region_gear: { name: 'Region gear', icon: 'lantern', line: 'Gear that drops only in its own region; its card names the region.', more: 'A region’s gear rolls try its own line first: 40% of them on the road, 70% at elites, every one at its boss.', see: ['gear', 'region', 'trophy'] },
     item_level: { name: 'Item level', icon: 'star', line: 'The level of the stage a piece came from; higher means stronger stats.', more: 'Health, Mana, Power and Defence grow with it. The rest stay as they are.', see: ['gear', 'sell'] },
     bag: { name: 'Bag', icon: 'bag', line: 'Where unworn gear and party items wait; it holds 60 pieces of gear.', more: 'When it’s full, new gear sells where it drops, so a full Bag never sends the party home.', see: ['sell', 'loadout'] },
     sell: { name: 'Sell', icon: 'coin', line: 'Trade gear you don’t need for gold: rarer, higher-level pieces fetch more.', more: 'Party items sell for 30% of their Shop price. Relics never sell.', see: ['gold', 'bag'] },
@@ -353,6 +354,9 @@ const GLOSSARY = (() => {
     heartwood: { name: 'Heartwood', icon: 'wood', line: 'Thornwood’s material, for raising some buildings past level 2.', more: 'The Scavenger Camp, Barracks, Shrine and Hexing Stone need it from level 3.', see: ['thornwood', 'home_material'] },
     cinder_iron: { name: 'Cinder Iron', icon: 'iron', line: 'The Ashen Keep’s material, for raising some buildings past level 2.', more: 'The Salvage Pit, Whetstone and Ossuary need it from level 3.', see: ['ashenkeep', 'home_material'] },
     throne_tallow: { name: 'Throne Tallow', icon: 'tallow', line: 'The Hollow Throne’s material, for raising some buildings past level 2.', more: 'The Masters’ Hall and Bell Tower need it from level 3.', see: ['hollowthrone', 'home_material'] },
+    trophy: { name: 'Trophy', icon: 'burialcoin', line: 'A region’s rarer material, for making and remaking its gear at the Smithy.', more: 'Its elites and boss always drop it, and a few of its own foes sometimes. The stage sheet shows which.', see: ['region_gear', 'burial_coin', 'bell_bronze'] },
+    burial_coin: { name: 'Burial Coin', icon: 'burialcoin', line: 'The Gravefields’ Trophy, for making and remaking Gravefields gear at the Smithy.', more: 'Gravediggers and Mourners sometimes drop it; elites and the Sexton always do. The Smithy opens after the Sexton.', see: ['trophy', 'gravefields'] },
+    bell_bronze: { name: 'Bell Bronze', icon: 'bellbronze', line: 'The Drowned Chapel’s Trophy, for making and remaking its gear at the Smithy.', more: 'Bell Wraiths and Silent Sisters sometimes drop it; elites and the Drowned Bishop always do.', see: ['trophy', 'drownedchapel'] },
   });
 
   return G;

@@ -440,7 +440,7 @@ const Base = (() => {
   function scavRegions(s = store()) {
     const x = rec('scavengercamp', s);
     if (!x) return [];
-    const [a, b] = String(x.focus || 'r0').split(',').map(t => clamp(parseInt(t.replace('r', ''), 10) || 0, 0, MATERIALS.length - 1));
+    const [a, b] = String(x.focus || 'r0').split(',').map(t => clamp(parseInt(t.replace('r', ''), 10) || 0, 0, MATERIALS.filter(m => !m.trophy).length - 1));
     const out = [reached(a, s) ? a : 0];
     if (hasChoice('scavengercamp', 'widenet', s) && b != null && reached(b, s) && b !== out[0]) out.push(b);
     return out;
@@ -545,7 +545,7 @@ const Base = (() => {
     }
     return out;
   }
-  const matIcon = m => ({ bone_dust: 'bone', chapel_wax: 'wax', heartwood: 'wood', cinder_iron: 'iron', throne_tallow: 'tallow' }[m] || 'bone');
+  const matIcon = m => ({ bone_dust: 'bone', chapel_wax: 'wax', heartwood: 'wood', cinder_iron: 'iron', throne_tallow: 'tallow', burial_coin: 'burialcoin', bell_bronze: 'bellbronze' }[m] || 'bone');
   // ── the road's tolls (tutorial study §7, pick 4): travellers pay to use the road you've cleared, even while you're
   // away. Each cleared stage earns BASE.TOLL gold an hour, stored up to BASE.STORE hours like an idle building's
   // output. The Toll House (from 1-5) adds its own on top. Collect, and "While you were away", take them.

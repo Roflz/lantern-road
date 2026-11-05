@@ -27,12 +27,12 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | [Battle](#battle) | 36 |
 | [Rules](#rules) | 56 |
 | [Heroes](#heroes) | 35 |
-| [Gear](#gear) | 19 |
+| [Gear](#gear) | 20 |
 | [The Hearth](#the-hearth) | 36 |
 | [The road](#the-road) | 25 |
 | [Statuses](#statuses) | 57 |
-| [Resources](#resources) | 7 |
-| **All** | **279** |
+| [Resources](#resources) | 10 |
+| **All** | **283** |
 
 ## The basics
 
@@ -206,6 +206,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Fine** | A step above Common, and worth more gold. |  | `fine` · star |
 | **Rare** | Hard to find, and among the strongest gear on the road. |  | `rare` · star |
 | **Relic** | A boss’s one-of-a-kind treasure: you can only ever own one. | Each boss gives its Relic on the first clear. Relics never sell, and always find room in the Bag. | `relic` · star |
+| **Region gear** | Gear that drops only in its own region; its card names the region. | A region’s gear rolls try its own line first: 40% of them on the road, 70% at elites, every one at its boss. | `region_gear` · lantern |
 | **Item level** | The level of the stage a piece came from; higher means stronger stats. | Health, Mana, Power and Defence grow with it. The rest stay as they are. | `item_level` · star |
 | **Bag** | Where unworn gear and party items wait; it holds 60 pieces of gear. | When it’s full, new gear sells where it drops, so a full Bag never sends the party home. | `bag` · bag |
 | **Sell** | Trade gear you don’t need for gold: rarer, higher-level pieces fetch more. | Party items sell for 30% of their Shop price. Relics never sell. | `sell` · coin |
@@ -357,6 +358,9 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Heartwood** | Thornwood’s material, for raising some buildings past level 2. | The Scavenger Camp, Barracks, Shrine and Hexing Stone need it from level 3. | `heartwood` · wood |
 | **Cinder Iron** | The Ashen Keep’s material, for raising some buildings past level 2. | The Salvage Pit, Whetstone and Ossuary need it from level 3. | `cinder_iron` · iron |
 | **Throne Tallow** | The Hollow Throne’s material, for raising some buildings past level 2. | The Masters’ Hall and Bell Tower need it from level 3. | `throne_tallow` · tallow |
+| **Trophy** | A region’s rarer material, for making and remaking its gear at the Smithy. | Its elites and boss always drop it, and a few of its own foes sometimes. The stage sheet shows which. | `trophy` · burialcoin |
+| **Burial Coin** | The Gravefields’ Trophy, for making and remaking Gravefields gear at the Smithy. | Gravediggers and Mourners sometimes drop it; elites and the Sexton always do. The Smithy opens after the Sexton. | `burial_coin` · burialcoin |
+| **Bell Bronze** | The Drowned Chapel’s Trophy, for making and remaking its gear at the Smithy. | Bell Wraiths and Silent Sisters sometimes drop it; elites and the Drowned Bishop always do. | `bell_bronze` · bellbronze |
 
 <!-- glossary:end -->
 
@@ -396,20 +400,20 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 586 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 405 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 592 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
-| Come home when | Return when… | The stage sheet’s chips. | js/map.js 374 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 576, 582 · js/firstsession.js 109 · js/guide.js 92, 98 · js/main.js 377 |
+| Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 109 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 317 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 344 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 324 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 534, 688 · js/hero.js 31 · js/items.js 53 · js/map.js 317 |
-| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 505 |
-| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 510 · js/rules.js 288, 401, 717 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 58 · js/map.js 319 |
+| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 506 |
+| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 372 |
-| straight apostrophes | curly ones (’) |  | js/bag.js 203 · js/data.js 295 |
+| straight apostrophes | curly ones (’) |  | js/bag.js 205 · js/data.js 295 |
 | Ossuary, the Gravecaller’s first path | Charnel Host | The Boneward path ends in Charnel Fortress. | js/classes-late.js: CLASSES.gravecaller.paths[0] |
 | Surgeon, the Barber-Surgeon’s second path | Sawbones |  | js/classes-late.js: CLASSES.surgeon.paths[1] |
 | Bastion, the Warden’s second path | Unbroken | Unbroken is also a skill on that path, and the status the skill gives. | js/classes.js: CLASSES.warden.paths[1] |
