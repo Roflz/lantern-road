@@ -199,7 +199,7 @@ const HeroSheet = (() => {
   }
   function build(v) {
     const c = char();
-    if (!c) { v.replaceChildren(); return; }
+    if (!c) { v.replaceChildren(); if (App.current === 'hero') setTimeout(() => { if (App.current === 'hero' && !char()) App.go('home'); }); return; } // dismissed, or a cloud save without them
     const keepScroll = [...v.querySelectorAll('[data-scroll]')].map(el => [el.dataset.scroll, el.scrollTop]);
     v.replaceChildren(...top(c), arch(c), ui.over ? overPanel(c) : panel(c));
     for (const [k, y] of keepScroll) { const el = v.querySelector(`[data-scroll="${k}"]`); if (el) el.scrollTop = y; }
@@ -582,7 +582,6 @@ const HeroSheet = (() => {
       return ui.view;
     },
     refresh() { draw(); },
-    enter() { App.rest(); },
     leave() { if (ui.stage) ui.stage.stop(); ui.stage = null; ui.archEl = null; ui.archKey = null; ui.pending = {}; ui.over = null; ui.tryOn = null; ui.worn = null; },
   });
   // playing: a skill is being watched in the arch now (the tools check it)

@@ -19,7 +19,7 @@ that changes a screen.
 | 5 Formation and the Party screen | `screen('party')` in `js/app.js`; `.prow`, `.pslot`, `.rrow` in `css/app.css`; roster rows (`App.actions.rosterRow`) in `js/camp.js` | Old layout; Formation is being built |
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
-| 8 The hero sheet | `js/sheet.js`, `js/stage.js` (the sprite stage), `css/sheet.css` | Old layout |
+| 8 The hero | `js/sheet.js` (`HeroSheet`, the `'hero'` screen), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`) | Redesigned (`docs/mockups/hero.html`, 1.32); checked by `tools/hero_check.py` |
 | 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout |
 | 10 Buildings | `js/buildings.js`, `css/base.css` | Old layout |
 | 11 Tactics | `js/rules.js` (the model and the editor), `css/rules.css` | Old layout |
@@ -53,10 +53,10 @@ that changes a screen.
 This code still runs, but a redesign will replace it. Read it as old behaviour, not as the design.
 
 - **The battle canvas's `'camp'` mode** (`Battle.idle` in `js/battle.js`): a road scene seen from behind the party, with
-  heroes in rows looking up the road. The Road map, Party, Bag and hero sheet call it as they open (`App.rest()`), and
+  heroes in rows looking up the road. The Road map, Party and Bag call it as they open (`App.rest()`), and
   it shows faintly behind their 95%-opaque pages. It is not the Hearth (the Hearth holds it undrawn, `Battle.hold`).
   Only this mode uses `S.rows`, `COL`, `field()`'s camp half, `place()`'s second half, the back-view hero sprites in
-  `sprOf` and `drawGround`'s road. It becomes dead once those four screens leave the column; then remove it, with `restScene` in
+  `sprOf` and `drawGround`'s road. It becomes dead once those three screens leave the column; then remove it, with `restScene` in
   `js/app.js`.
 - **The portrait column** (`#frame.column`, `Frame.column`) and the shell's top bar and tab bar (`#shell`, `css/app.css`),
   for the screens marked "Old layout" above.
@@ -116,7 +116,8 @@ because those builds may already have removed or reused it.
 | `js/app.js` | `placeholder` (the "Placeholder" note helper) | No callers: `grep -n "placeholder(" js/*.js` finds none |
 | `js/app.js` | `showAway`'s own sheet, after `if (actions.away) return actions.away(ms)`, and `awayGains` (and its export) | `js/camp.js` always sets `App.actions.away` (`camp.js` is in `index.html`), so the fallback never runs. Nothing pushes to `awayGains`: `grep -rn awayGains js tools` finds only `js/app.js` |
 | `css/map.css` | `.ts-unl` | No element has the class: `grep -rn ts-unl js` finds nothing (its last use went in `aba4b1e`) |
-| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map, Party, Bag and hero sheet leave the column. That is not yet; they still call it |
+| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map, Party and Bag leave the column. That is not yet; they still call it |
+| `css/sheet.css`, `css/gear.css` | the old hero sheet's styles: everything in `css/sheet.css` but `.stg-*` (the sprite stage) and the `.hs-` classes the Bag and the prototype tools still use (`hs-banner`, `hs-card`, `hs-k`, `hs-kv`, `hs-row`, `hs-tag`, `hs-why`); `.hs-stage`, `.hs-ov` and `.gr-try` in `css/gear.css` | The hero screen (`js/sheet.js`) draws with `css/hero.css` now: `grep -on "hs-[a-z]*" js/*.js` finds only those seven, in `js/bag.js` and `js/proto.js` |
 
 No dead code was found in `js/camp.js`, `js/campscene.js`, `css/camp.css`, `js/map.js` or `js/guide.js`. Their
 exports that no other file reads (`Camp.sceneState`, `CampScene.weightOf` and the like) are used inside their own
