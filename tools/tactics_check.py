@@ -37,6 +37,7 @@ SETUP = """
   };
   closeScreen();
   s.settings.tips = false;
+  if (typeof FirstSession !== 'undefined') FirstSession.skip(); // Wick's first session: done (tools/guide_check.py walks it)
   const ids = {};
   for (const [k, cls, lv] of [['fulke', 'sellsword', 6], ['brand', 'warden', 5], ['isolde', 'crossbowman', 4], ['agnes', 'pilgrim', 6]])
     ids[k] = P(cls, k[0].toUpperCase() + k.slice(1), lv).id;

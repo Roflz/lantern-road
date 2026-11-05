@@ -55,6 +55,11 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
   makes, so `tap()` can't be used while the session runs.
 
 ## Gotchas
+- A check (or any code) that builds a save after the title must end the session with `FirstSession.skip()`: by then
+  Wick's first step is already up. Setting `save.guide.done` alone now takes that step down within a quarter of a
+  second (the tick closes a forced step whose session is over), but `skip()` does it at once. While a forced step is
+  up, a mouse press still clicks through on its pointerup (the step ends there), but a finger's press loses its tap:
+  the held-back touchstart cancels the click. That's how PR #31 broke touch taps in `hero_check` and `tactics_check`.
 - A forced step's `until()` is checked every frame; a `target` step without one ends at the press's pointerup, before
   the click lands, so give every tap step an `until()`.
 - Column screens (Party, the hero sheet) scroll: a step there scrolls its target into view first (`seen()`).

@@ -164,14 +164,16 @@ const FirstSession = (() => {
     const pause = o.pause && typeof Battle !== 'undefined' && Battle.busy;
     if (pause) Battle.setPaused(true);
     quietSince = 0;
+    const forced = !replaying;
     H = Wick.show(Object.assign({}, o, {
       onDone: () => {
         H = null;
         if (pause && Battle.busy && Battle.paused) { Battle.play(); if (typeof syncControls === 'function') syncControls(); }
-        if (replaying) { const s = st(); if (s.guide.replay) { s.guide.replay[step.id] = 1; Save.commit(); } }
-        else advance(step.id);
+        if (!forced) { const s = st(); if (s.guide.replay) { s.guide.replay[step.id] = 1; Save.commit(); } }
+        else if (on()) advance(step.id);
       },
     }));
+    H.forced = forced;
   }
   function showStep(step) {
     let o = null;
@@ -183,6 +185,9 @@ const FirstSession = (() => {
   // Every quarter of a second: is it the next step's moment?
   function tick() {
     const s = st();
+    // A forced step up for a save whose session is over (another save took its place: a cloud copy, another server,
+    // or a tool's) goes at once: its gate would hold back every press, and on touch a held-back press loses its tap.
+    if (s && H && H.forced && !on()) { H.close(); return; }
     if (!s || H || titleUp()) return;
     if (!s.guide.done) {
       replaying = false;
