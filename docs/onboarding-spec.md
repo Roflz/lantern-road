@@ -89,9 +89,9 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 ## 6. The guide
 
 ### 6.1 Who
-- A character who tends the camp's fire and knows the road. **Working name: Old Wick, the lamp-keeper.**
+- **Wick,** the old man who keeps the Hearth, the inn at the gate. He fled the old kingdom as a boy, and knows the road (`docs/story.md`).
 - He sits by the fire, has a portrait for his speech bubbles, and reacts when tapped, like the heroes.
-- His name, look and voice are yours to choose.
+- His voice and lines follow `docs/story.md`.
 
 ### 6.2 How a guided step looks
 - The screen dims except the target, which gets a soft lantern glow and a pointing hand.
@@ -108,6 +108,8 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 - After Region I it simply points at the frontier stage.
 
 ### 6.4 The first session: forced, about 10 minutes
+
+**Being revised:** `docs/tutorial-study.md` §5 rewrites this session for the story, and waits on your approval. Below is the build as it stands.
 
 **Built** (the `guide` build, 2026-11-04): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts and the hand), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's lanterns). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game.
 
