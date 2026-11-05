@@ -8,8 +8,8 @@
 //   5    the road: "Each lantern is a stage", then the card's Set out
 //   6    battle 1-1, paused twice: the turn order at the first turn, then speed and skip
 //   7    the results popup: the first level, the fatigue bar, then the Hearth button
-//   8–9  the hero's rules: Heroes, the hero, the Rules tab; how rules are read; back to the Hearth by its tab
-//   10   1-2: the turn order names the rule that chose the move (a line that doesn't stop the battle)
+//   8–9  the hero's tactics: Heroes, the hero, the Tactics tab; how tactics are read; back to the Hearth by its tab
+//   10   1-2: the turn order names the tactic that chose the move (a line that doesn't stop the battle)
 //   11   the Recruit Board's free recruit, hired the same way, who waits at the fire
 //   12   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done, and Wick's goodbye
 // Then the goal tracker at the Hearth takes over. The session runs once per save (save.guide: the step under way, and
@@ -83,17 +83,16 @@ const FirstSession = (() => {
     { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one brings a stat point.' : 'Battles bring XP. A full bar is a level.' }) },
     { id: 'fatigue', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=fatigue]', pad: 5, say: 'Every turn tires a hero a little. They rest at the Hearth.' }) },
     { id: 'home', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
-    // 8–9: the hero's rules
-    { id: 'heroes', phase: 'rules', at: atHearth, show: () => ({ target: '[data-tut=hearth-heroes]', round: true, say: 'Your hero fights by rules. Let’s look at them.', tap: 'target', until: () => App.current === 'party' }) },
+    // 8–9: the hero's tactics (the anchors keep their names: hero-tab-rules, hero-rules)
+    { id: 'heroes', phase: 'rules', at: atHearth, show: () => ({ target: '[data-tut=hearth-heroes]', round: true, say: 'Your hero fights by tactics. Let’s look at them.', tap: 'target', until: () => App.current === 'party' }) },
     { id: 'hero', nav: true, phase: 'rules', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=party-hero]'), show: () => { seen('[data-tut=party-hero]'); return { target: () => q('[data-tut=party-hero]'), pad: 3, tap: 'target', until: () => App.current === 'hero' }; } },
     { id: 'tab', nav: true, phase: 'rules', at: () => App.current === 'hero' && !sheetOpen() && !!q('[data-tut=hero-tab-rules]'), show: () => ({ target: '[data-tut=hero-tab-rules]', pad: 3, tap: 'target', until: rulesTab }) },
-    { id: 'rules', phase: 'rules', at: () => App.current === 'hero' && rulesTab() && !!q('[data-tut=hero-rules]'), show: () => (seen('[data-tut=hero-rules]'), { target: '[data-tut=hero-rules]', pad: 4, arrow: false, say: 'Rules run from the top. The first one that fits is used.' }) },
-    { id: 'basic', phase: 'rules', at: () => App.current === 'hero' && rulesTab() && !!q('[data-tut=hero-basic]'), show: () => (seen('[data-tut=hero-basic]'), { target: '[data-tut=hero-basic]', pad: 4, say: 'When none fits, the basic attack.' }) },
+    { id: 'rules', phase: 'rules', at: () => App.current === 'hero' && rulesTab() && !!q('[data-tut=hero-rules]'), show: () => (seen('[data-tut=hero-rules]'), { target: '[data-tut=hero-rules]', pad: 4, arrow: false, say: 'Tactics run from the top. The first one that fits is used.' }) },
     { id: 'tabhome', nav: true, phase: 'rules', at: () => (App.current === 'hero' || App.current === 'party') && !sheetOpen(), show: () => ({ target: '[data-tut=tab-home]', pad: 2, tap: 'target', until: () => App.current === 'home' }) },
     // 10: battle 1-2
     { id: 'setout2', nav: true, phase: 'rules', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', round: true, say: 'On to 1-2.', tap: 'target', until: () => { const c = camp(); return !!c && c.onRoad; } }) },
     { id: 'go2', nav: true, phase: 'rules', at: onRoadCard, show: () => ({ target: '[data-tut=road-go]', round: true, tap: 'target', until: () => App.current === 'battle' }) },
-    { id: 'why', phase: 'rules', battle: 1, show: () => ({ target: '[data-tut=turn-order] .flag.now .why', pad: 4, dim: false, arrow: false, say: 'The turn order names the rule that chose the move.', small: true, side: 'l', tap: 'free', ms: 6500 }) },
+    { id: 'why', phase: 'rules', battle: 1, show: () => ({ target: '[data-tut=turn-order] .flag.now .why', pad: 4, dim: false, arrow: false, say: 'The turn order names the tactic that chose the move.', small: true, side: 'l', tap: 'free', ms: 6500 }) },
     { id: 'new', phase: 'rules', at: () => results(1) && !!q('[data-tut=new]'), show: () => ({ target: '[data-tut=new]', pad: 4, say: 'The Recruit Board is open.' }) },
     { id: 'home2', nav: true, phase: 'rules', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
     // 11: the free recruit
@@ -216,7 +215,7 @@ const FirstSession = (() => {
   };
 
   // The battle's events, as they play (js/guide.js passes them on): 1-1 stops at its first turn for the turn order,
-  // and two turns later for speed and skip; 1-2 names the rule that chose a move.
+  // and two turns later for speed and skip; 1-2 names the tactic that chose a move.
   function battleEvent(e, i) {
     const s = st();
     if (!s) return;
