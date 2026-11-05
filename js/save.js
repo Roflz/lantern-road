@@ -16,7 +16,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
@@ -219,7 +219,20 @@ const MIGRATIONS = {
     if (!isObj(old.unlocks)) old.unlocks = {};
     return old;
   },
+  // Version 6 (the gear study's Relic fix): a Relic comes at its boss's level, not level 1, so a Relic already owned,
+  // in the Bag or worn, rises to it.
+  6: old => {
+    for (const x of savedPieces(old)) if (GEAR[x.id].rarity === 'relic') x.lv = Math.max(Number(x.lv) || 1, Items.relicLevel(x.id));
+    return old;
+  },
 };
+// Every gear piece in a saved state, in the Bag and worn: the plain objects, to change in place.
+function savedPieces(d) {
+  const out = [], ok = x => isObj(x) && GEAR[x.id];
+  if (isObj(d.inventory) && Array.isArray(d.inventory.items)) out.push(...d.inventory.items.filter(ok));
+  for (const c of Array.isArray(d.roster) ? d.roster : []) if (isObj(c) && isObj(c.gear)) for (const k of SLOTS) if (ok(c.gear[k])) out.push(c.gear[k]);
+  return out;
+}
 function upgrade(d) {
   if (!isObj(d)) throw new Error('not a save');
   let v = Number.isInteger(d.v) ? d.v : 0;

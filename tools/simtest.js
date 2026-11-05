@@ -520,6 +520,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(!over.added && over.sold === Items.sellPrice(Items.make('notchedsword', 5)) && S0.currencies.gold === g0 + over.sold, 'a full Bag sells new gear on the spot');
   const relic = Items.grantRelic(S0, 'gravediggersspade');
   ok(relic && S0.inventory.items.length === ITEM.BAG + 1 && !Items.grantRelic(S0, 'gravediggersspade') && Items.sellPrice(relic) === 0 && !Items.sell(S0, relic.uid), 'a Relic always finds room, comes once, and does not sell');
+  ok(relic.lv === 10 && RELICS.every(id => { const b = STAGES.find(st => st.boss && st.region === GEAR[id].region); return b && Items.relicLevel(id) === b.level; }), `a Relic comes at its boss's level (the Spade at ${relic.lv}; ${RELICS.map(Items.relicLevel).join(', ')})`);
   const sw = S0.roster.find(c => c.cls === 'sellsword'), hx = S0.roster.find(c => c.cls === 'hexblade');
   const blade = Items.make('headsmansblade', 4); S0.inventory.items.push(blade);
   ok(!Items.equip(S0, hx, blade.uid), 'a Hexblade can’t wield a sword');
@@ -544,6 +545,29 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const res = simulate({ seed: 3, party: [null, null, sp, null, null, null], foes: STAGES[0].foes, partyRules: [], loadout: [] });
   ok(res.start.find(u => u.side === 0).look[2] === 'hollowcrown', 'the battle log carries the look');
   console.log('Item model checked: counts, item levels, region and rank odds, starting weapons, the Bag’s 60, selling, Relics, equipping, combined classes, Plate-born, save round-trip.');
+}
+
+// ── A stall the gear fuzz found (2-15, level 107): a lone Warden who recasts Unbroken sits at 1 health while the Drowned
+// Acolyte heals the foes, until the action cap. From the surge (round 40) a foe's blow breaks through Unbroken.
+{
+  const rng = makeRng(23), c = Hero.create('warden', 'uw', { rng, level: 103 });
+  c.tiers.warden = HERO.TIERS;
+  for (const sid of [CLASSES.warden.starter, ...CLASSES.warden.tree.flat()]) c.skills[sid] = 5;
+  c.lessons.skill = 2;
+  c.equip = ['unbreak', 'lastbastion', 'guard', 'shieldtoss'];
+  c.gear = { weapon: Items.make('ironmace', 12), armor: Items.make('sellswordsjack', 79), accessory: Items.make('earstoppers', 111) };
+  const rules = [{ if: 'always', do: 'unbreak' }, { if: 'ally_hp_lt', n: 50, do: 'lastbastion' }, { if: 'always', do: 'guard' }, { if: 'foe_lowest', do: 'shieldtoss' }];
+  const stage = STAGES.find(x => x.id === '2-15');
+  let stalls = 0, ended = 0, rounds = 0;
+  for (let i = 0; i < 12; i++) {
+    const res = simulate({ seed: 9000 + i, party: [Hero.spec(c, rules), null, null, null, null, null], foes: stage.foes, level: 107, partyRules: PARTY_RULES.rules, loadout: ['draught', 'salts', 'tincture', 'lampoil'] });
+    check(res, stage);
+    if (res.stalled) stalls++;
+    if (res.actions < SIM.MAX_ACTIONS) ended++;
+    rounds = Math.max(rounds, res.rounds);
+  }
+  ok(!stalls && ended === 12 && rounds <= SIM.ENRAGE_SURGE + 5, `a lone Unbroken Warden against the Acolyte's heals: every battle ends soon after the surge (${stalls} stalls, longest ${rounds} rounds)`);
+  console.log(`A lone Unbroken Warden on 2-15 at level 107: 12 battles, ${stalls} stalls, the longest ${rounds} rounds.`);
 }
 
 // ── The Hero model
@@ -609,7 +633,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 5, 'save version 5');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 6, 'save version 6');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -628,7 +652,15 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v3.v = 3; delete v3.unlocks; v3.campaign = { cleared: ['1-1', '1-2', '2-3'], best: { '2-3': 9 }, current: { stage: 5, seed: 3 } }; v3.roster[0].level = 9; v3.roster[0].fatigue = 40;
   const s4 = upgrade(v3);
   ok(s4.v === SAVE_VERSION && !s4.campaign.cleared.length && !Object.keys(s4.campaign.best).length && !s4.campaign.current && s4.campaign.trip === null && s4.campaign.road.keepGoing === true && s4.campaign.rebuilt && isObj(s4.unlocks) && s4.roster[0].level === 9 && s4.roster[0].fatigue === 0, 'version 3 → 4: the rebuilt road starts at 1-1, and heroes keep their levels');
-  console.log('Save migration checked: version 1 → 5 (characters, their rules, gear, the road, the camp), 2 → 5, 3 → 5, and 0 → 5.');
+  // version 5 → 6: a Relic owned at level 1, in the Bag or worn, rises to its boss's level; other pieces stay
+  const v5 = JSON.parse(JSON.stringify(protoState()));
+  v5.v = 5;
+  v5.inventory.items = [{ uid: 'r1', id: 'bishopscrozier', lv: 1 }, { uid: 'n1', id: 'notchedsword', lv: 3 }, { uid: 'r2', id: 'hollowcrown', lv: 120 }];
+  const lamp = v5.roster.find(c => c.cls === 'lamplighter'); lamp.gear.accessory = { uid: 'r3', id: 'gravediggersspade', lv: 1 };
+  const s6 = upgrade(v5), bagLv = id => s6.inventory.items.find(x => x.id === id).lv;
+  ok(s6.v === 6 && bagLv('bishopscrozier') === 30 && bagLv('notchedsword') === 3 && bagLv('hollowcrown') === 120 && s6.roster.find(c => c.cls === 'lamplighter').gear.accessory.lv === 10,
+    `version 5 → 6: owned Relics rise to their boss's level (${JSON.stringify(s6.inventory.items)})`);
+  console.log('Save migration checked: version 1 → 6 (characters, their rules, gear, the road, the camp, Relics), 2 → 6, 3 → 6, 5 → 6 and 0 → 6.');
 }
 
 // ── The Tactics model
@@ -982,14 +1014,14 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     v4.roster[0].lessons = { skill: 0, rule: 1 };
     const s5 = upgrade(v4);
     const elite = STAGES.find(x => x.id === '1-9').kind === 'elite';
-    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 5 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
+    ok(s5.v === SAVE_VERSION && SAVE_VERSION === 6 && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
     ok(s5.base.legacySlots.party === 4 && s5.base.legacySlots.loadout === 3 && s5.roster[0].lessons.rule === 1, 'slots opened in the prototype stay');
     ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !s5.board.free && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
     const n = JSON.parse(JSON.stringify(s5));
     ok(JSON.stringify(upgrade(n).renown) === JSON.stringify(s5.renown), 'a version 5 save loads unchanged');
     const v3 = JSON.parse(JSON.stringify(protoState())); v3.v = 3; v3.campaign.cleared = ['1-1', '2-3'];
     const r3 = upgrade(v3);
-    ok(r3.v === 5 && r3.renown.points === 0 && r3.roster.length === 6, 'a version 3 save passes through the rebuilt road to the camp, with no Renown for the old road');
+    ok(r3.v === SAVE_VERSION && r3.renown.points === 0 && r3.roster.length === 6, 'a version 3 save passes through the rebuilt road to the camp, with no Renown for the old road');
   }
   console.log('Home base checked: a new game, the board, Region I’s gold, rest and beds, battle fatigue, idle buildings and time away, costs, choices, tearing down, Renown, the Hall, the Shrine, the Tactician, the Shop, dismissing, and the save.');
 }

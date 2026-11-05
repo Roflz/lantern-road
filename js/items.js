@@ -578,6 +578,8 @@ const RELICS = ['gravediggersspade', 'bishopscrozier', 'barkofoldgod', 'marshals
 // Each region's own line (regions study §3.1–3.3): five pieces that drop only in that region, beside the 92 general
 // items, which keep rolling everywhere. A piece carries its region (regional: true, region: 0–4) and its card names it.
 // Weapons and armour are Fine or Rare, accessories Rare (tune). Regions III–V's lines wait for the play-test of I and II.
+// A heavy piece has the Rare heavy base (Ashen Plate's 45 Health and 6 Defense); its own Speed cost stands in for the
+// weight's −1.
 const regionPiece = (region, id, slot, rarity, name, o) => defItem(id, Object.assign({ name, slot, rarity, region, regional: true }, o));
 // I. Gravefields: grave goods. Endurance and comebacks.
 regionPiece(0, 'pallbearerssabre', 'weapon', 'fine', 'Pall-bearer’s Sabre', {
@@ -599,7 +601,7 @@ regionPiece(0, 'shroudcoat', 'armor', 'fine', 'Shroud Coat', {
   flavor: 'Cut from a winding sheet. The first blow always seems to find only cloth.',
 });
 regionPiece(0, 'headstonemantle', 'armor', 'rare', 'Headstone Mantle', {
-  weight: 'heavy', stats: { hp: 24, def: 4 }, cost: { spd: -2 },
+  weight: 'heavy', stats: { hp: 45, def: 6 }, cost: { spd: -2 },
   lines: [W('At half health or less', 'Fortified: 20% less damage taken', 'fort')],
   fx: { turnStart: (E, u) => (E.pct(u) <= 0.5 ? E.status(u, u, 'fortified', { turns: 1, sure: true, raw: true }) : false) },
   flavor: 'A slab of the old churchyard, cut thin and strapped on.',
@@ -630,7 +632,7 @@ regionPiece(1, 'waxsealedvestments', 'armor', 'fine', 'Wax-sealed Vestments', {
   flavor: 'Sealed against the flood. Curses run off them like water.',
 });
 regionPiece(1, 'reliquaryplate', 'armor', 'rare', 'Reliquary Plate', {
-  weight: 'heavy', stats: { hp: 20, def: 5 }, cost: { spd: -2 },
+  weight: 'heavy', stats: { hp: 45, def: 6 }, cost: { spd: -2 },
   lines: [B('Push-backs on the wearer are halved', 'hourglass')],
   fx: { pushIn: (E, u, src) => (src && src.side !== u.side ? 0.5 : 1) },
   flavor: 'Each plate holds a saint’s knucklebone. The bells cannot shift them.',
@@ -817,10 +819,15 @@ const Items = (() => {
     state.currencies.gold += g;
     return { added: false, sold: g, item: x };
   }
-  // A boss's Relic on its first clear: given once, never again.
+  // A Relic's level: its boss's stage (the gear study §4.4), so it arrives as strong as the road it came from.
+  function relicLevel(x) {
+    const D = def(x), st = D && D.rarity === 'relic' && typeof STAGES !== 'undefined' ? STAGES.find(s => s.boss && s.region === D.region) : null;
+    return st ? st.level : 1;
+  }
+  // A boss's Relic on its first clear, at its boss's level: given once, never again.
   function grantRelic(state, id) {
     if (!GEAR[id] || GEAR[id].rarity !== 'relic' || owns(state, id)) return null;
-    const x = make(id, 1);
+    const x = make(id, relicLevel(id));
     x.fresh = true;
     add(state, x);
     return x;
@@ -894,7 +901,7 @@ const Items = (() => {
   }
   return {
     make, valid, def, stats, rarity, kind, usersOf, canUse, whyNot, worn, gearStats, effects, look, fatigueMul, fixedFront, odds, roll, loot, rollLine, regionOf, starter,
-    room, everything, owns, sellPrice, add, grantRelic, relicOf, sell, find, equip, unequip, bands, score, uid,
+    room, everything, owns, sellPrice, add, relicLevel, grantRelic, relicOf, sell, find, equip, unequip, bands, score, uid,
   };
 })();
 const STAT_ORDER = ['pow', 'hp', 'def', 'mp', 'spd', 'crit', 'dodge'];
