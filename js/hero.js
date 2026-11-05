@@ -229,6 +229,24 @@ const Hero = (() => {
   // ── a ready-made build: points spent the way a sensible player might, for higher-level recruits (step 5) and the
   // balance test. Thresholds open the first class's tiers; skills follow the class's first path, then the others.
   const STAT_PLAN = { front: { pow: 4, hp: 4, def: 2 }, back: { pow: 5, hp: 3, mp: 2 } };
+  // The class's stat points in the order the plan places them: front-row classes Power, Health and Defence; back-row
+  // classes Power, Health and Mana.
+  function statCycle(c) {
+    const plan = STAT_PLAN[CLASSES[c.cls].row === 'front' ? 'front' : 'back'], cycle = [];
+    for (const k in plan) for (let i = 0; i < plan[k]; i++) cycle.push(k);
+    return cycle;
+  }
+  // The hero screen's Auto: where n more stat points would go, the way the class prefers, as { stat: count }. It
+  // carries on the plan from the points already placed, so placing one a level comes out the same as placing them all.
+  function autoPoints(c, n = points(c).stat) {
+    const cycle = statCycle(c), out = {};
+    let i = STAT_KEYS.reduce((m, k) => m + (c.alloc[k] || 0), 0);
+    for (let left = n, guard = 0; left > 0 && guard < n * cycle.length + cycle.length; guard++, i++) {
+      const k = cycle[i % cycle.length];
+      if (placed(c, k) + (out[k] || 0) < capOf(k)) { out[k] = (out[k] || 0) + 1; left--; }
+    }
+    return out;
+  }
   function autoBuild(c) {
     for (const t of pending(c)) { const o = options(c, t); choose(c, t, o.tier.length ? { kind: 'tier', cls: o.tier[0] } : { kind: 'awaken' }); }
     const C = CLASSES[c.cls], order = [C.second || C.tree[0][0], C.starter];
@@ -236,8 +254,7 @@ const Hero = (() => {
     const want = [...new Set(order)];
     for (let goal = 1; goal <= SKILL_LV_MAX; goal++) for (const id of want) while ((c.skills[id] || 0) < goal && learn(c, id));
     for (const id of want) if (skill(c, id).canAwaken) awaken(c, id);
-    const plan = STAT_PLAN[C.row === 'front' ? 'front' : 'back'], cycle = [];
-    for (const k in plan) for (let i = 0; i < plan[k]; i++) cycle.push(k);
+    const cycle = statCycle(c);
     for (let i = 0, left = points(c).stat; left > 0 && i < left * cycle.length + cycle.length; i++) if (allocate(c, cycle[i % cycle.length], 1)) left--;
     fixEquip(c);
     const acts = actives(c).sort((a, b) => (b === order[0]) - (a === order[0]) || (SKILLS[b].tier - SKILLS[a].tier));
@@ -310,6 +327,6 @@ const Hero = (() => {
 
   return {
     xpToNext, xpBetween, roll, create, stats, res, sheet, points, allocate, placed, capOf, skill, learn, awaken, awakenOpen,
-    activeSlots, ruleSlots, ruleMax, mods, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, geared,
+    activeSlots, ruleSlots, ruleMax, mods, actives, equip, fixEquip, pending, options, choose, respec, gainXp, spec, upgrade, sanitize, owns, autoBuild, autoPoints, geared,
   };
 })();

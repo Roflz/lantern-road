@@ -19,7 +19,6 @@
 .txt{margin:0;font-size:14px;line-height:1.4;color:var(--ash)}
 .sp{flex:1}
 .row{display:flex;align-items:center;gap:8px;min-width:0}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .col{display:grid;gap:4px;justify-items:end}
 .gold{display:inline-flex;align-items:center;gap:4px;font:10px var(--f-pixel);color:var(--gold)}
 .gold .ico{width:11px;height:11px}
@@ -29,7 +28,6 @@
 .cost .ico{width:11px;height:11px}
 .cost .short,.btn .short{color:var(--bad)}
 .small.danger{border-color:#6a3030;color:var(--bad)}
-.btn.sm{display:inline-flex;align-items:center;justify-content:center;width:auto;flex:1;min-height:40px;padding:6px 10px;text-align:center;font-size:10px}
 .btn:disabled,.small:disabled{opacity:.45;cursor:default}
 .sbox{width:36px;height:36px;flex:none;object-fit:contain;image-rendering:pixelated;background:#0d0a12;box-shadow:0 0 0 1px #000,0 0 0 2px #3a2a20}
 .ico.l{width:20px;height:20px}

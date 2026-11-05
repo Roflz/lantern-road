@@ -1,7 +1,7 @@
 'use strict';
 // Lantern Road · the six classes who join the recruit board later (content spec §4): the Duellist, Alchemist,
 // Barber-Surgeon, Bellringer, Gravecaller and Cutpurse. The format is described at the top of js/classes.js.
-// Until recruiting arrives (step 5) they reach a party only by combining classes at level 50.
+// They join the Recruit Board as the road goes on (js/base.js).
 
 // ═══════════════════════════════════════════════════════════════════ Duellist
 defClass('duellist', {
