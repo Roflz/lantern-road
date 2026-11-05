@@ -7,9 +7,9 @@ Run it turned (a touch phone held upright, the default), flat, and at desktop si
 
 It checks that the title covers the frame with its scene at 3×, and its server picker opens, asks before a new server,
 and closes; a tap lands where it was aimed, in design pixels, and on the title it begins; the camp (views around the
-fire) fills the stage with its scene at 2×, its Set out opens the Road with the stage sheet, the camera nudges back
+fire) fills the stage with its scene at 2×, its Set out flies up the road to 1-1's card, the camera nudges back
 while no blueprint has come, turns under a drag along the frame and not across it, and settles on the nearer view;
-taps in its scene find the fire, the road and the Recruit Board, and its formation swaps places by drag; a roster
+taps in its scene find the fire, the road (and fly up it) and the Recruit Board, and its formation swaps places by drag; a roster
 row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings,
 the Road map and Tactics scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
 3×, the coach mark rings the thing it points at, and a tap on the HUD answers; starting S2 from the title, playing,
@@ -141,16 +141,18 @@ def main():
         check(bool(seen) and abs(seen[-1][1] - 200) < 1.5 and abs(seen[-1][2] - 120) < 1.5, f'a tap at design (200, 120) reads as {seen[-1:]}')
         check(js("!Title.up && App.current === 'home'"), f'that tap on the title begins: the game opens on the camp ({js("App.current")})')
 
-        # 2. a new game: the camp fills the stage with its scene at 2x; its Set out, tapped where it is drawn, opens the
-        # Road with the frontier's stage sheet
+        # 2. a new game: the camp fills the stage with its scene at 2x; its Set out, tapped where it is drawn, flies up the
+        # road to the frontier with its card open (tools/road_check.py checks the road view itself)
         js("Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1200)
         shot('camp')
         cv = js("(() => { const cv = document.querySelector('.camp .cv-scene'), b = Frame.box(cv); return [cv.width, cv.height, b.width, b.height, document.getElementById('frame').className, getComputedStyle(document.getElementById('tabbar')).display]; })()")
         check(cv[1] == 195 and abs(cv[3] - 390) < 1 and abs(cv[2] - cv[0] * 2) < 1 and cv[2] >= info['W'] and 'column' not in cv[4] and cv[5] == 'none',
               f'the camp fills the stage with its scene at 2x ({cv[0]}x{cv[1]} -> {cv[2]:.0f}x{cv[3]:.0f}), and no tab bar')
-        check(tap_el('.camp .cv-big:not([hidden])') and js("App.current === 'map' && !!document.querySelector('#sheet .stagebox')"), f'the camp\'s Set out opens the Road with the stage sheet (now {js("App.current")})')
-        js("closeSheet(); App.go('home', {}, {instant: true}); 'ok'")
+        tapped = tap_el('.camp .cv-dock .cv-big:not([hidden])')
+        page.wait_for_timeout(1800)
+        check(tapped and js("Camp.scene.onRoad && Camp.scene.sel === 0 && /1-1/.test(document.querySelector('.cv-card').textContent)"), f'the camp\'s Set out flies up the road to 1-1, its card open (road {js("Camp.scene.out.road")})')
+        js("Camp.scene.toCamp(true); 'ok'")
         page.wait_for_timeout(1000)
         yaw = lambda: js('Math.round(Camp.scene.yaw)')
         cx, cy = info['W'] / 2, 150
@@ -159,14 +161,14 @@ def main():
         drag(cx + 80, cy, cx - 80, cy, still=True)
         page.wait_for_timeout(1200)
         check(js('Camp.scene.locked') and yaw() == 0, f'no blueprint yet: a drag along the frame nudges the camp and it eases back ({yaw()})')
-        # a tap on the fire, where the scene draws it, answers; a tap on the road opens the Road map
+        # a tap on the fire, where the scene draws it, answers; a tap on the road flies up it
         def scene_tap(anchor):
             p = js(f"(() => {{ const a = Camp.scene.out.anchors.find(q => q.id === {json.dumps(anchor)}); return a ? [(a.box[0] + a.box[2]), (a.box[1] + a.box[3])] : null; }})()")
             if p:
                 tap_at(to_client(p[0], p[1]))
             return bool(p)
         check(scene_tap('fire') and js("[...document.querySelectorAll('#toasts .toast')].some(t => /fire|Draught/.test(t.textContent))"), 'a tap on the fire, where the scene draws it, answers')
-        check(scene_tap('stage2') and js("App.current") == 'map', f'a tap on the road in the scene opens the Road map (now {js("App.current")})')
+        check(scene_tap('stage2') and js("Camp.scene.onRoad"), f'a tap on the road in the scene flies up it (now {js("App.current")}, road {js("Camp.scene.out.road")})')
         # a blueprint opens the buildings view: a drag across the frame doesn't turn the camera; along it, it turns, and
         # let go part-way it settles on the nearer view; a quick tap on the Recruit Board's plaque opens the board
         js("Save.state.unlocks.tollhouse = Date.now(); Base.ensure(Save.state); Save.commit(); App.go('home', {}, {instant: true}); 'ok'")
