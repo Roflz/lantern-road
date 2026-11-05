@@ -16,7 +16,7 @@ that changes a screen.
 | 2 The Hearth (camp) | `js/campscene.js` (the scene), `js/hearthart.js` (its buildings and props, drawn in code), `js/camp.js` (the screen: HUD, the dock, plaques, taps, formation), `js/dockart.js` (the dock's menu objects and the board's picture), `js/tip.js` (tooltips), `css/camp.css` (`cv-`) | Redesigned (PR #24); the scene's detail pass from `hearth.html` (phase A: the art, the terrace, the Old Beacon); the dock along the bottom (`docs/mockups/hearth-dock.html`, 2026-11-05: gold and materials, Set out, the menus as drawn things), checked by `tools/board_check.py` |
 | 3 The first pick | `js/firstpick.js` (`FirstPick`), on the Recruit Board's panel (`RecruitBoard` in `js/buildings.js`); `css/board.css` (`rb-`, `fp-`) | Redesigned: the board's panel with Free tags and Wick (`docs/mockups/recruit-board.html`, First pick); checked by `tools/board_check.py` and `tools/guide_check.py` |
 | 4 The Road and the stage sheet | `js/map.js`, `css/map.css` | Old layout, in the column; the road view is being built (`docs/mockups/road-view.html`) |
-| 5 Formation and the Party screen | `screen('party')` in `js/app.js`; `.prow`, `.pslot`, `.rrow` in `css/app.css`; roster rows (`App.actions.rosterRow`) in `js/camp.js` | Old layout; Formation is being built |
+| 5 Formation and the Heroes list | Formation: `js/formation.js`, `css/formation.css` (`fm-`). The Heroes list: `js/heroes.js` (`HeroesList`, the `'party'` screen the Hearth's Heroes button opens), `css/hero.css` (`hl-`, with the card kit `hc-`) | Formation redesigned (PR #26); checked by `tools/formation_check.py`. The Heroes list redesigned (the hero card mockup's Heroes state: a card a hero, filters, Dismiss, the Bag); checked by `tools/bag_heroes_check.py` |
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build; Pause and the turn order checked by `tools/battle_check.py` |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
 | 8 The hero card | `js/sheet.js` (`HeroSheet`, the `'hero'` screen, and `tipsFor`, which gives every `data-tip` its tooltip through `js/tip.js`), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`, and the card kit `hc-` the Bag and the Heroes list share), the tall card and the piece's card in `js/bag.js` (`GearUI.tall`, `GearUI.pieceLines`) and `css/gear.css` (`gc-`, `pc-`) | Redesigned again as one page (`docs/mockups/hero-card.html`, D1, approved 2026-11-05, to `docs/ui-rules.md`); checked by `tools/hero_check.py` |
@@ -56,7 +56,7 @@ that changes a screen.
 This code still runs, but a redesign will replace it. Read it as old behaviour, not as the design.
 
 - **The battle canvas's `'camp'` mode** (`Battle.idle` in `js/battle.js`): a road scene seen from behind the party, with
-  heroes in rows looking up the road. The Road map and Party call it as they open (`App.rest()`), and
+  heroes in rows looking up the road. The Road map calls it as it opens (`App.rest()`), and
   it shows faintly behind their 95%-opaque pages. It is not the Hearth (the Hearth holds it undrawn, `Battle.hold`).
   Only this mode uses `S.rows`, `COL`, `field()`'s camp half, `place()`'s second half, the back-view hero sprites in
   `sprOf` and `drawGround`'s road. It becomes dead once those three screens leave the column; then remove it, with `restScene` in
@@ -118,6 +118,9 @@ Each was checked with grep across `js/`, `index.html` and `tools/` first.
   `.gr-try` in `css/gear.css`.
 - **The hero screen's tabs** (Stats, Skills, Gear, Tactics) and their styles in `css/hero.css`, the skill watched on a
   dummy in the arch (`HeroSheet.watch`, `.playing`), the Gear tab's Card and Unequip, and `HeroSheet.waiting` (no caller).
+- **The old Party screen** (`screen('party')` in `js/app.js`, with arranging, now Formation's): the Heroes list
+  (`js/heroes.js`) replaces it, and the Party markers' styles in `css/sheet.css` (`.pslot`, `.pflag`, `.rrow`) and
+  `css/gear.css` (`.pspr`) go with it. Wick's `seen()` helper in `js/firstsession.js` (a column's scroll) has no caller.
 - **The old Bag** (`js/bag.js`): its portrait page, the slot filters and sort chip, the Bag's meter, Sell every Common
   piece, the Worn by your heroes rows, its prototype box (the Prototype tools panel keeps it), `GearUI.tile` and
   `GearUI.sorted`; their styles in `css/gear.css` (`.view.bag`, `.gr-inv`, `.gr-it`, `.gr-meter`, `.gr-worn`, `.gr-wrow`,
@@ -133,8 +136,10 @@ because those builds may already have removed or reused it.
 | `js/app.js` | `placeholder` (the "Placeholder" note helper) | No callers: `grep -n "placeholder(" js/*.js` finds none |
 | `js/app.js` | `showAway`'s own sheet, after `if (actions.away) return actions.away(ms)`, and `awayGains` (and its export) | `js/camp.js` always sets `App.actions.away` (`camp.js` is in `index.html`), so the fallback never runs. Nothing pushes to `awayGains`: `grep -rn awayGains js tools` finds only `js/app.js` |
 | `css/map.css` | `.ts-unl` | No element has the class: `grep -rn ts-unl js` finds nothing (its last use went in `aba4b1e`) |
-| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map and Party leave the column (the Bag left it with its redesign). That is not yet; they still call it |
+| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map leaves the column (the Bag and the Heroes list left it with their redesigns). That is not yet; it still calls it |
 | `css/gear.css` | `.gr-slots`, `.gr-slot`, `.gr-bagrow`, `.gr-fits` | No element has these classes (`grep -rn` across `js/` finds none); dead before the hero card, so left for this table |
+| `js/camp.js` | `App.actions.rosterRow`, `confirmDismiss`, `App.actions.recruitLink` | The old Party screen was their only caller; the Heroes list (`js/heroes.js`) asks its own Dismiss question through `Base.dismiss`. `statusOf` stays: `Camp.statusOf` is exported |
+| `css/app.css`, `css/base.css`, `css/map.css` | the old Party screen's styles: `.view.party`, `.prow`, `.pslot`, `.roster`, `.rrow` (`css/app.css`); `.pslot .fat`, `.rrow .fatbar`, `.rwrap`, `.rdismiss`, `.rrow .lv` (`css/base.css`); `.arrbar`, `.pslot.arr`, `.rrow.bench` (`css/map.css`) | No element has them once the Heroes list replaced the Party screen (`grep -rn "pslot\|rrow\|arrbar" js` finds only `js/camp.js`'s dead rows). Not this builder's files |
 
 No dead code was found in `js/camp.js`, `js/campscene.js`, `css/camp.css`, `js/map.js` or `js/guide.js`. Their
 exports that no other file reads (`Camp.sceneState`, `CampScene.weightOf` and the like) are used inside their own

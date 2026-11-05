@@ -406,11 +406,11 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 167, 181, 276, 293 · js/camp.js 820 · js/data.js 592 · js/firstsession.js 109, 122, 138 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 167, 181, 276, 293 · js/camp.js 820 · js/data.js 592 · js/firstsession.js 111, 124, 140 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 118 · js/guide.js 92, 98 · js/main.js 377 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 120 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
 | Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 327 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |

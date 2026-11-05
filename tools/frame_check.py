@@ -9,8 +9,8 @@ It checks that the title covers the frame with its scene at 3×, and its server 
 and closes; a tap lands where it was aimed, in design pixels, and on the title it begins; the camp (views around the
 fire) fills the stage with its scene at 2×, its Set out flies up the road to 1-1's card, the camera nudges back
 while no blueprint has come, turns under a drag along the frame and not across it, and settles on the nearer view;
-taps in its scene find the fire, the road (and fly up it) and the Recruit Board, and its formation swaps places by drag; a roster
-row's swipe opens Dismiss; tactics reorder by drag; the Party tab, Settings,
+taps in its scene find the fire, the road (and fly up it) and the Recruit Board, and its formation swaps places by drag;
+tactics reorder by drag; the Heroes list (and a drag on a hero's card doesn't open them), Settings,
 the Road map and the Tactics picker scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
 3×, the coach mark rings the thing it points at, and a tap on the HUD answers; starting S2 from the title, playing,
 reloading and switching back to S1 leaves both saves intact; and, with touch, the frame keeps clear of emulated notches.
@@ -197,29 +197,6 @@ def main():
         after = js('JSON.stringify(Save.state.party)')
         check(js('Save.state.party[2] && !Save.state.party[0]') and js('App.current') == 'home', f'dragging a face in the camp\'s formation moves the hero there ({before} -> {after})')
 
-        # 4. a roster row's swipe left opens Dismiss, and a swipe along the frame's height from a row still scrolls
-        js("App.go('party', {}, {instant: true}); 'ok'")
-        page.wait_for_timeout(800)
-        js("document.querySelector('.rwrap .rrow').scrollIntoView({ block: 'center' }); 'ok'")
-        page.wait_for_timeout(300)
-        rx, ry = js("__design('.rwrap .rrow')")[:2]
-        drag(rx + 50, ry, rx - 90, ry, n=10)
-        tf = js("document.querySelector('.rwrap .rrow').style.transform")
-        check(tf == 'translateX(-92px)', f'a swipe left on a roster row opens Dismiss ({tf!r})')
-        shot('roster-swipe')
-        js("App.go('party', {}, {instant: true}); 'ok'")
-        page.wait_for_timeout(600)
-        js("document.querySelector('.rwrap .rrow').scrollIntoView({ block: 'center' }); 'ok'")
-        page.wait_for_timeout(300)
-        rx, ry = js("__design('.rwrap .rrow')")[:2]
-        view = "document.querySelector('#views .view:not(.out)')"
-        v0 = js(f'{view}.scrollTop')
-        if a.touch and v0 > 20:
-            drag(rx - 100, ry - 20, rx - 100, ry + 60)
-            v1 = js(f'{view}.scrollTop')
-            check(v1 < v0 - 30, f'a swipe down the frame from a roster row scrolls the Party tab back ({v0:.0f} -> {v1:.0f})')
-        js(f"{view}.scrollTop = 0; 'ok'")
-
         # 5. scrolling: a finger moving up the frame (or the wheel) scrolls the content down, and back
         def scroll_check(sel, what, dist=140):
             q = f'document.querySelector({json.dumps(sel)})'
@@ -251,9 +228,11 @@ def main():
             back = js(f'{q}.scrollTop')
             check(back < after - dist * 0.4, f'{what} scrolls back ({after:.0f} -> {back:.0f})')
 
-        js("Save.state.roster.length < 4 && Proto.fill(); Save.commit(); App.go('party', {}, {instant: true}); 'ok'")
+        # the Heroes list (js/heroes.js), with a dozen heroes so it scrolls: a drag that starts on a hero's card scrolls it
+        js("(() => { const s = Save.state; if (s.roster.length < 4) Proto.fill(); for (const cls of ['duellist', 'alchemist', 'surgeon', 'bellringer', 'gravecaller', 'cutpurse', 'hexblade', 'pilgrim']) { if (s.roster.length >= 12) break; const c = Hero.create(cls, 'c' + s.nextId++, { level: 3 }); s.roster.push(c); Tactics.owner(c.id); } Save.commit(); App.go('party', {}, {instant: true}); })(); 'ok'")
         page.wait_for_timeout(800)
-        scroll_check('#views .view:not(.out)', 'the Party tab')
+        scroll_check('.hl-grid', 'the Heroes list')
+        check(js('App.current') == 'party', 'a drag on a hero\'s card scrolls; it doesn\'t open the hero')
         js("App.openSettings(); 'ok'")
         page.wait_for_timeout(700)
         scroll_check('#sheet .box', 'the Settings sheet', dist=120)
