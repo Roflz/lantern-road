@@ -38,6 +38,7 @@ SETUP = """
     return c;
   };
   closeScreen();
+  if (typeof FirstSession !== 'undefined') FirstSession.skip(); // Wick's first session (tools/guide_check.py walks it)
   s.settings.tips = false; // no first-time tips or coach marks over the shots
   const light = n => { for (let k = 0; k < n; k++) Proto.lightNext(s); };
   let stage = 0, want = 0;

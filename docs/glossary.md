@@ -394,15 +394,15 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 66 · js/buildings.js 164, 178, 311, 329 · js/camp.js 593 · js/data.js 568 · js/guide.js 118, 133 · js/main.js 386, 476 · js/map.js 396 · js/proto.js 94, 118 · js/sheet.js 279 |
-| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 120 · js/main.js 115, 175, 316 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 66 · js/buildings.js 164, 178, 311, 329 · js/camp.js 709 · js/data.js 569 · js/firstsession.js 85, 97 · js/guide.js 122, 137 · js/main.js 386, 476 · js/map.js 396 · js/proto.js 94, 118 |
+| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 124 · js/main.js 115, 175, 316 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 · js/rules.js 434, 605 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 368 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 558, 564 · js/guide.js 83, 89 · js/main.js 374 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 559, 565 · js/firstsession.js 80, 95 · js/guide.js 87, 93 · js/main.js 374 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 374, 376, 388 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 128 · js/battle.js 544 · js/campaign.js 297 · js/classes-late.js 253 · js/data.js 310 · js/main.js 259, 305, 332, 473 · js/map.js 338 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 128 · js/battle.js 544 · js/campaign.js 299 · js/classes-late.js 253 · js/data.js 310 · js/main.js 259, 305, 332, 473 · js/map.js 338 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 199, 475 · js/map.js 278 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 87 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 517, 670 · js/hero.js 31 · js/items.js 53 · js/map.js 316 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 87 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 517, 671 · js/hero.js 31 · js/items.js 53 · js/map.js 316 |
 | Foe: highest attack | Foe: highest Power |  | js/data.js 288, 488 |
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 493 · js/rules.js 289, 466, 601 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
@@ -412,7 +412,7 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 | Surgeon, the Barber-Surgeon’s second path | Sawbones |  | js/classes-late.js: CLASSES.surgeon.paths[1] |
 | Bastion, the Warden’s second path | Unbroken | Unbroken is also a skill on that path, and the status the skill gives. | js/classes.js: CLASSES.warden.paths[1] |
 | Ossuary, the Gravecaller’s passive | Bone Retinue | Each battle starts with a free Bone Thrall, two when awakened. The building, the Ossuary Steps, the Sunken Ossuary and the Ossuary Rod keep their names. | js/classes-late.js: SKILLS.ossuarypassive |
-| Wick, a recruit name | (removed) | Wick is the guide. | js/base.js: RECRUIT_NAMES |
+| Wick, a recruit name | (removed) | Wick is the guide. | Done |
 
 <!-- decided:end -->
 

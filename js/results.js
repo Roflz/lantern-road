@@ -250,5 +250,5 @@ const Results = (() => {
   // The same popup again, at its end: back from the report, a piece's card or the list of new things.
   function reopen() { if (last) show(last.res, Object.assign({}, last.o, { still: true })); }
 
-  return { show, reopen, get busy() { return !!run; }, get res() { return last && last.res; } };
+  return { show, reopen, get busy() { return !!run; }, get res() { return last && last.res; }, get index() { return last ? last.o.index : null; } };
 })();

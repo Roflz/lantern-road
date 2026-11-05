@@ -10,7 +10,9 @@
 //                 was closed.
 //   tab dots      a dot on Hearth, Party, Bag or Road when something there waits for you (the Hearth's Heroes
 //                 and Bag buttons show them too).
-// The title card over a new game's first pick is now the title screen, on every boot (js/title.js).
+// The title card over a new game's first pick is now the title screen, on every boot (js/title.js), and Wick's first
+// session (js/firstsession.js) teaches the first ten minutes: while it runs, the coach marks here stay quiet, and the
+// battle's events go to it.
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
 // and Settings → First-time tips turns them all off. The new-thing rows are part of the trip summary and always show.
 
@@ -73,8 +75,10 @@ const Guide = (() => {
   // ── the battle: the first battle shows the turn flags and the speed buttons, 1-2 the rule each flag names, and the
   // first battle with party items the draughts (campaign spec §8.2). Called for every event as it plays (js/main.js).
   let fight = null; // { i (stage index), t0, turns }
-  function battleStart(i) { fight = { i, t0: 0, turns: 0 }; }
+  const FS = () => (typeof FirstSession !== 'undefined' ? FirstSession : null);
+  function battleStart(i) { fight = { i, t0: 0, turns: 0 }; if (FS()) FS().battleStart(i); }
   function battleEvent(e) {
+    if (fight && FS()) { FS().battleEvent(e, fight.i); if (FS().on) return; }
     if (!fight || !tipsOn()) return;
     if (e.t === 'turn') {
       fight.turns++;
@@ -88,13 +92,13 @@ const Guide = (() => {
     if (e.t === 'act' && e.rule >= 0 && /^p\d$/.test(e.who) && fight.i >= 1 && !seen('c:rule') && !mark)
       setTimeout(() => coach('c:rule', '.flag.now .why', 'The flag names the rule that chose the move. Rules are yours to change, on Tactics.', { place: 'below', ms: 7000, minLeft: Math.round(frame().offsetWidth * 0.2) }), 350);
   }
-  function battleEnd() { fight = null; clear(); }
+  function battleEnd() { fight = null; clear(); if (FS()) FS().battleEnd(); }
   // Between battles on a trip that keeps going.
   function between() { setTimeout(() => coach('c:walk', '.between .bt-acts .btn:last-child', 'The party walks on to the next stage by itself. Come home whenever you like.', { place: 'below', ms: 6000 }), 500); }
 
   // ── screens: the first visit that matters
   function onScreen(name) {
-    if (!tipsOn()) return;
+    if (!tipsOn() || (FS() && FS().on)) return;
     const s = st();
     if (name === 'tactics') setTimeout(() => coach('c:tactics', '.tx-rule .tx-grip', 'Rules run from the top. Drag one to move it; switch one off to skip it.', { place: 'below', ms: 7000 }), 450);
     // the free recruit: the Recruit Board's chip in the camp's party view (its plaque, if the chip isn't up)

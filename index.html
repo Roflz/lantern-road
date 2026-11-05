@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/kit.css">
 <link rel="stylesheet" href="css/formation.css">
 <link rel="stylesheet" href="css/hero.css">
+<link rel="stylesheet" href="css/guide.css">
 
 <div id="app">
   <div id="stage">
@@ -32,14 +33,14 @@
           <button id="hudRound" class="round" aria-label="Round and enrage"></button>
         </div>
       </header>
-      <div id="flags" aria-label="Turn order: who acts next, and with what"></div>
+      <div id="flags" data-tut="turn-order" aria-label="Turn order: who acts next, and with what"></div>
       <div id="controls" hidden>
         <div id="pausedTag" hidden>Paused · tap Turn to play one turn</div>
         <button class="ctl" id="bMenu" aria-label="Menu"><svg viewBox="0 0 10 10"><path d="M1 2h8v1.4H1zM1 4.3h8v1.4H1zM1 6.6h8V8H1z"/></svg></button>
         <button class="ctl" id="bPlay" aria-label="Pause"></button>
         <button class="ctl wide" id="bStep" aria-label="Play the next turn, then pause"><svg viewBox="0 0 10 10"><path d="M1 1v8l5.5-4zM7 1h2v8H7z"/></svg>Turn</button>
-        <button class="ctl" id="bSpeed" aria-label="Battle speed">1×</button>
-        <button class="ctl wide skip" id="bSkip" aria-label="Skip to the result">Skip<svg viewBox="0 0 10 10"><path d="M1 1v8l4-4zM5 1v8l4-4z"/></svg></button>
+        <button class="ctl" id="bSpeed" data-tut="battle-speed" aria-label="Battle speed">1×</button>
+        <button class="ctl wide skip" id="bSkip" data-tut="battle-skip" aria-label="Skip to the result">Skip<svg viewBox="0 0 10 10"><path d="M1 1v8l4-4zM5 1v8l4-4z"/></svg></button>
       </div>
       <div id="shell" hidden>
         <header id="topbar">
@@ -85,6 +86,8 @@
 <script src="js/results.js"></script>
 <script src="js/kit.js"></script>
 <script src="js/formation.js"></script>
+<script src="js/firstpick.js"></script>
+<script src="js/firstsession.js"></script>
 <script src="js/proto.js"></script>
 <script src="js/title.js"></script>
 <script src="js/main.js"></script>

@@ -131,7 +131,7 @@ const TACTICIAN_LESSONS = {
   4: { name: 'Lesson III', conds: [], line: 'Switch rule set: party rules can change everyone’s tactics on their own.' },
 };
 // Recruit names (placeholders, tune).
-const RECRUIT_NAMES = ['Ottilie', 'Brannoc', 'Isolde', 'Maud', 'Fenn', 'Wick', 'Morwen', 'Gisla', 'Hugh', 'Corvin', 'Agathe', 'Edda', 'Alaric', 'Bertil',
+const RECRUIT_NAMES = ['Ottilie', 'Brannoc', 'Isolde', 'Maud', 'Fenn', 'Morwen', 'Gisla', 'Hugh', 'Corvin', 'Agathe', 'Edda', 'Alaric', 'Bertil',
   'Cressida', 'Dagny', 'Elric', 'Fulke', 'Godric', 'Hild', 'Ivo', 'Jehane', 'Kenric', 'Lisbet', 'Mabyn', 'Nell', 'Osric', 'Petra', 'Quill', 'Rowan', 'Sigrun',
   'Tamsin', 'Ulric', 'Vesna', 'Wulfric', 'Ysolde', 'Aldous', 'Bryony', 'Caspar', 'Dunstan', 'Elowen', 'Garnet', 'Hester', 'Ingram', 'Jory', 'Linnet', 'Merrick',
   'Odo', 'Perrin', 'Rook', 'Sabine', 'Tobin', 'Una', 'Wenna', 'Yorick', 'Briar', 'Cael', 'Dorran', 'Ember', 'Fable', 'Greer', 'Haddon', 'Kestrel', 'Lark', 'Mire'];

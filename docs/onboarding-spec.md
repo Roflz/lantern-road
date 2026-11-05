@@ -109,28 +109,50 @@ Idle Heroes' own tutorial script isn't written down anywhere I could reach: fan 
 
 ### 6.4 The first session: forced, about 10 minutes
 
-Wick's lines are drafts.
+**Built** (the `guide` build, 2026-11-04): `js/firstsession.js` runs the steps, `js/wick.js` draws them (`Wick.show`: the spotlight, the pointer, Wick's bubble and panel, callouts and the hand), and `js/firstpick.js` is the Recruit Board's first pick. Every step points at a `data-tut` anchor, or at what the Hearth's scene draws (the board, the road's lanterns). Screenshots of every step are in `docs/screens/guide/`; `tools/guide_check.py` walks it from a new game.
+
+It follows the screens built since the first draft: the camp is the Hearth's party view (`camp-views.html`), Set out flies up the road view (`road-view.html`), and the formation is its own panel (`formation.html`). Wick's lines are still drafts.
 
 | # | Where | Wick says | You do |
 |---|---|---|---|
-| 1 | Camp, after the title | "The road's gone dark, and it wants a lantern-bearer. The board will find you one." | Tap the Recruit Board |
-| 2 | Recruit Board, showing the three starters | "Three would carry the lantern. Tap each to hear about them." | Tap a card. Wick gives one line on each. |
-| 3 | The same | Sellsword: "Hits hardest, up front. Simple and strong." · Hexblade: "Curses that tick. Patient, and hard on healers." · Pilgrim: "Heals, and burns the dead. Slow, but hard to kill." | Hire one, free |
-| 4 | Camp | "A bearer needs a road. That's the signpost." | Tap the Road |
-| 5 | Road | "Each lantern is a stage. Light the first." | Tap 1-1, then Set out |
-| 6 | Battle 1-1 | Paused at the first turn: "Battles fight themselves. The flags show who acts next." Later: "Speed it up, or skip to the end." | Watch |
-| 7 | Results popup | "Your first level. Each one brings a stat point." Then, at the fatigue bar: "Every turn tires a hero a little. They rest at camp." | Tap Camp |
-| 8 | Camp | "Your hero fights by rules. Let's look at them." | Tap the hero, then Rules |
-| 9 | Rules | "Rules run from the top. The first one that fits is used." | A guided look at the two starter rules |
-| 10 | Battle 1-2 | "The flag names the rule that chose the move." | Watch |
-| 11 | Camp | "The board has a free recruit for you." | Hire the second hero |
-| 12 | Party | "Sturdy heroes in front, the rest behind." | Set the formation |
+| 1 | The Hearth, after the title (W1–W3) | Panel: "Ah, a traveller. Come and sit by the fire." · "The road's gone dark. Someone has to light it again." · Bubble: "What do they call you?" · Panel: "Roflz. A good name for the road. Let me show you the Hearth." · Spotlight on the board (V4): "The Recruit Board. Let's find you a lantern-bearer." | Tap to go on, give a name (or none: "Traveller"), then tap the Recruit Board |
+| 2 | The Recruit Board, first pick (P1) | "Three would carry the lantern. Tap each to hear about them." | Tap a card |
+| 3 | The same (P2–P4) | Sellsword: "Hits hardest, up front. Simple and strong." · Hexblade: "Curses that tick. Patient, and hard on healers." · Pilgrim: "Heals, and burns the dead. Slow, but hard to kill." | Hire (free), then the reveal: the hero's rolled name, class and level |
+| 4 | The Hearth (P5) | "A bearer needs a road. Set out when you're ready." | Tap Set out: the camera flies up the road with 1-1's card open |
+| 5 | The road view | On 1-1's lantern: "Each lantern is a stage." · On the card's Set out: "Light the first." | Tap to go on, then Set out |
+| 6 | Battle 1-1, paused twice | At the first turn, on the turn order: "Battles fight themselves. The turn order shows who acts next." · At the third turn, on speed and skip: "Speed it up, or skip to the end." | Tap to go on; then tap the speed button (or Skip) |
+| 7 | The results popup | On the XP bar: "Your first level. Each one brings a stat point." · On the fatigue bar: "Every turn tires a hero a little. They rest at the Hearth." · On Hearth: "Back to the Hearth." | Tap to go on twice, then Hearth |
+| 8 | The Hearth | On Heroes: "Your hero fights by tactics. Let's look at them." | Tap Heroes, then the hero, then the Tactics tab |
+| 9 | The hero screen (screen 8), Tactics | On the tactics: "Tactics run from the top. The first one that fits is used." | Tap to go on, then ‹ back to the Party, then its Hearth tab |
+| 10 | Set out, then battle 1-2 | "On to 1-2." · In battle, without stopping it, a ring on the tactic's name: "The turn order names the tactic that chose the move." · On the results' New chip: "The Recruit Board is open." | Set out twice, watch, then Hearth |
+| 11 | The Hearth, then the board | On the board: "The board has a free recruit for you." · On the board: "Three new faces. Tap each to hear about them.", then a line on each | Hire one (free); the reveal. They wait at the fire, out of the formation |
+| 12 | The Hearth, then Formation (F3) | On the party panel: "Two of you now. Let's find them a place." · In Formation, callouts on the rows (Front: "Takes the blows. Melee can only reach here." Back: "Safe while the front stands.") and a hand showing the drag: "Sturdy heroes in front, the rest behind." · On Done: "Well placed." · Panel: "That's the road. I'm by the fire if you need me." | Drag the new hero into a place, Done, tap to go on |
 
-After step 12 the forced session ends and the goal tracker takes over. This keeps design.md's pace of a first recruit within 10 minutes.
+After step 12 the forced session ends and the goal tracker takes over (after 1-2 it reads "Spend 1 stat point").
 
-**Tuning this needs:** step 7 assumes 1-1 brings the first level-up. Today 1-1 gives 5 XP and no level, so its first-clear XP needs raising *(tune)*.
+**How a step behaves:**
+- **A line** (a ▼ in its corner) goes on with a tap anywhere, or Enter.
+- **A tap step** lights one thing, with the pointer on it. Nothing else takes a press, keys included, until it's tapped.
+- **Between steps** (the camera flying, the popup filling) nothing takes a press either, except in a battle. If no step comes for 15 seconds the hold lets go, so a save the script didn't foresee is never stuck.
+- **Wick stands on the side away from what he points at.** His bubble moves up, or to the top, when it would cover it.
+- **A reload carries on** where the session was. A step whose moment has gone (a battle resolved while the app was closed) is skipped. "While you were away" and the Road's "Back from the road" card wait until the session is over.
 
-**Change to design.md §6:** the first pick happens at the Recruit Board, which stands open from the start in a first-pick mode with the three starters, free. After the pick it shows "New faces after 1-2" until 1-2's first clear opens it as it works today.
+**Changes from the first draft:**
+- Step 1 follows `camp-welcome.html` W1–W3, with your name (shown by your Renown).
+- Step 4: Set out flies up the road (the road view), instead of "tap the signpost".
+- Step 5: "Light the first" goes on the card's Set out.
+- Step 6: the second pause lights speed and skip, and waits for a tap on one, as Idle Heroes does. Its line: "Speed it up, or skip to the end."
+- Step 8 goes Heroes → the hero → Tactics, the way Idle Heroes reaches its hero screen. Steps 8–9 hang on `data-tut` anchors (`hearth-heroes`, `party-hero`, `hero-tab-rules`, `hero-rules`, `hero-back`, `tab-home`), on the rebuilt hero screen (PR #29).
+- "Rules" are "Tactics" in Wick's lines (the user's naming decision); the game's other strings follow in the glossary's rename pass.
+- Step 10 doesn't stop the battle (only 1-1 stops, per §6.2).
+- Step 11 opens the board's own panel, the first pick's, with its three recruits and a line on each.
+- Step 12 is Formation (screen 5), after F3: the free recruit waits out of the formation so the drag has someone to place.
+
+**Tuning:** 1-1's first clear now gives at least a level's worth of XP (`firstXp: 1.05` on the stage, in `js/data.js`), so step 7 always shows a level-up. 1-1 and 1-2 can't be lost with any starter (200 seeds each).
+
+**Left for you: Keep going.** The stage sheet's "Keep going" question is still open. It would come in at 1-6, when its first clear unlocks Keep going (§6.5's guided visit: the stage sheet's trip settings and the come-home rule). Until then every trip is one battle, so the first session never meets it. The results popup for a trip of several battles stays provisional until it's decided.
+
+**Change to design.md §6:** the first pick happens at the Recruit Board, which stands lit from the start in a first-pick mode with the three starters, free. After the pick it stands dark until 1-2's first clear opens it as it works today.
 
 ### 6.5 Unlock moments: the rest of Region I
 
@@ -157,8 +179,8 @@ Every first-clear unlock in campaign spec §5.3 gets three things:
 
 ### 6.6 Turning it off, and replaying it
 - **Settings → Tips, On or Off.** Off stops Wick's soft steps, his unlock cards and the one-line tips. The goal tracker stays.
-- **Settings → Replay the guide** plays Wick's explanations again on your current save, without forced taps.
-- **The forced first session can't be skipped on a new save.** For play-testing, the Prototype panel can skip it.
+- **Settings → Replay the guide** plays Wick's explanations again on your current save, without forced taps. *Built:* each line shows once more when its place comes up (the welcome at the Hearth, the road when you set out, the battle lines in your next battle, and so on). Nothing is held back, and a press anywhere moves on.
+- **The forced first session can't be skipped on a new save.** For play-testing, the Prototype panel can skip it. *Built:* Prototype tools → Rules and tips → Skip the guide (the camp's Prototype chip stays live during the session for this).
 
 ## 7. Tooltips
 

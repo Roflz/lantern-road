@@ -88,7 +88,7 @@ const App = (() => {
       ...MATERIALS.filter(m => m.region <= reached || (s.currencies.mats[m.id] || 0) > 0).map(m => h('span', { class: 'coin mat', title: m.name }, ico(typeof Base !== 'undefined' ? Base.matIcon(m.id) : 'bone'), h('b', { text: fmt(s.currencies.mats[m.id] || 0) }))));
   }
 
-  TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));
+  TABS.forEach(t => tabbar.append(h('button', { class: 'tab', 'data-tab': t.id, 'data-tut': 'tab-' + t.id, onclick: () => { if (cur !== t.id) { sfx('click'); go(t.id); } } }, ico(t.icon), h('span', { text: t.label }))));
   $('#tbSettings').append(ico('gear'));
   $('#tbSettings').addEventListener('click', () => { sfx('click'); openSettings(); });
 
@@ -162,7 +162,7 @@ const App = (() => {
         if (arrange != null) return h('button', { class: 'pslot arr' + (c ? '' : ' empty') + (arrange === i ? ' sel' : ''), 'aria-pressed': arrange === i ? 'true' : 'false', onclick: () => pickSlot(i) },
           c ? [h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })), h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level })] : h('span', { text: arrange === i ? 'Pick a hero' : 'Empty' }));
         if (!c) return h('div', { class: 'pslot empty' }, h('span', { text: 'Empty' }));
-        return h('button', { class: 'pslot' + (typeof Fatigue !== 'undefined' && Fatigue.spent(c) ? ' spent' : ''), onclick: () => { sfx('click'); showCharacter(c.id); } },
+        return h('button', { class: 'pslot' + (typeof Fatigue !== 'undefined' && Fatigue.spent(c) ? ' spent' : ''), 'data-tut': 'party-hero', onclick: () => { sfx('click'); showCharacter(c.id); } },
           h('span', { class: 'pspr' }, h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' })),
           h('b', { text: c.name }), h('span', { class: 'lv', text: 'Lv ' + c.level }), flags(c),
           h('span', { class: 'xp' }, h('i', { style: `width:${xpPct(c)}%` })), fat(c));
@@ -236,6 +236,7 @@ const App = (() => {
         : h('div', { class: 'setting off' }, h('div', { class: 'nm', text: 'Music' }), h('div', { class: 'ds', text: 'Being reworked: it comes back in a later build.' }), h('span', { class: 'ph-tag', text: 'Later' })),
       row('Reduced motion', 'No screen shake or flashes, and no sliding between screens.', !s.motion, () => { s.motion = !s.motion; }),
       row('First-time tips', 'A one-line tip the first time something happens, and a pointer to each new thing the road unlocks.', s.tips, () => { s.tips = !s.tips; }),
+      typeof FirstSession !== 'undefined' ? btn('Replay the guide', () => { closeSheet(); FirstSession.replay(); }) : null,
       h('div', { class: 'savewhere', text: `Saved ${ago == null ? 'never' : ago < 5 ? 'just now' : ago < 60 ? ago + 's ago' : duration(ago * 1000) + ' ago'} · ${Save.info.cloud === 'off' ? 'this device only' : 'synced to your account'}` }),
       btn('How battles work', () => { closeSheet(); showHow(() => closeScreen()); }),
       actions.proto ? h('button', { class: 'btn pt-open', onclick: () => { sfx('click'); actions.proto(); } }, h('span', { class: 'ph-tag', text: 'Prototype' }), ' Prototype tools', h('span', { class: 'sub', text: 'Light the road, add gold and materials, train the party. For play-testing.' })) : null,
@@ -278,7 +279,7 @@ const App = (() => {
       const a = Save.state.away;
       a.last = ms; a.total += ms; a.returns++; a.at = Date.now();
       Save.commit();
-      if (cur && screens[cur].tab) showAway(ms);
+      if (cur && screens[cur].tab && !(typeof FirstSession !== 'undefined' && FirstSession.on)) showAway(ms);
     } else Save.touch();
   });
   window.addEventListener('pagehide', () => Save.flush());
@@ -294,8 +295,10 @@ const App = (() => {
     const c = Save.state.campaign.current, last = Save.state.campaign.lastTrip;
     if (c && STAGES[c.stage]) go('battle', { stage: c.stage, seed: c.seed });
     else {
-      go(last && !last.seen ? 'map' : 'home', {}, { instant: true });
-      if (info.awayMs >= AWAY_MIN) showAway(info.awayMs);
+      // Wick's first session (js/firstsession.js) keeps a new player at the Hearth: no road card, no time-away note
+      const guided = typeof FirstSession !== 'undefined' && FirstSession.on;
+      go(last && !last.seen && !guided ? 'map' : 'home', {}, { instant: true });
+      if (info.awayMs >= AWAY_MIN && !guided) showAway(info.awayMs);
     }
     Save.initCloud();
   }
