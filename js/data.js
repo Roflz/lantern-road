@@ -548,13 +548,14 @@ const TACTICIAN_I = ['self_mp_lt', 'self_front', 'self_back', 'self_has', 'self_
 // in the back row waits there and steps up when a front slot opens (js/sim.js).
 // kind: road, elite or boss. level: its foes' level, and the hero level it recommends for `party` heroes.
 // tier: the reward tier (js/campaign.js): light, standard, rich, elite or boss. first: what its first clear unlocks.
+// firstXp: the least XP its first clear gives, in levels' worth (1-1's brings the first level, onboarding spec §6.4).
 // teaches: what is new in the battle. hint: what the report leads with after a loss.
 // The Gravewarden's Bones throw softer than the road's, so the Watch's threat is the Gravewarden itself: fewer, bigger
 // hits make a wall less of a pure stat check (the softened cliff, campaign spec §5.6, tune).
 const WATCH_BONES = { key: 'bones', over: { pow: 10 } };
 const foeKey = x => (x && typeof x === 'object' ? x.key : x);
 const STAGES = [
-  { id: '1-1', name: 'The Edge of the Light', kind: 'road', level: 1, party: 1, tier: 'light', foes: ['shambler', null, null, null, null, null], first: ['tactics'],
+  { id: '1-1', name: 'The Edge of the Light', kind: 'road', level: 1, party: 1, tier: 'light', firstXp: 1.05, foes: ['shambler', null, null, null, null, null], first: ['tactics'],
     teaches: 'How a battle runs: the turn strip, a basic attack, your skill and the callouts.', hint: 'Your skill costs mana. Basic attacks restore it.' },
   { id: '1-2', name: 'The Barrow Gate', kind: 'road', level: 1, party: 1, tier: 'light', foes: ['shambler', 'shambler', null, null, null, null], first: ['recruitboard'],
     teaches: 'Rules in action: each callout names the rule that fired.', hint: 'Rules fire from the top. Put the one you want most first.' },

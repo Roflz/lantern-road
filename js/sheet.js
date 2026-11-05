@@ -65,7 +65,7 @@ const HeroSheet = (() => {
   function header(c) {
     const P = Hero.points(c), pend = Hero.pending(c).length;
     return h('div', { class: 'hs-top' },
-      h('button', { class: 'hs-sq', 'aria-label': 'Back to the party', onclick: () => { click(); App.go('party'); } }, '‹'),
+      h('button', { class: 'hs-sq', 'data-tut': 'hero-back', 'aria-label': 'Back to the party', onclick: () => { click(); App.go('party'); } }, '‹'),
       h('div', { class: 'hs-name' }, h('h1', { text: c.name }),
         h('span', { class: 'hs-sub' }, h('b', { text: 'Lv ' + c.level }), ' · ', c.classes.map(k => CLASSES[k].name).join(' + '))),
       (P.skill > 0 || P.stat > 0 || pend) ? h('span', { class: 'hs-pts', title: 'Points to spend' }, pend ? ico('star') : null, `${P.stat + P.skill} pts`) : null,
@@ -75,7 +75,7 @@ const HeroSheet = (() => {
   }
   function tabs() {
     return h('div', { class: 'hs-seg', role: 'tablist' }, [['stats', 'Stats'], ['skills', 'Skills'], ['gear', 'Gear'], ['rules', 'Rules']].map(([k, n]) =>
-      h('button', { class: ui.tab === k ? 'on' : '', role: 'tab', 'aria-selected': ui.tab === k ? 'true' : 'false', onclick: () => { if (ui.tab === k) return; click(); ui.tab = k; draw(); } }, n)));
+      h('button', { class: ui.tab === k ? 'on' : '', role: 'tab', 'data-tut': 'hero-tab-' + k, 'aria-selected': ui.tab === k ? 'true' : 'false', onclick: () => { if (ui.tab === k) return; click(); ui.tab = k; draw(); } }, n)));
   }
   // What a skill would do on the dummy: its damage or healing at the character's level.
   function playInfo(c, id) {
@@ -410,12 +410,12 @@ const HeroSheet = (() => {
   function rulesTab(c) {
     const o = Tactics.owner(c.id);
     return [
-      h('div', { class: 'hs-rules' }, o.rules.length ? o.rules.map((r, i) => {
+      h('div', { class: 'hs-rules', 'data-tut': 'hero-rules' }, o.rules.length ? o.rules.map((r, i) => {
         const x = Tactics.explain(c.id, r), sk = SKILLS[r.do];
         return h('div', { class: 'hs-rule' + (r.on ? '' : ' off') + (x.warn ? ' warn' : '') }, h('b', { class: 'n', text: String(i + 1) }),
           h('div', {}, h('span', { class: 'cond', text: ruleCond(r) }), h('span', { class: 'hs-sk' }, h('span', { class: 'arr', text: '→' }), ico(sk.icon), sk.name), h('span', { class: 'hint', text: r.on ? x.text : 'Switched off' })));
       }) : h('p', { class: 'hs-why', text: 'No rules yet: this hero only uses their basic attack.' })),
-      h('div', { class: 'hs-default' }, h('span', { class: 'hs-k', text: 'Otherwise' }), ico(SKILLS[CLASSES[c.cls].basic].icon), h('b', { text: SKILLS[CLASSES[c.cls].basic].name }), h('span', { class: 'hs-kv', text: 'basic attack' })),
+      h('div', { class: 'hs-default', 'data-tut': 'hero-basic' }, h('span', { class: 'hs-k', text: 'Otherwise' }), ico(SKILLS[CLASSES[c.cls].basic].icon), h('b', { text: SKILLS[CLASSES[c.cls].basic].name }), h('span', { class: 'hs-kv', text: 'basic attack' })),
       h('p', { class: 'hs-why', text: `${o.rules.length} of ${o.slots} rule slots used. Every hero starts with 3; a Masters’ Hall lesson teaches each one more, up to ${o.max}${c.classes.length > 1 ? ', the highest of their classes' : ''}.` }),
       btn('Edit rules', () => App.actions.tactics(c.id, () => open(c.id, 'rules')), 'primary', 'Reorder, switch off, or change what each rule does'),
     ];

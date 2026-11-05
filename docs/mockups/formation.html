@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Formation</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Screen 5, Formation (docs/idle-heroes-study.md §6; onboarding spec §6.4 step 12). Tap the party panel to open it:
+   the party standing as in battle, facing the next stage's foes; the roster along the bottom; drag to place, swap or
+   rest. Idle Heroes' deployment pattern, in the Hearth's framed-panel kit. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a; --iron:#6e7480;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.band>p{margin:0 0 14px;color:var(--ash);max-width:62ch}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;font-size:15px;user-select:none;touch-action:none}
+.frame canvas{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+.layer{position:absolute;inset:0;pointer-events:none}
+
+/* the Hearth behind: its HUD, as the Hearth mockup has it */
+.crest{position:absolute;left:8px;top:4px;width:64px;height:64px;filter:drop-shadow(0 2px 0 #000)}
+.banner{position:absolute;left:66px;top:9px;height:27px;padding:0 20px 0 16px;display:grid;place-items:center;font:400 21px/1 var(--f-display);color:#f6e6c4;background:linear-gradient(#5a2028,#2e0e14);clip-path:polygon(0 0,100% 0,calc(100% - 9px) 50%,100% 100%,0 100%,7px 50%);box-shadow:inset 0 1px 0 #b0844a,inset 0 -1px 0 #b0844a}
+.purse{position:absolute;right:122px;top:17px;display:flex;gap:24px}
+.cur{position:relative;display:flex;align-items:center;height:26px;min-width:118px;padding:0 4px 0 30px;border-radius:13px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim)}
+.cur .ci{position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim)}
+.cur .ci img{width:22px;height:22px}
+.cur .cv{flex:1;text-align:center;font:700 11px/1 var(--f-pixel);color:var(--bone)}
+.mini{position:absolute;right:14px;top:62px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule)}
+.mini span{width:40px;height:40px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
+.mini span img{width:34px;height:34px}
+.mini span.f{border-color:var(--ember)}
+
+/* the formation panel: the Hearth's framed-panel kit */
+.modal{position:absolute;inset:0;z-index:5;display:grid;place-items:center;background:rgba(5,3,9,.66)}
+.fp{position:relative;width:776px;background:linear-gradient(#1c1521,#120d17);border:3px solid #3a2a1c;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 18px 44px rgba(0,0,0,.75)}
+.fp .cn{position:absolute;width:18px;height:18px;border:3px solid var(--iron);box-shadow:0 0 0 1px #000;z-index:2}
+.fp .cn::after{content:"";position:absolute;width:4px;height:4px;background:#c8ccd4;border:1px solid #000}
+.fp .cn.tl{left:-7px;top:-7px;border-right:0;border-bottom:0}.fp .cn.tl::after{left:1px;top:1px}
+.fp .cn.tr{right:-7px;top:-7px;border-left:0;border-bottom:0}.fp .cn.tr::after{right:1px;top:1px}
+.fp .cn.bl{left:-7px;bottom:-7px;border-right:0;border-top:0}.fp .cn.bl::after{left:1px;bottom:1px}
+.fp .cn.br{right:-7px;bottom:-7px;border-left:0;border-top:0}.fp .cn.br::after{right:1px;bottom:1px}
+.plate{display:flex;align-items:center;gap:10px;height:40px;padding:0 16px;background:linear-gradient(#34303c,#1c1922);border-bottom:2px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 0 #7a5a36}
+.plate h3{margin:0;font:400 25px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.plate .ct{font:700 10px/1 var(--f-pixel);letter-spacing:.08em;color:var(--bone);background:#0f0b14;border:1px solid var(--trim);padding:5px 7px}
+.xx{position:absolute;right:-14px;top:-14px;z-index:3;width:32px;height:32px;display:grid;place-items:center;font:700 15px/1 var(--f-pixel);color:#f6e6c4;background:radial-gradient(circle at 50% 35%,#b8342e,#6a1418);border:2px solid #000;border-radius:50%;box-shadow:0 0 0 2px #8a6a3a}
+.fbody{display:grid;grid-template-columns:1fr 168px;gap:12px;padding:10px 14px 6px}
+
+/* the line: the party standing as in battle, the front on the right, facing the next stage's foes */
+.line{position:relative;height:196px;overflow:hidden;border:1px solid #3a2c22;background:radial-gradient(ellipse 55% 60% at 36% 105%,#4a2c18 0,#251a1c 50%,#140f18 100%);box-shadow:inset 0 0 0 1px #000,inset 0 0 36px rgba(0,0,0,.65)}
+.line::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 64%,rgba(60,50,90,.18) 76%,rgba(40,32,60,.12) 100%);pointer-events:none}
+.rowlab{position:absolute;top:7px;transform:translateX(-50%);height:18px;padding:0 9px;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:#d8c8a8;background:linear-gradient(#2e2a34,#1a171f);border:1px solid #5a4632;box-shadow:0 0 0 1px #000}
+.rowlab.front{color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border-color:#000}
+.slot{position:absolute;width:98px;height:84px;transform:translate(-50%,-100%)}
+.slot .pad{position:absolute;left:50%;bottom:4px;width:76px;height:20px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#5e4a3a 0,#3a2c24 60%,#1e1618 100%);box-shadow:0 2px 0 #000}
+.slot.empty .pad{background:rgba(20,14,22,.5);border:1px dashed #6a5642;box-shadow:none}
+.slot.empty .pad::after{content:"+";position:absolute;inset:0;display:grid;place-items:center;font:700 12px/1 var(--f-pixel);color:#6a5642}
+.slot .sp{position:absolute;left:50%;bottom:11px;transform:translateX(-50%);filter:drop-shadow(0 1px 0 #000)}
+.slot .lv{position:absolute;left:4px;bottom:20px;height:14px;padding:0 4px;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);color:var(--bone);background:#0b0810;border:1px solid #5a4632}
+.slot .ft{position:absolute;left:50%;bottom:0;width:48px;height:3px;transform:translateX(-50%);background:#241b2c;border:1px solid #000;box-sizing:content-box}
+.slot .ft i{display:block;height:100%}
+.slot.over .pad,.slot.hint .pad{border:0;background:radial-gradient(ellipse at 50% 40%,#ffd68a 0,#c8722a 55%,#4a2a18 100%);box-shadow:0 0 0 2px #000,0 0 18px rgba(244,166,70,.75)}
+.slot.over .pad::after,.slot.hint .pad::after{color:#1a1008}
+.slot.lift .sp{opacity:.25}
+.slot .warn{position:absolute;left:50%;bottom:-5px;z-index:2;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:18px;padding:0 6px;white-space:nowrap;font:700 8px/1 var(--f-pixel);letter-spacing:.06em;color:#ffe8e0;background:#7a1c1c;border:1px solid #000;box-shadow:0 0 10px rgba(212,72,74,.5)}
+.slot .warn img{width:11px;height:11px}
+.foes{position:absolute;inset:0;pointer-events:none}
+.foes img{position:absolute;transform:translate(-50%,-100%);filter:drop-shadow(1px 0 0 #5a4a78) drop-shadow(-1px 0 0 #3a3050) drop-shadow(0 -1px 0 #5a4a78)}
+.stagechip{position:absolute;right:10px;top:7px;display:flex;align-items:center;gap:5px;height:18px;padding:0 7px;font:700 9px/1 var(--f-pixel);color:var(--bone);background:#120c14;border:1px solid #6a3a32;box-shadow:0 0 0 1px #000}
+.stagechip i{width:7px;height:7px;background:var(--blood);transform:rotate(45deg)}
+.side{display:grid;align-content:space-between;gap:10px;padding:2px 0}
+.side .who{display:grid;gap:6px;padding:10px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.side .who div{display:flex;align-items:center;gap:7px;font:700 9px/1 var(--f-pixel);letter-spacing:.08em;color:var(--ash)}
+.side .who div b{font-weight:700;color:var(--bone)}
+.side .who img{width:14px;height:14px}
+.btn{height:36px;padding:0 16px;font:400 19px/1 var(--f-display);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000;box-shadow:0 0 0 1px #8a5a2a,inset 0 1px 0 rgba(255,255,255,.5)}
+.btn.sec{color:var(--bone);background:linear-gradient(#3a2c40,#1e1624);box-shadow:0 0 0 1px #6b4a2a,inset 0 1px 0 rgba(255,255,255,.1)}
+
+/* the roster, along the bottom */
+.strip{position:relative;display:flex;align-items:flex-end;gap:7px;height:86px;margin:0 14px 12px;padding:8px 10px 8px 10px;background:rgba(10,7,14,.6);border:1px solid #3a2c22;overflow:hidden}
+.strip .sort{align-self:center;display:grid;justify-items:center;gap:3px;width:34px;margin-right:4px;font:700 7px/1 var(--f-pixel);letter-spacing:.1em;color:var(--dim)}
+.strip .sort b{font:700 10px/1 var(--f-pixel);color:var(--bone)}
+.port{position:relative;display:grid;justify-items:center;gap:4px;width:56px;cursor:grab;touch-action:none}
+.port .pf{position:relative;width:56px;height:56px;display:grid;place-items:center;border:1px solid #5a4632;background:radial-gradient(circle at 50% 30%,#2a2030,#0f0b14)}
+.port .pf img{width:48px;height:48px}
+.port .pf em{position:absolute;left:-1px;top:-1px;height:14px;padding:0 4px;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);font-style:normal;color:var(--bone);background:#0b0810;border:1px solid #5a4632}
+.port .ft{width:56px;height:3px;background:#241b2c}
+.port .ft i{display:block;height:100%}
+.port.in .pf{border-color:var(--ember);box-shadow:0 0 0 1px #000,0 0 8px rgba(244,166,70,.35)}
+.port.in .pf::after{content:"";position:absolute;right:3px;top:3px;width:7px;height:7px;background:var(--ember);border:1px solid #000;border-radius:50%}
+.port.spent .pf img{filter:grayscale(1) brightness(.55)}
+.port .tag{position:absolute;left:50%;top:22px;transform:translateX(-50%);height:14px;padding:0 4px;display:grid;place-items:center;font:700 7px/1 var(--f-pixel);letter-spacing:.08em;color:#cfc6e0;background:#2a2238;border:1px solid #000}
+.port.new .pf{border-color:var(--good)}
+.port.new .tag{color:#1a1008;background:var(--good)}
+.port.lift{opacity:.35}
+.strip.over{box-shadow:inset 0 0 0 2px var(--ember)}
+.ghost{position:absolute;z-index:9;width:56px;height:56px;transform:translate(-50%,-60%);display:grid;place-items:center;border:2px solid var(--ember);background:#0f0b14;box-shadow:0 0 0 1px #000,0 10px 20px rgba(0,0,0,.7),0 0 16px rgba(244,166,70,.5);pointer-events:none}
+.ghost img{width:48px;height:48px}
+
+/* Wick's first visit: callouts on the rows, his bubble, a hand showing the drag */
+.callout{position:absolute;z-index:7;max-width:200px;padding:8px 11px 9px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px var(--trim),0 8px 18px rgba(0,0,0,.5);font:600 13px/1.25 var(--f-body);pointer-events:none}
+.callout b{display:block;font:400 17px/1 var(--f-display);color:#5a1c10;margin-bottom:2px}
+.callout::after{content:"";position:absolute;border:8px solid transparent}
+.callout.down::after{left:var(--ax,50%);bottom:-15px;margin-left:-8px;border-top:8px solid #f2e7d0;border-bottom:0}
+.callout.up::after{left:var(--ax,50%);top:-15px;margin-left:-8px;border-bottom:8px solid #f2e7d0;border-top:0}
+.wickc{position:absolute;z-index:8;right:4px;bottom:-6px;width:108px;height:146px;filter:drop-shadow(0 0 14px rgba(244,166,70,.3)) drop-shadow(0 3px 0 rgba(0,0,0,.6));pointer-events:none}
+.wbub{position:absolute;z-index:8;right:116px;bottom:104px;max-width:250px;padding:9px 13px 10px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px var(--trim),0 8px 18px rgba(0,0,0,.5);font:600 14px/1.3 var(--f-body);pointer-events:none}
+.wbub::after{content:"";position:absolute;right:-16px;bottom:14px;border:8px solid transparent;border-left:8px solid #f2e7d0;border-right:0}
+.hand{position:absolute;z-index:9;width:30px;height:30px;pointer-events:none;filter:drop-shadow(0 0 8px rgba(244,166,70,.8));animation:drag 2.4s ease-in-out infinite}
+@keyframes drag{0%,12%{translate:0 0;opacity:0}20%{opacity:1}70%{translate:var(--dx) var(--dy);opacity:1}86%,100%{translate:var(--dx) var(--dy);opacity:0}}
+.trail{position:absolute;z-index:6;height:0;border-top:2px dashed rgba(244,166,70,.7);transform-origin:0 0;pointer-events:none}
+.toast{position:absolute;left:50%;top:14px;z-index:10;transform:translateX(-50%);padding:6px 12px;font:600 13px/1.2 var(--f-body);color:var(--bone);background:#1e1016;border:1px solid #9a3a34;box-shadow:0 0 0 1px #000;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 5 · Formation</div>
+    <h1>Formation</h1>
+    <p class="lede">Tap the party panel in the party view to open it. Your party stands as it does in battle, front on the right, facing the next stage’s foes, with the roster along the bottom. The top frame is live: drag heroes onto places, swap them, or drag one down to rest.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="live"></div></div></div><figcaption><b>Live</b> Drag a portrait onto a place, a hero onto another to swap, or a hero down to the roster to rest. Auto fills the empty places.</figcaption></figure>
+
+  <section class="band">
+    <h2>The screen</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="f1"></div></div></div><figcaption><b>F1</b> Mid Region I: four set out, two back places open, two heroes resting. The amber dot marks who’s in the party.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="f2"></div></div></div><figcaption><b>F2</b> Dragging the Hexblade to an open back place. The place lights as you reach it.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="f3"></div></div></div><figcaption><b>F3</b> The first visit, step 12 of the first session: the second hero has just joined. Wick points at each row once, and a hand shows the drag.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="f4"></div></div></div><figcaption><b>F4</b> Warnings: a melee hero put in the back only Defends, and a Spent hero is greyed until rested.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>What it does</h2>
+    <ul class="notes">
+      <li><b>Opens from the party panel</b> in the party view. Its first visit is step 12 of the first session, when the second hero joins.</li>
+      <li><b>The line</b> is the party as it stands in battle: two places in front, four behind, facing the next stage’s foes. It’s the same grid as the party panel, only larger, with the heroes standing in it.</li>
+      <li><b>Drag</b> a portrait onto a place, a hero onto another to swap them, or a hero down to the roster to rest them. Tap a portrait for the hero (screen 8).</li>
+      <li><b>Auto</b> fills empty places with rested heroes, front-row classes in front, the highest level first. <b>Done</b> closes it.</li>
+      <li><b>Warnings, not rules:</b> a melee hero in the back only Defends (that’s how battles work today), and a Spent hero is greyed. The Oathbound Gorget still keeps its wearer in front.</li>
+      <li><b>Words:</b> Front, Back, the count, levels. The rows are explained once, by Wick, on the first visit.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>For you</h2>
+    <ol class="notes qs">
+      <li><b>Auto:</b> keep it, as described?</li>
+      <li><b>Spent heroes:</b> greyed but placeable, or kept out until they’ve rested?</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+// js/camp.js holds the building art. Its screen code needs the rest of the game, so it gets stand-ins that do nothing.
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script src="hearth-art.js"></script>
+<script src="hearth-scene.js"></script>
+<script>
+'use strict';
+HearthScene.install();
+(() => {
+  const C = HearthArt.C;
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; i.draggable = false; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const big = (c, k) => { const o = document.createElement('canvas'); o.width = c.width * k; o.height = c.height * k; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL(); };
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  const fatCol = f => (f >= 100 ? '#7d7186' : f >= 75 ? 'var(--bad)' : f >= 50 ? 'var(--gold)' : 'var(--good)');
+  const portrait = cls => portraitURL(cls, true, LOOK(cls));
+  const standing = (() => { const cache = {}; return cls => cache[cls] || (cache[cls] = (() => { const c = heroSide(cls, 0, LOOK(cls)); return { src: big(c, 2), w: c.width * 2, h: c.height * 2 }; })()); })();
+  const melee = cls => CLASSES[cls].row === 'front';
+  const crest = (() => { const P = HearthArt.painter(32, 32); P.disc(16, 16, 15, (x, y, d) => (d > 12.2 ? (d > 14 ? C.i1 : x + y < 31 ? C.i3 : C.i2) : null)); P.disc(16, 16, 12.2, (x, y, d) => (d < 12.2 ? '#22182a' : null)); P.rect(12, 8, 9, 2, C.i2); P.rect(11, 10, 11, 11, C.i1); P.rect(12, 11, 9, 9, C.y2); P.rect(13, 12, 7, 6, C.y3); P.rect(10, 21, 13, 2, C.i2); return P.finish({ warm: 0 }); })();
+  const HAND = { map: ['...kk.....', '..kwwk....', '..kwwk....', '..kwwkkk..', '..kwwwwwkk', 'kkkwwwwwwk', 'kwwwwwwwwk', '.kwwwwwwwk', '..kwwwwwk.', '...kkkkk..'], pal: { k: '#1a1008', w: '#ffe2a0' } };
+
+  // ── the heroes: a mid Region I roster, and the first visit's two
+  const H = {
+    brand: { cls: 'warden', name: 'Brand', lv: 5, fat: 22 },
+    fulke: { cls: 'sellsword', name: 'Fulke', lv: 6, fat: 41 },
+    isolde: { cls: 'crossbowman', name: 'Isolde', lv: 4, fat: 18 },
+    agnes: { cls: 'pilgrim', name: 'Agnes', lv: 6, fat: 56 },
+    morrow: { cls: 'hexblade', name: 'Morrow', lv: 3, fat: 0 },
+    tobin: { cls: 'lamplighter', name: 'Tobin', lv: 2, fat: 100 },
+    fulke1: { cls: 'sellsword', name: 'Fulke', lv: 2, fat: 30 },
+    agnes1: { cls: 'pilgrim', name: 'Agnes', lv: 1, fat: 0, isNew: true },
+  };
+  const MID = () => ({ roster: ['brand', 'fulke', 'agnes', 'isolde', 'morrow', 'tobin'], party: ['brand', 'fulke', 'isolde', 'agnes', null, null] });
+  const FRAMES = {
+    live: { st: MID(), live: true },
+    f1: { st: MID() },
+    f2: { st: MID(), drag: { id: 'morrow', over: 4 } },
+    f3: { st: { roster: ['fulke1', 'agnes1'], party: ['fulke1', null, null, null, null, null] }, first: true },
+    f4: { st: { roster: ['brand', 'fulke', 'agnes', 'isolde', 'morrow', 'tobin'], party: ['brand', null, 'isolde', 'agnes', 'fulke', 'morrow'] } },
+  };
+  // where each place stands in the line (px within it): back two columns, then the front on the right; two rows
+  const PLACE = [[300, 92], [300, 176], [86, 92], [192, 92], [86, 176], [192, 176]];
+  const FOES = (() => { const st = STAGES.find(s => s.id === '1-9'); return st.foes.map((f, i) => (f && FOE_ART[f] ? { f, i } : null)).filter(Boolean); })();
+  const FOE_AT = [[420, 98], [420, 180], [488, 92], [520, 150], [488, 186], [520, 186]];
+
+  function bg(el) {
+    const cv = h('canvas', { width: Camp3D.IW, height: Camp3D.IH, 'aria-hidden': 'true' });
+    const cur = (ic, v) => h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon(ic, 22)), h('span', { class: 'cv', text: v }));
+    const mini = h('div', { class: 'mini' }, ...[2, 3, 0, 4, 5, 1].map(i => { const id = MID().party[i]; return h('span', { class: i < 2 ? 'f' : '' }, id ? pxImg(portrait(H[id].cls), 34, 34) : null); }));
+    el.append(cv, pxImg(big(crest, 2), 64, 64, 'px crest'), h('div', { class: 'banner', text: 'The Hearth' }), h('div', { class: 'purse' }, cur('coin', '1,240'), cur('bone', '34')), mini);
+    Camp3D.live(cv, el, { heroes: ['sellsword', 'pilgrim', 'warden', 'crossbowman'], lit: 8, wick: true, plots: [{ art: 'toll' }, { art: 'infirmary' }, { art: 'yard' }, { empty: true }, { empty: true }, null, null, null, null, null, null, null, null, null] }, { yaw: 0, drag: false });
+  }
+
+  function panel(F, el) {
+    const st = F.st, modal = h('div', { class: 'modal' });
+    const fp = h('div', { class: 'fp' }), line = h('div', { class: 'line' }), strip = h('div', { class: 'strip' }), count = h('span', { class: 'ct' }), who = h('div', { class: 'who' });
+    const close = h('button', { class: 'xx', text: '✕', 'aria-label': 'Close' }), auto = h('button', { class: 'btn sec', text: 'Auto' }), done = h('button', { class: 'btn', text: 'Done' });
+    fp.append(...['tl', 'tr', 'bl', 'br'].map(c => h('i', { class: 'cn ' + c })), close,
+      h('div', { class: 'plate' }, icon('helm', 24), h('h3', { text: 'Formation' }), count),
+      h('div', { class: 'fbody' }, line, h('div', { class: 'side' }, who, h('div', { style: 'display:grid;gap:8px' }, auto, done))), strip);
+    modal.append(fp); el.append(modal);
+    const slots = [], ports = {};
+    const render = () => {
+      line.innerHTML = ''; strip.innerHTML = ''; slots.length = 0;
+      line.append(h('span', { class: 'rowlab', style: `left:${(PLACE[2][0] + PLACE[3][0]) / 2}px`, text: 'Back' }), h('span', { class: 'rowlab front', style: `left:${PLACE[0][0]}px`, text: 'Front' }));
+      const foes = h('div', { class: 'foes' });
+      FOES.forEach(({ f, i }) => { const c = tinted(foeSprite(f), '#1e1628'), [fx, fy] = FOE_AT[i] || [520, 150]; const im = pxImg(big(c, 2), c.width * 2, c.height * 2); im.style.left = fx + 'px'; im.style.top = fy + 'px'; foes.append(im); });
+      line.append(foes, h('span', { class: 'stagechip' }, h('i'), '1-9'));
+      st.party.forEach((id, i) => {
+        const [x, y] = PLACE[i], c = id && H[id];
+        const s = h('div', { class: 'slot' + (c ? '' : ' empty'), style: `left:${x}px;top:${y}px` }, h('span', { class: 'pad' }));
+        if (c) {
+          const S = standing(c.cls), im = pxImg(S.src, S.w, S.h, 'px sp');
+          s.append(im, h('span', { class: 'lv', text: String(c.lv) }), h('span', { class: 'ft' }, h('i', { style: `width:${Math.min(100, c.fat)}%;background:${fatCol(c.fat)}` })));
+          if (i >= 2 && melee(c.cls)) s.append(h('span', { class: 'warn' }, icon('shield', 11), 'Defends only'));
+          s.dataset.id = id;
+        }
+        s.dataset.i = i; slots.push(s); line.append(s);
+      });
+      strip.append(h('div', { class: 'sort' }, 'SORT', h('b', { text: 'LV' })));
+      st.roster.forEach(id => {
+        const c = H[id], inP = st.party.includes(id), spent = c.fat >= 100;
+        const p = h('div', { class: 'port' + (inP ? ' in' : '') + (spent ? ' spent' : '') + (c.isNew ? ' new' : ''), title: c.name }, h('span', { class: 'pf' }, pxImg(portrait(c.cls), 48, 48), h('em', { text: String(c.lv) }), spent ? h('span', { class: 'tag', text: 'SPENT' }) : c.isNew ? h('span', { class: 'tag', text: 'NEW' }) : null), h('span', { class: 'ft' }, h('i', { style: `width:${Math.min(100, c.fat)}%;background:${fatCol(c.fat)}` })));
+        p.dataset.id = id; ports[id] = p; strip.append(p);
+      });
+      const n = st.party.filter(Boolean).length, fr = st.party.slice(0, 2).filter(Boolean).length;
+      count.textContent = `${n} / 6`;
+      who.innerHTML = '';
+      who.append(h('div', {}, icon('shield', 14), h('b', { text: String(fr) }), 'FRONT'), h('div', {}, icon('arrow', 14), h('b', { text: String(n - fr) }), 'BACK'), h('div', {}, icon('fatigue', 14), h('b', { text: String(st.roster.length - n) }), 'RESTING'));
+    };
+    render();
+    return { modal, fp, line, strip, slots, ports, render, auto, done, close };
+  }
+
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+
+  for (const el of document.querySelectorAll('.frame')) {
+    const F = FRAMES[el.dataset.f];
+    bg(el);
+    const P = panel(F, el);
+    const rel = (node) => { const r = node.getBoundingClientRect(), R = el.getBoundingClientRect(), k = R.width / 844; return { x: (r.left - R.left) / k, y: (r.top - R.top) / k, w: r.width / k, h: r.height / k }; };
+
+    // a still mid-drag: the ghost over its place
+    if (F.drag) {
+      requestAnimationFrame(() => {
+        const s = P.slots[F.drag.over], r = rel(s.querySelector('.pad')), g = h('div', { class: 'ghost' }, pxImg(portrait(H[F.drag.id].cls), 48, 48));
+        s.classList.add('over'); P.ports[F.drag.id].classList.add('lift');
+        g.style.left = (r.x + r.w / 2 + 8) + 'px'; g.style.top = (r.y - 2) + 'px'; el.append(g);
+      });
+    }
+    // the first visit: Wick, a callout on each row, a hand showing the drag
+    if (F.first) {
+      requestAnimationFrame(() => {
+        const front = rel(P.slots[0].querySelector('.pad')), b2 = rel(P.slots[2].querySelector('.pad')), b3 = rel(P.slots[3].querySelector('.pad')), from = rel(P.ports.agnes1.querySelector('.pf')), to = rel(P.slots[4].querySelector('.pad'));
+        P.slots[4].classList.add('hint');
+        const bmid = (b2.x + b3.x + b3.w) / 2;
+        el.append(
+          h('div', { class: 'callout up', style: `left:${front.x - 40}px;top:${front.y + 30}px;width:178px;--ax:${front.w / 2 + 40}px` }, h('b', { text: 'Front' }), 'Takes the blows. Melee can only reach here.'),
+          h('div', { class: 'callout down', style: `left:${bmid - 95}px;top:${b2.y - 76}px;width:190px;--ax:95px` }, h('b', { text: 'Back' }), 'Safe while the front stands.'),
+          pxImg(big(wickPortrait(), 3), 108, 146, 'px wickc'), h('div', { class: 'wbub', text: 'Sturdy heroes in front, the rest behind.' }));
+        const ax = from.x + from.w / 2, ay = from.y + 10, bx = to.x + to.w / 2, by = to.y - 4, hand = pxImg(big(sprite(HAND.map, HAND.pal, 'hand'), 3), 30, 30, 'px hand');
+        hand.style.left = (ax - 6) + 'px'; hand.style.top = ay + 'px'; hand.style.setProperty('--dx', (bx - ax) + 'px'); hand.style.setProperty('--dy', (by - ay) + 'px');
+        const len = Math.hypot(bx - ax, by - ay), tr = h('div', { class: 'trail', style: `left:${ax}px;top:${ay + 6}px;width:${len}px;transform:rotate(${Math.atan2(by - ay, bx - ax)}rad)` });
+        el.append(tr, hand);
+      });
+    }
+    if (!F.live) continue;
+
+    // live: drag to place, swap or rest; Auto; Done and ✕ close, a tap on the party panel opens it again
+    const st = F.st, toast = msg => { const t = h('div', { class: 'toast', text: msg }); el.append(t); setTimeout(() => { t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 1600); };
+    const local = e => { const R = el.getBoundingClientRect(), k = R.width / 844; return [(e.clientX - R.left) / k, (e.clientY - R.top) / k]; };
+    const over = (x, y) => { for (const s of P.slots) { const r = rel(s); if (x > r.x + 8 && x < r.x + r.w - 8 && y > r.y && y < r.y + r.h + 6) return s; } const sr = rel(P.strip); return x > sr.x && x < sr.x + sr.w && y > sr.y && y < sr.y + sr.h ? P.strip : null; };
+    let drag = null;
+    el.addEventListener('pointerdown', e => {
+      const src = e.target.closest('.port,.slot[data-id]'); if (!src) return;
+      const id = src.dataset.id, [x, y] = local(e);
+      drag = { id, from: src.classList.contains('slot') ? +src.dataset.i : null, x0: x, y0: y, moved: false, ghost: null, src };
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const [x, y] = local(e);
+      if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < 6) return;
+      if (!drag.moved) { drag.moved = true; drag.ghost = h('div', { class: 'ghost' }, pxImg(portrait(H[drag.id].cls), 48, 48)); el.append(drag.ghost); drag.src.classList.add('lift'); }
+      drag.ghost.style.left = x + 'px'; drag.ghost.style.top = y + 'px';
+      const t = over(x, y); for (const s of P.slots) s.classList.toggle('over', s === t); P.strip.classList.toggle('over', t === P.strip && drag.from != null);
+    });
+    el.addEventListener('pointerup', e => {
+      if (!drag) return;
+      const d = drag; drag = null;
+      if (d.ghost) d.ghost.remove();
+      if (!d.moved) { P.render(); toast(`${H[d.id].name}: the hero screen opens (screen 8)`); return; }
+      const [x, y] = local(e), t = over(x, y), p = st.party;
+      if (t && t !== P.strip) {
+        const i = +t.dataset.i, was = p.indexOf(d.id), other = p[i];
+        if (was >= 0) p[was] = other; p[i] = d.id;
+      } else if (t === P.strip && d.from != null) {
+        if (p.filter(Boolean).length > 1) { p[d.from] = null; toast(`${H[d.id].name} rests at the Hearth`); } else toast('One hero has to set out');
+      }
+      P.render();
+    });
+    P.auto.onclick = () => {
+      const p = st.party, free = st.roster.filter(id => !p.includes(id) && H[id].fat < 100).sort((a, b) => H[b].lv - H[a].lv);
+      for (const want of ['front', 'back']) for (let i = 0; i < 6; i++) { if (p[i] || (i < 2) !== (want === 'front')) continue; const k = free.findIndex(id => (CLASSES[H[id].cls].row === 'front') === (want === 'front')); const j = k >= 0 ? k : 0; if (free.length) p[i] = free.splice(j, 1)[0]; }
+      P.render(); toast('Empty places filled');
+    };
+    const hide = () => { P.modal.style.display = 'none'; };
+    P.done.onclick = hide; P.close.onclick = hide;
+    el.querySelector('.mini').style.cursor = 'pointer';
+    el.querySelector('.mini').addEventListener('click', () => { P.modal.style.display = ''; });
+  }
+})();
+</script>
+</body>
+</html>

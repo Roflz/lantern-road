@@ -21,7 +21,7 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-MID = """(() => { const s = Save.state; Base.newGame('sellsword', s); Tactics.owner(s.roster[0].id); closeScreen(); for (let i = 0; i < 8; i++) Proto.lightNext(s);
+MID = """(() => { const s = Save.state; if (typeof FirstSession !== 'undefined') FirstSession.skip(); Base.newGame('sellsword', s); Tactics.owner(s.roster[0].id); closeScreen(); for (let i = 0; i < 8; i++) Proto.lightNext(s);
   Proto.fill(s); Base.proto.gold(1500, s); Base.proto.mats(40, s); Base.build('tollhouse', 0, s); Base.build('infirmary', 1, s); Base.build('trainingyard', 2, s);
   Base.proto.skip(3, s); s.renown.up = 0; s.renown.newPlot = 0; Save.commit(); App.go('home', {}, { instant: true }); return 'mid'; })()"""
 LATE = """(() => { const s = Save.state; Proto.lightTo(3, s); for (let i = 0; i < 9; i++) Proto.lightNext(s); Proto.trainTo(48, s); Proto.spendPoints(s); Base.proto.blueprints(s);

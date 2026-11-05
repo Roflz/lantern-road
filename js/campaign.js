@@ -133,6 +133,8 @@ const Campaign = (() => {
       if (rng() < C.items[0]) for (let n = 0; n < C.items[1]; n++) item();
       if ((r.first && (stage.tier === 'light' || stage.tier === 'standard')) || rng() < C.gear) gear({ rank }, 'clear');
     }
+    // a stage whose first clear must bring a level (1-1: the first level comes in the first battle)
+    if (r.first && stage.firstXp) r.xpLv = Math.max(r.xpLv, stage.firstXp);
     r.spoilsGold = Math.round(r.spoilsGold); r.clearGold = Math.round(r.clearGold);
     r.gold = r.spoilsGold + r.clearGold;
     r.xp = Math.round(r.xpLv * Hero.xpToNext(L));
@@ -143,8 +145,8 @@ const Campaign = (() => {
     const S = GOLD_SCALE(stage.level), C = CLEAR[stage.tier];
     const foes = stage.foes.filter(Boolean).map(x => FOES[foeKey(x)]);
     const spoils = foes.reduce((a, F) => a + SPOILS[foeRank(F)].gold * S, 0), xpLv = foes.reduce((a, F) => a + SPOILS[foeRank(F)].xp, 0) + C.xp;
-    const k = first ? 2 : 1;
-    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp: Math.round(xpLv * Hero.xpToNext(stage.level)), xpLv, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
+    const k = first ? 2 : 1, xpL = first && stage.firstXp ? Math.max(xpLv, stage.firstXp) : xpLv;
+    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp: Math.round(xpL * Hero.xpToNext(stage.level)), xpLv: xpL, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
   }
 
   // ── fatigue (home-base spec §6): +1 for each turn a hero took, times their gear's multiplier. The home base's

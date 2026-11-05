@@ -126,7 +126,8 @@ const Proto = (() => {
       sect('Rules and tips',
         h('div', { class: 'pt-grid' },
           act('Learn every condition', () => { Tactics.learnAll(); return 'Every condition learned'; }),
-          act('Show the tips again', s2 => { s2.campaign.tips = {}; return 'First-time tips will show again'; }, 'The first-time tips and the new-thing notes'))));
+          act('Show the tips again', s2 => { s2.campaign.tips = {}; return 'First-time tips will show again'; }, 'The first-time tips and the new-thing notes'),
+          typeof FirstSession !== 'undefined' && FirstSession.on ? act('Skip the guide', () => { FirstSession.skip(); if (!st().roster.length) setTimeout(() => { closeSheet(); open = false; App.go('home'); }, 0); return 'Wick’s first session is skipped'; }, 'Wick’s forced first session') : null)));
     const prev = again && $('#sheet .protobox');
     const y = prev ? prev.scrollTop : 0;
     openSheet(box, 'sheet-bottom');

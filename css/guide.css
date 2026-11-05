@@ -1,0 +1,126 @@
+/* Wick's guide (js/wick.js Wick.show, js/firstsession.js) and the Recruit Board's first pick (js/firstpick.js), after
+   docs/mockups/camp-welcome.html W1–W3, first-pick.html P1–P5 and formation.html F3. Laid out in the landscape
+   stage's design pixels: the guide's layer covers the whole stage, over every screen and under the title. */
+
+/* ── the layer and a step */
+#wk{position:absolute;inset:0;z-index:25;pointer-events:none;overflow:hidden}
+.wk-step{position:absolute;inset:0;opacity:0;transition:opacity .22s ease}
+.wk-step.in{opacity:1}
+.wk-step.out{opacity:0;transition-duration:.18s}
+.wk-step.lost .wk-hole,.wk-step.lost .wk-arrow{visibility:hidden}
+.wk-veil{position:absolute;inset:0;background:rgba(5,3,9,.66)}
+/* the spotlight: a lit hole in the dark, with a soft lantern glow round its edge */
+.wk-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 2px rgba(244,166,70,.85),0 0 16px 4px rgba(244,166,70,.45),0 0 0 3000px rgba(5,3,9,.72)}
+.wk-hole.round{border-radius:50%}
+.wk-step.lost .wk-hole{visibility:visible;box-shadow:0 0 0 3000px rgba(5,3,9,.72);width:0!important;height:0!important}
+.wk-step.nodim .wk-hole{box-shadow:0 0 0 2px rgba(244,166,70,.85),0 0 16px 4px rgba(244,166,70,.45);animation:wk-glow 1.4s ease-in-out infinite}
+@keyframes wk-glow{50%{box-shadow:0 0 0 2px rgba(244,166,70,.5),0 0 10px 2px rgba(244,166,70,.25)}}
+/* the pointer: bobs over the target, or under it, pointing up */
+.wk-arrow{position:absolute;width:27px;height:30px;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(244,166,70,.7));animation:wk-bob 1.1s ease-in-out infinite}
+.wk-arrow.below{transform:rotate(180deg)}
+@keyframes wk-bob{50%{translate:0 -5px}}
+.wk-arrow.below{animation-name:wk-bob-up}
+@keyframes wk-bob-up{50%{translate:0 5px}}
+
+/* ── Wick: his portrait at a bottom corner, and his bubble beside his head */
+.wk-pt{position:absolute;left:4px;bottom:-4px;width:150px;height:203px;image-rendering:pixelated;filter:drop-shadow(0 0 18px rgba(244,166,70,.25)) drop-shadow(0 4px 0 rgba(0,0,0,.6));animation:wk-rise .35s ease-out}
+.wk-pt.r{left:auto;right:4px}
+.wk-pt.big{width:160px;height:216px;left:8px;z-index:2}
+.wk-step.small .wk-pt{width:108px;height:146px}
+@keyframes wk-rise{from{translate:0 24px;opacity:0}}
+.wk-bubble{position:absolute;max-width:280px;padding:11px 15px 12px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px #6b4a2a,0 10px 24px rgba(0,0,0,.45);font:600 16px/1.3 var(--f-body);animation:wk-rise .3s ease-out}
+.wk-step.small .wk-bubble{max-width:250px;font-size:14px;padding:9px 13px 10px}
+.wk-bubble::after{content:"";position:absolute;border:8px solid transparent}
+/* the tail: toward Wick's head beside it, or down to him from above */
+.wk-bubble[data-tail="side"]::after{top:20px;left:-16px;border-right:9px solid #f2e7d0;border-left:0}
+.wk-bubble.r[data-tail="side"]::after{left:auto;right:-16px;border-left:9px solid #f2e7d0;border-right:0}
+.wk-bubble[data-tail="down"]::after{bottom:-15px;left:26px;border-top:8px solid #f2e7d0;border-bottom:0}
+.wk-bubble.r[data-tail="down"]::after{left:auto;right:26px}
+/* a tap goes on: a small ▼ in the corner */
+.wk-more{display:block;position:absolute;right:8px;bottom:6px;width:0;height:0;border:6px solid transparent;border-top:7px solid #b0692a;border-bottom:0;animation:wk-bob 1s ease-in-out infinite}
+.wk-bubble:has(.wk-more){padding-right:26px}
+
+/* ── his wide panel along the bottom, for the welcome (W1) */
+.wk-panel{position:absolute;left:96px;right:28px;bottom:14px;min-height:96px;padding:16px 56px 18px 92px;background:linear-gradient(#1f1729,#150f1c);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 10px 30px rgba(0,0,0,.5);animation:wk-rise .3s ease-out}
+.wk-who{font:700 9px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-bottom:8px}
+.wk-panel p{margin:0;font:400 19px/1.35 var(--f-body);color:var(--bone)}
+.wk-panel .wk-more{right:18px;bottom:14px;border-width:9px;border-top:11px solid var(--ember);border-bottom:0}
+
+/* ── callouts on what they explain (F3), and the hand that shows a drag */
+.wk-call{position:absolute;max-width:200px;padding:8px 11px 9px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px #6b4a2a,0 8px 18px rgba(0,0,0,.5);font:600 13px/1.25 var(--f-body);animation:wk-rise .3s ease-out}
+.wk-call b{display:block;font:400 17px/1 var(--f-display);color:#5a1c10;margin-bottom:2px}
+.wk-call::after{content:"";position:absolute;left:var(--ax,50%);margin-left:-8px;border:8px solid transparent}
+.wk-call.down::after{bottom:-15px;border-top:8px solid #f2e7d0;border-bottom:0}
+.wk-call.up::after{top:-15px;border-bottom:8px solid #f2e7d0;border-top:0}
+.wk-hand{position:absolute;width:30px;height:30px;image-rendering:pixelated;filter:drop-shadow(0 0 8px rgba(244,166,70,.8));animation:wk-drag 2.4s ease-in-out infinite;z-index:3}
+@keyframes wk-drag{0%,12%{translate:0 0;opacity:0}20%{opacity:1}70%{translate:var(--dx) var(--dy);opacity:1}86%,100%{translate:var(--dx) var(--dy);opacity:0}}
+.wk-trail{position:absolute;height:0;border-top:2px dashed rgba(244,166,70,.75);transform-origin:0 0}
+
+/* ── his name box (W2) */
+.wk-name{position:absolute;right:44px;top:112px;width:340px;padding:32px 22px 20px;display:grid;gap:14px;justify-items:center;background:linear-gradient(#1d1626,#130e19);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);pointer-events:auto;animation:wk-rise .3s ease-out}
+.wk-name .wk-tab{position:absolute;left:50%;top:-16px;transform:translateX(-50%);padding:6px 28px 7px;background:linear-gradient(#3a2512,#22160c);border:1px solid var(--ember);font:400 24px/1 var(--f-display);color:var(--bone);box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.25);white-space:nowrap}
+.wk-name input{width:100%;height:46px;padding:0 14px;background:#0e0a13;border:1px solid var(--ember);font:400 22px/1 var(--f-display);color:var(--bone);box-shadow:inset 0 0 12px rgba(0,0,0,.6);outline:none;user-select:text;-webkit-user-select:text}
+.wk-name input::placeholder{color:var(--dim)}
+.wk-ok{min-width:110px;height:40px;padding:0 18px;font:700 11px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--bone);border:1px solid var(--ember);background:linear-gradient(#3a2512,#22160c);box-shadow:0 0 0 1px #000,0 0 14px rgba(244,166,70,.3);cursor:pointer}
+.wk-ok:active{transform:translateY(1px)}
+
+#wk.narrow .wk-name{right:14px;width:280px;padding:30px 16px 18px}
+#wk.narrow .wk-panel{left:84px;right:16px;padding-left:84px}
+
+/* ── the Recruit Board, first pick (P1–P3) and the free recruit: three cards in the kit's framed panel, Wick beside */
+#sheet.firstpick{align-items:stretch;background:rgba(5,3,9,.62)}
+.fp{position:absolute;inset:0}
+.fp .kp{position:absolute;left:168px;right:22px;top:24px;bottom:14px;display:grid;grid-template-rows:auto 1fr}
+.fp .kp-body{display:grid;grid-template-rows:1fr auto;gap:8px;padding:12px 14px 12px;min-height:0}
+.fp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-height:0}
+.fp-card{position:relative;display:grid;grid-template-rows:auto auto 1fr auto;justify-items:center;gap:4px;padding:9px 8px 10px;background:linear-gradient(#211a2b,#16111d);border:1px solid #3a3044;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);color:var(--bone);cursor:pointer;transition:transform .15s,border-color .15s,opacity .15s;min-height:0}
+.fp-card .fp-nm{font:400 25px/1 var(--f-display);color:var(--bone)}
+.fp-card .fp-rr{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ash)}
+.fp-card .fp-who{font:italic 400 13px/1 var(--f-body);color:var(--dim);margin-top:-1px}
+.fp-dais{position:relative;align-self:end;width:100%;height:118px;display:grid;place-items:end center}
+.fp-dais::before{content:"";position:absolute;left:50%;bottom:4px;width:96px;height:22px;margin-left:-48px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#3a3044,#1a1420 70%);box-shadow:0 2px 0 #0b0810}
+.fp-dais::after{content:"";position:absolute;left:50%;bottom:-6px;width:150px;height:70px;margin-left:-75px;border-radius:50%;background:radial-gradient(ellipse,rgba(244,166,70,0),rgba(244,166,70,0));transition:background .2s}
+.fp-dais img{position:relative;z-index:1;margin-bottom:12px;image-rendering:pixelated}
+.fp-ri{display:flex;gap:6px}
+.fp-ri span{width:26px;height:26px;display:grid;place-items:center;background:#0f0b14;border:1px solid #3a3044}
+.fp-ri img{width:16px;height:16px;image-rendering:pixelated}
+.fp-card.on{border-color:var(--ember);box-shadow:0 0 0 1px #000,0 0 18px rgba(244,166,70,.35),inset 0 0 30px rgba(244,166,70,.08);transform:translateY(-3px)}
+.fp-card.on .fp-dais::after{background:radial-gradient(ellipse,rgba(244,166,70,.28),rgba(244,166,70,0) 70%)}
+.fp-card.on .fp-dais img{animation:wk-bob .9s ease-in-out infinite}
+.fp-cards.picked .fp-card:not(.on){opacity:.55}
+.fp-hire{display:flex;justify-content:center;align-items:center;min-height:46px}
+.fp-go{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;font:700 11px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--bone);border:1px solid var(--ember);background:linear-gradient(#3a2512,#22160c);box-shadow:0 0 0 1px #000,0 0 14px rgba(244,166,70,.3);cursor:pointer}
+.fp-go em{font-style:normal;color:#0f1a0a;background:var(--good);padding:4px 6px;font-size:9px;letter-spacing:.1em}
+.fp-go:active{transform:translateY(1px)}
+.fp .wick-say .wick-pt{left:4px;bottom:-4px;width:150px;height:203px}
+.fp .wick-say .wick-bubble{left:14px;top:30px;max-width:200px;animation:wk-rise .3s ease-out}
+.fp .wick-say .wick-bubble::after{top:auto;bottom:-14px;right:auto;left:26px;border:8px solid transparent;border-top:9px solid #f2e7d0;border-bottom:0}
+/* the reveal (P4): the new hero in the lantern light, their name, class and level */
+.fp-reveal{position:absolute;inset:0;z-index:7;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 58%,#2a1a14 0%,#120c14 45%,#07050b 80%);overflow:hidden;cursor:pointer;animation:fadein .4s ease-out}
+.fp-rays{position:absolute;left:50%;top:56%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,rgba(244,166,70,.12) 0deg 6deg,rgba(244,166,70,0) 6deg 18deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);animation:fp-spin 40s linear infinite}
+@keyframes fp-spin{to{transform:rotate(360deg)}}
+.fp-glow{position:absolute;left:50%;top:58%;width:320px;height:120px;margin:-30px 0 0 -160px;border-radius:50%;background:radial-gradient(ellipse,rgba(244,166,70,.4),rgba(244,166,70,0) 70%)}
+.fp-hero{position:relative;margin-top:-30px;image-rendering:pixelated;filter:drop-shadow(0 0 16px rgba(255,200,120,.55));animation:wk-rise .6s ease-out}
+.fp-plate{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);display:grid;justify-items:center;gap:6px;animation:wk-rise .6s .2s ease-out both}
+.fp-plate b{font:400 46px/1 var(--f-display);color:var(--bone);text-shadow:0 0 20px rgba(244,166,70,.5),0 2px 0 #000;white-space:nowrap}
+.fp-plate span{font:700 10px/1 var(--f-pixel);letter-spacing:.18em;text-transform:uppercase;color:var(--ember)}
+.fp-tap{position:absolute;right:26px;bottom:18px;font:700 9px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);animation:fp-pulse 1.6s ease-in-out infinite}
+@keyframes fp-pulse{50%{opacity:.35}}
+.fp-mote{position:absolute;width:3px;height:3px;background:#ffd68a;border-radius:1px;animation:fp-mote 3.2s linear infinite;opacity:0}
+@keyframes fp-mote{0%{opacity:0;translate:0 0}20%{opacity:.9}100%{opacity:0;translate:0 -180px}}
+/* 16:9 frames, 694 wide: a smaller Wick beside the board */
+@container (max-width:779px){
+  .fp .kp{left:128px}
+  .fp .wick-say .wick-pt{width:118px;height:160px}
+  .fp .wick-say .wick-bubble{max-width:170px;font-size:14px}
+  .fp-card .fp-nm{font-size:21px}
+  .fp-dais{height:100px}
+}
+@media (prefers-reduced-motion:reduce){
+  .wk-arrow,.wk-hand,.wk-more,.fp-card.on .fp-dais img,.fp-rays,.fp-mote{animation:none}
+  .wk-step{transition:none}
+}
+/* the Prototype panel can skip the guide: the guide steps aside while it's open */
+#stage:has(#sheet:not([hidden]) .protobox) #wk{display:none}
+/* a battle paused for Wick doesn't say "Paused" */
+#stage:has(#wk .wk-step:not(.soft):not(.out)) #pausedTag{display:none}

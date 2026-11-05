@@ -65,6 +65,10 @@ function defaultState() {
     shop: { stall: [], refreshedAt: 0, n: 0 },
     settings: { sfx: true, music: true, motion: true, speed: 1, tips: true, proto: true }, // tips: first-time tips; proto: show the prototype tools
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
+    name: '',               // the name you gave Wick (the Hearth shows it by your Renown); '' until you do
+    // Wick's first session (js/firstsession.js): step, the forced step under way; done once it is over (or skipped);
+    // replay: the steps seen again since Settings → Replay the guide, or null.
+    guide: { step: '', done: false, replay: null },
   };
 }
 
@@ -113,6 +117,8 @@ function normalize(d) {
   const uids = new Set(s.roster.flatMap(c => SLOTS.map(k => c.gear[k] && c.gear[k].uid).filter(Boolean)));
   s.inventory.items = s.inventory.items.map(x => Items.valid(x)).filter(x => x && !uids.has(x.uid) && uids.add(x.uid));
   if (!(s.lastSeen > 0)) s.lastSeen = Date.now();
+  // A save from before the guide, with heroes in it, has had its first session.
+  if (!(isObj(d) && isObj(d.guide)) && s.roster.length) s.guide.done = true;
   if (typeof Base !== 'undefined') Base.ensure(s);
   return s;
 }
