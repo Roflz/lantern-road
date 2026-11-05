@@ -46,7 +46,7 @@ SETUP = """
     ['travellerscoat', 2], ['brigandine', 3], ['gravediggersleathers', 2], ['huntershauberk', 3], ['gravewardensplate', 4], ['mothsilk', 4],
     ['bonecharm', 1], ['knucklebone', 2], ['haresfoot', 1], ['courierspur', 3], ['vanguardsbadge', 2], ['tallowcoin', 3], ['bloodcontract', 3]]) Items.add(s, Items.make(id, lv));
   Items.grantRelic(s, 'gravediggersspade');
-  for (const x of s.inventory.items) delete x.fresh;
+  s.inventory.items.forEach((x, i) => { delete x.fresh; if (i % 3 === 0 && Items.rarity(x) !== 'relic') Items.enchant(x, makeRng(i + 7), { stars: 1 + (i % 4) }); }); // a few with stars (#42)
   Base.tick(s);
   Save.commit();
   App.go('home', {}, { instant: true });
