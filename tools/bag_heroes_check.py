@@ -17,7 +17,7 @@ Then the Heroes list, from the Hearth's Heroes button:
   - the party first in its order, then the resting; the count by the title; a badge with the points to spend
   - the filters (everyone, in the party, resting); a row icon's tooltip (with a mouse)
   - a card opens the hero card, whose ‹ comes back; the Bag button opens the Bag, whose ‹ comes back; the + card opens
-    the Recruit Board
+    the Recruit Board (over the Hearth, js/buildings.js)
   - Dismiss: a mode that marks every hero; a tap asks; Keep keeps them; Dismiss sends them on their way
   python tools/bag_heroes_check.py [--sizes 844x390,667x375t,390x844t] [--shots docs/screens]
 --shots saves into its bag/ and heroes/ folders. A size ending in t has a touch screen (and 390x844t is turned).
@@ -276,11 +276,9 @@ def main():
             check(js("App.current") == 'party', f'{tag}: the Bag\'s ‹ comes back to the Heroes list')
             # the + card: the Recruit Board
             tap('[data-tut="heroes-hire"]', wait=600)
-            check(js("RecruitBoard.shown") and js("!document.getElementById('sheet').hidden"), f'{tag}: the + card opens the Recruit Board over the list ({js("App.current")})')
-            shot('heroes', 'board')
-            js("RecruitBoard.close(); 'ok'")
-            page.wait_for_timeout(400)
-            check(js("App.current") == 'party' and js("document.getElementById('sheet').hidden"), f'{tag}: closing the board leaves the Heroes list')
+            check(js("RecruitBoard.shown") and js("App.current") == 'home', f'{tag}: the + card opens the Recruit Board, at the Hearth ({js("App.current")})')
+            js("RecruitBoard.close(); App.go('party', {}, { instant: true }); 'ok'")
+            page.wait_for_timeout(500)
             # Dismiss: a mode; a tap asks; Keep keeps them; Dismiss sends them on their way
             tap('[data-tut="heroes-dismiss"]')
             check(js("HeroesList.dismissing") and count('.hl-hero .hl-x') == 6 and not exists('[data-tut="heroes-hire"]'), f'{tag}: Dismiss marks every hero with ✕')
