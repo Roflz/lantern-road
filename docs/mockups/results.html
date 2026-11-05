@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Battle Results</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Screen 7 of docs/idle-heroes-study.md §6: the results popup after a battle (onboarding spec §9, play-test note 1.7).
+   Each frame is a phone on its side (844×390), drawn with the game's own art and fonts. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a; --mana:#6a94e8;
+  --r-common:#b4a8b6; --r-fine:#b4de98; --r-rare:#8cc4e6; --r-relic:#f1d36a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.shot figcaption button{margin-left:auto;font:700 9px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:7px 9px}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;font-size:15px;user-select:none}
+.frame canvas.scene{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+.veil{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(5,3,9,.55),rgba(5,3,9,.85))}
+@keyframes bob{50%{translate:0 -4px}}
+@keyframes pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+
+/* the popup */
+.res{position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);width:640px;padding:30px 18px 14px;background:linear-gradient(#1d1626,#120d18);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;gap:10px}
+.res.shift{left:calc(50% + 70px)}
+.res.one{width:470px}
+.banner{position:absolute;left:50%;top:-30px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:6px 30px 8px;background:linear-gradient(#4a2e14,#22160c);border:1px solid var(--ember);box-shadow:0 0 0 1px #000,0 0 26px rgba(244,166,70,.45);white-space:nowrap}
+.banner b{font:400 36px/1 var(--f-display);color:#fff4dc;text-shadow:0 0 14px rgba(255,200,120,.6),0 2px 0 #000}
+.banner img{width:22px;height:22px;filter:drop-shadow(0 0 6px rgba(244,166,70,.8))}
+.banner.lost{background:linear-gradient(#3a1a1c,#1c0e10);border-color:#a8484a;box-shadow:0 0 0 1px #000,0 0 22px rgba(212,72,74,.35)}
+.banner.lost b{color:#f2d0c8;text-shadow:0 2px 0 #000}
+.sub{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:2px}
+.sub .id{font:700 11px/1 var(--f-pixel);color:var(--ember)}
+.sub .nm{font:400 19px/1 var(--f-display);color:var(--ash)}
+.sub .first{display:flex;align-items:center;gap:5px;height:20px;padding:0 8px 0 6px;font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);background:#2a1d0c;border:1px solid var(--gold)}
+.sub .first img{width:11px;height:11px}
+.heroes{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.res.one .heroes{grid-template-columns:1fr}
+.hr{display:grid;grid-template-columns:44px 1fr;gap:4px 10px;align-items:center;padding:5px 8px 6px 5px;background:#150f1b;border:1px solid #2e2636}
+.hr .face{grid-row:1/4;position:relative;width:44px;height:44px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
+.hr .face img{width:38px;height:38px}
+.hr .face em{position:absolute;right:-6px;bottom:-6px;min-width:18px;height:17px;padding:0 3px;display:grid;place-items:center;font:700 9px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
+.hr .face em.up{animation:pop .45s ease-out}
+.hr .top{display:flex;align-items:center;gap:8px}
+.hr .nm{font:400 17px/1 var(--f-display);color:var(--bone)}
+.hr .lvup{display:none;align-items:center;height:16px;padding:0 6px;font:700 8px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:#1a1008;background:var(--ember);box-shadow:0 0 10px rgba(244,166,70,.6)}
+.hr .lvup.on{display:flex;animation:pop .45s ease-out}
+.hr .xpn{margin-left:auto;font:700 9px/1 var(--f-pixel);color:var(--gold)}
+.bar{position:relative;height:8px;background:#0c0910;border:1px solid #3a2e22;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#b8622a,#f4a646);box-shadow:inset 0 1px 0 rgba(255,230,180,.35)}
+.bar i::after{content:"";position:absolute;right:0;top:0;bottom:0;width:3px;background:#ffe2a0}
+.bar.flash{box-shadow:0 0 10px rgba(255,214,140,.9)}
+.fat{display:flex;align-items:center;gap:6px}
+.fat img{width:12px;height:12px;opacity:.85}
+.fbar{position:relative;flex:1;height:4px;background:#0c0910;border:1px solid #2e2636}
+.fbar i{position:absolute;left:0;top:0;bottom:0}
+.fbar s{position:absolute;top:-2px;bottom:-2px;width:1px;background:#6a5a7a}
+.fat .fv{min-width:42px;text-align:right;font:700 8px/1 var(--f-pixel);color:var(--ash)}
+.fat .fv.weary{color:var(--gold)}.fat .fv.exh{color:var(--bad)}
+.loot{display:flex;align-items:center;gap:6px;padding:6px 8px;background:#0f0b14;border:1px solid #2a2232;min-height:46px}
+.loot .k{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-right:4px}
+.loot .it{position:relative;width:34px;height:34px;display:grid;place-items:center;background:#17111d;border:1px solid #3a3044;opacity:0}
+.loot .it.in{opacity:1;animation:pop .35s ease-out}
+.loot .it img{width:22px;height:22px}
+.loot .it em{position:absolute;right:1px;bottom:0;font:700 8px/1 var(--f-pixel);font-style:normal;color:var(--bone);text-shadow:0 1px 0 #000}
+.loot .it.r-fine{border-color:var(--r-fine);box-shadow:inset 0 0 8px rgba(180,222,152,.25)}
+.loot .it.r-rare{border-color:var(--r-rare);box-shadow:inset 0 0 8px rgba(140,196,230,.3)}
+.loot .sp{flex:1}
+.loot .new{display:flex;align-items:center;gap:6px;height:30px;padding:0 9px 0 6px;background:linear-gradient(#2a1d14,#160f0c);border:1px solid var(--ember);opacity:0}
+.loot .new.in{opacity:1;animation:pop .4s ease-out}
+.loot .new b{font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ember)}
+.loot .new span{font:400 15px/1 var(--f-display);color:var(--bone)}
+.loot .new img{width:16px;height:16px}
+.acts{display:flex;gap:8px;justify-content:center}
+.b{display:inline-grid;place-items:center;height:42px;padding:0 16px;font:700 10px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--bone);background:#1a1320;border:1px solid var(--rule);white-space:nowrap}
+.b small{display:block;margin-top:4px;font:italic 400 12px/1 var(--f-body);letter-spacing:0;text-transform:none;color:#e6c79a}
+.b.pri{min-width:150px;border-color:var(--ember);background:linear-gradient(#4a2e14,#22160c);box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.35)}
+.b.pri .bl::after{content:" ›";color:var(--ember)}
+
+/* Wick, for the first battle's results and the hint after a loss */
+.wick-big{position:absolute;left:4px;bottom:-4px;width:150px;height:203px;filter:drop-shadow(0 0 18px rgba(244,166,70,.25)) drop-shadow(0 4px 0 rgba(0,0,0,.6));pointer-events:none;z-index:6}
+.bubble{position:absolute;max-width:250px;padding:11px 15px 12px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px var(--trim),0 10px 24px rgba(0,0,0,.45);font:600 16px/1.3 var(--f-body);z-index:6}
+.bubble::after{content:"";position:absolute;bottom:-14px;left:26px;border:8px solid transparent;border-top:9px solid #f2e7d0;border-bottom:0}
+.bubble.side::after{bottom:auto;top:20px;left:auto;right:-14px;border:8px solid transparent;border-left:9px solid #f2e7d0;border-right:0}
+.spot{position:absolute;inset:0;pointer-events:none;z-index:5}
+.arrow{position:absolute;width:27px;height:30px;animation:bob 1.1s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(244,166,70,.7));pointer-events:none;z-index:6}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 7 · after a battle</div>
+    <h1>The Results</h1>
+    <p class="lede">After every battle: who levelled, how tired they are, what came home, and where to go next. The bars fill as you watch; tap to skip to the end. The top frame is live.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="live"></div></div></div><figcaption><b>Live</b> A full party after 1-7: XP bars fill, two heroes level up and roll over, fatigue rises, loot pops in. <button id="replay">Replay</button></figcaption></figure>
+
+  <section class="band">
+    <h2>The popup</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r1"></div></div></div><figcaption><b>R1</b> The first battle (1-1), in the tutorial: one hero’s first level. Wick points at the bar.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r2"></div></div></div><figcaption><b>R2</b> Mid-way: Fulke’s bar has filled, flashed and rolled over into level 6; Agnes’s is still filling.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r3"></div></div></div><figcaption><b>R3</b> The end: levels gained, fatigue up (Agnes is now Weary), the loot and a Fine accessory. Next goes straight up the road to 1-8.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="r4"></div></div></div><figcaption><b>R4</b> Driven back at the elite. Wick gives the stage’s hint; Farm 1-8 is offered for XP and gear.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>How it works</h2>
+    <ul class="notes">
+      <li><b>XP bars</b> fill from where each hero was. A level-up fills the bar, flashes, lights “Level up”, empties it and fills again; several levels roll over in turn. The badge on the face shows the new level.</li>
+      <li><b>Fatigue bars</b> grow from before to after, with marks at 50 (Weary) and 75 (Exhausted). The number turns gold, then red, as a hero crosses them; tap it for what it means.</li>
+      <li><b>Loot</b> pops in piece by piece; rarity shows on the frame. A first clear’s unlock shows as New. Tap anything for its card.</li>
+      <li><b>The buttons:</b> Report (the battle’s numbers, a screen of its own), Camp, Fight again, and Next, which flies up the road to the next stage with its card open. After a loss: Report, Camp, Try again, and Farm the stage before a wall.</li>
+      <li><b>It replaces</b> today’s level-up sheet and the report that opens on its own.</li>
+      <li><b>On a trip that keeps going</b> this popup will be shorter, with the walk on to the next stage; that waits for the Keep going decision.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script>
+'use strict';
+(() => {
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const big = (c, k) => { const o = document.createElement('canvas'); o.width = c.width * k; o.height = c.height * k; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL(); };
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  if (!UI_ICONS.flask) UI_ICONS.flask = { map: ['..kk...', '..ww...', '.wrrw..', 'wrRrrw.', 'wrrrrw.', '.wwww..', '.......'], pal: { k: '#6b4a2e', w: '#cfc4b0', r: '#d83a46', R: '#ff9a8a' } };
+  const WICK_URL = big(wickPortrait(), 4);
+  const ARROW = { map: ['..kkkkk..', '..kyYyk..', '..kyYyk..', '..kyYyk..', 'kkkyYykkk', 'kyyyYyyyk', '.kyyYyyk.', '..kyYyk..', '...kyk...', '....k....'], pal: { k: '#1a1008', y: '#f4a646', Y: '#ffd68a' } };
+  const pick = (slot, rarity) => GEAR_ORDER.find(id => GEAR[id].slot === slot && GEAR[id].rarity === rarity) || GEAR_ORDER.find(id => GEAR[id].slot === slot);
+  const fatCol = f => (f >= 75 ? 'var(--bad)' : f >= 50 ? 'var(--gold)' : 'var(--good)');
+
+  // Each hero: level before, XP fraction before, levels gained, fraction after, XP gained, fatigue before and after.
+  const PARTY = [
+    { cls: 'sellsword', name: 'Fulke', lv: 5, from: 0.72, gain: 1, to: 0.31, xp: 140, f0: 22, f1: 31 },
+    { cls: 'pilgrim', name: 'Agnes', lv: 5, from: 0.48, gain: 1, to: 0.12, xp: 140, f0: 44, f1: 53 },
+    { cls: 'warden', name: 'Osric', lv: 4, from: 0.15, gain: 0, to: 0.84, xp: 140, f0: 18, f1: 26 },
+    { cls: 'crossbowman', name: 'Mira', lv: 3, from: 0.6, gain: 2, to: 0.2, xp: 140, f0: 9, f1: 21 },
+  ];
+  const FIRST = [{ cls: 'sellsword', name: 'Fulke', lv: 1, from: 0, gain: 1, to: 0.25, xp: 30, f0: 0, f1: 6 }];
+  const LOOT = [['coin', '124'], ['bone', '6'], ['flask', '1'], [null, '', 'accessory', 'fine']];
+  const LOOT1 = [['coin', '18'], ['bone', '2']];
+  const FRAMES = {
+    live: { stage: 6, won: true, party: PARTY, loot: LOOT, live: true },
+    r1: { stage: 0, won: true, party: FIRST, loot: LOOT1, first: true, unlock: ['book', 'Tactics'], p: 1, tutorial: true },
+    r2: { stage: 6, won: true, party: PARTY, loot: LOOT, p: 0.42 },
+    r3: { stage: 6, won: true, party: PARTY, loot: LOOT, p: 1 },
+    r4: { stage: 8, won: false, party: PARTY.map(c => ({ ...c, gain: 0, to: Math.min(0.97, c.from + 0.18), xp: 60, f1: c.f0 + 11 })), loot: [['coin', '41'], ['bone', '2']], p: 1, hint: true },
+  };
+
+  function popup(F) {
+    const st = STAGES[F.stage], rows = [], bars = [];
+    for (const c of F.party) {
+      const em = h('em', { text: String(c.lv) }), lvup = h('span', { class: 'lvup', text: 'Level up' }), xpn = h('span', { class: 'xpn', text: '+0 XP' });
+      const fill = h('i'), bar = h('span', { class: 'bar' }, fill);
+      const ffill = h('i'), fv = h('span', { class: 'fv' });
+      rows.push(h('div', { class: 'hr' },
+        h('span', { class: 'face' }, pxImg(portraitURL(c.cls, true, LOOK(c.cls)), 38, 38), em),
+        h('span', { class: 'top' }, h('span', { class: 'nm', text: c.name }), lvup, xpn),
+        bar,
+        h('span', { class: 'fat' }, icon('fatigue', 12), h('span', { class: 'fbar' }, ffill, h('s', { style: 'left:50%' }), h('s', { style: 'left:75%' })), fv)));
+      bars.push({ c, em, lvup, xpn, fill, bar, ffill, fv, shownLv: c.lv });
+    }
+    const items = F.loot.map(([ic, n, slot, rar]) => {
+      if (slot) { const id = pick(slot, rar); return h('span', { class: 'it r-' + rar }, pxImg(gearIconURL(id), 22, 22)); }
+      return h('span', { class: 'it' }, icon(ic, 22), h('em', { text: n }));
+    });
+    const nw = F.unlock ? h('span', { class: 'new' }, icon(F.unlock[0], 16), h('b', { text: 'New' }), h('span', { text: F.unlock[1] })) : null;
+    const next = STAGES[F.stage + 1];
+    const acts = F.won
+      ? [h('button', { class: 'b', text: 'Report' }), h('button', { class: 'b', text: 'Camp' }), h('button', { class: 'b', text: 'Fight again' }), h('button', { class: 'b pri' }, h('span', { class: 'bl', text: 'Next' }), h('small', { text: `${next.id} · ${next.name.replace(/^The /, '')}` }))]
+      : [h('button', { class: 'b', text: 'Report' }), h('button', { class: 'b', text: 'Camp' }), h('button', { class: 'b', text: 'Try again' }), h('button', { class: 'b pri' }, h('span', { class: 'bl', text: `Farm ${STAGES[F.stage - 1].id}` }), h('small', { text: 'XP and gear' }))];
+    const box = h('div', { class: 'res' + (F.party.length === 1 ? ' one' : '') + (F.tutorial || F.hint ? ' shift' : '') },
+      h('div', { class: 'banner' + (F.won ? '' : ' lost') }, icon('lantern', 22), h('b', { text: F.won ? 'Victory' : 'Driven back' }), icon('lantern', 22)),
+      h('div', { class: 'sub' }, h('span', { class: 'id', text: st.id }), h('span', { class: 'nm', text: st.name }), F.first ? h('span', { class: 'first' }, icon('star', 11), 'First clear') : null),
+      h('div', { class: 'heroes' }, rows),
+      h('div', { class: 'loot' }, h('span', { class: 'k', text: 'Loot' }), items, h('span', { class: 'sp' }), nw),
+      h('div', { class: 'acts' }, acts));
+    // p runs 0 → 1: heroes fill one after another, then loot and the new unlock pop in
+    function set(p) {
+      bars.forEach((b, i) => {
+        const c = b.c, q = Math.max(0, Math.min(1, (p * 1.25 - i * 0.12) / 0.75)), travel = c.gain ? (1 - c.from) + (c.gain - 1) + c.to : c.to - c.from;
+        let dist = travel * q, lv = c.lv, frac = c.from;
+        if (c.gain) { if (dist < 1 - c.from) frac = c.from + dist; else { dist -= 1 - c.from; lv++; while (dist >= 1 && lv < c.lv + c.gain) { dist -= 1; lv++; } frac = dist; } }
+        else frac = c.from + dist;
+        b.fill.style.width = Math.round(frac * 100) + '%';
+        b.xpn.textContent = '+' + Math.round(c.xp * q) + ' XP';
+        if (lv !== b.shownLv) { b.shownLv = lv; b.em.textContent = String(lv); b.em.classList.remove('up'); void b.em.offsetWidth; b.em.classList.add('up'); b.lvup.classList.add('on'); b.bar.classList.add('flash'); setTimeout(() => b.bar.classList.remove('flash'), 220); }
+        if (lv === c.lv) { b.em.textContent = String(c.lv); b.lvup.classList.remove('on'); }
+        const f = c.f0 + (c.f1 - c.f0) * q;
+        b.ffill.style.width = f + '%'; b.ffill.style.background = fatCol(f);
+        b.fv.textContent = Math.round(f) + ''; b.fv.className = 'fv' + (f >= 75 ? ' exh' : f >= 50 ? ' weary' : '');
+      });
+      items.forEach((it, k) => it.classList.toggle('in', p > 0.55 + k * 0.08));
+      if (nw) nw.classList.toggle('in', p > 0.9);
+    }
+    return { box, set };
+  }
+
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+  for (const el of document.querySelectorAll('.frame')) {
+    const F = FRAMES[el.dataset.f];
+    const cv = h('canvas', { class: 'scene', width: Camp3D.IW, height: Camp3D.IH });
+    el.append(cv);
+    Camp3D.live(cv, el, { heroes: F.party.map(c => c.cls), lit: F.stage, wick: false, sel: null, plots: [] }, { road: 1, zc: Camp3D.STAGE_Z[F.stage] - 20, drag: false });
+    el.append(h('div', { class: 'veil' }));
+    const P = popup(F);
+    el.append(P.box);
+    if (F.tutorial) {
+      el.append(pxImg(WICK_URL, 150, 203, 'px wick-big'), h('div', { class: 'bubble side', style: 'left:22px;top:120px;max-width:180px', text: 'Your first level. Each one brings a stat point.' }));
+    }
+    if (F.hint) el.append(pxImg(WICK_URL, 150, 203, 'px wick-big'), h('div', { class: 'bubble side', style: 'left:10px;top:24px;max-width:168px;font-size:14px;line-height:1.25', text: STAGES[F.stage].hint }));
+    if (F.live) {
+      let t0 = performance.now();
+      const loop = now => { const p = Math.min(1, (now - t0) / 4200); P.set(p); requestAnimationFrame(loop); };
+      requestAnimationFrame(loop);
+      el.addEventListener('click', () => { t0 = -1e9; });
+      document.getElementById('replay').addEventListener('click', () => { P.set(0); t0 = performance.now(); });
+    } else P.set(F.p);
+  }
+})();
+</script>
+</body>
+</html>

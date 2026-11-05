@@ -1183,11 +1183,17 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   for (const c of S.roster) c.fatigue = 0;
   const T = Campaign.setOut(st('1-7').index, S);
   out = Campaign.afterBattle(won(st('1-7'), 6), S);
+  const xp7 = out.r.xp;
   ok(T.keep && out.next === st('1-8').index && S.campaign.trip && S.campaign.trip.stage === out.next, 'Keep going: a first clear walks on to the next dark stage');
   const tired = S.roster.find(c => S.party.includes(c.id));
   tired.fatigue = 80;
   out = Campaign.afterBattle(won(st('1-8'), 6), S);
   ok(out.next == null && out.why.k === 'rule' && /fatigue/.test(out.why.text) && !S.campaign.trip, `the come-home rule fires between battles (${out.why.text})`);
+  // what the results popup shows for a trip of several battles (js/results.js): its stages, its gear, and each hero's
+  // XP since setting out, from their level and XP as they set out
+  const LT = S.campaign.lastTrip, gotXp = x => { const c = S.roster.find(r => r.id === x.id); return Hero.xpBetween(x.from.level, c.level) - x.from.xp + c.xp; };
+  ok(LT.fought.join() === '1-7,1-8' && LT.pieces.length === LT.gear && LT.heroes.length && LT.heroes.every(x => x.from && gotXp(x) >= 0 && gotXp(x) <= xp7 + out.r.xp) && LT.heroes.some(x => gotXp(x) === xp7 + out.r.xp),
+    `a trip keeps the stages it fought, its gear, and each hero's level and XP as they set out (${LT.fought.join(', ')}; ${LT.heroes.map(gotXp).join(', ')} XP of ${xp7 + out.r.xp})`);
   // a Spent hero walks home alone; the rest carry on
   for (const c of S.roster) c.fatigue = 0;
   Campaign.setOut(st('1-8').index, S);
