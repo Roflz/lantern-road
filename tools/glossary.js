@@ -49,7 +49,7 @@ const DECIDED = [
   { old: 'Ossuary, the Gravecaller’s first path', now: 'Charnel Host', note: 'The Boneward path ends in Charnel Fortress.', data: ['CLASSES.gravecaller.paths[0]', () => CLASSES.gravecaller.paths[0][0], 'Ossuary', 'classes-late.js'] },
   { old: 'Surgeon, the Barber-Surgeon’s second path', now: 'Sawbones', data: ['CLASSES.surgeon.paths[1]', () => CLASSES.surgeon.paths[1][0], 'Surgeon', 'classes-late.js'] },
   { old: 'Bastion, the Warden’s second path', now: 'Unbroken', note: 'Unbroken is also a skill on that path, and the status the skill gives.', data: ['CLASSES.warden.paths[1]', () => CLASSES.warden.paths[1][0], 'Bastion', 'classes.js'] },
-  { old: 'Ossuary, the Gravecaller’s passive', now: 'Bone Retinue (proposed, not decided)', proposed: true, note: 'Each battle starts with a free Bone Thrall, two when awakened.', data: ['SKILLS.ossuarypassive', () => SKILLS.ossuarypassive.name, 'Ossuary', 'classes-late.js'] },
+  { old: 'Ossuary, the Gravecaller’s passive', now: 'Bone Retinue', note: 'Each battle starts with a free Bone Thrall, two when awakened. The building, the Ossuary Steps, the Sunken Ossuary and the Ossuary Rod keep their names.', data: ['SKILLS.ossuarypassive', () => SKILLS.ossuarypassive.name, 'Ossuary', 'classes-late.js'] },
   { old: 'Wick, a recruit name', now: '(removed)', note: 'Wick is the guide.', data: ['RECRUIT_NAMES', () => (RECRUIT_NAMES.includes('Wick') ? 'Wick' : null), 'Wick', 'base.js'] },
 ];
 const renamed = name => DECIDED.reduce((t, d) => (d.swap ? t.replace(d.swap[0], d.swap[1]) : t), name);
@@ -185,7 +185,7 @@ expect('lesson_i', UNLOCKS.tactician.name, 'UNLOCKS');
 expect('keep_going', UNLOCKS.keepgoing.name, 'UNLOCKS');
 expect('party_items', UNLOCKS.items.name, 'UNLOCKS');
 // A decided name held in a table is either still the old one (pending) or the decided one (done).
-for (const d of DECIDED) if (d.data && !d.proposed) {
+for (const d of DECIDED) if (d.data) {
   const [where, now, old] = d.data, v = now();
   if (v !== old && v !== null && v !== d.now) bad('DECIDED', `${where} is “${v}”, neither “${old}” nor the decided “${d.now}”`);
 }
