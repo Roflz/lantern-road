@@ -226,7 +226,6 @@ const Base = (() => {
   // A region is reached once the boss before it falls.
   const reached = (r, s = store()) => r === 0 || unlocked('region:' + r, s) || litStages(s).some(st => (st.region || 0) >= r);
   const furthest = (s = store()) => { let r = 0; for (let k = 1; k < 5; k++) if (reached(k, s)) r = k; return r; };
-  const regionCount = () => (typeof REGIONS !== 'undefined' ? REGIONS.length : 5);
   const regionName = r => ((typeof REGIONS !== 'undefined' ? REGIONS : REGION_NAMES)[r] || { name: MATERIALS[r] ? MATERIALS[r].name : 'Region ' + (r + 1) }).name;
   const highestLevel = s => Math.max(1, ...s.roster.map(c => c.level));
 

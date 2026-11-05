@@ -2,6 +2,9 @@
 // Lantern Road · the battle screen.
 // It plays a battle's event log (js/sim.js) on a small pixel canvas lit by lanterns. Health bars, damage numbers,
 // rule callouts and the turn strip are page elements laid over the canvas, so their text stays crisp.
+// A battle is landscape and side-on: heroes on the left, foes on the right (S.mode 'battle'). The canvas has one other
+// use, the 'camp' mode below: the road scene behind the screens still in the portrait column. It is not the Hearth,
+// which js/campscene.js draws (and which holds this canvas undrawn, Battle.hold).
 // Every animation runs on one play clock that speed changes scale and Pause stops.
 
 const Battle = (() => {
@@ -11,8 +14,9 @@ const Battle = (() => {
 
   // ── scene
   const S = { mode: 'camp', W: 120, H: 260, scale: 3, ox: 0, oy: 0, region: 0, dist: 0, walkUntil: 0, units: {}, list: [], fx: [], parts: [], amb: [], active: null, flash: null };
-  // A battle is drawn side-on, across the whole landscape frame. The camp scene, behind the screens still in the
-  // frame's portrait column (js/frame.js), looks up the road from behind the party.
+  // A battle is drawn side-on, across the whole landscape frame. The 'camp' mode (Battle.idle, which the Road map, the
+  // Party screen, the Bag and the hero sheet call on entering) is the scene faintly behind those column screens
+  // (js/frame.js): it looks up the road from behind the party. Only it uses S.rows, COL and place()'s second half.
   const sideOn = () => S.mode === 'battle';
   const P = { t: 0, speed: 1, paused: false };   // the play clock, in milliseconds at 1×
   // 1× plays at half the pace of the first prototype: the play clock runs at half real time, times the speed.
@@ -33,12 +37,12 @@ const Battle = (() => {
     S.ox = Math.floor((fw - S.W * S.scale) / 2); S.oy = 0;
     cv.style.left = S.ox + 'px';
     ctx.imageSmoothingEnabled = false;
-    S.rows = [Math.round(S.H * 0.645), Math.round(S.H * 0.775), Math.round(S.H * 0.39), Math.round(S.H * 0.272)]; // hero front, hero back, foe front, foe back
+    S.rows = [Math.round(S.H * 0.645), Math.round(S.H * 0.775), Math.round(S.H * 0.39), Math.round(S.H * 0.272)]; // the camp mode's rows: hero front, hero back (foe front, foe back unused)
     for (const u of S.list) { place(u); u.x = u.bx; u.y = u.by; }
     layoutPlates();
   }
-  const COL = [-18, 18, -45, -15, 15, 45];
-  // Where the formation stands. In battle it moves right, leaving the left edge to the turn flags.
+  const COL = [-18, 18, -45, -15, 15, 45]; // the camp mode's columns, by formation slot
+  // Where the camp mode's road runs. Its battle half only steers the road's glide back to the middle after a battle.
   function field() {
     if (S.mode === 'camp') return { cx: S.W / 2, k: Math.min(1, S.W / 118) };
     const gutter = Math.ceil(FLAG_W / S.scale), half = (S.W - gutter) / 2;
@@ -60,7 +64,7 @@ const Battle = (() => {
   }
   const css = (x, y) => [S.ox + x * S.scale, S.oy + y * S.scale];
   // Heroes are drawn in their gear (js/art.js, heroCanvas); thralls from the side, facing the foes.
-  const sprOf = u => (u.thrall ? (sideOn() ? thrallSide(u.key) : foeSprite(u.art || 'bones')) : u.hero ? (sideOn() ? heroSide(u.key, u.step || 0, u.look) : heroSprite(u.key, u.step || 0, u.look)) : foeSprite(u.key));
+  const sprOf = u => (u.thrall ? thrallSide(u.key) : u.hero ? (sideOn() ? heroSide(u.key, u.step || 0, u.look) : heroSprite(u.key, u.step || 0, u.look)) : foeSprite(u.key));
   const lampOf = u => (u.thrall || !u.hero ? null : sprOf(u).lamp);
   const faceOf = u => (u.thrall ? portraitURL('thrall:' + u.key, false) : portraitURL(u.key, u.side === 0, u.look));
   // The body's size, without a raised weapon: where numbers float and projectiles land.
@@ -154,7 +158,7 @@ const Battle = (() => {
     u.anim = { t0: P.t, tx, ty, share, out, hold, back };
   }
   function hop(u, dy = -3, dur = 220) { u.anim = { t0: P.t, hop: dy, dur }; }
-  function recoil(u, dir = -1) { u.recoil = { t0: P.t, dir }; }
+  function recoil(u) { u.recoil = { t0: P.t }; }
   function flash(u, dur = 90) { u.flashUntil = P.t + dur; }
 
   // Numbers and words that float up from a unit.
@@ -351,7 +355,7 @@ const Battle = (() => {
         for (const tg of targets) { tx += tg.x; ty += tg.y; }
         tx /= n; ty /= n;
         // stop short of the target, at its feet
-        if (sideOn()) tx += actor.hero ? -10 : 10; else ty += actor.hero ? 6 : -10;
+        tx += actor.hero ? -10 : 10;
         const out = dash ? 220 : 160, share = dash ? 0.9 : 0.6;
         at(T0, () => { lunge(actor, tx, ty, share, out, 60, dash ? 260 : 200); if (dash) { burst(actor.x, actor.y, '#d8c8a8', 6, 20, 300); } });
         say(F.sfx, out - 30);
@@ -472,7 +476,7 @@ const Battle = (() => {
         if (e.guard) { pop(t, 'Guarded', 'tag guard'); const g = U[e.guard]; addFx({ type: 'link', a: g, b: t, dur: 380, color: '#8cc4e6' }); sfx('guard', .7); }
         // A splash from the blow beside: the Burnt Marshal's blade
         if (e.splash) { pop(t, 'Splash', 'tag splash'); const [sx, sy] = midOf(t); burst(sx, sy, '#ff9a3a', 6, 26, 380, true); }
-        flash(t); recoil(t, t.hero ? 1 : -1);
+        flash(t); recoil(t);
         const [x, y] = midOf(t);
         burst(x, y, e.crit ? '#ffd06a' : '#fff0d0', e.crit ? 12 : 6, e.crit ? 46 : 32, 360, true);
         if (e.crit) { sfx('crit'); shake(2); } else if (share >= .2) shake(1);
@@ -590,7 +594,7 @@ const Battle = (() => {
         const t = U[e.who], v = U[e.tgt];
         // Thorns: Mother Bramble doesn't lunge; her thorns bite whoever hit her
         if (t && e.why === 'thorns') { if (v) { pop(v, 'Thorns', 'tag thorns'); const [x, y] = midOf(v); burst(x, y, '#c8a070', 9, 26, 420); addFx({ type: 'link', a: t, b: v, dur: 260, color: '#a07a4a' }); } sfx('claw', .6); break; }
-        if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (sideOn() ? (t.hero ? -10 : 10) : 0), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
+        if (t) { pop(t, 'Counter', 'tag counter'); if (v) { const [x, y] = midOf(v); lunge(t, v.x + (t.hero ? -10 : 10), v.y, 0.5, 120, 40, 160); at(P.t + 120, () => addFx({ type: 'slash', x, y, dur: 200, color: '#eceaf2', arc: 'slash', flip: true })); sfx('slash', .7); } }
         break;
       }
       case 'saved': {
@@ -1181,8 +1185,7 @@ const Battle = (() => {
     if (u.recoil) {
       const e = P.t - u.recoil.t0;
       if (e > 200) u.recoil = null;
-      else if (sideOn()) x += Math.round(Math.sin(Math.PI * e / 200) * 2 * (u.hero ? -1 : 1));
-      else y += Math.round(Math.sin(Math.PI * e / 200) * 2 * u.recoil.dir), x += Math.round(Math.sin(Math.PI * e / 100) * (e < 100 ? 1 : 0));
+      else x += Math.round(Math.sin(Math.PI * e / 200) * 2 * (u.hero ? -1 : 1));
     }
     u.x = x; u.y = y;
   }
@@ -1399,7 +1402,7 @@ const Battle = (() => {
       if (q >= 1) S.flash = null;
       else { ctx.globalAlpha = S.flash.alpha * (1 - q); ctx.fillStyle = S.flash.color; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     }
-    if (B && B.enrage) { ctx.globalAlpha = .08 + .04 * Math.sin(realT / 300); ctx.fillStyle = '#e5574a'; if (sideOn()) ctx.fillRect(Math.round(W / 2), 0, W, H); else ctx.fillRect(0, 0, W, S.rows[2] + 6); ctx.globalAlpha = 1; }
+    if (B && B.enrage) { ctx.globalAlpha = .08 + .04 * Math.sin(realT / 300); ctx.fillStyle = '#e5574a'; ctx.fillRect(Math.round(W / 2), 0, W, H); ctx.globalAlpha = 1; }
   }
   // Projectiles and slashes drawn again above the darkness, so they glow.
   function drawFxTop() {

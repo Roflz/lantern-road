@@ -48,6 +48,8 @@ Open `index.html` in a browser. It needs no build step and no internet connectio
 
 ### Code
 
+[docs/code-map.md](docs/code-map.md) says which files each screen lives in, which code is legacy, and which docs are out of date.
+
 | File | What it holds |
 |---|---|
 | `js/core.js` | Seeded random numbers and small helpers |

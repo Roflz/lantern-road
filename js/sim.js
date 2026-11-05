@@ -180,7 +180,6 @@ function simulate(setup) {
   const party = { rules: partyRules.map(() => 0), used: {}, hand: 0 };
 
   // ── basics
-  const hasSt = (u, k) => !!u.st[k];
   const effSpd = u => Math.max(1, u.spd * (1 + (u.st.hasted ? (u.st.hasted.v || 30) / 100 : 0)) * (1 - (u.st.slowed ? (u.st.slowed.v || 30) / 100 : 0)));
   const interval = u => 1000 / effSpd(u);
   const living = side => units.filter(u => u.alive && u.side === side);
