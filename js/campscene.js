@@ -5,8 +5,13 @@
 // chapel. The buildings view looks south, lower and further back, over the fire to the plots. Between them the camera
 // turns, rises and pulls back smoothly; let go and it eases to the nearer view.
 //
-// Everything is drawn with the game's own art (js/art.js, and the building art in js/camp.js) plus a few props of its
-// own, at 2× on a canvas 195 pixels tall and half the frame's width. Sprites are billboards: while the camera moves they
+// Everything is drawn with the game's own art (js/art.js, and the Hearth's buildings and props in js/hearthart.js) plus
+// a few props of its own, at 2× on a canvas 195 pixels tall and half the frame's width.
+//
+// The Hearth's detail (play-test note 1.30, docs/mockups/hearth.html and its hearth-scene.js): fourteen plots, six on the
+// lower ground either side of the fire and eight on a walled terrace behind, with steps up the middle; lamp posts on the
+// terrace's edge and braziers at the foot of the steps; chimney smoke; mist along the terrace and over the graves; the
+// Old Beacon on the southern skyline with its crows; and a dark tree and a lamp framing the buildings view. Sprites are billboards: while the camera moves they
 // scale smoothly; at rest their scale snaps to whole pixels.
 //
 // The road view (play-test note 1.21, docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the
@@ -50,9 +55,21 @@ const CampScene = (() => {
   // small, like a guide in the corner of the screen (the user's moves of 2026-11-04).
   const BOARD = [-56, -18], SIGN = [30, 62], WICK = [-61, -41];
   const CAMP_POSTS = [[-62, 40], [62, 40], [-96, -50], [96, -50]];
-  // Building plots, as the buildings view sees them (844-wide frame pixels), in the order they open: the middle row's
-  // centre three, then outwards. Their places on the ground are worked out from the buildings view's camera.
-  const PLOT_SCREEN = [[242, 240], [422, 232], [602, 240], [302, 198], [542, 198], [422, 194], [212, 298], [632, 298], [122, 246], [722, 246], [182, 202], [662, 202], [92, 302], [752, 302]];
+  // The Hearth's ground south of the fire (docs/mockups/hearth.html, play-test note 1.30): fourteen plots in two rows,
+  // six on the lower ground either side of the fire and eight on a terrace behind, with steps up the middle toward the
+  // Old Beacon on the skyline. The terrace stands TH high from the radius RT out, walled in stone from bearing W0 to W1
+  // (bearings from north, clockwise; 180 is due south), with earth banks running down to the ground at either end.
+  const RT = 140, TH = 28, R_LO = 118, R_UP = 162, W0 = 118, W1 = 242, E0 = 92, E1 = 268;
+  // The plots by bearing, in the order they open: the lower row from the fire out, then the terrace from the steps out.
+  // [bearing, 1 on the terrace]
+  const ORDER = [[150, 0], [210, 0], [129, 0], [231, 0], [164, 1], [196, 1], [108, 0], [252, 0], [146.5, 1], [213.5, 1], [129, 1], [231, 1], [112, 1], [248, 1]];
+  // Lamp posts along the terrace's edge, and the steps: N_STEPS of them, each RUN deep, STEP_W either side of the middle.
+  const LAMPS = [171, 189, 134, 226], N_STEPS = 8, RUN = 3.4, STEP_W = 11;
+  const ramp = b => (b <= E0 || b >= E1 ? 0 : b >= W0 && b <= W1 ? 1 : b < W0 ? (b - E0) / (W0 - E0) : (E1 - b) / (E1 - W1));
+  const bearingOf = (x, z) => ((Math.atan2(x, z) / RAD) + 360) % 360;
+  const th = b => TH * ramp(b);
+  const terrace = (x, z) => (z > 30 || Math.hypot(x, z) < RT ? 0 : th(bearingOf(x, z)));
+  const atB = (b, r) => [r * Math.sin(b * RAD), r * Math.cos(b * RAD)];
   // The road: out of camp to the north, zigzagging away into the hills, like the region map. Its stages stand along it.
   const ROAD_PTS = [[0, 22], [0, 66], [-26, 112], [24, 176], [-40, 262], [46, 380], [-58, 548], [66, 790], [-76, 1140], [80, 1640], [-40, 2300], [0, 2900], [44, 3360], [-36, 3900], [20, 4600]];
   const ROAD = (() => {
@@ -72,7 +89,7 @@ const CampScene = (() => {
   const roadAt = z => { for (let i = 1; i < ROAD.length; i++) if (ROAD[i][1] >= z) { const [x0, z0] = ROAD[i - 1], [x1, z1] = ROAD[i]; return lerp(x0, x1, (z - z0) / Math.max(1e-6, z1 - z0)); } return ROAD[ROAD.length - 1][0]; };
   // The hills rise from HILL0 and level out at HILL1, where the chapel stands; the gate to the next region is past it.
   const ROAD_W = 16, HILL0 = 205, HILL1 = 3000, GATE_Z = 3240;
-  const groundY = (x, z) => { if (z <= HILL0) return 0; const zz = Math.min(z, HILL1); return 0.17 * (zz - HILL0) * (1 + 0.22 * Math.sin(x / 240 + zz / 700)); };
+  const groundY = (x, z) => { if (z <= HILL0) return terrace(x, z); const zz = Math.min(z, HILL1); return 0.17 * (zz - HILL0) * (1 + 0.22 * Math.sin(x / 240 + zz / 700)); };
   // The road's centre line with the way across it at each point.
   const EDGES = ROAD.map(([rx, rz], i) => {
     const [ax, az] = ROAD[Math.max(0, i - 1)], [bx, bz] = ROAD[Math.min(ROAD.length - 1, i + 1)], dx = bx - ax, dz = bz - az, n = Math.hypot(dx, dz) || 1;
@@ -83,7 +100,7 @@ const CampScene = (() => {
   const stageZ = n => { if (!zCache.has(n)) zCache.set(n, Array.from({ length: n }, (_, k) => 80 * Math.pow(35, Math.pow(n > 1 ? k / (n - 1) : 0, 0.85)))); return zCache.get(n); };
   const TUFTS = Array.from({ length: 420 }, (_, i) => { const a = h2(i, 121) * Math.PI * 2, r = 30 + Math.sqrt(h2(i, 122)) * 190, x = Math.cos(a) * r, z = Math.sin(a) * r; return [x, groundY(x, z), z, h2(i, 123)]; })
     .concat(Array.from({ length: 700 }, (_, i) => { const z = 200 + h2(i, 161) * 3100, side = h2(i, 162) > 0.5 ? 1 : -1, x = roadAt(z) + side * (12 + h2(i, 163) * 160); return [x, groundY(x, z), z, h2(i, 164)]; }));
-  const CAMP_PROPS = ['tent', 'cart', 'logs', 'crate'];
+  const CAMP_PROPS = ['tent', 'logs'];
   // What never moves is worked out once: the hill bands the road climbs into (their points on the ground, near edge and
   // far edge), the road's two sides at each width it's drawn, and the far hills' outline by bearing.
   const BANDS = (() => {
@@ -110,8 +127,9 @@ const CampScene = (() => {
     return sideCache.get(half);
   };
 
-  // Scenery: dead wood all round the camp; a walled graveyard and a crypt south of it; the camp's low wall, open to the
-  // road; tents, a cart and a crate. The road's own scenery is by region (roadScenery).
+  // Scenery: dead wood all round the camp; a walled graveyard and a crypt south of it, on the terrace; the camp's low
+  // wall, open to the road; tents. The road's own scenery is by region (roadScenery). (The cart and the crate went when
+  // the plots grew: they stood where the lower row is now.)
   function makeScenery(wallR) {
     const out = [];
     for (let i = 0; i < 140; i++) {
@@ -127,7 +145,7 @@ const CampScene = (() => {
     out.push({ k: 'crypt', x: (wallR + 120) * Math.sin(214 * RAD), z: (wallR + 120) * Math.cos(214 * RAD), v: 0 });
     out.push({ k: 'chapelS', x: (wallR + 150) * Math.sin(146 * RAD), z: (wallR + 150) * Math.cos(146 * RAD), v: 0 });
     for (let b = 58; b <= 302; b += 4.4) out.push({ k: 'wall', x: wallR * Math.sin(b * RAD), z: wallR * Math.cos(b * RAD), v: b });
-    out.push({ k: 'tent', x: 84, z: 30, v: 0 }, { k: 'tent', x: 128, z: 96, v: 1 }, { k: 'tent', x: -118, z: 104, v: 1 }, { k: 'cart', x: 104, z: -22, v: 0 }, { k: 'crate', x: 64, z: -40, v: 0 });
+    out.push({ k: 'tent', x: 84, z: 30, v: 0 }, { k: 'tent', x: 128, z: 96, v: 1 }, { k: 'tent', x: -118, z: 104, v: 1 });
     for (const sc of out) sc.y = groundY(sc.x, sc.z);
     return out;
   }
@@ -154,15 +172,16 @@ const CampScene = (() => {
     roads.set(r, out);
     return out;
   }
-  // The world at a canvas width. The mockup is 422 pixels wide; a narrower frame (a 16:9 phone or window) draws the
-  // plots, the Recruit Board and Wick a little closer in, so they stay on screen and clear of the edges.
+  // The world at a canvas width. The mockup is 422 pixels wide; a narrower frame (a 16:9 phone or window) stands the
+  // plots and the terrace's outer lamps a little closer to the steps, so they stay on screen and clear of the edges, and
+  // draws the Recruit Board and Wick a little closer in.
   const worlds = new Map();
   function worldFor(IW) {
     if (worlds.has(IW)) return worlds.get(IW);
-    const nar = clamp(IW / REF, 0.86, 1), near = clamp(IW / REF, 0.8, 1), bc = camera(IW, VIEWS.build.yaw);
-    const plots = PLOT_SCREEN.map(([px, py]) => bc.unproj(IW / 2 + (px / K - REF / 2) * nar, py / K));
+    const near = clamp(IW / REF, 0.8, 1), inB = b => 180 + (b - 180) * near;
+    const plots = ORDER.map(([b, up]) => { const bb = inB(b); return atB(bb, up ? R_UP : R_LO).concat(bb, up); });
     const wallR = Math.max(...plots.map(([a, b]) => Math.hypot(a, b))) + 40;
-    const W = { IW, plots, wallR, scenery: makeScenery(wallR), board: [BOARD[0] * near, BOARD[1]], wick: [WICK[0] * near, WICK[1]] };
+    const W = { IW, plots, wallR, lamps: LAMPS.map(inB), scenery: makeScenery(wallR), board: [BOARD[0] * near, BOARD[1]], wick: [WICK[0] * near, WICK[1]] };
     worlds.set(IW, W);
     return W;
   }
@@ -190,17 +209,14 @@ const CampScene = (() => {
     wick: { map: ['.....kkkk......', '....kHHHhk.....', '...kHhhhhhk....', '...khhhkffk....', '...khhkfffk..m.', '...khhkFwwk.mYm', '..kchhkwwwWkmym', '..kcchkwwwWk.d.', '..kcCcckWkffkd.', '..kcCcccckk..d.', '..kcCccccck..d.', '..kcCccccck..d.', '...kcccccbb..d.', '..kSSSSSSbbb.d.', '..ksssssssk..d.', '..ksssssssk..d.', '...kkkkkkk..ddd'],
       pal: { k: '#0d0911', H: '#6a5a7e', h: '#463a58', f: '#eec4a0', F: '#c49070', w: '#f6efe0', W: '#bfb29a', c: '#2f2640', C: '#4a3d60', b: '#2e2219', s: '#4a3424', S: '#6b4a2e', d: '#6b4a2e', m: '#3a3c41', y: '#f4a646', Y: '#ffe9b0' } },
     logs: { map: ['.oo.oo.oo.', 'oOooOooOoo', 'ooOooOooOo', '.oo.oo.oo.'], pal: { o: '#4a3424', O: '#8a6a44' } },
-    crate: { map: ['.kkk..kkkkkk', 'kwWwk.kwWwWk', 'kkkkk.kWkkWk', 'kwWwk.kwWwWk', 'kwWwk.kkkkkk', '.kkk........'], pal: { k: '#2e2219', w: '#5a4030', W: '#7a5a3a' } },
     tent: { map: ['.......k........', '......kck.......', '.....kcCck......', '....kccCCck.....', '...kcccCCCck....', '..kccckkkCCck...', '.kcccky.kCCCck..', 'kccckyYy.kCCCck.', 'kcckyYYyykCCCCck', 'dddddddddddddddd'], pal: { k: '#1a1218', c: '#7a6a52', C: '#5a4e3c', y: '#f4a646', Y: '#ffe2a0', d: '#2e2219' } },
-    cart: { map: ['..kkkkkkkkkkk...', '..kwWwWwWwWwk...', '..kwwwwwwwwwk...', 'kkkkkkkkkkkkkkkk', '...kk.....kk....', '..kssk...kssk...', '..kssk...kssk...', '...kk.....kk....'], pal: { k: '#2a1c14', w: '#6b4a2e', W: '#8a6038', s: '#4a4c52' } },
     wall: { map: ['.ssS.sSs.Ss.', 'sSsssSssSssS', 'ssdssSsdssSs', 'dddddddddddd'], pal: { s: '#4a4c52', S: '#62656c', d: '#2a2a30' } },
     crypt: { map: ['........kk........', '.......kSSk.......', '......kSSSSk......', '.....kSSSSSSk.....', '....kkkkkkkkkk....', '....kSsSsSsSsk....', '....kSs.kk.sSk....', '....kSskddksSk....', '....kSskddksSk....', '....kSskddksSk....', '..kkkkkkkkkkkkkk..', '..kssssssssssssk..', 'kkkkkkkkkkkkkkkkkk'], pal: { k: '#18161c', S: '#6a6d74', s: '#4a4c52', d: '#0a080c' } },
     chapelS: { map: ['.....k.....', '....kSk....', '....kSk....', '...kSSSk...', '...kSySk...', '..kkkkkkk..', '..kSSSSSk..', '.kSSSSSSSk.', 'kSSkkSkkSSk', 'kSSkdSdkSSk', 'kSSkdSdkSSk', 'kkkkkkkkkkk'], pal: { k: '#18161c', S: '#55585e', y: '#f4a646', d: '#0a080c' } },
     skull: { map: ['.kkkkk.', 'kwwwwwk', 'kwkwkwk', 'kwwwwwk', '.kwkwk.'], pal: { k: '#1a0d10', w: '#c86a6a' } },
   };
   const art = k => sprite(ART[k].map, ART[k].pal, 'cs:a:' + k);
-  // The far hills' watchtower, and the boss's chapel at the road's end.
-  const TOWER = { map: ['..k.k..', '..kkk..', '.kSSSk.', '.kSySk.', '.kSSSk.', '.kSSSk.', 'kSSSSSk', 'kSSySSk', 'kSSSSSk', 'kSSSSSk', 'kkkkkkk'], pal: { k: '#06040a', S: '#0f0b15', y: '#6a4224' } };
+  // The boss's chapel at the road's end.
   const CHAPEL = { map: ['.........k..........', '........kSk.........', '........kSk.........', '.......kSSSk........', '.......kSySk..k.....', '......kSSSSSk.kk....', '......kSSSSSkkSk....', '..kkkkkSSSSSkSSSk...', '..kSSSSSSSSSSSSSSk..', '.kSSSSSSSSSSSSSSSSk.', 'kSSkyykSSSSSkyykSSSk', 'kSSkyykSSSSSkyykSSSk', 'kSSSSSSSSSSSSSSSSSSk', 'kkkkkkkkkkkkkkkkkkkk'], pal: { k: '#08060c', S: '#130e1b', y: '#c8783a' } };
   // A hero sitting: their side sprite in their gear, without the last two rows (the legs fold under them).
   const seatCache = new Map();
@@ -213,8 +229,6 @@ const CampScene = (() => {
     cv.ax = full.ax; seatCache.set(key, cv);
     return cv;
   }
-  const lightCache = new Map();
-  const lightsOf = k => { if (!lightCache.has(k)) { const L = []; BUILD_ART[k].forEach((r, y) => [...r].forEach((ch, x) => { if (ch === 'Y') L.push([x, y, 'y']); else if (ch === 'V') L.push([x, y, 'v']); })); lightCache.set(k, L); } return lightCache.get(k); };
   // Distant scenery sinks into the night: the sprite with the dark laid over it, in twelve steps.
   const darkCache = new WeakMap();
   function darkened(img, a) {
@@ -260,8 +274,8 @@ const CampScene = (() => {
     x.globalAlpha = Math.min(1, a);
     x.drawImage(glowSprite(rgb), gx - r, gy - r * sq, r * 2, r * 2 * sq);
   }
-  const WISP_R = 339.7; // the camp wall's radius at the mockup's width: the will-o'-wisps keep their place against it
-  const LAMP = '255,190,100', AMBER = '244,166,70', WARM = '255,200,110', VIOLET = '190,140,255', POOL = '244,150,70', FIRE = '244,140,50', HOT = '255,214,150', FRONT = '255,214,140', WISP = '120,220,200', MOON = '232,220,196', CHAPEL_L = '244,140,60', MIST = '120,100,160';
+  const LAMP = '255,190,100', AMBER = '244,166,70', WARM = '255,200,110', VIOLET = '190,140,255', POOL = '244,150,70', FIRE = '244,140,50', HOT = '255,214,150', FRONT = '255,214,140', WISP = '120,220,200', MOON = '232,220,196', CHAPEL_L = '244,140,60', MIST = '120,100,160', EMBER = '240,120,50', COLD = '120,220,200', BRAZIER = '255,170,80', FOG = '150,134,184';
+  const LIGHT_OF = { y: [WARM, 0.5], v: [VIOLET, 0.5], g: [COLD, 0.45] };
 
   // ── the camera, at a canvas width
   // The orbit's parameters for a yaw; the road view's for a place along the road (looking north, down at the road from
@@ -349,12 +363,97 @@ const CampScene = (() => {
     return true;
   }
 
+  // ── the Hearth's terrace and skyline (docs/mockups/hearth-scene.js)
+  // A point at bearing b, radius r and height h into a list of screen points; false when it's behind the camera.
+  const at3 = (cam, out, b, r, h) => { const s = Math.sin(b * RAD), c = Math.cos(b * RAD); if (!cam.p(r * s, h, r * c)) return false; out.push(cam.px, cam.py); return true; };
+  const pt3 = (cam, out, x, y, z) => { if (!cam.p(x, y, z)) return false; out.push(cam.px, cam.py); return true; };
+  // The ground between two bearings and two radii, its near edge at h0 and its far edge at h1.
+  function quadAt(cam, b0, b1, r0, r1, h0, h1) { const q = []; return at3(cam, q, b0, r0, h0) && at3(cam, q, b1, r0, h1) && at3(cam, q, b1, r1, h1) && at3(cam, q, b0, r1, h0) ? q : null; }
+  const mixHex = (a, b, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.substr(i, 2), 16) * (1 - k) + parseInt(b.substr(i, 2), 16) * k).toString(16).padStart(2, '0')).join('');
+  const STONES = ['#2c2832', '#27232d', '#312c37', '#231f29', '#2a2630'];
+  // The wall's courses, each stone's colour worked out once: warmer near the fire, low down.
+  const WALL_STEP = 3, COURSE = 5.5, WALL = [];
+  for (let b = W0; b < W1; b += WALL_STEP) {
+    const h0 = th(b), h1 = th(b + WALL_STEP), stairs = Math.abs(b + WALL_STEP / 2 - 180) < 4, courses = [];
+    for (let k = 0; !stairs && k * COURSE < Math.max(h0, h1); k++) {
+      const lo0 = Math.min(h0, k * COURSE), hi0 = Math.min(h0, (k + 1) * COURSE), lo1 = Math.min(h1, k * COURSE), hi1 = Math.min(h1, (k + 1) * COURSE);
+      if (hi0 - lo0 <= 0 && hi1 - lo1 <= 0) continue;
+      const warm = Math.max(0, 1 - Math.abs(b - 180) / 70) * (0.34 - k * 0.07);
+      courses.push([lo0, hi0, lo1, hi1, mixHex(STONES[(Math.floor(b / 6) + k * 3 + (k & 1)) % 5], '#8a5a3a', Math.max(0, warm))]);
+    }
+    WALL.push({ b, h0, h1, stairs, courses });
+  }
+  const RISERS = Array.from({ length: N_STEPS }, (_, i) => mixHex('#2c2832', '#7a4a30', 0.18 + i * 0.01));
+  // The terrace: its top in bands of darkness, the earth banks at either end, the wall course by course with its coping,
+  // and the steps up the middle, far to near, with their cheeks.
+  function drawTerrace(x, cam) {
+    for (const [r0, r1, col] of [[RT, 178, '#19141f'], [178, 222, '#16111b'], [222, 300, '#130f18'], [300, 560, '#100c15']]) {
+      x.fillStyle = col; x.beginPath();
+      for (let b = E0; b < E1; b += 4) { const q = quadAt(cam, b, b + 4, r0, r1, th(b), th(b + 4)); if (q) { x.moveTo(q[0], q[1]); x.lineTo(q[2], q[3]); x.lineTo(q[4], q[5]); x.lineTo(q[6], q[7]); x.closePath(); } }
+      x.fill();
+    }
+    x.fillStyle = '#18131d'; x.beginPath();
+    for (let b = E0; b < E1; b += 2) {
+      if (b >= W0 && b + 2 <= W1) continue;
+      const q = [];
+      if (at3(cam, q, b, RT - 16, 0) && at3(cam, q, b + 2, RT - 16, 0) && at3(cam, q, b + 2, RT, th(b + 2)) && at3(cam, q, b, RT, th(b))) { x.moveTo(q[0], q[1]); x.lineTo(q[2], q[3]); x.lineTo(q[4], q[5]); x.lineTo(q[6], q[7]); x.closePath(); }
+    }
+    x.fill();
+    const cope = new Path2D(), capTop = new Path2D(), q = [];
+    for (const { b, h0, h1, stairs, courses } of WALL) {
+      if (h0 <= 0.2 && h1 <= 0.2) continue;
+      for (const [lo0, hi0, lo1, hi1, col] of courses) {
+        q.length = 0;
+        if (at3(cam, q, b, RT, lo0) && at3(cam, q, b + WALL_STEP, RT, lo1) && at3(cam, q, b + WALL_STEP, RT, hi1) && at3(cam, q, b, RT, hi0)) poly(x, q, col);
+      }
+      if (stairs) continue;
+      q.length = 0;
+      if (at3(cam, q, b, RT - 1.5, h0 - 1.2) && at3(cam, q, b + WALL_STEP, RT - 1.5, h1 - 1.2) && at3(cam, q, b + WALL_STEP, RT - 1.5, h1 + 0.2) && at3(cam, q, b, RT - 1.5, h0 + 0.2)) { cope.moveTo(q[0], q[1]); cope.lineTo(q[2], q[3]); cope.lineTo(q[4], q[5]); cope.lineTo(q[6], q[7]); cope.closePath(); }
+      const tp = quadAt(cam, b, b + WALL_STEP, RT - 1.5, RT + 2, h0 + 0.2, h1 + 0.2);
+      if (tp) { capTop.moveTo(tp[0], tp[1]); capTop.lineTo(tp[2], tp[3]); capTop.lineTo(tp[4], tp[5]); capTop.lineTo(tp[6], tp[7]); capTop.closePath(); }
+    }
+    x.fillStyle = '#46404e'; x.fill(cope); x.fillStyle = '#383240'; x.fill(capTop);
+    for (let i = N_STEPS - 1; i >= 0; i--) {
+      const zf = -(RT - i * RUN) - (i === N_STEPS - 1 ? 2 : 0), zn = -(RT - i * RUN) + RUN, h = (i + 1) * (TH / N_STEPS), hl = i * (TH / N_STEPS);
+      q.length = 0;
+      if (pt3(cam, q, -STEP_W, h, zf) && pt3(cam, q, STEP_W, h, zf) && pt3(cam, q, STEP_W, h, zn) && pt3(cam, q, -STEP_W, h, zn)) poly(x, q, i % 2 ? '#4a4452' : '#45404d');
+      q.length = 0;
+      if (pt3(cam, q, -STEP_W, hl, zn) && pt3(cam, q, STEP_W, hl, zn) && pt3(cam, q, STEP_W, h, zn) && pt3(cam, q, -STEP_W, h, zn)) poly(x, q, RISERS[i]);
+    }
+    const z0 = -RT + N_STEPS * RUN;
+    for (const sd of [-1, 1]) {
+      q.length = 0;
+      if (pt3(cam, q, sd * STEP_W, 0, z0) && pt3(cam, q, sd * (STEP_W + 2.5), 0, z0) && pt3(cam, q, sd * (STEP_W + 2.5), TH + 1.5, -RT) && pt3(cam, q, sd * STEP_W, TH + 1.5, -RT)) poly(x, q, '#3a3442');
+      const fx = sd * (STEP_W + (sd < 0 ? 0 : 2.5));
+      q.length = 0;
+      if (pt3(cam, q, fx, 0, z0) && pt3(cam, q, fx, 1.5, z0) && pt3(cam, q, fx, TH + 1.5, -RT) && pt3(cam, q, fx, TH, -RT)) poly(x, q, '#2e2936');
+    }
+  }
+  // The Old Beacon on the southern skyline, against long streaks of cloud whose upper edges catch the moon. Its crows
+  // circle in drawLive.
+  const CLOUDS = [[-46, 2, 70, 5, 0.34], [30, -6, 64, 4, 0.28], [-8, 14, 96, 6, 0.3], [52, 18, 50, 4, 0.22], [-70, 22, 44, 3, 0.2]];
+  function drawBeacon(x, cam, hz, t) {
+    const sx = cam.screenOfBearing(180);
+    if (sx == null || sx < -120 || sx > cam.IW + 120) return;
+    const beacon = HearthArt.props().beacon, bx = Math.round(sx - 17), by = Math.round(hz + 3 - beacon.height);
+    const cl = x.createRadialGradient(sx, by + 10, 2, sx, by + 10, 70); cl.addColorStop(0, 'rgba(150,132,190,.22)'); cl.addColorStop(0.5, 'rgba(110,96,150,.1)'); cl.addColorStop(1, 'rgba(110,96,150,0)'); x.fillStyle = cl; x.fillRect(sx - 80, by - 60, 160, 140);
+    for (const [ox, oy, w, h, a] of CLOUDS) {
+      const cx = sx + ox + Math.sin(t / 11000 + ox) * 3, cy = by + oy;
+      x.save(); x.translate(cx, cy); x.scale(1, h / w);
+      const g = x.createRadialGradient(0, 0, 0, 0, 0, w / 2); g.addColorStop(0, `rgba(78,66,108,${a})`); g.addColorStop(0.7, `rgba(70,60,98,${a * 0.6})`); g.addColorStop(1, 'rgba(70,60,98,0)');
+      x.fillStyle = g; x.fillRect(-w / 2, -w / 2, w, w); x.restore();
+      x.fillStyle = `rgba(150,136,186,${a * 0.5})`; x.fillRect(Math.round(cx - w * 0.28), Math.round(cy - h / 2), Math.round(w * 0.56), 1);
+    }
+    x.drawImage(beacon, bx, by);
+    x.imageSmoothingEnabled = true; glow(x, bx + 17, by + 11, 6, EMBER, 0.35); x.globalAlpha = 1; x.imageSmoothingEnabled = false;
+  }
+
   // ── the ground and the sky: everything that lies flat, behind every billboard
   function drawGround(x, cam, Wd, S, t, still) {
     const IW = cam.IW, hz = cam.horizon, R = cam.road, near = GROUND_NEAR[S.region || 0] || GROUND_NEAR[0];
     x.imageSmoothingEnabled = false;
     x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
-    // the sky, the moon, the far hills and their watchtower
+    // the sky, the moon, the far hills and the Old Beacon
     const g = x.createLinearGradient(0, Math.min(hz, 0) - 60, 0, Math.max(hz, 0) + 4); g.addColorStop(0, '#05030a'); g.addColorStop(0.55, '#110b1a'); g.addColorStop(1, '#2e2040');
     x.fillStyle = g; x.fillRect(0, 0, IW, IH);
     if (hz > 0) {
@@ -386,8 +485,7 @@ const CampScene = (() => {
         x.fillStyle = rim; x.fill(path);
         x.translate(0, 1); x.fillStyle = col; x.fill(path); x.translate(0, -1);
       }
-      const tw = cam.screenOfBearing(204);
-      if (tw != null) { const hh = HILLS[0].at(204), T = sprite(TOWER.map, TOWER.pal, 'cs:tower'); x.drawImage(T, Math.round(tw - 3), Math.round(hz - hh - T.height + 2), 7, 11); }
+      drawBeacon(x, cam, hz, t);
       const mist = x.createLinearGradient(0, hz - 10, 0, hz + 14); mist.addColorStop(0, 'rgba(70,58,100,0)'); mist.addColorStop(0.5, 'rgba(80,66,110,.28)'); mist.addColorStop(1, 'rgba(70,58,100,0)');
       x.fillStyle = mist; x.fillRect(0, hz - 10, IW, 24);
     }
@@ -420,6 +518,7 @@ const CampScene = (() => {
         if (z1 > 2900 && z1 < 3200) { const rim = new Path2D(); for (let i = a0; i <= a1; i += 2) rim.rect(Math.round(top[i]) - 4, Math.round(top[i + 1]), 9, 1); x.fillStyle = '#3a2f4a'; x.fill(rim); }
       }
     }
+    if (cam.w > 0.02 && R < 0.98) drawTerrace(x, cam);
     const tufts = [new Path2D(), new Path2D(), new Path2D()];
     for (const [tx, ty, tz, k] of TUFTS) {
       if (!cam.p(tx, ty, tz) || cam.py < hz || cam.px < -4 || cam.px > IW + 4) continue;
@@ -428,20 +527,23 @@ const CampScene = (() => {
       if (k > 0.8) path.rect(px + s, py - s, s, s);
     }
     ['#26301f', '#1f2719', '#2a2026'].forEach((c, i) => { x.fillStyle = c; x.fill(tufts[i]); });
-    S.plots.forEach((pl, i) => {
-      if (!pl) return;
-      const [wx, wz] = Wd.plots[i], len = Math.hypot(wx, wz), ux = wx / len, uz = wz / len, c = cam.proj(wx, 0, wz);
-      const a = c ? nearFade(c.d) : 0;
-      if (a <= 0) return;
-      x.globalAlpha = a;
-      const pts = [];
-      for (const [o, r] of [[-2.5, 30], [2.5, 30], [2.5, len - 10], [-2.5, len - 10]]) { if (!cam.p(ux * r - uz * o, 0, uz * r + ux * o)) { pts.length = 0; break; } pts.push(cam.px, cam.py); }
-      if (pts.length) poly(x, pts, '#241c26');
-      pts.length = 0;
-      for (const [a2, b2] of [[-15, -9], [15, -9], [15, 9], [-15, 9]]) { if (!cam.p(wx + a2, 0, wz + b2)) { pts.length = 0; break; } pts.push(cam.px, cam.py); }
-      if (pts.length) poly(x, pts, pl.empty ? '#211a26' : '#2e2329');
-      x.globalAlpha = 1;
-    });
+    // packed earth before each plot, and paths to the fire from the lower row and up from the terrace's edge
+    if (cam.w > 0.02 && R < 0.98) {
+      const path = (b, r0, r1, h, wd, col) => { const db = (wd / ((r0 + r1) / 2)) / RAD, q = quadAt(cam, b - db, b + db, r0, r1, h, h); if (q) poly(x, q, col); };
+      path(180, 40, RT - N_STEPS * RUN, 0, 6, '#2a2028');
+      S.plots.forEach((pl, i) => {
+        if (!pl) return;
+        const [wx, wz, b, up] = Wd.plots[i], c = cam.proj(wx, 0, wz), a = c ? nearFade(c.d) : 0;
+        if (a <= 0) return;
+        const r = up ? R_UP : R_LO, h = up ? th(b) : 0;
+        x.globalAlpha = a;
+        if (!up) path(b, 44, r - 6, 0, 3, '#261d26');
+        else path(b, RT + 2, r - 4, h, 2.5, '#231b25');
+        const db = (16 / r) / RAD, pad = quadAt(cam, b - db, b + db, r - 7, r + 6, h, h);
+        if (pad) poly(x, pad, pl.empty ? '#1e1823' : '#2a2129');
+        x.globalAlpha = 1;
+      });
+    }
     // the road, in three strips: a dark verge, the dark road, and the lit stretch as far as your light reaches
     const last = EDGES.length - 1, iLit = litEdge(S);
     strip(x, cam, ROAD_W / 2 + 3, 0, last, '#0b0810');
@@ -455,7 +557,7 @@ const CampScene = (() => {
   // ── everything that stands up: the billboards, each { d, dyn, img, x, y, w, h, a } or { d, dyn, fn(x, t) }, with
   // the lights they cast and the anchors the camp screen puts its plaques, chips and taps on
   function build(cam, Wd, S, reduce, sel) {
-    const items = [], lights = [], anchors = [], hz = cam.horizon, northA = Math.max(0, 1 - 1.8 * cam.w), dyn = { eyes: [] }, R = cam.road;
+    const items = [], lights = [], anchors = [], hz = cam.horizon, northA = Math.max(0, 1 - 1.8 * cam.w), dyn = { eyes: [], smoke: [] }, R = cam.road;
     const IW = cam.IW;
     const at = (wx, wz) => cam.proj(wx, groundY(wx, wz), wz);
     const put = (p, img, s, a = 1, ox = 0.5, lift = 0) => {
@@ -572,32 +674,37 @@ const CampScene = (() => {
       if (on) { lights.push([p.x, p.y - 4 * s, 3 + 7 * s, AMBER, 0.32]); pools.push([p.x, p.y, 4 + 12 * s]); }
       if (front) dyn.front = [p.x, p.y - 4 * s, 4 + 10 * s];
     });
-    // the plots, open from the middle outwards: what stands on each, or the plot itself
+    // the plots, the lower row from the fire out and then the terrace: what stands on each (js/hearthart.js), or the
+    // plot itself; their window lights, and the chimneys' smoke (drawn each frame, in drawSmoke)
     S.plots.forEach((pl, i) => {
       if (!pl) return;
       const [wx, wz] = Wd.plots[i], p = at(wx, wz);
       if (!p) return;
-      const fade = nearFade(p.d);
+      // they come in as the camera turns from the party, so none shows at the party view's edges
+      const fade = nearFade(p.d) * clamp(cam.w * 8, 0, 1);
       if (fade <= 0) return;
-      const k = pl.empty ? 'plot' : pl.art, img = bart(k), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s;
+      const k = pl.empty ? 'plot' : pl.art, img = HearthArt.building(k) || HearthArt.building('plot'), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s;
       items.push({ d: p.d, fn: x => {
         x.globalAlpha = fade * 0.5; x.fillStyle = '#050308'; x.fillRect(Math.round(bx), Math.round(p.y), Math.round(img.width * s), Math.max(1, Math.round(s)));
         x.globalAlpha = fade; x.drawImage(img, Math.round(bx), Math.round(by), Math.round(img.width * s), Math.round(img.height * s)); x.globalAlpha = 1;
       } });
-      if (!pl.empty && fade > 0.5) for (const [lx, ly, kind] of lightsOf(k)) lights.push([bx + (lx + 0.5) * s, by + (ly + 0.5) * s, 4 * s, kind === 'v' ? VIOLET : WARM, 0.5]);
+      if (fade > 0.5) {
+        for (const [lx, ly, kind, r] of img.lights) { const L = LIGHT_OF[kind] || LIGHT_OF.y; lights.push([bx + (lx + 0.5) * s, by + (ly + 0.5) * s, (r || 4) * s, L[0], L[1]]); }
+        img.smoke.forEach(([sx, sy], j) => dyn.smoke.push([bx + (sx + 0.5) * s, by + sy * s, s, h2(i, 171 + j)]));
+      }
       anchors.push({ id: 'plot' + i, plot: i, x: p.x, y: p.y, top: by, d: p.d, box: [bx - 2, by - 2, bx + img.width * s + 2, p.y + 2], view: 'build', a: fade });
     });
     // the Recruit Board, at the front on the left, dark until the road opens it
     if (northA > 0.01) {
       const p = at(Wd.board[0], Wd.board[1]);
       if (p) {
-        const img = bart('board'), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s, shut = !S.board.open;
+        const img = HearthArt.building('board'), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s, shut = !S.board.open;
         items.push({ d: p.d, fn: x => {
           x.globalAlpha = northA; x.drawImage(img, Math.round(bx), Math.round(by), Math.round(img.width * s), Math.round(img.height * s));
           if (shut) { x.globalAlpha = northA * 0.6; x.drawImage(tinted(img, '#07050b'), Math.round(bx), Math.round(by), Math.round(img.width * s), Math.round(img.height * s)); }
           x.globalAlpha = 1;
         } });
-        if (!shut) lights.push([bx + 10.5 * s, by + 14.5 * s, 6 * s, WARM, 0.6 * northA]);
+        if (!shut) for (const [lx, ly, , r] of img.lights) lights.push([bx + (lx + 0.5) * s, by + (ly + 0.5) * s, (r || 6) * s, WARM, 0.6 * northA]);
         anchors.push({ id: 'board', x: p.x, y: p.y, top: by, d: p.d, box: [bx - 2, by - 2, bx + img.width * s + 2, p.y + 2], view: 'party', a: northA });
       }
       // the road's sign, by the way out of camp
@@ -616,6 +723,43 @@ const CampScene = (() => {
       const img = prop('post'), s = cam.scale(p.s);
       put(p, img, s, a, 2.5 / img.width, s);
       lights.push([p.x, p.y - img.height * s + 3.5 * s, 9 * s, LAMP, 0.45 * a]);
+    }
+    // the Hearth's props: lamp posts on the terrace's edge, braziers at the foot of the steps, and mist lying along the
+    // foot of the terrace and further back over the graves (it shows as the camera turns to the buildings)
+    if (cam.w > 0.02 && R < 0.98) {
+      const HP = HearthArt.props();
+      for (const b of Wd.lamps) {
+        const [lx, lz] = atB(b, RT + 3), p = at(lx, lz);
+        if (!p || p.x < -20 || p.x > IW + 20) continue;
+        const s = cam.scale(p.s), r = put(p, HP.lamp, s, 1, 3.5 / HP.lamp.width);
+        lights.push([r.x0 + 5.5 * s, r.y0 + 7 * s, 11 * s, LAMP, 0.5]);
+      }
+      for (const sd of [-1, 1]) {
+        const p = at(sd * 17, -RT + N_STEPS * RUN + 5);
+        if (!p) continue;
+        const s = cam.scale(p.s), r = put(p, HP.brazier, s, 1, 4.5 / HP.brazier.width);
+        lights.push([r.x0 + 4.5 * s, r.y0 + 2 * s, 14 * s, BRAZIER, 0.55]);
+      }
+      if (cam.w > 0.15) {
+        const k = Math.min(1, (cam.w - 0.15) * 2);
+        const mist = (b, r, h, a, wd) => {
+          const [mx, mz] = atB(b, r), p = at(mx, mz);
+          if (!p) return;
+          const w = wd * p.s, gx = p.x + Math.sin(b * 1.7) * 8 * p.s, gy = p.y - (h + 2) * p.s;
+          if (gx + w < 0 || gx - w > IW) return;
+          items.push({ d: p.d, fn: x => { x.imageSmoothingEnabled = true; glow(x, gx, gy, w, FOG, a * k, 0.17); x.globalAlpha = 1; x.imageSmoothingEnabled = false; } });
+        };
+        for (let b = 92; b <= 268; b += 8) mist(b, RT + 5, th(b), 0.22, 30);
+        for (let b = 118; b <= 242; b += 11) mist(b, 250, TH, 0.16, 46);
+      }
+    }
+    // what frames the buildings view: the dark tree and its lantern at the left, a lamp and a fence at the right, sliding
+    // in from the sides as the camera comes round (drawn over the scene, in drawFrame)
+    if (cam.w >= 0.4 && R <= 0.01) {
+      const HP = HearthArt.props(), k = Math.min(1, (cam.w - 0.4) / 0.5), slide = Math.round((1 - k) * 90);
+      const lx = -22 - slide, ly = IH - HP.frameL.height + 4, rx = IW - HP.frameR.width + 8 + slide, ry = IH - HP.frameR.height + 2;
+      dyn.frame = { lx, ly, rx, ry, k };
+      lights.push([lx + HP.frameL.lamp[0], ly + HP.frameL.lamp[1], 22 * k, LAMP, 0.55 * k], [rx + HP.frameR.lamp[0], ry + HP.frameR.lamp[1], 20 * k, LAMP, 0.55 * k]);
     }
     // the party at the fire, each on a log, facing it
     const fireP = cam.proj(0, 0, 0);
@@ -657,7 +801,7 @@ const CampScene = (() => {
     const over = [];
     const lz = litZ(S), fz = cam.proj(roadAt(lz), groundY(roadAt(lz), lz), lz);
     if (fz && cam.w < 0.5 && fz.y > hz && R < 0.5) over.push(xx => { const dg = xx.createLinearGradient(0, fz.y + 4, 0, Math.max(hz - 20, fz.y - 60)); dg.addColorStop(0, 'rgba(7,5,11,0)'); dg.addColorStop(1, `rgba(7,5,11,${(0.5 * (1 - 2 * cam.w)).toFixed(3)})`); xx.fillStyle = dg; xx.fillRect(0, 0, IW, fz.y + 4); });
-    if (fireP && R < 1) over.push(xx => { const dk = xx.createRadialGradient(fireP.x, fireP.y - 8 * fireP.s, 12 * fireP.s, fireP.x, fireP.y - 8 * fireP.s, Math.max(130 * fireP.s, 120)); dk.addColorStop(0, 'rgba(6,4,10,0)'); dk.addColorStop(0.5, 'rgba(6,4,10,.18)'); dk.addColorStop(1, 'rgba(6,4,10,.72)'); xx.globalAlpha = 1 - R; xx.fillStyle = dk; xx.fillRect(0, 0, IW, IH); xx.globalAlpha = 1; });
+    if (fireP && R < 1) over.push(xx => { const dk = xx.createRadialGradient(fireP.x, fireP.y - 8 * fireP.s, 12 * fireP.s, fireP.x, fireP.y - 8 * fireP.s, Math.max(130 * fireP.s, 120)); dk.addColorStop(0, 'rgba(6,4,10,0)'); dk.addColorStop(0.5, 'rgba(6,4,10,.18)'); dk.addColorStop(1, 'rgba(6,4,10,.72)'); xx.globalAlpha = (1 - R) * (1 - 0.38 * cam.w); xx.fillStyle = dk; xx.fillRect(0, 0, IW, IH); xx.globalAlpha = 1; });
     if (R > 0) over.push(xx => { const vg = xx.createRadialGradient(IW / 2, IH * 0.42, IH * 0.35, IW / 2, IH * 0.42, IW * 0.62); vg.addColorStop(0, 'rgba(6,4,10,0)'); vg.addColorStop(1, 'rgba(6,4,10,.6)'); xx.globalAlpha = R; xx.fillStyle = vg; xx.fillRect(0, 0, IW, IH); xx.globalAlpha = 1; });
     // the next region's air beyond the gate: a blue mist, with the lights
     const glows = [];
@@ -679,6 +823,21 @@ const CampScene = (() => {
     x.globalAlpha = 1;
     if (glows) for (const f of glows) f(x);
   }
+  // Over the billboards and under the dark, each frame: the chimneys' smoke drifting up and away, then what frames the
+  // buildings view.
+  function drawSmoke(x, D, t) {
+    x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
+    for (const [sx, sy, ss, seed] of D.smoke) {
+      for (let j = 0; j < 10; j++) {
+        const q = ((t / 5200) + j / 10 + seed) % 1, r = (1 + q * 5) * ss, px = sx + (Math.sin(q * 4 + j * 1.3 + seed * 6) * 1.6 + q * q * 18) * ss, py = sy - q * 38 * ss;
+        x.globalAlpha = 0.34 * Math.min(1, q * 6) * (1 - q); x.fillStyle = q < 0.2 ? '#8a7a86' : '#6e6688';
+        x.beginPath(); x.arc(px, py, r, 0, 7); x.fill();
+      }
+    }
+    x.globalAlpha = 1;
+    const F = D.frame;
+    if (F) { const HP = HearthArt.props(); x.globalAlpha = F.k; x.drawImage(HP.frameL, F.lx, F.ly); x.drawImage(HP.frameR, F.rx, F.ry); x.globalAlpha = 1; }
+  }
   // What flickers and drifts: the fire's light, Wick's lantern, the frontier lantern guttering, the will-o'-wisps over
   // the graveyard, and fireflies.
   function drawLive(x, cam, B, t, Wd) {
@@ -691,11 +850,18 @@ const CampScene = (() => {
     for (const [ex, ey, es, boss, k, dim] of D.eyes) { x.globalAlpha = dim * (0.6 + 0.4 * Math.sin(t / 240 + k)); x.fillStyle = boss ? '#ff5a4a' : '#d4484a'; x.fillRect(ex, ey, es, es); }
     x.globalAlpha = 1; x.globalCompositeOperation = 'lighter'; x.imageSmoothingEnabled = true;
     for (let i = 0; i < 7; i++) {
-      const b = 150 + h2(i, 131) * 70, r = (250 + h2(i, 132) * 90) * Wd.wallR / WISP_R;
-      if (!cam.p(r * Math.sin(b * RAD) + Math.sin(t / 1300 + i) * 8, 6 + Math.sin(t / 700 + i * 2) * 3, r * Math.cos(b * RAD))) continue;
+      const b = 150 + h2(i, 131) * 70, r = 250 + h2(i, 132) * 90, wz = r * Math.cos(b * RAD), wx = r * Math.sin(b * RAD) + Math.sin(t / 1300 + i) * 8;
+      if (!cam.p(wx, groundY(wx, wz) + 6 + Math.sin(t / 700 + i * 2) * 3, wz)) continue;
       glow(x, cam.px, cam.py, 3 + 6 * cam.ps, WISP, 0.25 + 0.15 * Math.sin(t / 300 + i));
     }
     x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
+    // crows round the Old Beacon's top
+    const sx = hz > 0 ? cam.screenOfBearing(180) : null;
+    if (sx != null && sx > -40 && sx < IW + 40) {
+      const by = Math.round(hz + 3 - HearthArt.props().beacon.height);
+      x.fillStyle = '#0a070e';
+      for (let i = 0; i < 3; i++) { const a = t / 1400 + i * 2.1, cx = Math.round(sx + Math.cos(a) * (12 + i * 3)), cy = Math.round(by + 4 + Math.sin(a * 1.3) * 4 - i * 2), f = Math.floor(t / 180 + i) % 2; x.fillRect(cx - 1, cy - f, 1, 1); x.fillRect(cx, cy, 1, 1); x.fillRect(cx + 1, cy - f, 1, 1); }
+    }
     for (let i = 0; i < 12; i++) {
       const px = (h2(i, 41) * IW + Math.sin(t / 2300 + i) * 14 + IW) % IW, py = Math.max(hz, 30) + h2(i, 42) * (IH - Math.max(hz, 30)) + Math.sin(t / 1700 + i * 2) * 6, a = 0.35 + 0.35 * Math.sin(t / 400 + i * 1.3);
       if (a < 0.2) continue;
@@ -892,6 +1058,7 @@ const CampScene = (() => {
       const S = api.state, Wd = worldFor(IW), B = build(cam, Wd, S, reduce(), sel);
       drawGround(x, cam, Wd, S, t, still);
       for (const it of B.items) drawItem(x, it, t, react);
+      drawSmoke(x, B.dyn, t);
       for (const f of B.over) f(x);
       x.globalCompositeOperation = 'lighter'; x.imageSmoothingEnabled = true;
       drawLights(x, B.lights, B.pools, B.glows);
@@ -947,6 +1114,7 @@ const CampScene = (() => {
         x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.imageSmoothingEnabled = false;
         x.drawImage(cache.bg, 0, 0);
         for (const it of cache.near) drawItem(x, it, t, react);
+        drawSmoke(x, B.dyn, t);
         for (const f of B.over) f(x);
         x.globalCompositeOperation = 'lighter'; x.drawImage(cache.lit, 0, 0); x.globalCompositeOperation = 'source-over';
         drawLive(x, cam, B, t, worldFor(IW));
