@@ -239,4 +239,37 @@
 .hr-big span{font:600 13px/1 var(--f-body);color:var(--ash)}
 .hr-rbtns{display:grid;gap:8px;justify-items:center}
 
+/* ── the Heroes list (the 'party' screen, js/heroes.js): a card a hero, four to a row (three on a 16:9 frame) */
+.hl-grid{position:absolute;left:16px;right:16px;top:64px;bottom:12px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:140px;gap:16px;align-content:start;padding:0 0 8px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+@container (max-width:779px){.hl-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.hl-hero{position:relative;display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;padding:8px;min-width:0;text-align:left;background:linear-gradient(#1a1320,#110c16);border:1px solid #4a3622;box-shadow:0 0 0 1px #000}
+.hl-hero:hover{border-color:#8a6a2a}
+.hl-niche{position:relative;display:grid;place-items:end center;padding-bottom:8px;overflow:hidden;background:radial-gradient(ellipse 80% 50% at 50% 100%,#33221d,#130d17 72%);border-radius:36px 36px 2px 2px}
+.hl-spr{max-width:none;filter:drop-shadow(0 2px 0 rgba(0,0,0,.6))}
+.hl-hero.rest .hl-spr{opacity:.65}
+.hl-hero.out .hl-spr{filter:grayscale(.7) brightness(.7)}
+.hl-row{position:absolute;left:6px;top:8px;opacity:.8}
+.hl-row img{width:12px;height:12px}
+.hl-inf{display:grid;align-content:start;gap:8px;padding-top:8px;min-width:0}
+.hl-nm{font:400 22px/1 var(--f-display);color:#f6e6c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:16px}
+.hl-cl{font:400 13px/1 var(--f-body);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-meta{display:flex;align-items:center;gap:8px;margin-top:8px}
+.hl-hero .hc-lvb.sm{position:relative;left:0;width:28px;height:38px;padding-top:4px;flex:none}
+.hl-hero .hc-lvb.sm b{font-size:17px}
+.hl-hero .hc-lvb.sm i{width:16px}
+.hl-hero .hc-fat{position:static;transform:none;padding:0;background:none;min-width:0}
+.hl-hero .hc-fat i{width:44px}
+.hl-hero .hc-badge{right:8px;top:8px}
+.hl-hero.dis{border-color:#6a2a24}
+.hl-hero .hl-x{color:#1a1008;background:var(--bad)}
+.hl-hero.empty{grid-template-columns:1fr;place-items:center;border-style:dashed;border-color:#3e3024;background:rgba(14,10,20,.4)}
+.hl-cross{position:relative;width:24px;height:24px}
+.hl-cross::before,.hl-cross::after{content:"";position:absolute;left:11px;top:0;width:2px;height:24px;background:#6a5642}
+.hl-cross::after{transform:rotate(90deg)}
+/* Dismiss's question, over the list */
+#sheet.hl-sheet{align-items:center;justify-content:center;background:rgba(5,3,9,.66)}
+.kp.hl-ask{width:min(380px,calc(100% - 48px))}
+.kp.hl-ask .kp-body{display:grid;gap:16px;padding:16px}
+.hl-ask-p{margin:0;font:400 15px/1.3 var(--f-body);color:var(--ash)}
+
 @media (prefers-reduced-motion:reduce){.hc-enter .hc-in,.hr-glow,.gc::before{animation:none!important}}

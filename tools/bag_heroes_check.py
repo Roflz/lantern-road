@@ -1,5 +1,6 @@
-"""Checks the Bag (js/bag.js, screen 9; docs/mockups/hero-card.html's Bag state) in headless Chromium through real
-input, and takes its screenshots.
+"""Checks the Bag (js/bag.js, screen 9) and the Heroes list (js/heroes.js, the 'party' screen), after
+docs/mockups/hero-card.html's Bag and Heroes states, in headless Chromium through real input, and takes their
+screenshots.
 
 From a save set up in the page (six heroes, four set out, a Bag of 21 pieces with a Relic among them), it opens the
 Bag from the Hearth's Bag button, then, with taps where things are drawn (through the quarter-turn when turned):
@@ -11,8 +12,15 @@ Bag from the Hearth's Bag button, then, with taps where things are drawn (throug
   - Sell takes two taps and pays its price; a Relic has no Sell; a piece the hero can't use says so, with no Give to
   - Give to opens the hero card dressing, with the piece tried on; Wear wears it; the card's ‹ comes back to the Bag
   - ‹ goes back to the Hearth
+Then the Heroes list, from the Hearth's Heroes button:
+  - the cards sit inside the frame without overlapping, the anchors are there, two typefaces
+  - the party first in its order, then the resting; the count by the title; a badge with the points to spend
+  - the filters (everyone, in the party, resting); a row icon's tooltip (with a mouse)
+  - a card opens the hero card, whose ‹ comes back; the Bag button opens the Bag, whose ‹ comes back; the + card opens
+    the Recruit Board (over the Hearth, js/buildings.js)
+  - Dismiss: a mode that marks every hero; a tap asks; Keep keeps them; Dismiss sends them on their way
   python tools/bag_heroes_check.py [--sizes 844x390,667x375t,390x844t] [--shots docs/screens]
---shots saves into its bag/ folder. A size ending in t has a touch screen (and 390x844t is turned).
+--shots saves into its bag/ and heroes/ folders. A size ending in t has a touch screen (and 390x844t is turned).
 """
 import argparse, functools, http.server, os, socketserver, sys, threading
 from playwright.sync_api import sync_playwright
@@ -46,6 +54,7 @@ SETUP = """
     ['travellerscoat', 2], ['brigandine', 3], ['gravediggersleathers', 2], ['huntershauberk', 3], ['gravewardensplate', 4], ['mothsilk', 4],
     ['bonecharm', 1], ['knucklebone', 2], ['haresfoot', 1], ['courierspur', 3], ['vanguardsbadge', 2], ['tallowcoin', 3], ['bloodcontract', 3]]) Items.add(s, Items.make(id, lv));
   Items.grantRelic(s, 'gravediggersspade');
+  for (const k of STAT_KEYS) Save.char(ids.isolde).alloc[k] = 0; // points for her badge on the Heroes list
   s.inventory.items.forEach((x, i) => { delete x.fresh; if (i % 3 === 0 && Items.rarity(x) !== 'relic') Items.enchant(x, makeRng(i + 7), { stars: 1 + (i % 4) }); }); // a few with stars (#42)
   Base.tick(s);
   Save.commit();
@@ -88,7 +97,7 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     port = srv.server_address[1]
     fails, errors = [], []
-    for d in ('bag',):
+    for d in ('bag', 'heroes'):
         if a.shots:
             os.makedirs(os.path.join(a.shots, d), exist_ok=True)
 
@@ -223,6 +232,66 @@ def main():
             check(js("App.current") == 'bag' and bag_n() == n - 1, f'{tag}: the card\'s ‹ comes back to the Bag, with his old weapon in it')
             tap('[data-tut="bag-back"]', wait=600)
             check(js("App.current") == 'home', f'{tag}: ‹ goes back to the Hearth')
+            # ── the Heroes list, from the Hearth
+            js("document.querySelectorAll('#toasts .toast').forEach(t => t.remove())")
+            tap('[data-tut="hearth-heroes"]', wait=700)
+            check(js("App.current") == 'party' and exists('.hl-view'), f'{tag}: the Hearth\'s Heroes opens the Heroes list ({js("App.current")})')
+            bad = js(INSIDE, ['.hc-back', '.hc-title', '.hc-sorts', '.hl-grid']) + js(APART, [['.hc-title', '.hc-sorts']])
+            bad += js("""(() => { const out = [], G = Frame.box(document.querySelector('.hl-grid')), bs = [...document.querySelectorAll('.hl-hero')].map(el => Frame.box(el));
+              bs.forEach((b, i) => { if (b.left < G.left - 1 || b.right > G.right + 1) out.push('card ' + i + ' spills out'); bs.slice(i + 1).forEach((q, j) => { if (b.left < q.right - 1 && q.left < b.right - 1 && b.top < q.bottom - 1 && q.top < b.bottom - 1) out.push('cards ' + i + ' and ' + (i + j + 1) + ' overlap'); }); });
+              return out; })()""")
+            check(not bad, f'{tag}: the title, the filters and the cards sit inside the frame, apart {bad}')
+            missing = [t for t in ['heroes-back', 'heroes-filter-all', 'heroes-filter-party', 'heroes-filter-rest', 'heroes-dismiss', 'heroes-bag', 'party-hero', 'heroes-hire'] if not exists(f'[data-tut="{t}"]')]
+            check(not missing, f'{tag}: the anchors are there {missing}')
+            bad = js(TYPE, '.hl-view')
+            check(not bad, f'{tag}: two typefaces, no letter-spaced capitals, no text under 9 px {bad}')
+            listed = js("[...document.querySelectorAll('[data-tut=party-hero]')].map(el => el.dataset.id)")
+            want = js("(() => { const s = Save.state, p = s.party.filter(Boolean); return p.concat(s.roster.filter(c => !p.includes(c.id)).sort((a, b) => b.level - a.level).map(c => c.id)); })()")
+            check(listed == want and js("document.querySelector('.hl-view .hc-title span').textContent") == f'6 / {js("Base.rosterCap(Save.state)")}', f'{tag}: six heroes, the party first in its order, then the resting; 6 / {js("Base.rosterCap(Save.state)")} by the title')
+            badge = js(f"(() => {{ const b = document.querySelector('[data-tut=party-hero][data-id=\"{ids['isolde']}\"] .hc-badge'); return b && b.textContent; }})()")
+            check(badge == str(js(f"Hero.points(Save.char('{ids['isolde']}')).stat")) and count('.hl-hero .hc-badge') == 1, f'{tag}: Isolde\'s card has her points to spend on its badge ({badge}), and no one else\'s')
+            shot('heroes', 'heroes')
+            tap('[data-tut="heroes-filter-party"]')
+            n_party = count('[data-tut="party-hero"]')
+            tap('[data-tut="heroes-filter-rest"]')
+            n_rest = count('[data-tut="party-hero"]')
+            tap('[data-tut="heroes-filter-all"]')
+            check(n_party == 4 and n_rest == 2 and exists('[data-tut="heroes-hire"]'), f'{tag}: the filters: in the party ({n_party}), resting ({n_rest}), everyone')
+            if not touch:
+                x, y = client(*centre(f'[data-tut="party-hero"][data-id="{ids["fulke"]}"] .hl-row'))
+                page.mouse.move(x, y)
+                page.wait_for_timeout(300)
+                t = js("(() => { const t = document.querySelector('.tp'); return t ? t.textContent : ''; })()")
+                check(t == 'Front row', f'{tag}: a row icon\'s tooltip names the row ({t!r})')
+                page.mouse.move(2, 2)
+            # a card opens the hero; the card's ‹ comes back
+            tap(f'[data-tut="party-hero"][data-id="{ids["isolde"]}"]', wait=700)
+            check(js("App.current") == 'hero' and js("HeroSheet.id") == ids['isolde'], f'{tag}: a tap on Isolde\'s card opens her hero card')
+            tap('[data-tut="hero-back"]', wait=600)
+            check(js("App.current") == 'party', f'{tag}: its ‹ comes back to the Heroes list')
+            # the Bag, and back
+            tap('[data-tut="heroes-bag"]', wait=600)
+            check(js("App.current") == 'bag', f'{tag}: the Bag button opens the Bag')
+            tap('[data-tut="bag-back"]', wait=600)
+            check(js("App.current") == 'party', f'{tag}: the Bag\'s ‹ comes back to the Heroes list')
+            # the + card: the Recruit Board
+            tap('[data-tut="heroes-hire"]', wait=600)
+            check(js("RecruitBoard.shown") and js("App.current") == 'home', f'{tag}: the + card opens the Recruit Board, at the Hearth ({js("App.current")})')
+            js("RecruitBoard.close(); App.go('party', {}, { instant: true }); 'ok'")
+            page.wait_for_timeout(500)
+            # Dismiss: a mode; a tap asks; Keep keeps them; Dismiss sends them on their way
+            tap('[data-tut="heroes-dismiss"]')
+            check(js("HeroesList.dismissing") and count('.hl-hero .hl-x') == 6 and not exists('[data-tut="heroes-hire"]'), f'{tag}: Dismiss marks every hero with ✕')
+            tap(f'[data-tut="party-hero"][data-id="{ids["morrow"]}"]', wait=500)
+            check(js("!!document.querySelector('#sheet:not([hidden]) .kp.hl-ask')"), f'{tag}: a tap asks before Morrow goes')
+            shot('heroes', 'dismiss')
+            tap('#sheet .kp.hl-ask .kp-btn.sec', wait=400)
+            check(js("Save.state.roster.length") == 6 and js("document.getElementById('sheet').hidden"), f'{tag}: Keep keeps him')
+            tap(f'[data-tut="party-hero"][data-id="{ids["morrow"]}"]', wait=500)
+            tap('#sheet .kp.hl-ask .kp-btn:not(.sec)', wait=500)
+            check(js("Save.state.roster.length") == 5 and not js(f"Save.char('{ids['morrow']}')") and not js("HeroesList.dismissing") and count('[data-tut="party-hero"]') == 5, f'{tag}: Dismiss sends him on his way, and the mode ends')
+            tap('[data-tut="heroes-back"]', wait=600)
+            check(js("App.current") == 'home', f'{tag}: the list\'s ‹ goes back to the Hearth')
             ctx.close()
         b.close()
     srv.shutdown()

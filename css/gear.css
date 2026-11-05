@@ -42,18 +42,12 @@
 .pc .hc-row{margin-top:8px}
 @media (prefers-reduced-motion:reduce){.gc::before{animation:none!important}}
 
-/* ── the item card's bottom sheet (GearUI.card), and the Party screen's sprites */
+/* ── the item card's bottom sheet (GearUI.card) */
 
 :root{--r-common:#b4a8b6;--r-fine:#b4de98;--r-rare:#8cc4e6;--r-relic:#f1d36a}
 .r-common{--rc:var(--r-common)}.r-fine{--rc:var(--r-fine)}.r-rare{--rc:var(--r-rare)}.r-relic{--rc:var(--r-relic)}
 .ico.gico{image-rendering:pixelated}
 .ico.faint{opacity:.28}
-
-/* the Party screen shows each hero's whole sprite, in their gear */
-.pspr{display:grid;place-items:end center;width:48px;height:48px;background:#0b0913;box-shadow:0 0 0 1px #000,0 0 0 2px #4a2c14;overflow:hidden}
-.prow.front .pspr{width:56px;height:56px}
-.pslot .pspr img{width:auto;height:44px;background:none;box-shadow:none;image-rendering:pixelated}
-.prow.front .pslot .pspr img{height:52px}
 
 /* the three slots */
 .gr-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
