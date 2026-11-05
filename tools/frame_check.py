@@ -10,8 +10,8 @@ and closes; a tap lands where it was aimed, in design pixels, and on the title i
 fire) fills the stage with its scene at 2×, its Set out flies up the road to 1-1's card, the camera nudges back
 while no blueprint has come, turns under a drag along the frame and not across it, and settles on the nearer view;
 taps in its scene find the fire, the road (and fly up it) and the Recruit Board, and its formation swaps places by drag; a roster
-row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings,
-the Road map and Tactics scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
+row's swipe opens Dismiss; tactics reorder by drag; the Party tab, Settings,
+the Road map and the Tactics picker scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
 3×, the coach mark rings the thing it points at, and a tap on the HUD answers; starting S2 from the title, playing,
 reloading and switching back to S1 leaves both saves intact; and, with touch, the frame keeps clear of emulated notches.
 Fingers are CDP touch events, so the browser's own touch scrolling and pointer events run as on a phone. --shots DIR
@@ -260,24 +260,21 @@ def main():
         page.wait_for_timeout(900)
         scroll_check('.mapwrap', 'the Road map', dist=100)
 
-        # 6. rules reorder by drag on Tactics
+        # 6. tactics reorder by drag on Tactics, and its picker scrolls
         js("Proto.lightNext(); Save.commit(); App.actions.tactics(Save.state.roster[0].id); 'ok'")
         page.wait_for_timeout(1000)
-        rules = lambda: js("[...document.querySelectorAll('.tx-rule .tx-body')].map(r => r.textContent.replace(/\\s+/g, ' ').trim().slice(0, 48))")
+        rules = lambda: js("[...document.querySelectorAll('.tx-main .tx-rule[data-i]')].map(r => r.textContent.replace(/\\s+/g, ' ').trim().slice(0, 48))")
         r0 = rules()
-        js("document.querySelector('.tx-rule').scrollIntoView({ block: 'center' }); 'ok'")
-        page.wait_for_timeout(300)
-        g = js("__design('.tx-rule .tx-grip')")
-        step = js("(() => { const l = [...document.querySelectorAll('.tx-rule')].map(el => Frame.box(el).top); return l[1] - l[0]; })()")
+        g = js("__design('.tx-main .tx-rule[data-i] .tx-grip')")
+        step = js("(() => { const l = [...document.querySelectorAll('.tx-main .tx-rule[data-i]')].map(el => Frame.box(el).top); return l[1] - l[0]; })()")
         if len(r0) >= 2 and g:
             drag(g[0], g[1], g[0], g[1] + step * 1.1, n=16)
             r1 = rules()
-            check(r1[0] == r0[1] and r1[1] == r0[0], f'dragging rule 1 down a row swaps it with rule 2 ({r1[0][:20]!r} is first)')
+            check(r1[0][1:] == r0[1][1:] and r1[1][1:] == r0[0][1:], f'dragging tactic 1 down a line swaps it with tactic 2 ({r1[0][:20]!r} is first)')
             shot('rules-after-drag')
         else:
-            check(False, f'Tactics shows two rules to drag ({len(r0)} rules)')
-        js("document.getElementById('screen').scrollTop = 0; 'ok'")
-        scroll_check('#screen', 'the Tactics screen', dist=140)
+            check(False, f'Tactics shows two tactics to drag ({len(r0)} tactics)')
+        scroll_check('.tx-opts', 'the Tactics picker', dist=100)
 
         # 7. a battle: the whole stage, the art at 3×, the coach mark on its target, and a tap on the HUD
         js("TacticsEditor.close(); App.go('battle', { stage: 1 }); Battle.setSpeed(1); 'ok'")
