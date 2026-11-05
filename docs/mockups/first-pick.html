@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>First Pick</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Screen 3 of docs/idle-heroes-study.md §6: the first pick at the Recruit Board, guided by Wick (onboarding spec §6.4,
+   steps 1–4). Each frame is a phone on its side (844×390), drawn with the game's own art and fonts. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.shot figcaption button{margin-left:auto;font:700 9px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:#1a1008;background:var(--ember);padding:7px 9px}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;background:#07050b;font-size:15px;user-select:none}
+.frame canvas.scene{position:absolute;left:0;top:0;width:844px;height:390px;image-rendering:pixelated}
+.layer{position:absolute;inset:0}
+.hidden{display:none!important}
+@keyframes bob{50%{translate:0 -4px}}
+@keyframes rise{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
+
+/* the camp's HUD, as in the camp views */
+.pnl{background:var(--panel);border:1px solid var(--rule)}
+.me{position:absolute;left:18px;top:12px;display:flex;align-items:center;gap:9px;height:44px;padding:0 12px 0 3px}
+.me .face{position:relative;width:38px;height:38px;border:1px solid var(--trim);background:#0f0b14;display:grid;place-items:center}
+.me .face img{width:32px;height:32px}
+.me .face em{position:absolute;right:-7px;bottom:-7px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;font:700 9px/1 var(--f-pixel);font-style:normal;color:#1a1008;background:var(--gold);border:1px solid #000}
+.me .nm{font:400 19px/1 var(--f-display)}
+.purse{position:absolute;right:116px;top:17px;display:flex;gap:24px}
+.cur{position:relative;display:flex;align-items:center;height:26px;min-width:118px;padding:0 4px 0 30px;border-radius:13px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cur .ci{position:absolute;left:-12px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.cur .ci img{width:22px;height:22px}
+.cur .cv{flex:1;text-align:center;font:700 11px/1 var(--f-pixel);color:var(--bone)}
+.cur .cv.gold{color:var(--gold)}
+.cur .plus{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font:700 13px/1 var(--f-pixel);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000}
+.corner{position:absolute;right:18px;top:13px;display:flex;gap:8px}
+.round{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;font:400 23px/1 var(--f-display);color:var(--gold)}
+.round img{width:18px;height:18px}
+.form{position:absolute;right:18px;top:66px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule)}
+.form .fc{position:relative;width:40px;height:40px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center;color:#4a4054;font:700 14px/1 var(--f-pixel)}
+.form .fc.empty{border-style:dashed;border-color:#3a3044}
+.form .fc.front{border-color:var(--ember)}
+.form .fc img{width:34px;height:34px}
+.form .fc em{position:absolute;left:-1px;top:-1px;height:13px;padding:0 3px;display:grid;place-items:center;font:700 7px/1 var(--f-pixel);font-style:normal;color:var(--bone);background:#0b0810;border:1px solid var(--ember)}
+.dock{position:absolute;right:16px;bottom:10px;display:flex;align-items:flex-end;gap:10px}
+.rb{position:relative;display:grid;justify-items:center;gap:2px;width:54px}
+.rb .orb{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 32%,#45304e,#1d1424 70%);border:2px solid #8a6038;box-shadow:0 0 0 1px #000}
+.rb .orb img{width:26px;height:26px}
+.rb span{font:400 14px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000}
+.rb.locked{opacity:.4;filter:grayscale(.7)}
+.big{position:relative;display:grid;justify-items:center;gap:3px;width:84px}
+.big .orb{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;border:2px solid #ffd68a;box-shadow:0 0 0 2px #000,0 0 22px rgba(244,166,70,.55),inset 0 3px 0 rgba(255,240,200,.35),inset 0 -6px 10px rgba(0,0,0,.45);background:radial-gradient(circle at 50% 30%,#f7b85a,#b8622a 70%)}
+.big .orb img{width:34px;height:34px}
+.big span{font:400 16px/1 var(--f-display);color:var(--bone);text-shadow:0 1px 0 #000}
+.big .tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);height:20px;padding:0 7px;display:grid;place-items:center;white-space:nowrap;font:700 9px/1 var(--f-pixel);color:var(--bone);background:#120c14;border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+
+/* Wick: big portrait, bubble, spotlight, pointer */
+.wick-big{position:absolute;bottom:-4px;width:150px;height:203px;filter:drop-shadow(0 0 18px rgba(244,166,70,.25)) drop-shadow(0 4px 0 rgba(0,0,0,.6));pointer-events:none;z-index:6}
+.wick-big.l{left:4px}.wick-big.r{right:4px}
+.bubble{position:absolute;max-width:270px;padding:11px 15px 12px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px var(--trim),0 10px 24px rgba(0,0,0,.45);font:600 16px/1.3 var(--f-body);z-index:6;animation:rise .35s ease-out}
+.bubble::after{content:"";position:absolute;bottom:-14px;border:8px solid transparent;border-top:9px solid #f2e7d0;border-bottom:0}
+.bubble.tl::after{left:26px}.bubble.tr::after{right:26px}
+.bubble em{display:block;margin-top:5px;font:italic 400 14px/1.3 var(--f-body);color:#5a4030}
+.spot{position:absolute;inset:0;pointer-events:none;z-index:4}
+.arrow{position:absolute;width:27px;height:30px;animation:bob 1.1s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(244,166,70,.7));pointer-events:none;z-index:5}
+
+/* the Recruit Board, in first-pick mode */
+.veil{position:absolute;inset:0;background:rgba(5,3,9,.62);z-index:2}
+.board{position:absolute;left:168px;right:18px;top:30px;bottom:14px;padding:30px 16px 14px;background:linear-gradient(#1d1626,#120d18);border:1px solid var(--trim);box-shadow:0 0 0 1px #000,0 20px 50px rgba(0,0,0,.6);display:grid;grid-template-rows:1fr auto;gap:10px;z-index:3;animation:rise .3s ease-out}
+.ttab{position:absolute;left:50%;top:-16px;transform:translateX(-50%);padding:6px 28px 7px;background:linear-gradient(#3a2512,#22160c);border:1px solid var(--ember);font:400 24px/1 var(--f-display);color:var(--bone);box-shadow:0 0 0 1px #000,0 0 16px rgba(244,166,70,.25);white-space:nowrap}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rc{position:relative;display:grid;grid-template-rows:auto auto 1fr auto;justify-items:center;gap:4px;padding:10px 8px 10px;background:linear-gradient(#211a2b,#16111d);border:1px solid #3a3044;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:transform .15s,border-color .15s,opacity .15s}
+.rc .rn{font:400 25px/1 var(--f-display);color:var(--bone)}
+.rc .rr{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ash)}
+.rc .dais{position:relative;align-self:end;width:100%;height:118px;display:grid;place-items:end center}
+.rc .dais::before{content:"";position:absolute;left:50%;bottom:4px;width:96px;height:22px;margin-left:-48px;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#3a3044,#1a1420 70%);box-shadow:0 2px 0 #0b0810}
+.rc .dais::after{content:"";position:absolute;left:50%;bottom:-6px;width:150px;height:70px;margin-left:-75px;border-radius:50%;background:radial-gradient(ellipse,rgba(244,166,70,0),rgba(244,166,70,0));transition:background .2s}
+.rc .dais img{position:relative;z-index:1;margin-bottom:12px}
+.rc .ri{display:flex;gap:6px}
+.rc .ri span{width:26px;height:26px;display:grid;place-items:center;background:#0f0b14;border:1px solid #3a3044}
+.rc .ri img{width:16px;height:16px}
+.rc.on{border-color:var(--ember);box-shadow:0 0 0 1px #000,0 0 18px rgba(244,166,70,.35),inset 0 0 30px rgba(244,166,70,.08);transform:translateY(-3px)}
+.rc.on .dais::after{background:radial-gradient(ellipse,rgba(244,166,70,.28),rgba(244,166,70,0) 70%)}
+.rc.on .dais img{animation:bob .9s ease-in-out infinite}
+.cards.picked .rc:not(.on){opacity:.55}
+.hire{display:flex;justify-content:center;align-items:center;gap:12px;min-height:46px}
+.b{display:inline-flex;align-items:center;gap:10px;height:44px;padding:0 22px;font:700 11px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--bone);border:1px solid var(--ember);background:linear-gradient(#3a2512,#22160c);box-shadow:0 0 0 1px #000,0 0 14px rgba(244,166,70,.3)}
+.b em{font-style:normal;color:#0f1a0a;background:var(--good);padding:4px 6px;font-size:9px;letter-spacing:.1em}
+.hint{font:italic 400 15px/1 var(--f-body);color:var(--dim)}
+
+/* the reveal */
+.reveal{position:absolute;inset:0;z-index:8;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 58%,#2a1a14 0%,#120c14 45%,#07050b 80%);overflow:hidden;animation:fade .4s ease-out}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.reveal .rays{position:absolute;left:50%;top:56%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,rgba(244,166,70,.12) 0deg 6deg,rgba(244,166,70,0) 6deg 18deg);border-radius:50%;-webkit-mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);mask:radial-gradient(circle,#000 0,#000 20%,transparent 60%);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reveal .glow{position:absolute;left:50%;top:58%;width:320px;height:120px;margin:-30px 0 0 -160px;border-radius:50%;background:radial-gradient(ellipse,rgba(244,166,70,.4),rgba(244,166,70,0) 70%)}
+.reveal .hero{position:relative;margin-top:-30px;filter:drop-shadow(0 0 16px rgba(255,200,120,.55));animation:rise .6s ease-out}
+.reveal .plate{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:grid;justify-items:center;gap:6px;animation:rise .6s .2s ease-out both}
+.reveal .plate b{font:400 46px/1 var(--f-display);color:var(--bone);text-shadow:0 0 20px rgba(244,166,70,.5),0 2px 0 #000}
+.reveal .plate span{font:700 10px/1 var(--f-pixel);letter-spacing:.18em;text-transform:uppercase;color:var(--ember)}
+.reveal .tap{position:absolute;right:26px;bottom:18px;font:700 9px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.reveal .mote{position:absolute;width:3px;height:3px;background:#ffd68a;border-radius:1px;animation:mote 3.2s linear infinite;opacity:0}
+@keyframes mote{0%{opacity:0;translate:0 0}20%{opacity:.9}100%{opacity:0;translate:0 -180px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 3 · the first pick</div>
+    <h1>The First Lantern-Bearer</h1>
+    <p class="lede">Wick sends you to the Recruit Board. Three would carry the lantern; tap each to hear about them, then hire one, free. The top frame is live.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="live"></div></div></div><figcaption><b>Live</b> Tap the Recruit Board, then a hero, then Hire. <button id="replay">Replay</button></figcaption></figure>
+
+  <section class="band">
+    <h2>Step by step</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="p1"></div></div></div><figcaption><b>P1</b> The board opens with the three who would carry the lantern. Wick asks you to tap each.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="p2"></div></div></div><figcaption><b>P2</b> Tap the Sellsword: they step into the light, Wick says what they do, and Hire appears.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="p3"></div></div></div><figcaption><b>P3</b> Tap another to hear about them instead. Here, the Pilgrim.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="p4"></div></div></div><figcaption><b>P4</b> Hire, and your hero steps into the lantern light: their name, class and level.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="p5"></div></div></div><figcaption><b>P5</b> Back at camp, your hero sits by the fire, and Wick points to Set out: the road view and 1-1 come next.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>Wick’s lines</h2>
+    <ol class="notes">
+      <li><b>At the board:</b> “Three would carry the lantern. Tap each to hear about them.”</li>
+      <li><b>Sellsword:</b> “Hits hardest, up front. Simple and strong.”</li>
+      <li><b>Hexblade:</b> “Curses that tick. Patient, and hard on healers.”</li>
+      <li><b>Pilgrim:</b> “Heals, and burns the dead. Slow, but hard to kill.”</li>
+      <li><b>Back at camp:</b> “A bearer needs a road. Set out when you’re ready.”</li>
+    </ol>
+  </section>
+
+  <section class="band">
+    <h2>How it works</h2>
+    <ul class="notes">
+      <li><b>Only the board takes a tap</b> until you’ve hired; the rest of the camp waits. This is the forced first session.</li>
+      <li><b>The cards say only</b> who they are, where they stand and what they do, in icons. Wick says the rest.</li>
+      <li><b>Hiring is free</b> for this first hero. The two you didn’t pick come back on the board later, with the free recruit at 1-2.</li>
+      <li><b>The reveal</b> is a moment, as in Idle Heroes: the hero in the light, their rolled name, class and level. Tap anywhere to go on.</li>
+      <li><b>Afterwards the board shows its usual face,</b> with new faces from 1-2.</li>
+    </ul>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script>
+'use strict';
+(() => {
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const big = (c, k) => { const o = document.createElement('canvas'); o.width = c.width * k; o.height = c.height * k; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL(); };
+  const LOOK = cls => [Items.starter(cls, 1).id, null, null];
+  const ARROW = { map: ['..kkkkk..', '..kyYyk..', '..kyYyk..', '..kyYyk..', 'kkkyYykkk', 'kyyyYyyyk', '.kyyYyyk.', '..kyYyk..', '...kyk...', '....k....'], pal: { k: '#1a1008', y: '#f4a646', Y: '#ffd68a' } };
+  const WICK_URL = big(wickPortrait(), 4), ARROW_URL = big(sprite(ARROW.map, ARROW.pal, 'fp:arrow'), 3);
+
+  // The three starters: where they stand, what they do (as icons), and Wick's line on each.
+  const STARTERS3 = [
+    { cls: 'sellsword', where: 'Front · Damage', icons: ['sword', 'cleave'], line: 'Hits hardest, up front. Simple and strong.', name: 'Fulke' },
+    { cls: 'hexblade', where: 'Back · Curses', icons: ['curse', 'doom'], line: 'Curses that tick. Patient, and hard on healers.', name: 'Morrow' },
+    { cls: 'pilgrim', where: 'Back · Healer', icons: ['holy', 'heart'], line: 'Heals, and burns the dead. Slow, but hard to kill.', name: 'Agnes' },
+  ];
+  const plots = [{ empty: true }, { empty: true }, { empty: true }, null, null, null, null, null, null, null, null, null, null, null];
+
+  function hud(S, step) {
+    const cur = (ic, v, cls) => h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon(ic, 22)), h('span', { class: 'cv ' + (cls || ''), text: v }), h('span', { class: 'plus', text: '+' }));
+    const hero = S.heroes[0];
+    const face = hero ? pxImg(portraitURL(hero, true, LOOK(hero)), 32, 32) : pxImg(iconURL('lantern'), 22, 22);
+    const tile = (c, front) => c ? h('span', { class: 'fc front' }, pxImg(portraitURL(c, true, LOOK(c)), 34, 34), h('em', { text: '1' })) : h('span', { class: 'fc empty' + (front ? ' front' : ''), text: '+' });
+    const rb = (ic, label, locked) => h('span', { class: 'rb' + (locked ? ' locked' : '') }, h('span', { class: 'orb' }, icon(ic, 26)), h('span', { text: label }));
+    return [
+      h('div', { class: 'pnl me' }, h('span', { class: 'face' }, face, h('em', { text: '1' })), h('span', { class: 'nm', text: 'Roflz' })),
+      h('div', { class: 'purse' }, cur('coin', '100', 'gold'), cur('bone', '0')),
+      h('div', { class: 'corner' }, h('span', { class: 'round', text: '?' }), h('span', { class: 'round' }, icon('gear', 18))),
+      h('div', { class: 'form' }, tile(null), tile(null), tile(hero, true), tile(null), tile(null), tile(null, true)),
+      h('div', { class: 'dock' }, rb('helm', 'Heroes', !hero), rb('scroll', 'Tactics', true), rb('bag', 'Bag', !hero),
+        h('span', { class: 'big' + (hero ? '' : ' locked'), 'data-go': '1' }, h('span', { class: 'tag', text: '1-1' }), h('span', { class: 'orb' }, icon('boot', 34)), h('span', { text: 'Set out' }))),
+    ];
+  }
+  function board(sel, onPick, onHire) {
+    const cards = h('div', { class: 'cards' + (sel != null ? ' picked' : '') }, STARTERS3.map((c, i) => {
+      const card = h('button', { class: 'rc' + (sel === i ? ' on' : '') },
+        h('span', { class: 'rn', text: CLASSES[c.cls].name }), h('span', { class: 'rr', text: c.where }),
+        h('span', { class: 'dais' }, pxImg(big(heroSide(c.cls, 0, LOOK(c.cls)), 5), heroSide(c.cls, 0, LOOK(c.cls)).width * 5, heroSide(c.cls, 0, LOOK(c.cls)).height * 5)),
+        h('span', { class: 'ri' }, c.icons.map(n => h('span', {}, icon(n, 16)))));
+      card.addEventListener('click', () => onPick && onPick(i));
+      return card;
+    }));
+    const hireBtn = h('button', { class: 'b' }, 'Hire', h('em', { text: 'Free' }));
+    hireBtn.addEventListener('click', () => onHire && onHire());
+    return h('div', { class: 'board' }, h('div', { class: 'ttab', text: 'Recruit Board' }), cards, h('div', { class: 'hire' }, sel != null ? hireBtn : h('span', { class: 'hint', text: '' })));
+  }
+  function wickSays(side, text, pos) {
+    return [pxImg(WICK_URL, 150, 203, 'px wick-big ' + side), h('div', { class: 'bubble ' + (side === 'l' ? 'tl' : 'tr'), style: pos, text })];
+  }
+  function reveal(i) {
+    const c = STARTERS3[i], sp = heroSide(c.cls, 0, LOOK(c.cls));
+    const motes = Array.from({ length: 16 }, (_, k) => h('i', { class: 'mote', style: `left:${300 + (k * 53) % 250}px;top:${240 + (k * 37) % 80}px;animation-delay:${(k * 0.21) % 3.2}s` }));
+    return h('div', { class: 'reveal' }, h('div', { class: 'rays' }), h('div', { class: 'glow' }), ...motes,
+      pxImg(big(sp, 8), sp.width * 8, sp.height * 8, 'px hero'),
+      h('div', { class: 'plate' }, h('b', { text: c.name }), h('span', { text: `${CLASSES[c.cls].name} · Lv 1` })),
+      h('div', { class: 'tap', text: 'Tap to go on' }));
+  }
+
+  // One frame: a camp scene behind, and a step of the first pick in front.
+  function makeFrame(el, step, sel = null, onAction) {
+    el.replaceChildren();
+    const picked = step === 'camp-after' ? sel : null;
+    const S = { heroes: picked != null ? [STARTERS3[picked].cls] : [], lit: 0, wick: false, fireLow: picked == null, focus: step === 'camp-board' ? 'board' : null, plots };
+    const cv = h('canvas', { class: 'scene', width: Camp3D.IW, height: Camp3D.IH });
+    el.append(cv, ...hud(S, step));
+    const api = Camp3D.live(cv, el, S, { yaw: 0, drag: false });
+    const over = h('div', { class: 'layer' });
+    el.append(over);
+    if (step === 'camp-board') {
+      const spot = h('div', { class: 'spot' }), arrow = pxImg(ARROW_URL, 27, 30, 'px arrow');
+      over.append(spot, arrow, ...wickSays('r', 'The Recruit Board. Let’s find you a lantern-bearer.', 'right:168px;top:150px'));
+      const hit = h('button', { style: 'position:absolute;z-index:7;width:120px;height:110px;border-radius:50%', 'aria-label': 'The Recruit Board' });
+      hit.addEventListener('click', () => onAction && onAction('board'));
+      over.append(hit);
+      api.onFrame = out => { const a = out.anchors.find(q => q.id === 'board'); if (!a) return; const bx = a.x, by = (a.top + a.y) / 2; spot.style.background = `radial-gradient(ellipse 96px 92px at ${bx}px ${by}px,rgba(5,3,9,0) 0,rgba(5,3,9,0) 70%,rgba(5,3,9,.82) 100%)`; arrow.style.left = (bx - 13) + 'px'; arrow.style.top = (a.top - 44) + 'px'; hit.style.left = (bx - 60) + 'px'; hit.style.top = (by - 55) + 'px'; };
+    }
+    if (step === 'board') {
+      over.append(h('div', { class: 'veil' }), board(sel, i => onAction && onAction('pick', i), () => onAction && onAction('hire')));
+      over.append(...wickSays('l', sel == null ? 'Three would carry the lantern. Tap each to hear about them.' : STARTERS3[sel].line, 'left:14px;top:46px;max-width:200px'));
+    }
+    if (step === 'reveal') { const r = reveal(sel); r.addEventListener('click', () => onAction && onAction('next')); over.append(r); }
+    if (step === 'camp-after') {
+      const spot = h('div', { class: 'spot', style: 'background:radial-gradient(circle 70px at 789px 316px,rgba(5,3,9,0) 0,rgba(5,3,9,0) 70%,rgba(5,3,9,.82) 100%)' });
+      over.append(spot, Object.assign(pxImg(ARROW_URL, 27, 30, 'px arrow'), { style: 'left:775px;top:214px' }), ...wickSays('l', 'A bearer needs a road. Set out when you’re ready.', 'left:150px;top:150px'));
+    }
+    return api;
+  }
+
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+  const STILLS = { p1: ['board', null], p2: ['board', 0], p3: ['board', 2], p4: ['reveal', 0], p5: ['camp-after', 0] };
+  for (const el of document.querySelectorAll('.frame[data-f^="p"]')) { const [step, sel] = STILLS[el.dataset.f]; makeFrame(el, step, sel); }
+  // the live frame walks the whole first pick
+  const live = document.querySelector('.frame[data-f="live"]');
+  let chosen = null;
+  const go = (step, sel) => makeFrame(live, step, sel, (what, i) => {
+    if (what === 'board') go('board', null);
+    if (what === 'pick') { chosen = i; go('board', i); }
+    if (what === 'hire') go('reveal', chosen);
+    if (what === 'next') go('camp-after', chosen);
+  });
+  go('camp-board');
+  document.getElementById('replay').addEventListener('click', () => { chosen = null; go('camp-board'); });
+  window.__fp = { go };
+})();
+</script>
+</body>
+</html>
