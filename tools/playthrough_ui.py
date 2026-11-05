@@ -12,12 +12,36 @@ Taps in the Hearth's scene are real touches at the place on the screen, so they 
 
 It records every console error, every coach mark and tip as it appears, and every new thing the results popup shows,
 and fails when the road stops moving.
-  python tools/playthrough_ui.py [pilgrim|sellsword|hexblade] [--shots DIR]
+
+Quick, for builders: --quick stops as soon as every flow below has run once, and fails if one never did. The partner
+session runs the whole play-through (the default) once before merging.
+  python tools/playthrough_ui.py [pilgrim|sellsword|hexblade] [--quick] [--shots DIR] [--minutes N]
+
+How it keeps quick: each tap waits for what it should bring up next (wait_for_function on the game's own state: the
+camera still, the road's card up, a battle under way, the popup's fill done) instead of sleeping, and the battle speed
+button is set to 4×. One test switch, which players never have: window.__test.fastWalk, read where the walk between
+battles is timed (walkOn in js/main.js), makes that walk instant. The guide's coach marks need time on screen, so on
+the first trips battles play before Skip until it has shown its marks in battle, and the walk takes its time until it
+has shown the one between battles.
+
+To add a step (the guide's forced steps, say): tap(sel, text, then=JS) taps and waits for JS to be true; touch() is
+for things in the camp's scene; ran('name') marks a flow done, and FLOWS lists the ones --quick waits for.
 """
 import argparse, functools, http.server, json, os, socketserver, sys, threading, time
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# the flows --quick waits for, each once; in the order a new game first meets them
+FLOWS = {
+    'pick': 'the first pick',
+    'set out': "Set out at the Hearth, up the road to the frontier's card",
+    'battle': 'a battle, skipped',
+    'results': 'the results popup, with Report',
+    'hearth': 'the Hearth button on the results',
+    'hire': 'a hire at the Recruit Board',
+    'build': 'a building on an empty plot',
+}
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -30,6 +54,8 @@ CLOCK = """
   const real = Date.now.bind(Date); let skew = 0;
   Date.now = () => real() + skew;
   window.__pass = ms => { skew += ms; };
+  // the play-through's switches (players never have window.__test): the walk between battles takes no time
+  window.__test = { fastWalk: true };
   // what the first hour shows, as it appears
   window.__seen = { coach: [], tips: [], news: [] };
   const watch = () => new MutationObserver(list => { for (const m of list) for (const n of m.addedNodes) {
@@ -41,20 +67,40 @@ CLOCK = """
 })();
 """
 
+# What each step waits for. The camp's camera is still (it has stood 200 ms where it was going: js/campscene.js's
+# out.still) in a view, or at the end of the road's flight with the frontier's card up.
+VIEW_STILL = """want => { const L = Camp.scene; if (App.current !== 'home' || !L || !L.out || !L.out.still || L.onRoad || L.road !== 0) return false;
+  const y = ((L.out.yaw % 360) + 360) % 360; return L.view === want && Math.abs(y - (want === 'build' ? 180 : 0)) < 0.1; }"""
+ROAD_STILL = """() => { const L = Camp.scene, b = document.querySelector('.cv-roadgo');
+  return !!(L && L.onRoad && L.road === 1 && L.out && L.out.still && L.out.road && b && b.offsetWidth); }"""
+IN_BATTLE = "() => !!(Battle.busy && !document.getElementById('controls').hidden)"
+SHEET_OR_BATTLE = "() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)"
+RESULTS = "() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"
+# The guide's coach marks in battle and between battles (js/guide.js) come with time on screen: until each has shown,
+# battles play (at 4×) before Skip, and the walk between battles takes its time.
+WATCH_KEYS = ['c:flags', 'c:items', 'c:rule']
+WATCHING = f"() => {json.dumps(WATCH_KEYS)}.some(k => !Guide.seen(k))"
+WATCH_TRIPS, WATCH_MS = 8, 12000
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('hero', nargs='?', default='sellsword')
     ap.add_argument('--shots', default='')
     ap.add_argument('--minutes', type=float, default=25)
+    ap.add_argument('--quick', action='store_true', help='stop once every flow has run')
     a = ap.parse_args()
 
     handler = functools.partial(Quiet, directory=ROOT)
     srv = socketserver.TCPServer(('127.0.0.1', 0), handler)
     port = srv.server_address[1]
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    errors, problems = [], []
-    t_end = time.time() + a.minutes * 60
+    errors, problems, done = [], [], {}
+    t0 = time.time()
+    t_end = t0 + a.minutes * 60
+
+    def ran(flow):
+        done.setdefault(flow, round(time.time() - t0, 1))
 
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -64,7 +110,6 @@ def main():
         page.on('console', lambda m: errors.append(m.text) if m.type == 'error' else None)
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.goto(f'http://127.0.0.1:{port}/index.html')
-        page.wait_for_timeout(3000)
         js = page.evaluate
         n_shot = [0]
 
@@ -73,19 +118,33 @@ def main():
                 n_shot[0] += 1
                 page.screenshot(path=os.path.join(a.shots, f'{n_shot[0]:03d}-{name}.png'))
 
-        def tap(sel, text=None, wait=500):
-            """Taps the first visible element matching sel (and text, a regex), as a finger would. True if it did."""
+        def until(cond, arg=None, timeout=5000):
+            """Waits for cond (a JS function) to be true, polling every 25 ms. True if it came true in time."""
+            try:
+                page.wait_for_function(cond, arg=arg, timeout=timeout, polling=25)
+                return True
+            except PWTimeout:
+                return False
+
+        def tap(sel, text=None, then=None, arg=None, timeout=5000, settle=0):
+            """Taps the first visible element matching sel (and text, a regex), as a finger would; then waits for then
+            (a JS function) to be true, or settle ms when nothing on screen tells. True if it tapped (and then came
+            true)."""
             ok = js("""([sel, text]) => { const re = text ? new RegExp(text) : null;
               const el = [...document.querySelectorAll(sel)].find(e => e.offsetWidth && !e.disabled && (!re || re.test(e.textContent)));
               if (!el) return false; el.scrollIntoView({ block: 'center' }); el.click(); return true; }""", [sel, text])
-            if ok:
-                page.wait_for_timeout(wait)
-            return ok
+            if not ok:
+                return False
+            if then:
+                return until(then, arg, timeout)
+            if settle:
+                page.wait_for_timeout(settle)
+            return True
 
-        def touch(sel, text=None, wait=600):
+        def touch(sel, text=None, then=None, timeout=5000):
             """Touches the middle of the first visible element matching sel (and text), where it is drawn on the screen and
             nothing of the HUD lies over it: for things in the camp's scene, which answer to the touch itself rather than
-            to a click. Returns where it touched and what was there, or None."""
+            to a click. Then waits for then. Returns where it touched and what was there, or None."""
             r = js("""([sel, text]) => { const re = text ? new RegExp(text) : null, camp = document.querySelector('.camp');
               const toClient = (x, y) => { const r = document.getElementById('stage').getBoundingClientRect(), b = Frame.box(camp), k = Frame.k; x += b.left; y += b.top; return Frame.turned ? [r.left + (Frame.H - y) * k, r.top + x * k] : [r.left + x * k, r.top + y * k]; };
               for (const el of document.querySelectorAll(sel)) {
@@ -100,14 +159,9 @@ def main():
             if not r:
                 return None
             page.touchscreen.tap(r[0], r[1])
-            page.wait_for_timeout(wait)
+            if then:
+                until(then, None, timeout)
             return r
-
-        def scene_point(anchor):
-            """Where an anchor of the camp's scene (js/campscene.js) is on the screen: the middle of its box."""
-            return js("""id => { const L = Camp.scene; if (!L || !L.out) return null; const a = L.out.anchors.find(q => q.id === id); if (!a) return null;
-              const x = (a.box[0] + a.box[2]) / 2 * 2, y = (a.box[1] + a.box[3]) / 2 * 2, r = document.getElementById('stage').getBoundingClientRect(), k = Frame.k;
-              return Frame.turned ? [r.left + (Frame.H - y) * k, r.top + x * k] : [r.left + x * k, r.top + y * k]; }""", anchor)
 
         def road_point():
             """A lantern on the road in the camp's party view that a tap there reaches: the road under it, and no plaque,
@@ -127,15 +181,15 @@ def main():
             return js("() => JSON.stringify({ on: App.current, sheet: !document.getElementById('sheet').hidden && document.getElementById('sheet').firstChild && document.getElementById('sheet').firstChild.className, view: Camp.scene && Camp.scene.view, yaw: Camp.scene && Math.round(Camp.scene.yaw), toasts: [...document.querySelectorAll('#toasts .toast')].map(t => t.textContent).slice(-2) })")
 
         def to_camp(view='party'):
-            """Back to camp (the Hearth tab, from the other screens), turned to a view with the arrow keys."""
-            if js("() => App.current") != 'home' and not tap('#tabbar .tab', '^Hearth$', 1200):
+            """Back to camp (the Hearth tab, from the other screens), turned to a view with the arrow keys, the camera
+            still."""
+            if js("() => App.current") != 'home' and not tap('#tabbar .tab', '^Hearth$', "() => App.current === 'home' && !!(Camp.scene && Camp.scene.out)"):
                 problems.append(f"no Hearth tab on {js('() => App.current')}")
                 return False
             if js("() => Camp.scene ? Camp.scene.view : null") != view:
                 page.keyboard.press('ArrowRight')
-                page.wait_for_timeout(1600)
-            if js("() => Camp.scene ? Camp.scene.view : null") != view:
-                problems.append(f'the camp did not turn to the {view} view')
+            if not until(VIEW_STILL, view):
+                problems.append(f'the camp did not turn to the {view} view: now {where()}')
                 return False
             return True
 
@@ -151,20 +205,24 @@ def main():
         # ── the title (js/title.js): once it has loaded, a tap begins
         page.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
         shot('title')
-        if not tap('#title', None, 1500):
-            problems.append('no title to tap')
+        if not tap('#title', None, "() => [...document.querySelectorAll('.pickc')].some(e => e.offsetWidth)", timeout=10000):
+            problems.append('no title to tap, or no first pick after it')
         # ── the first pick
-        if not tap('.pickc', a.hero.capitalize()) and not tap('.pickc'):
+        if not tap('.pickc', a.hero.capitalize(), settle=50) and not tap('.pickc', settle=50):
             problems.append('no first pick on a new game')
         shot('pick')
-        if not tap('.page.pick .btn.primary', wait=1500):
-            problems.append('no Begin button on the first pick')
+        if tap('.page.pick .btn.primary', then=VIEW_STILL, arg='party', timeout=10000):
+            ran('pick')
+        else:
+            problems.append(f'no Begin button on the first pick, or no Hearth after it: now {where()}')
         shot('camp')
 
-        trips, last_fr, still = 0, -1, 0
+        trips, last_fr, still, battles = 0, -1, 0, 0
         while time.time() < t_end:
             st = state()
             if st['fr'] >= st['n']:
+                break
+            if a.quick and all(f in done for f in FLOWS):
                 break
             if st['fr'] == last_fr:
                 still += 1
@@ -186,80 +244,92 @@ def main():
             js('() => { for (const c of Save.state.roster) Hero.autoBuild(c); Save.commit(); }')
             # hire: the Recruit Board, tapped in the camp's party view (its plaque), a card, Hire
             while st['board'] and st['picks'] > 0 and st['roster'] < min(st['need'], st['cap']) and st['cheapest'] <= st['gold']:
-                to_camp('party')
-                t = touch('.camp .cv-plq[data-id="board"]', None, 900)
+                if not to_camp('party'):
+                    break
+                t = touch('.camp .cv-plq[data-id="board"]', None, "() => App.current === 'building' && !!document.querySelector('.bld-view')")
                 if not t or js("() => App.current") != 'building':
                     problems.append(f"a tap on the Recruit Board at camp did not open it: touched {t}, now {where()}")
                     break
-                tap('.recruit', None, 300)
-                if not tap('.bld-view .btn.primary', '^Hire', 900):
+                tap('.recruit', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
+                n = st['roster']
+                if not tap('.bld-view .btn.primary', '^Hire', 'n => Save.state.roster.length > n', n):
                     break
+                ran('hire')
                 shot('hired')
                 st = state()
             # build: turn the camp to the buildings view, tap an empty plot, pick, Build the …
             if st['build'] and to_camp('build'):
-                t = touch('.camp .cv-plq.empty', None, 900)
-                if t and js("() => !!document.querySelector('#sheet .buildbox')"):
-                    tap('.buildbox .opt', None, 300)
-                    if tap('.buildbox .btn.primary', '^Build the', 900):
+                t = touch('.camp .cv-plq.empty', None, "() => !!document.querySelector('#sheet:not([hidden]) .buildbox')", timeout=3000)
+                if t and js("() => !!document.querySelector('#sheet:not([hidden]) .buildbox')"):
+                    tap('.buildbox .opt', None, settle=50)
+                    if tap('.buildbox .btn.primary', '^Build the', "() => !document.querySelector('#sheet:not([hidden]) .buildbox')"):
+                        ran('build')
                         shot('built')
                     else:
-                        tap('.sheet-x', None, 300)
+                        tap('.sheet-x', None, "() => document.getElementById('sheet').hidden")
                 else:
                     problems.append(f'a tap on an empty plot at camp did not open its build sheet: touched {t}, now {where()}')
                     shot('missed-plot')
-                    tap('.sheet-x', None, 300)
+                    tap('.sheet-x', None, "() => document.getElementById('sheet').hidden")
             # the road view: the first trip by the camp's Set out, after that a tap on the road in the camp's scene; the
             # camera flies up the road to the frontier with its card open. Its Set out, or after two losses there, a
             # step back down the road (↓) and Farm.
             to_camp('party')
             if trips == 0:
-                if not tap('.camp .cv-dock .cv-big', 'Set out', 2000):
-                    problems.append("no Set out at the Hearth")
-                    break
+                if not tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL):
+                    problems.append(f"no Set out at the Hearth, or no flight up the road after it: now {where()}")
             else:
                 pt = road_point()
                 if pt:
                     page.touchscreen.tap(pt[0], pt[1])
-                    page.wait_for_timeout(2000)
+                    until(ROAD_STILL)
             on_road = js("() => !!(Camp.scene && Camp.scene.onRoad && Camp.scene.out.road === 1)")
             front = js("() => { const fr = Campaign.frontier(); return Camp.scene.sel === STAGES.filter(x => x.region === STAGES[fr].region).indexOf(STAGES[fr]); }") if on_road else False
             if not on_road or not front:
                 problems.append(f"{'the Hearth' + chr(39) + 's Set out' if trips == 0 else 'a tap on the road at camp'} did not fly up the road to the frontier: now {where()}, on the road {on_road}")
                 shot('missed-road')
                 if not on_road:
-                    tap('.camp .cv-dock .cv-big', 'Set out', 2000)
+                    tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL)
+            elif trips == 0:
+                ran('set out')
             if trips < 2:
                 shot('road')
+            # the walk between battles is instant once the guide has pointed at it
+            js("() => { __test.fastWalk = Guide.seen('c:walk'); }")
             farm = js('() => window.__lost >= 2 && Campaign.frontier() % 18 > 0')
             if farm:
                 page.keyboard.press('ArrowDown')
-                page.wait_for_timeout(900)
-                if tap('.cv-roadgo', '^Farm$', 1500):
+                until("() => /^Farm$/.test((document.querySelector('.cv-roadgo') || {}).textContent || '')")
+                if tap('.cv-roadgo', '^Farm$', IN_BATTLE, timeout=8000):
                     js('() => { window.__lost = 1; }')
                 else:
                     problems.append(f"no Farm a stage back from {st['fr'] + 1}")
                     farm = False
-            if not farm and not tap('.cv-roadgo', '^Set out$', 1500):
-                problems.append(f"no Set out on the road at stage {st['fr'] + 1}: the button says {js('() => (document.querySelector(`.cv-roadgo`) || {}).textContent')}")
+            if not farm and not tap('.cv-roadgo', '^Set out$', IN_BATTLE, timeout=8000):
+                problems.append(f"no Set out on the road at stage {st['fr'] + 1}, or no battle after it: the button says {js('() => (document.querySelector(`.cv-roadgo`) || {}).textContent')}, now {where()}")
                 js("() => Camp.scene && Camp.scene.toCamp(true)")
                 continue
             trips += 1
             if trips <= 2:
                 shot('battle')
+            # the battle speed button, to 4× (it scales the battle's last beats and the walk between battles)
+            for _ in range(3):
+                if js("() => Save.state.settings.speed") >= 4 or not tap('#bSpeed'):
+                    break
             # the trip: Skip each battle; between battles the party walks on by itself; the results popup ends it
             for _ in range(80):
                 # a battle under way, or a sheet (the results popup hides the battle's controls behind it)
-                page.wait_for_function("() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)", timeout=20000, polling=100)
-                page.wait_for_timeout(300)
-                if js("() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"):
+                if not until(SHEET_OR_BATTLE, timeout=20000):
+                    problems.append(f'no battle and no results 20 s after a battle: now {where()}')
+                    break
+                if js(RESULTS):
                     # a tap skips the fill; then what came home, a look at the report, and back to camp
-                    tap('#sheet .rs-banner', None, 400)
+                    tap('#sheet .rs-banner', None, '() => !Results.busy')
                     won = js("() => document.querySelector('#sheet .rs-banner b').textContent === 'Victory'")
                     js('w => { window.__lost = w ? 0 : (window.__lost || 0) + 1; }', won)
-                    if tap('#sheet .rs-new.more', None, 600):
+                    if tap('#sheet .rs-new.more', None, "() => !!document.querySelector('#sheet .rs-list')"):
                         news = js("() => [...document.querySelectorAll('#sheet .rs-list .newrow b')].map(b => b.textContent)")
-                        tap('#sheet .rs-list .sheet-x', None, 500)
+                        tap('#sheet .rs-list .sheet-x', None, RESULTS)
                     else:
                         news = js("() => [...document.querySelectorAll('#sheet .rs-new')].map(b => b.getAttribute('aria-label'))")
                     if news:
@@ -267,35 +337,50 @@ def main():
                         shot('news')
                     if trips <= 2:
                         shot('results')
-                        if tap('#sheet .rs-b[data-tut=report]', None, 800) and js("() => !!document.querySelector('#sheet .report-box')"):
-                            tap('#sheet .report-wrap > .sheet-x', None, 600)
+                        if tap('#sheet .rs-b[data-tut=report]', None, "() => !!document.querySelector('#sheet:not([hidden]) .report-box')"):
+                            if tap('#sheet .report-wrap > .sheet-x', None, RESULTS):
+                                ran('results')
+                            else:
+                                problems.append('the report did not close back to the results')
                         else:
                             problems.append('Report on the results did not open the battle report')
-                    if not tap('#sheet .rs-b[data-tut=camp]', None, 1200):
-                        problems.append('no Hearth button on the results')
+                    if tap('#sheet .rs-b[data-tut=camp]', None, "() => App.current === 'home' && document.getElementById('sheet').hidden"):
+                        ran('hearth')
+                    else:
+                        problems.append(f'no Hearth button on the results, or no Hearth after it: now {where()}')
                     break
+                if js("() => { const b = Battle.battle; if (!b || b.counted) return false; b.counted = true; return true; }"):
+                    battles += 1
                 if js("() => !document.getElementById('sheet').hidden"):
-                    tap('#sheet .sheet-x', None, 400)
+                    if not tap('#sheet .sheet-x', None, "() => document.getElementById('sheet').hidden"):
+                        page.wait_for_timeout(100)
                     continue
-                tap('#bSkip', None, 900)
-                # between battles: wait for the walk, or for the results
-                for _ in range(40):
-                    if js("() => !document.getElementById('sheet').hidden || !!(Battle.busy && !document.querySelector('.between'))"):
-                        break
-                    page.wait_for_timeout(250)
+                # on the first trips, the battle plays until the guide has shown what it shows in battle
+                if trips <= WATCH_TRIPS and js(WATCHING):
+                    until(f"() => !Battle.busy || !({WATCHING})()", timeout=WATCH_MS)
+                    if not js('() => Battle.busy'):
+                        continue
+                if tap('#bSkip', None, '() => !Battle.busy'):
+                    ran('battle')
             if js('() => Campaign.trip() != null'):
                 problems.append('a trip did not end')
                 js("() => { Campaign.end({ k: 'called', text: 'test' }); App.go('map'); }")
 
-        tap('#tabbar .tab', 'Road', 900)
+        tap('#tabbar .tab', 'Road', settle=300)
         st = state()
         seen = js('() => window.__seen')
         shot('end')
         b.close()
     srv.shutdown()
-    if st['fr'] < st['n']:
+    took = time.time() - t0
+    if a.quick:
+        missing = [f for f in FLOWS if f not in done]
+        if missing:
+            problems.append(f"in {a.minutes:g} minutes these flows never ran: {', '.join(missing)}")
+    elif st['fr'] < st['n']:
         problems.append(f"stopped at stage {st['fr'] + 1} of {st['n']} after {trips} trips")
-    print(f"UI play-through ({a.hero}): {st['cleared']} stages lit in {trips} trips, {st['roster']} heroes, {st['gold']} gold")
+    print(f"UI play-through ({a.hero}{', quick' if a.quick else ''}): {st['cleared']} stages lit in {trips} trips, {battles} battles, {st['roster']} heroes, {st['gold']} gold, {took:.0f} s")
+    print('flows:', ', '.join(f"{f} ({done[f]} s)" if f in done else f"{f} (never)" for f in FLOWS))
     print('coach marks:', json.dumps(seen['coach'], ensure_ascii=False))
     print('tips:', json.dumps(seen['tips'], ensure_ascii=False))
     print('new things:', json.dumps(seen['news'], ensure_ascii=False))

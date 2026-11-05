@@ -125,7 +125,7 @@ function walkOn(res, bar) {
   if (!T || !current) return showCamp();
   const token = ++walkToken, real = WALK_MS / (0.5 * Math.max(1, Battle.speed));
   if (bar) requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `width ${real}ms linear`; bar.style.width = '100%'; }));
-  Battle.travel(WALK_MS, () => { if (token !== walkToken || !current || !Campaign.trip()) return; hideBetween(); startStage(T.stage); });
+  Battle.travel(window.__test && __test.fastWalk ? 0 : WALK_MS, () => { if (token !== walkToken || !current || !Campaign.trip()) return; hideBetween(); startStage(T.stage); });
 }
 // Come home from between battles: the trip ends here, and the results popup shows what it brought.
 function comeHomeNow(res) {
