@@ -14,8 +14,15 @@ battles play at the speed Wick sets (2× after his second pause). At the end the
 heroes in the formation, 1-1 and 1-2 are cleared, the goal tracker says "Clear 1-3", and Settings → Replay the guide
 shows his first line again without holding anything back. Then, in the same save, 1-3: its results' New chip, Wick's
 card at the Hearth, Show me, and the soft visit to Tactics. Console errors fail the run.
+
+  python tools/guide_check.py --resume                          # 844x390, a reload at every step (play-test note 3.6)
+
+With --resume, at every step (and inside the board's pick and hire, after + on Grow, and during 1-2's battle) the save
+as it stands, without the flush a page makes as it closes, is opened in a new page, as if the app had been closed
+there and opened again: past the title, the same step must come back from its start with the screen it needs (RESUME
+says which, and which step follows instead where the moment has passed), and the session must not be over.
 """
-import argparse, functools, http.server, os, socketserver, sys, threading, time
+import argparse, functools, http.server, json, os, socketserver, sys, threading, time
 from playwright.sync_api import sync_playwright
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -47,8 +54,30 @@ STEPS = [
     ('bye', 'The Sexton’s at the end of the Gravefields.', 'any'), ('tolls', 'The road earns tolls while you’re away.', 'any'),
     ('fire', 'I’ll be by the fire.', 'any'),
 ]
+# --resume: what the app opened again at each moment brings back: (the step that must show, a test of the screen it
+# needs). The same step, from its start, wherever it can be had again; where its moment has passed, the step the
+# session carries on with (the battle resolved while the app was closed, the results popup gone, the way back to the
+# Hearth already made by the load). The moments inside a step are the walk's own: pick-card (a card chosen), pick-reveal
+# (hired: the reveal), spend-placed (+ pressed, not kept), battle-1-2 (1-2 under way).
+HEARTH = "App.current === 'home' && !!Camp.scene && !Camp.scene.onRoad && document.getElementById('sheet').hidden"
+ROAD = "!!Camp.scene && Camp.scene.onRoad && !!document.querySelector('.cv-card') && document.querySelector('.cv-card .cv-id').textContent === '{}'"
+BOARD = "FirstPick.shown && !document.querySelector('#sheet .fp-card.on') && !document.querySelector('[data-tut=pick-reveal]')"
+HERO = "App.current === 'hero' && HeroSheet.placing === 0"
+FORM = "Formation.shown"
+RESUME = {
+    **{k: (k, HEARTH) for k in ('hello', 'inn', 'king', 'hollow', 'wall', 'offer', 'name', 'welcome', 'board', 'setout', 'heroes', 'setout2', 'board2', 'form', 'bye', 'tolls', 'fire')},
+    'pick': ('pick', BOARD), 'pick-card': ('pick', BOARD), 'pick-reveal': ('setout', HEARTH),
+    'stage': ('stage', ROAD.format('1-1')), 'go': ('go', ROAD.format('1-1')),
+    'order': ('heroes', HEARTH), 'speed': ('heroes', HEARTH), 'xp': ('heroes', HEARTH), 'home': ('heroes', HEARTH),
+    'hero': ('hero', "App.current === 'party'"), 'stats': ('spend', HERO), 'spend': ('spend', HERO), 'spend-placed': ('spend', HERO),
+    'keep': ('spend', HERO), 'strong': ('strong', "App.current === 'hero'"),
+    'heroback': ('setout2', HEARTH), 'tabhome': ('setout2', HEARTH),
+    'yours': ('yours', ROAD.format('1-2')), 'battle-1-2': ('board2', HEARTH), 'new': ('board2', HEARTH), 'home2': ('board2', HEARTH),
+    'hire': ('hire', BOARD), 'hire-card': ('hire', BOARD), 'hire-reveal': ('form', HEARTH),
+    'place': ('place', FORM + " && document.querySelectorAll('#wk .wk-call').length === 2"), 'done': ('done', FORM),
+}
 # Wick's visit to Tactics after 1-3's first clear (js/visits.js): his soft lines, in order
-VISIT = ['When an ally’s hurt, the party drinks a draught.', 'Your hero has tactics like this too.', 'Tactics run from the top.']
+VISIT =['When an ally’s hurt, the party drinks a draught.', 'Your hero has tactics like this too.', 'Tactics run from the top.']
 
 HELPERS = """
 window.__toClient = (x, y) => {
@@ -75,9 +104,11 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--sizes', default=SIZES)
+    ap.add_argument('--sizes', default=None)
     ap.add_argument('--shots', default='')
+    ap.add_argument('--resume', action='store_true', help='at every step, open the save as it stands in a new page')
     a = ap.parse_args()
+    a.sizes = a.sizes or ('844x390' if a.resume else SIZES)
     srv = socketserver.TCPServer(('127.0.0.1', 0), functools.partial(Quiet, directory=ROOT))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     port = srv.server_address[1]
@@ -141,6 +172,43 @@ def main():
             def says(s, line):
                 return bool(s) and (line[1:] in s['text'] if line.startswith('~') else s['text'].startswith(line))
 
+            LINES = {sid.rstrip('?'): line for sid, line, _ in STEPS}
+
+            def probe(moment):
+                """--resume: the save as it stands (committed, not flushed) in a new page, past the title: the step
+                RESUME names comes back, from its start, with its screen; the session isn't over, and nothing errs."""
+                if not a.resume or moment not in RESUME:
+                    return
+                want, screen = RESUME[moment]
+                dump = js("JSON.stringify(Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])))")
+                c2 = b.new_context(viewport={'width': w, 'height': h}, device_scale_factor=1, is_mobile=touch, has_touch=touch)
+                c2.add_init_script("(() => { if (sessionStorage.getItem('__seeded')) return; const d = JSON.parse(%s); localStorage.clear(); for (const k in d) localStorage.setItem(k, d[k]); sessionStorage.setItem('__seeded', '1'); })()" % json.dumps(dump))
+                p2, errs = c2.new_page(), []
+                p2.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
+                p2.on('pageerror', lambda e: errs.append(str(e)))
+                try:
+                    p2.goto(f'http://127.0.0.1:{port}/index.html')
+                    p2.wait_for_function("typeof Title !== 'undefined' && Title.ready", timeout=60000, polling=50)
+                    p2.click('#title')
+                    p2.evaluate(HELPERS)
+                    got, t0 = None, time.time()
+                    while time.time() - t0 < 15:
+                        got = p2.evaluate('__wk()')
+                        if got and got['step'] == want and p2.evaluate(f'!!({screen})'):
+                            break
+                        p2.wait_for_timeout(150)
+                    ok = bool(got) and got['step'] == want and p2.evaluate(f'!!({screen})')
+                    line = LINES.get(want)
+                    ok_line = not line or says(got, line)
+                    over = p2.evaluate('Save.state.guide.done')
+                    check(ok and ok_line and not over and not errs,
+                          f'  opened again at {moment}: {want}' + (' (the same step)' if want == moment else '') + ' comes back from its start, with its screen'
+                          + ('' if ok and ok_line and not over and not errs else f' (got {got}, screen {p2.evaluate(f"!!({screen})")}, {p2.evaluate("__state()")}, done {over}, errors {errs[:2]})'))
+                    if a.shots and ok:
+                        p2.screenshot(path=os.path.join(a.shots, f'resume-{moment}-{w}x{h}.png'))
+                finally:
+                    c2.close()
+
             def aside(what, open_sel, page_sel, close):
                 """Help or Settings on a forced step: it opens, Wick steps aside and nothing is held back; it closes,
                 and the same step is back."""
@@ -193,6 +261,7 @@ def main():
                 if line:
                     check(says(s, line), f'  Wick says “{line.lstrip("~")}…”' + ('' if says(s, line) else f' (got “{s["text"]}”)'))
                 shot(sid)
+                probe(sid)
                 if sid == 'hello':
                     # Help and Settings at every step (play-test note 2.2), and Replay the guide does no harm
                     def close_settings():
@@ -240,9 +309,11 @@ def main():
                         check(js("App.current") == 'battle', '  the card’s Set out (pressed by the player) starts 1-2')
                         page.wait_for_timeout(1500)
                         check(js('!Battle.paused && !Wick.step'), '  1-2 plays on: nothing stops it')
+                        probe('battle-1-2')
                 elif how == 'plus':
                     press(js("__mid('.hr-stats .hr-plus')"), 400)
                     check(js('HeroSheet.placing') == 1, '  + places a point (Keep comes next)')
+                    probe('spend-placed')
                 elif how == 'target':
                     press(s['hole'])
                 elif how == 'name':
@@ -261,12 +332,14 @@ def main():
                     bub = js("document.querySelector('#sheet .fp .wick-bubble').textContent")
                     check(bool(bub) and not bub.startswith('Three'), f'  Wick says a line on the {want}: “{bub}”')
                     shot(how + '-card')
+                    probe(how + '-card')
                     press(js("__mid('[data-tut=pick-hire]')"), 700)
                     check(js("!!document.querySelector('[data-tut=pick-reveal]')"), '  Hire: the reveal')
                     page.wait_for_timeout(900)  # the hero's line rises
                     said = js("(() => { const e = document.querySelector('[data-tut=pick-says]'); return e ? e.textContent : ''; })()")
                     check(said == js(f"SIGN_ON['{want}']"), f'  the {want} says why they signed on: “{said}”')
                     shot(how + '-reveal')
+                    probe(how + '-reveal')
                     press(at(W / 2, 200), 700)
                     check(js('Save.state.roster.length') == (1 if how == 'pick' else 2), f'  the roster has {1 if how == "pick" else 2}')
                     if how == 'hire':

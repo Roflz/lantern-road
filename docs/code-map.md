@@ -24,7 +24,7 @@ that changes a screen.
 | 10 Buildings | `js/buildings.js`, `css/base.css` | Old layout |
 | 11 Tactics | `js/rules.js` (`Tactics`, the model, and `TacticsEditor`, the `'tactics'` screen), `css/rules.css` (`tx-`) | Redesigned (`docs/mockups/tactics.html`, 1.35); checked by `tools/tactics_check.py` |
 | 12 Settings, help | `openSettings` in `js/app.js`; "How battles work" (`showHow`) in `js/main.js` | Old layout |
-| — Wick and his guide | `js/wick.js` (his portrait, and the guide's kit: `Wick.show`), `js/firstsession.js` (the first session), `js/visits.js` (his unlock visits: the card at the Hearth and Show me), `js/firstpick.js` (the Recruit Board's first pick), `css/wick.css`, `css/guide.css` (`wk-`, `fp-`) | Built (PR #31); rebuilt around the story, with the 1-3 visit (PR #35); checked by `tools/guide_check.py` |
+| — Wick and his guide | `js/wick.js` (his portrait, and the guide's kit: `Wick.show`), `js/firstsession.js` (the first session), `js/visits.js` (his unlock visits: the card at the Hearth and Show me), `js/firstpick.js` (the Recruit Board's first pick), `css/wick.css`, `css/guide.css` (`wk-`, `fp-`) | Built (PR #31); rebuilt around the story, with the 1-3 visit (PR #35); checked by `tools/guide_check.py` (`--resume`: the app opened again at every step) |
 | — The first hour's teaching | `js/guide.js`, `css/polish.css` | Coach marks, tips, the new-thing rows and tab dots; Wick's session and visits stand in for the coach marks they say |
 | — Prototype tools | `js/proto.js`, `css/polish.css` | For play-testing only |
 

@@ -25,6 +25,26 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
   it for the free recruit after 1-2 too.
 - Styles: `css/guide.css` (`wk-` for the kit, `fp-` for the board).
 
+## Since the 2026-11-05 play-test (branch `claude/hearth-guide-fixes`)
+- **No ring (3.7).** The spotlight is only a clear hole in the dim; the pointer marks the target. Every step keeps its
+  pointer (1-2's Set out and the soft line on 1-1's marker had only the ring's glow, and now show the pointer). DOM
+  buttons get a rounded box (`round` is for things drawn in the scene: the board, a stage's marker).
+- **The dim (3.8)** is two CSS variables on `#wk` in `css/guide.css`: `--wk-dim` (.36, half the old .66–.72) for a
+  step that asks for one tap or has no target, and `--wk-dim-light` (.1) for one that explains what it lights. Wick.show
+  picks: light when the step has callouts or a hand, or a target it doesn't ask a tap on (`tap` other than `target`).
+  A step can say `dim: 'light' | 'full' | false | <number>`. Formation's F3 step stays at `dim: false`; Done is `'light'`.
+- **Resume (3.6).** `save.guide.step` is committed as each step starts. A load always lands at the Hearth (a battle under
+  way is resolved at boot, js/main.js). On the first tick after the title, `resumed()` in js/firstsession.js brings the
+  saved step back from its start: a step on another screen has `open()` (the road via `Camp.toRoad()`, the board's
+  panel via `FirstPick.open`, the Party screen, the hero via Party, Formation), and Keep has `resume: 'spend'` (a point
+  placed and not kept is gone). Steps whose moment passed are passed over by `current()` as before: 1-1's and 1-2's
+  battles and results (they resume at Grow's Heroes and the free recruit's board), and the ways back to the Hearth (‹,
+  the Hearth tab). `python tools/guide_check.py --resume` opens the save in a new page at every step and checks it.
+  A rewrite of the first session keeps this by giving each step on another screen an `open()`, and each step whose
+  start lives only in memory a `resume`.
+- **The drag down to the road** (3.14, docs/notes/road-view.md) waits while a step is up or the guide holds presses
+  (`live.canPull` in js/camp.js), so a press let through to the lit board can't fly the camera away mid-step.
+
 ## Anchors (`data-tut`) the steps hang on
 - The Hearth: `hearth-me`, `hearth-goal`, `hearth-heroes`, `hearth-tactics`, `hearth-bag`, `hearth-setout`,
   `hearth-collect`, `hearth-formation`; the road's frontier label `road-frontier`. The board and the lanterns are

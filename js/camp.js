@@ -738,6 +738,7 @@ const Camp = (() => {
   // The prototype tools (gold, materials, blueprints, Renown and time) are in the one panel in Settings: js/proto.js.
 
   // scene: the camp's live scene while it shows (js/campscene.js), and at(x, y): the anchor a tap at that point in the
-  // camp (design pixels) would reach, both for the tools
-  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null) };
+  // camp (design pixels) would reach, both for the tools. toRoad(k): up the road to stage k (the frontier when not
+  // given), with its card open, while the Hearth shows (Wick's guide, back on a road step after a load).
+  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null), toRoad: k => { if (ui && ui.live && App.current === 'home') ui.toRoad(k); } };
 })();
