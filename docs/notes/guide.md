@@ -30,8 +30,8 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
   `hearth-collect`, `hearth-formation`; the road's frontier label `road-frontier`. The board and the lanterns are
   the scene's anchors (`Camp.scene.out.anchors`, ids `board` and `stage`).
 - The tab bar: `tab-home`, `tab-map`, `tab-party`, `tab-bag`. The Party screen's formation slots: `party-hero`.
-- The hero sheet (today's; screen 8's rebuild carries the same two): `hero-tab-rules` (the Tactics tab) and
-  `hero-rules` (the list, always there). Wick says "tactics"; the anchors keep their names.
+- The hero screen (screen 8, PR #29): `hero-tab-rules` (the Tactics tab), `hero-rules` (the list, always there) and
+  `hero-back` (‹, added here). Wick says "tactics"; the anchors keep their names.
 - The battle: `turn-order` (#flags), `battle-speed`, `battle-skip`.
 - The board: `pick-card`, `pick-hire`, `pick-reveal`; Wick's name box `name-ok`.
 - Formation: `formation-auto` and `formation-done` added; the callouts sit on the first places' pads.
@@ -50,8 +50,9 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
 - `js/guide.js`: its coach marks stay quiet while the session runs, and `c:flags`, `c:speed`, `c:rule`, `c:board`
   are marked seen when it ends (Wick said them).
 - The checks that build their own saves (`frame_check`, `road_check`, `formation_check`, `results_check`,
-  `camp_perf`) call `FirstSession.skip()` first. `tools/playthrough_ui.py` still taps the old first pick (`.pickc`);
-  its guide steps come once the quick play-through's PR merges.
+  `camp_perf`) call `FirstSession.skip()` first. `tools/playthrough_ui.py` plays the whole session first (the flow
+  `guide`), answering each forced step with real touches: Wick's gate holds back the synthetic clicks its `tap()`
+  makes, so `tap()` can't be used while the session runs.
 
 ## Gotchas
 - A forced step's `until()` is checked every frame; a `target` step without one ends at the press's pointerup, before

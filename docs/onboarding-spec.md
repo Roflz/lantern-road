@@ -123,7 +123,7 @@ It follows the screens built since the first draft: the camp is the Hearth's par
 | 6 | Battle 1-1, paused twice | At the first turn, on the turn order: "Battles fight themselves. The turn order shows who acts next." · At the third turn, on speed and skip: "Speed it up, or skip to the end." | Tap to go on; then tap the speed button (or Skip) |
 | 7 | The results popup | On the XP bar: "Your first level. Each one brings a stat point." · On the fatigue bar: "Every turn tires a hero a little. They rest at the Hearth." · On Hearth: "Back to the Hearth." | Tap to go on twice, then Hearth |
 | 8 | The Hearth | On Heroes: "Your hero fights by tactics. Let's look at them." | Tap Heroes, then the hero, then the Tactics tab |
-| 9 | The hero sheet, Tactics (today's sheet) | On the tactics: "Tactics run from the top. The first one that fits is used." | Tap to go on, then the Hearth tab |
+| 9 | The hero screen (screen 8), Tactics | On the tactics: "Tactics run from the top. The first one that fits is used." | Tap to go on, then ‹ back to the Party, then its Hearth tab |
 | 10 | Set out, then battle 1-2 | "On to 1-2." · In battle, without stopping it, a ring on the tactic's name: "The turn order names the tactic that chose the move." · On the results' New chip: "The Recruit Board is open." | Set out twice, watch, then Hearth |
 | 11 | The Hearth, then the board | On the board: "The board has a free recruit for you." · On the board: "Three new faces. Tap each to hear about them.", then a line on each | Hire one (free); the reveal. They wait at the fire, out of the formation |
 | 12 | The Hearth, then Formation (F3) | On the party panel: "Two of you now. Let's find them a place." · In Formation, callouts on the rows (Front: "Takes the blows. Melee can only reach here." Back: "Safe while the front stands.") and a hand showing the drag: "Sturdy heroes in front, the rest behind." · On Done: "Well placed." · Panel: "That's the road. I'm by the fire if you need me." | Drag the new hero into a place, Done, tap to go on |
@@ -142,7 +142,7 @@ After step 12 the forced session ends and the goal tracker takes over (after 1-2
 - Step 4: Set out flies up the road (the road view), instead of "tap the signpost".
 - Step 5: "Light the first" goes on the card's Set out.
 - Step 6: the second pause lights speed and skip, and waits for a tap on one, as Idle Heroes does. Its line: "Speed it up, or skip to the end."
-- Step 8 goes Heroes → the hero → Tactics, the way Idle Heroes reaches its hero screen. Steps 8–9 hang on `data-tut` anchors (`hearth-heroes`, `party-hero`, `hero-tab-rules`, `hero-rules`, `tab-home`); screen 8's rebuild carries `hero-tab-rules` and `hero-rules`.
+- Step 8 goes Heroes → the hero → Tactics, the way Idle Heroes reaches its hero screen. Steps 8–9 hang on `data-tut` anchors (`hearth-heroes`, `party-hero`, `hero-tab-rules`, `hero-rules`, `hero-back`, `tab-home`), on the rebuilt hero screen (PR #29).
 - "Rules" are "Tactics" in Wick's lines (the user's naming decision); the game's other strings follow in the glossary's rename pass.
 - Step 10 doesn't stop the battle (only 1-1 stops, per §6.2).
 - Step 11 opens the board's own panel, the first pick's, with its three recruits and a line on each.

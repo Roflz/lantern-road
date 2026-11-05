@@ -28,7 +28,7 @@ STEPS = [
     ('order', 'Battles fight themselves', 'any'), ('speed', 'Speed it up', 'target'),
     ('xp', 'Your first level', 'any'), ('fatigue', 'Every turn tires', 'any'), ('home', 'Back to the Hearth', 'target'),
     ('heroes', 'Your hero fights by tactics', 'target'), ('hero', None, 'target'), ('tab', None, 'target'),
-    ('rules', 'Tactics run from the top', 'any'), ('tabhome', None, 'target'),
+    ('rules', 'Tactics run from the top', 'any'), ('heroback', None, 'target'), ('tabhome', None, 'target'),
     ('setout2', 'On to 1-2', 'target'), ('go2', None, 'target'), ('why', 'The turn order names the tactic', 'soft'),
     ('new', 'The Recruit Board is open', 'any'), ('home2', None, 'target'),
     ('board2', 'The board has a free recruit', 'target'), ('hire', None, 'hire'),
