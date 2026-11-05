@@ -443,38 +443,9 @@ const HeroSheet = (() => {
 // The Party screen opens the hero sheet.
 App.actions.hero = (id, tab) => HeroSheet.open(id, tab);
 
-// ── the level-up moment after a battle: XP fills, levels ring, and new points and choices are named
+// ── a level from outside a battle (the camp's buildings, the prototype's training): a small note. A battle's levels
+// show in the results popup (js/results.js).
 const LevelUp = (() => {
-  // gains: [{ c, g (Hero.gainXp's result), before: { level, xp } }]
-  function show(gains, xp, done, won = true) {
-    const ups = gains.filter(x => x.g.to > x.g.from);
-    const card = x => {
-      const c = x.c, up = x.g.to > x.g.from, need = Hero.xpToNext(c.level);
-      const fromPct = up ? 0 : Math.min(100, 100 * x.before.xp / Hero.xpToNext(x.before.level)), toPct = c.level >= HERO.CAP ? 100 : Math.min(100, 100 * c.xp / need);
-      const bar = h('i', { style: `width:${fromPct}%` });
-      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = toPct + '%'; }));
-      const chips = [];
-      if (up) chips.push(h('span', { class: 'hs-tag e' }, `+${x.g.to - x.g.from} stat point${x.g.to - x.g.from === 1 ? '' : 's'}`));
-      if (x.g.skillPts) chips.push(h('span', { class: 'hs-tag g' }, `+${x.g.skillPts} skill point${x.g.skillPts === 1 ? '' : 's'}`));
-      if (x.g.slots) chips.push(h('span', { class: 'hs-tag w' }, 'New skill slot'));
-      for (const t of x.g.thresholds) chips.push(h('span', { class: 'hs-tag y' }, ico('star'), `Threshold · Lv ${t}`));
-      return h('div', { class: 'lu-card' + (up ? ' up' : '') },
-        h('div', { class: 'pennant hero' }, h('img', { src: heroPortrait(c), alt: '' })),
-        h('div', { class: 'lu-mid' },
-          h('div', { class: 'lu-nm' }, h('b', { text: c.name }), up ? h('span', { class: 'lu-lv' }, `Lv ${x.g.from} `, h('em', { text: '→ ' + x.g.to })) : h('span', { class: 'lu-lv dim', text: 'Lv ' + c.level })),
-          h('div', { class: 'lu-bar' }, bar),
-          chips.length ? h('div', { class: 'lu-chips' }, chips) : null));
-    };
-    const box = h('div', { class: 'box lu-box' },
-      h('div', { class: 'lu-head' }, h('div', { class: 'kicker', text: `${won ? 'Victory' : 'Driven back'} · +${fmt(xp)} XP each` }), h('h2', { class: 'lu-title', text: ups.length ? (ups.length === 1 ? `${ups[0].c.name} levels up` : 'Level up') : 'Experience' })),
-      h('div', { class: 'lu-list' }, gains.map(card)),
-      h('div', { class: 'lu-actions' },
-        h('button', { class: 'btn primary', onclick: () => { sfx('click'); done(); } }, 'The battle report'),
-        ups.length ? h('button', { class: 'btn', onclick: () => { sfx('click'); closeSheet(); App.actions.hero(ups[0].c.id, Hero.pending(ups[0].c).length || Hero.points(ups[0].c).skill ? 'skills' : 'stats'); } }, 'Spend points', h('span', { class: 'sub', text: 'Open the hero sheet' })) : null));
-    openSheet(box, 'report levelup');
-    if (ups.length) { sfx('win'); box.querySelectorAll('.lu-card.up').forEach((el, i) => setTimeout(() => el.classList.add('ring'), 300 + i * 160)); }
-  }
-  // A small note when a level comes from outside a battle (the prototype's training).
-  function toastOf(c, g) { toast(`${c.name} reaches level ${g.to}${g.thresholds.length ? ' · a threshold' : ''}`); }
-  return { show, toast: toastOf };
+  function toastOf(c, g) { toast(`${c.name} reaches level ${g.to}${g.thresholds && g.thresholds.length ? ' · a threshold' : ''}`); }
+  return { toast: toastOf };
 })();

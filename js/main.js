@@ -1,5 +1,5 @@
 'use strict';
-// Lantern Road · the Battle screen and its controls, the battle report, help, and boot.
+// Lantern Road · the Battle screen and its controls, what the results popup's buttons do, the battle report, help, and boot.
 // The other screens, settings and the shell live in js/app.js; the game state and saving in js/save.js.
 
 const scr = $('#screen'), sheet = $('#sheet');
@@ -57,18 +57,41 @@ function startStage(i, seed) {
   syncControls();
 }
 // The battle is over: rewards, XP, fatigue and unlocks are settled (js/campaign.js), then the party walks on, or the
-// trip ends and the report shows what it brought home.
+// trip ends and the results popup shows what it brought home. res.home: the trip's summary, once it has ended.
 function afterBattle(res) {
   if (!current || res.camp) return;
+  const trip = !!Campaign.trip();
   const out = Campaign.afterBattle(res);
   res.camp = out; res.xp = out.r.xp; res.gains = out.r.gains; res.saved = true;
+  res.home = trip && out.next == null ? progress().lastTrip : null;
   if (out.next == null) progress().current = null;
   Save.commit();
   Guide.battleEnd();
   afterTips(res);
   if (out.next != null) betweenBattles(res);
-  else if (res.gains.some(x => x.g.to > x.g.from)) LevelUp.show(res.gains, res.xp, () => { closeSheet(); showReport(res, { report: true }); }, res.winner === 0);
-  else showReport(res);
+  else showResults(res);
+}
+// ── the party is home: the results popup (js/results.js), and what its buttons do. After a win, Next is the frontier;
+// after a loss at the frontier, Farm is the stage before it, when that is lit (campaign spec §8.2: 1-9's wall).
+function showResults(res) {
+  const i = current.index, won = res.winner === 0, fr = Campaign.frontier(), T = res.home;
+  // The popup is the trip's summary now: the Road tab's "Back from the road" card would only say it again.
+  if (T && !T.seen) { T.seen = true; Save.commit(); }
+  const farmI = !won && i === fr && fr > 0 && Campaign.isLit(STAGES[fr - 1].id) ? fr - 1 : -1;
+  const go = k => () => { if (Campaign.setOut(k)) { Save.commit(); startStage(k); } else toast('No one is fit to set out.'); };
+  Results.show(res, {
+    index: i, trip: T && T.battles > 1 ? T : null,
+    next: won && fr < STAGES.length && fr !== i ? STAGES[fr] : null,
+    farm: farmI >= 0 ? STAGES[farmI] : null,
+    on: {
+      report: () => showReport(res),
+      camp: () => App.go('home'),
+      again: go(i),
+      // Next will fly up the road once the road view is built; until then, the Road tab with the next stage's sheet.
+      next: () => { RoadMap.show(STAGES[fr].region); RoadMap.stageSheet(fr); },
+      farm: go(farmI),
+    },
+  });
 }
 
 // ── between battles (campaign spec §7.4): loot into the Bag, a level-up banner, the party rules checked, then the
@@ -104,14 +127,14 @@ function walkOn(res, bar) {
   if (bar) requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `width ${real}ms linear`; bar.style.width = '100%'; }));
   Battle.travel(WALK_MS, () => { if (token !== walkToken || !current || !Campaign.trip()) return; hideBetween(); startStage(T.stage); });
 }
-// Come home from between battles: the trip ends here.
+// Come home from between battles: the trip ends here, and the results popup shows what it brought.
 function comeHomeNow(res) {
   walkToken++; hideBetween();
   const why = { k: 'called', text: 'You called the party home.' };
-  Campaign.end(why);
-  if (res && res.camp) { res.camp.next = null; res.camp.why = why; }
+  const home = Campaign.end(why);
+  if (res && res.camp) { res.camp.next = null; res.camp.why = why; res.home = home; }
   Save.commit();
-  if (res) showReport(res); else showCamp();
+  if (res && current) showResults(res); else showCamp();
 }
 
 // Battle controls: play or pause, one turn at a time, speed, skip.
@@ -266,7 +289,7 @@ function characterCard(u, res) {
 }
 function showReport(res, opts = {}) {
   const stage = current.stage, won = res.winner === 0, camp = res.camp;
-  const again = reportView && reportView.res === res && !sheet.hidden;
+  const again = reportView && reportView.res === res && !sheet.hidden && sheet.classList.contains('report');
   const v = reportView = Object.assign(again ? reportView : { res, side: 0, stat: 'dealt', sel: null }, opts);
   const S = res.stats, units = res.start.filter(u => u.side === v.side);
   const st = REPORT_STATS.find(x => x.k === v.stat);
@@ -284,19 +307,16 @@ function showReport(res, opts = {}) {
       h('b', { class: val ? '' : 'zero', text: val ? fmt(val) : '–' }),
       h('span', { class: 'chev', 'aria-hidden': 'true' }));
   });
-  // On a trip that carries on (the report was opened between battles): walk on, or come home. Once the trip is over:
-  // home to the road, or set out again.
+  // On a trip that carries on (the report was opened between battles): walk on, or come home. Once the trip is over
+  // the report opens from the results popup (js/results.js). Its close button stays in the corner as the report
+  // scrolls: back to the results, or between battles, on with the walk.
   const going = camp && camp.next != null && Campaign.trip();
-  const nextI = Campaign.frontier();
-  const farmI = !won && current.index === nextI && nextI > 0 && Campaign.isLit(STAGES[nextI - 1].id) ? nextI - 1 : -1;
-  const again2 = () => { sfx('click'); if (Campaign.setOut(current.index)) { Save.commit(); startStage(current.index); } else toast('No one is fit to set out.'); };
+  const walkOn = () => { sfx('click'); closeSheet(); betweenBattles(res); };
   const actions = going
-    ? [h('button', { class: 'btn primary', onclick: () => { sfx('click'); closeSheet(); betweenBattles(res); } }, 'Walk on', h('span', { class: 'sub', text: `${STAGES[camp.next].id} · ${STAGES[camp.next].name}` })), btn('Come home', () => comeHomeNow(null))]
-    : [h('button', { class: 'btn primary', onclick: () => { sfx('click'); showCamp(); } }, 'Home', h('span', { class: 'sub', text: camp && camp.why ? 'The party walks back to camp' : 'Back to the road' })),
-      won && nextI < STAGES.length && nextI !== current.index && !stage.boss ? btn('Set out', () => { sfx('click'); if (Campaign.setOut(nextI)) { Save.commit(); startStage(nextI); } }, '', `${STAGES[nextI].id} · ${STAGES[nextI].name}`) : null,
-      // Lost at the frontier: farming the stage before it is the way through a wall (campaign spec §8.2, 1-9).
-      !won && farmI >= 0 ? btn(`Farm ${STAGES[farmI].id}`, () => { if (Campaign.setOut(farmI)) { Save.commit(); startStage(farmI); } else toast('No one is fit to set out.'); }, '', 'XP and gear, then try again') : null,
-      btn(won ? 'Farm again' : 'Try again', again2)];
+    ? [h('button', { class: 'btn primary', onclick: walkOn }, 'Walk on', h('span', { class: 'sub', text: `${STAGES[camp.next].id} · ${STAGES[camp.next].name}` })), btn('Come home', () => comeHomeNow(res))]
+    : [];
+  const close = h('button', { class: 'sheet-x', 'aria-label': going ? 'Close the report and walk on' : 'Back to the results',
+    onclick: going ? walkOn : () => { sfx('click'); if (Results.res === res) Results.reopen(); else showCamp(); } }, '×');
   // Why the trip ended, and after a loss, the stage's hint first (campaign spec §8.1). The first loss also says what
   // a loss costs.
   if (!won && res.firstLoss == null) res.firstLoss = Guide.once('lossnote');
@@ -308,10 +328,10 @@ function showReport(res, opts = {}) {
         h('div', { class: 'kicker ' + (won ? 'won' : 'lost'), text: `${won ? 'Victory' : 'Defeat'} · ${REGION_NAMES[stage.region].name} ${stage.id}` }),
         h('h2', { text: won ? `${stage.name} is clear` : `Driven back at ${stage.name}` }),
         h('p', { class: 'flavor', text: flavorLine(res, won) }),
-        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`), res.xp ? h('button', { class: 'badge xp', onclick: () => { sfx('click'); LevelUp.show(res.gains || [], res.xp, () => { closeSheet(); showReport(res, { report: true }); }, won); } }, ico('star'), 'Levels', (res.gains || []).some(x => x.g.to > x.g.from) ? ' · level up' : '') : null,
+        h('div', { class: 'badges' }, badge(`Round ${res.rounds}`), badge(`${res.actions} turns`),
           badge(kos ? plural(kos, 'knockout') : 'No knockouts', kos ? 'bad' : 'good'), res.rounds >= SIM.ENRAGE_ROUND ? badge('Enraged', 'bad', 'rage') : null,
           h('div', { class: 'sides', role: 'tablist', 'aria-label': 'Whose fight to show' }, [[0, 'Your party'], [1, 'Foes']].map(([id, label]) => h('button', { class: v.side === id ? 'on' : '', role: 'tab', 'aria-selected': v.side === id ? 'true' : 'false', onclick: () => { sfx('click'); showReport(res, { side: id, sel: null }); } }, label))))),
-      h('div', { class: 'rside' }, h('div', { class: 'actions' }, actions), why, camp ? rewardChips(camp) : null, camp ? fatigueLine(camp) : null)),
+      h('div', { class: 'rside' }, actions.length ? h('div', { class: 'actions' }, actions) : null, why, camp ? rewardChips(camp) : null, camp ? fatigueLine(camp) : null)),
     h('div', { class: 'report' },
       h('div', { class: 'stabs' },
         h('div', { class: 'stats', role: 'tablist' }, REPORT_STATS.map(x => h('button', { class: 'stab ' + (x.heal ? 'heal' : 'dmg') + (x.k === v.stat ? ' on' : ''), role: 'tab', 'aria-selected': x.k === v.stat ? 'true' : 'false', title: x.tip, onclick: () => { sfx('click'); showReport(res, { stat: x.k }); } }, ico(x.icon), x.label))),
@@ -320,13 +340,14 @@ function showReport(res, opts = {}) {
       h('div', { class: 'line total' }, h('span'), h('span', { class: 'nm', text: `Total ${st.tip.toLowerCase()}` }), h('span'), h('b', { text: fmt(units.reduce((n, u) => n + S[u.id][st.k], 0)) }), h('span')),
       h('div', { class: 'seed', text: `Battle seed ${res.seed}` })),
     h('div', { class: 'side' }, characterCard(units.find(u => u.id === v.sel), res)));
-  if (again) { box.classList.add('quiet'); sheet.replaceChildren(box); }
+  const wrap = h('div', { class: 'report-wrap' }, box, close);
+  // Redrawn in place (a tab, a side, a character): it keeps where it was scrolled to.
+  if (again) { const old = sheet.querySelector('.report-box'), y = old ? old.scrollTop : 0; box.classList.add('quiet'); sheet.replaceChildren(wrap); box.scrollTop = y; }
   else {
     // A battle tip still showing would sit over the report: it has had its moment.
     for (const t of $('#toasts').querySelectorAll('.toast.tip')) t.remove();
     Guide.clear();
-    openSheet(box, 'report');
-    if (camp && camp.r.unlocks.length && !going) setTimeout(() => sfx('unlock'), 350);
+    openSheet(wrap, 'report');
   }
   reportRes = res;
   syncControls();
