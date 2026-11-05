@@ -177,7 +177,7 @@ const Wick = (() => {
   //             else the full dim. 'light' or 'full' to choose; false for none (a soft line in battle); a number for
   //             this step's own (0 … 1).
   //   arrow     false for no pointer (then nothing marks the target but the hole in the dim: keep the pointer on a
-  //             step with no dim).
+  //             step with no dim). 'below': under the target, pointing up, when what's over it shouldn't be covered.
   //   say       Wick's line in his bubble, with his portrait on the side away from the target (side: 'l' or 'r').
   //   panel     his line in the wide panel along the bottom instead (the welcome), with his name and a ▼.
   //   skip      with panel: a Skip button in its corner, which calls this (the story jumps to the name box).
@@ -247,8 +247,8 @@ const Wick = (() => {
       if (b) {
         const r = { x: b.x - pad, y: b.y - pad, w: b.w + pad * 2, h: b.h + pad * 2 };
         place(hole, r.x, r.y, r.w, r.h);
-        // the pointer over it, or under it when there's no room above
-        const up = r.y > 44;
+        // the pointer over it, or under it when there's no room above (or the step asks)
+        const up = o.arrow !== 'below' && r.y > 44;
         arrow.classList.toggle('below', !up);
         place(arrow, clamp(r.x + r.w / 2 - 13.5, 4, W - 31), up ? r.y - 38 : r.y + r.h + 8);
       }
@@ -260,7 +260,8 @@ const Wick = (() => {
         const pw = o.small ? 108 : 150, ph = o.small ? 146 : 203, bw = bubble.offsetWidth, bh = bubble.offsetHeight;
         const nx = s2 === 'l' ? pw + 4 : W - pw - 4 - bw;
         const cands = [{ x: nx, y: FH - ph + 22 }, { x: nx, y: FH - ph - bh - 6, tail: 'down' }, { x: nx, y: 60 }, { x: s2 === 'l' ? 12 : W - 12 - bw, y: 12 }];
-        const hit = b && { x: b.x - 10, y: b.y - (o.arrow === false ? 10 : 46), w: b.w + 20, h: b.h + (o.arrow === false ? 20 : 56) };
+        const over = o.arrow === false || o.arrow === 'below' ? 10 : 46, under = o.arrow === 'below' ? 46 : 10;
+        const hit = b && { x: b.x - 10, y: b.y - over, w: b.w + 20, h: b.h + over + under };
         const pick = cands.find(c => !overlap({ x: c.x, y: c.y, w: bw, h: bh }, hit, 0) && c.y >= 8 && c.y + bh <= FH - 4) || cands[0];
         place(bubble, pick.x, clamp(pick.y, 8, FH - bh - 6));
         bubble.dataset.tail = pick === cands[0] ? 'side' : pick === cands[1] ? 'down' : 'none';

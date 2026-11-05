@@ -133,7 +133,7 @@ const FirstSession = (() => {
     // 1-1's marker, and the battle doesn't stop
     { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', dim: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
     // (Wick small, on the left: the card's Set out, bottom right, stays in sight)
-    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), open: roadAgain, show: () => ({ target: firstMarker, round: true, pad: 10, dim: false, say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
+    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), open: roadAgain, show: () => ({ target: firstMarker, round: true, pad: 4, dim: false, arrow: 'below', say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
     { id: 'new', phase: 'road', at: () => results(1) && !!q('[data-tut=new]'), show: () => ({ target: '[data-tut=new]', pad: 4, say: 'The Recruit Board is open.' }) },
     { id: 'home2', nav: true, phase: 'road', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
     // 10: the free recruit
@@ -142,7 +142,7 @@ const FirstSession = (() => {
     // 11: Formation (F3)
     { id: 'form', phase: 'form', at: () => atHearth() && !!q('[data-tut=hearth-formation]'), show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
     { id: 'place', phase: 'form', forced: true, at: () => Formation.shown && !!q('[data-tut=formation-front]'), open: () => Formation.open(), show: placeStep },
-    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), open: () => Formation.open(), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', tap: 'target', until: () => !Formation.shown }) },
+    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), open: () => Formation.open(), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', arrow: 'below', tap: 'target', until: () => !Formation.shown }) },
     // 12: the goodbye: the region's end, a reason to come back, and where he'll be
     { id: 'bye', phase: 'form', at: atHearth, show: () => ({ panel: 'The Sexton’s at the end of the Gravefields. Plenty of road before him.' }) },
     { id: 'tolls', phase: 'form', at: atHearth, show: () => ({ panel: 'The road earns tolls while you’re away. Come back and collect.' }) },
