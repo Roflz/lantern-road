@@ -139,6 +139,8 @@ def main():
             def shot(name):
                 if a.shots:
                     js("document.querySelectorAll('#toasts .toast').forEach(t => t.remove())")
+                    if name != 'tip':
+                        js("Tip.hide()")
                     page.wait_for_timeout(150)
                     page.screenshot(path=os.path.join(a.shots, f'{name}-{w}x{h}.png'))
 
@@ -170,6 +172,7 @@ def main():
                 if touch:
                     page.touchscreen.tap(x, y)
                 else:
+                    page.mouse.move(2, 2)
                     page.mouse.move(x, y)
                 page.wait_for_timeout(300)
                 return True
