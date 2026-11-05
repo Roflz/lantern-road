@@ -36,13 +36,8 @@ const GearUI = (() => {
     const B = Items.bands(x, {});
     return [...B.good.filter(l => !l.stat).map(l => l.text), ...B.when.map(l => `${l.tag}: ${l.text}`), ...B.bad.filter(l => !l.stat).map(l => l.text)];
   }
-  // the gear stars' enchantment lines, when a piece has them: [{ text, tip }]. Items.bands gives them as its lines once the
-  // stars land (PR #42); until then a piece's en, as strings or { text }, stands in.
-  function enLines(x) {
-    const B = x ? Items.bands(x, {}) : {};
-    if (Array.isArray(B.lines)) return B.lines.map(l => ({ text: l.text, tip: l.tip || null }));
-    return (Array.isArray(x && x.en) ? x.en : []).map(e => ({ text: typeof e === 'string' ? e : (e && (e.text || e.name)) || '', tip: null })).filter(l => l.text);
-  }
+  // the gear stars' enchantment lines (Items.bands' lines, one a star): [{ text, tip }]
+  const enLines = x => (x ? Items.bands(x, {}).lines || [] : []).map(l => ({ text: l.text, tip: l.tip || null }));
   const enWords = x => enLines(x).map(l => l.text);
   // what a piece gives, for its tooltip: "Gravecutter|+10 Power · −1.0 Speed · Cleave … +20% damage"
   function pieceTip(x) {
