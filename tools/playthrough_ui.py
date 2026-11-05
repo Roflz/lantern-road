@@ -367,12 +367,14 @@ def main():
         shot('camp')
 
         trips, last_fr, still, battles = 0, -1, 0, 0
+        at = {}  # trips set out with each stage as the frontier: where a run spent them
         while time.time() < t_end:
             st = state()
             if st['fr'] >= st['n']:
                 break
             if a.quick and all(f in done for f in FLOWS):
                 break
+            at[st['fr']] = at.get(st['fr'], 0) + 1
             if st['fr'] == last_fr:
                 still += 1
             else:
@@ -539,6 +541,7 @@ def main():
         problems.append(f"stopped at stage {st['fr'] + 1} of {st['n']} after {trips} trips")
     print(f"UI play-through ({a.hero}{', quick' if a.quick else ''}): {st['cleared']} stages lit in {trips} trips, {battles} battles, {st['roster']} heroes, {st['gold']} gold, {took:.0f} s")
     print('flows:', ', '.join(f"{f} ({done[f]} s)" if f in done else f"{f} (never)" for f in FLOWS))
+    print('trips at one frontier, 5 or more:', ' · '.join(f"stage {k + 1} ×{n}" for k, n in sorted(at.items()) if n >= 5) or 'none')
     print('coach marks:', json.dumps(seen['coach'], ensure_ascii=False))
     print('tips:', json.dumps(seen['tips'], ensure_ascii=False))
     print('new things:', json.dumps(seen['news'], ensure_ascii=False))
