@@ -9,7 +9,9 @@ road to 1-9 with its card open (Set out); a drag along the road moves a stage fo
 on one, and a flick carries further; the labels show the stage ids, the frontier's callout, the boss's name, the
 bubbles over stages with something new and the gate; a far stage's card says Locked and a lit one's Farm; a tap on a
 stage opens its card; the wheel steps a stage (with a mouse); a drag back past 1-1 flies home, and so does ‹; a tap on
-the road in the party view flies to the frontier; the card opens the stage sheet; and the big button sets out.
+the road in the party view flies to the frontier; a drag down at the fire follows the finger up the road, springs back
+short of the line and flies to the frontier past it (or with a flick), while a drag up does nothing and one across
+still turns; the card opens the stage sheet; and the big button sets out.
 Held past the boss, the drag shows the gate to the next region. --shots DIR saves R1–R4 as the mockup has them, and
 the Hearth's view of the same road.
 """
@@ -248,6 +250,45 @@ def main():
             tap('.cv-back', 2400)
             r = road()
             check(not r['on'] and r['road'] == 0, f'‹ flies home from 1-13 ({r})')
+
+            # a drag down at the fire pulls the camera up the road (play-test note 3.14), as a drag back past 1-1 pulls
+            # it home: it follows the finger, springs back when let go short, and flies on to the frontier's card past
+            # the line, or with a flick. Up does nothing; across still turns (or nudges, while the buildings are locked).
+            held = {}
+            drag(mid, 120, mid, 160, wait=1600, hold=lambda: held.update(r=road()))
+            r, hr = road(), held.get('r')
+            check(bool(hr) and not hr['on'] and 0.1 < hr['road'] < 0.5, f'a short drag down lifts the camera toward the road, following the finger ({hr})')
+            check(not r['on'] and r['road'] == 0 and r['view'] == 'party', f'let go short of the line, it springs back to the fire ({r})')
+            held = {}
+            drag(mid, 100, mid, 220, wait=2400, hold=lambda: (held.update(r=road()), shot('r5-pull')))
+            r, hr = road(), held.get('r')
+            check(bool(hr) and not hr['on'] and hr['road'] > 0.5, f'a longer drag down lifts it further ({hr})')
+            c = card()
+            check(r['on'] and r['road'] == 1 and r['sel'] == 8 and c and c['id'] == '1-9', f'let go past the line, it flies on up the road to 1-9, its card open ({r}, {c and c["id"]})')
+            tap('.cv-back', 2400)
+            drag(mid, 120, mid, 160, n=3, still=False, wait=2400)
+            r = road()
+            if check(r['on'] and r['road'] == 1 and r['sel'] == 8, f'a flick down of 40 goes up the road too ({r})'):
+                # (the flick's fling is the page's own: this first tap after it isn't lost)
+                tap('.cv-back', 2400)
+                r = road()
+                check(not r['on'] and r['road'] == 0, f'and the next tap, on ‹, is not lost ({r})')
+            else:
+                js('Camp.scene.toCamp(true)')
+                page.wait_for_timeout(600)
+            drag(mid, 240, mid, 100, wait=1200)
+            r = road()
+            check(not r['on'] and r['road'] == 0 and r['view'] == 'party', f'a drag up at the fire does nothing ({r})')
+            locked = js('Camp.scene.locked')
+            drag(mid - 150, 140, mid + 150, 180, wait=1600)
+            r = road()
+            check(not r['on'] and r['road'] == 0 and r['view'] == ('party' if locked else 'build'), f'a drag across (a little down too) {"nudges the locked camera" if locked else "turns to the buildings"}, and leaves the road alone ({r})')
+            if not locked:
+                drag(mid, 100, mid, 220, wait=1600)
+                r = road()
+                check(not r['on'] and r['road'] == 0 and r['view'] == 'build', f'in the buildings view a drag down does nothing ({r})')
+                js("Camp.scene.go('party', true)")
+                page.wait_for_timeout(600)
 
             # one region open: ‹ and › are shut; Set out on the road sets out
             js("Camp.scene.toRoad(8, true)")

@@ -7,8 +7,10 @@
 // on what's in the scene, and the corner's ribbon and big button (Set out, or Collect). Taps in the scene open what
 // was tapped. Until the first blueprint the camera stays with the party.
 // The road view (docs/mockups/road-view.html) is the same scene: tap the road, or Set out, and the camera flies up the
-// road to the frontier with its stage's card open. Drag up or down (or the wheel, or ↑ ↓) to look along it a stage at
-// a time; tap a stage for its card. Drag back past the first stage, or tap ‹, and it flies home.
+// road to the frontier with its stage's card open; or drag down in the party view and the camera follows the finger
+// up the road, and on to the card once let go far enough (play-test note 3.14). Drag up or down (or the wheel, or ↑ ↓)
+// to look along it a stage at a time; tap a stage for its card. Drag back past the first stage, or tap ‹, and it flies
+// home.
 // Also here: "While you were away", the Renown track, the roster rows on the Party screen, and the building art. A new
 // game's first pick is the Recruit Board's own panel (js/firstpick.js), led by Wick (js/firstsession.js). Building screens are js/buildings.js; the model is js/base.js.
 
@@ -197,7 +199,7 @@ const Camp = (() => {
   const FORM = [2, 3, 0, 4, 5, 1]; // the formation as it stands in battle: two columns behind, the front on the right
   let ui = null;
   function screen() {
-    const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The Hearth. Drag sideways, or use the arrow keys, to turn between the party and the buildings.' });
+    const camp = h('div', { class: 'camp', tabindex: '0', 'aria-label': 'The Hearth. Drag sideways, or use the arrow keys, to turn between the party and the buildings. Drag down for the road.' });
     const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
     const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
     const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');
@@ -478,6 +480,10 @@ const Camp = (() => {
       try { camp.setPointerCapture(ev.pointerId); } catch (e) { }
     });
     camp.addEventListener('pointermove', ev => { if (down && ev.pointerId === down.id) { const p = Frame.point(ev, camp); live.dragMove(p.x, p.y); } });
+    // A drag in the scene keeps its finger's moves to itself, so the browser never takes it for a fling: Chrome loses
+    // the next tap, the one that would stop the fling (a flick up the road, then the card's Set out). The scene's own
+    // taps come from pointerup (tapAt), and buttons never start a drag, so no click is lost here.
+    camp.addEventListener('touchmove', ev => { if (down && ev.cancelable) ev.preventDefault(); }, { passive: false });
     // on the road the wheel steps one stage at a time; back from the first, it goes home
     let wheelAt = 0;
     camp.addEventListener('wheel', ev => {
@@ -549,6 +555,8 @@ const Camp = (() => {
       sync();
       live.onFrame = place;
       live.onSnap = k => showCard(k);
+      // the drag down to the road waits while Wick has a step up, or holds presses between steps (js/wick.js)
+      live.canPull = () => typeof Wick === 'undefined' || (!Wick.step && !Wick.held);
       if (live.out) place(live.out);
     }
     function stop() {
@@ -730,6 +738,7 @@ const Camp = (() => {
   // The prototype tools (gold, materials, blueprints, Renown and time) are in the one panel in Settings: js/proto.js.
 
   // scene: the camp's live scene while it shows (js/campscene.js), and at(x, y): the anchor a tap at that point in the
-  // camp (design pixels) would reach, both for the tools
-  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null) };
+  // camp (design pixels) would reach, both for the tools. toRoad(k): up the road to stage k (the frontier when not
+  // given), with its card open, while the Hearth shows (Wick's guide, back on a road step after a load).
+  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null), toRoad: k => { if (ui && ui.live && App.current === 'home') ui.toRoad(k); } };
 })();

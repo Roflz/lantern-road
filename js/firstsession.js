@@ -12,15 +12,17 @@
 //   6    battle 1-1, paused twice: the turn order at the first turn, then speed and skip
 //   7    the results popup: the first level, then the Hearth button (fatigue waits for its first-time tip, js/main.js)
 //   8    Grow: Heroes, the hero, the Stats tab, + or Auto, Keep, "Stronger already."; back, and to the Hearth by its tab
-//   9    1-2, unforced: the goal tracker says "Clear 1-2" and Set out glows; on the road a soft line on 1-1's marker; the
+//   9    1-2, unforced: the goal tracker says "Clear 1-2" and the pointer bobs over Set out; on the road a soft line on 1-1's marker; the
 //        battle doesn't stop. Its results' New chip: the Recruit Board is open, then the Hearth
 //   10   the Recruit Board's free recruit, hired the same way, who waits at the fire
 //   11   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done
 //   12   Wick's goodbye: the Sexton, the tolls, the fire
 // Then the goal tracker at the Hearth takes over ("Clear 1-3"). The session runs once per save (save.guide: the step
-// under way, and done); a reload carries on where it was, and a step whose moment has passed (a battle resolved while
-// the app was closed) is skipped. Settings → Replay the guide plays Wick's lines again as soft steps, each when its
-// place comes up, holding nothing back (save.guide.replay); while the session runs it does nothing. The Prototype
+// under way, and done); a reload brings that step back from its start, opening the screen it needs again (the road,
+// the board's panel, the hero, Formation; play-test note 3.6, checked by tools/guide_check.py --resume), and a step
+// whose moment has passed (a battle resolved while the app was closed, its results popup) is skipped. Settings →
+// Replay the guide plays Wick's lines again as soft steps, each when its place comes up, holding nothing back
+// (save.guide.replay); while the session runs it does nothing. The Prototype
 // panel can skip the session. Tactics come later, at 1-3's first clear (js/visits.js).
 // Every step points at a data-tut anchor (or the camp scene's anchors: the board and the road's stage markers), so a
 // redesigned screen keeps its steps by keeping its anchors.
@@ -67,6 +69,9 @@ const FirstSession = (() => {
   // forced: an action of the player's, not a line (no replay). nav: a pointer with no line (no replay). solo: a line
   // for this moment only (no replay). soft: nothing is held back, and a press elsewhere puts it aside until its moment
   // comes again.
+  // After a load (play-test note 3.6), which always lands at the Hearth: open() opens the screen the step needs again
+  // (the road, the Recruit Board's panel, the Party and hero screens, Formation); resume names the step to go back to
+  // when this one's start can't be had again (Keep: a point placed and not kept is gone with the page).
   const PHASE = {
     pick: s => !s.roster.length,
     first: s => !lit('1-1') || shown(0) || inBattle(0),
@@ -83,6 +88,10 @@ const FirstSession = (() => {
   const statsTab = () => { const t = q('[data-tut=hero-tab-stats]'); return !!t && t.getAttribute('aria-selected') === 'true'; };
   const onHero = () => App.current === 'hero' && !sheetOpen();
   const onRoad = () => { const c = camp(); return !!c && c.onRoad; };
+  // a step's screen, opened again after a load: the road with the frontier's card; the hero from the Party screen, so ‹
+  // goes back there as it did
+  const roadAgain = () => { if (typeof Camp !== 'undefined' && Camp.toRoad) Camp.toRoad(); };
+  const heroAgain = tab => { const c = lead(); if (!c) return; App.go('party'); App.showCharacter(c.id, tab); };
   // Wick's story at the fire (docs/story.md, the opening), a line a tap
   const STORY = [
     ['hello', 'Another company. Come in. Sit by the fire.'],
@@ -100,11 +109,11 @@ const FirstSession = (() => {
     { id: 'welcome', phase: 'pick', at: atHearth, show: () => ({ panel: `${who()}. Welcome to the Hearth. Your company can camp here.` }) },
     { id: 'board', phase: 'pick', at: () => atHearth() && !!board(), show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'First, you’ll need heroes. The Recruit Board’s there.', tap: 'target', until: () => typeof FirstPick !== 'undefined' && FirstPick.shown }) },
     // 3: the first pick (the board's own panel says Wick's lines, and the new hero says theirs at the reveal)
-    { id: 'pick', phase: 'pick', forced: true, at: () => FirstPick.shown, show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 0 && !FirstPick.shown }) },
+    { id: 'pick', phase: 'pick', forced: true, at: () => FirstPick.shown, open: () => FirstPick.open({ mode: 'pick', guided: true }), show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 0 && !FirstPick.shown }) },
     // 4–5: the road
-    { id: 'setout', phase: 'first', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', round: true, say: `The road starts at the gate. Take ${heroName()} through.`, tap: 'target', until: onRoad }) },
-    { id: 'stage', phase: 'first', at: () => onRoadCard() && !!marker(), show: () => ({ target: marker, round: true, pad: 12, say: 'Each stage is a stretch of road. Win its fight, and the stretch is yours.' }) },
-    { id: 'go', phase: 'first', at: onRoadCard, show: () => ({ target: '[data-tut=road-go]', round: true, say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
+    { id: 'setout', phase: 'first', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', say: `The road starts at the gate. Take ${heroName()} through.`, tap: 'target', until: onRoad }) },
+    { id: 'stage', phase: 'first', at: () => onRoadCard() && !!marker(), open: roadAgain, show: () => ({ target: marker, round: true, pad: 12, say: 'Each stage is a stretch of road. Win its fight, and the stretch is yours.' }) },
+    { id: 'go', phase: 'first', at: onRoadCard, open: roadAgain, show: () => ({ target: '[data-tut=road-go]', say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
     // 6: battle 1-1, paused twice (shown from the battle's events, below)
     { id: 'order', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=turn-order] .flag.in', pad: 4, say: 'Battles fight themselves. The turn order shows who acts next.', small: true, side: 'l', pause: true }) },
     { id: 'speed', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=battle-speed], [data-tut=battle-skip]', pad: 5, say: 'Speed it up, or skip to the end.', small: true, side: 'l', pause: true, tap: 'target' }) },
@@ -112,27 +121,28 @@ const FirstSession = (() => {
     { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one brings a stat point.' : 'Battles bring XP. A full bar is a level.' }) },
     { id: 'home', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
     // 8: Grow: the stat point the first level brought, spent on the hero's Stats tab
-    { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', round: true, say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
-    { id: 'hero', nav: true, phase: 'grow', skip: () => !points(), at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=party-hero]'), show: () => { seen('[data-tut=party-hero]'); return { target: () => q('[data-tut=party-hero]'), pad: 3, tap: 'target', until: () => App.current === 'hero' }; } },
-    { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && statsTab()), at: () => onHero() && !!q('[data-tut=hero-tab-stats]'), show: () => ({ target: '[data-tut=hero-tab-stats]', pad: 3, tap: 'target', until: statsTab }) },
-    { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('.hr-stats .hr-plus'), show: () => (seen('.hr-stats'), { target: () => [q('.hr-stats'), q('[data-tut=hero-auto]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
-    { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
-    { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('.hr-stats'), show: () => ({ target: '.hr-stats', pad: 4, arrow: false, say: 'Stronger already.' }) },
-    { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', round: true, pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
+    { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
+    { id: 'hero', nav: true, phase: 'grow', skip: () => !points(), at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=party-hero]'), open: () => points() && App.go('party'), show: () => { seen('[data-tut=party-hero]'); return { target: () => q('[data-tut=party-hero]'), pad: 3, tap: 'target', until: () => App.current === 'hero' }; } },
+    { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && statsTab()), at: () => onHero() && !!q('[data-tut=hero-tab-stats]'), open: () => points() && heroAgain(), show: () => ({ target: '[data-tut=hero-tab-stats]', pad: 3, tap: 'target', until: statsTab }) },
+    { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && statsTab() && !!q('.hr-stats .hr-plus'), open: () => points() && heroAgain('stats'), show: () => (seen('.hr-stats'), { target: () => [q('.hr-stats'), q('[data-tut=hero-auto]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
+    { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), resume: 'spend', at: () => onHero() && statsTab() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
+    { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('.hr-stats'), open: () => heroAgain('stats'), show: () => ({ target: '.hr-stats', pad: 4, arrow: false, say: 'Stronger already.' }) },
+    { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
     { id: 'tabhome', nav: true, phase: 'grow', skip: () => App.current === 'home', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=tab-home]'), show: () => ({ target: '[data-tut=tab-home]', pad: 2, tap: 'target', until: () => App.current === 'home' }) },
-    // 9: 1-2, unforced: Set out glows, a soft line on 1-1's marker, and the battle doesn't stop
-    { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', round: true, dim: false, arrow: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
+    // 9: 1-2, unforced: the pointer over Set out (it was a glow round it, before play-test note 3.7), a soft line on
+    // 1-1's marker, and the battle doesn't stop
+    { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', dim: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
     // (Wick small, on the left: the card's Set out, bottom right, stays in sight)
-    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), show: () => ({ target: firstMarker, round: true, pad: 10, dim: false, arrow: false, say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
+    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), open: roadAgain, show: () => ({ target: firstMarker, round: true, pad: 4, dim: false, arrow: 'below', say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
     { id: 'new', phase: 'road', at: () => results(1) && !!q('[data-tut=new]'), show: () => ({ target: '[data-tut=new]', pad: 4, say: 'The Recruit Board is open.' }) },
     { id: 'home2', nav: true, phase: 'road', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
     // 10: the free recruit
     { id: 'board2', phase: 'recruit', at: () => atHearth() && !!board(), show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'The board has a free recruit for you.', tap: 'target', until: () => FirstPick.shown }) },
-    { id: 'hire', phase: 'recruit', forced: true, at: () => FirstPick.shown, show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 1 && !FirstPick.shown }) },
+    { id: 'hire', phase: 'recruit', forced: true, at: () => FirstPick.shown, open: () => FirstPick.open({ mode: 'hire', guided: true, rest: true }), show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 1 && !FirstPick.shown }) },
     // 11: Formation (F3)
     { id: 'form', phase: 'form', at: () => atHearth() && !!q('[data-tut=hearth-formation]'), show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
-    { id: 'place', phase: 'form', forced: true, at: () => Formation.shown && !!q('[data-tut=formation-front]'), show: placeStep },
-    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', tap: 'target', until: () => !Formation.shown }) },
+    { id: 'place', phase: 'form', forced: true, at: () => Formation.shown && !!q('[data-tut=formation-front]'), open: () => Formation.open(), show: placeStep },
+    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), open: () => Formation.open(), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', arrow: 'below', tap: 'target', until: () => !Formation.shown }) },
     // 12: the goodbye: the region's end, a reason to come back, and where he'll be
     { id: 'bye', phase: 'form', at: atHearth, show: () => ({ panel: 'The Sexton’s at the end of the Gravefields. Plenty of road before him.' }) },
     { id: 'tolls', phase: 'form', at: atHearth, show: () => ({ panel: 'The road earns tolls while you’re away. Come back and collect.' }) },
@@ -195,6 +205,22 @@ const FirstSession = (() => {
     s.guide.step = STEPS[i].id;
     Save.commit();
   }
+  // After a load (the app opened again, a reload, another save): the step under way comes back from its start. A load
+  // lands at the Hearth, so once it's there a step on another screen opens that screen again (open), and Keep goes
+  // back to + (resume). A step whose moment has passed is still passed over by current(): its battle was resolved
+  // while the app was closed, its results popup is gone, or it only led back to the Hearth (‹, the Hearth tab, the
+  // results' Hearth button). Returns false while it waits for the Hearth (5 seconds at most).
+  let resuming = false, resumeAt = 0;
+  function resumed(s) {
+    let step = STEPS[idx(s.guide.step)];
+    const done = () => { resuming = false; return true; };
+    // nothing to bring back: no step yet, its part is over, or its screen is up already
+    if (!step || !PHASE[step.phase](s) || (!step.resume && safe(step.at))) return done();
+    if (!atHearth()) { if (!resumeAt) resumeAt = Date.now(); return Date.now() - resumeAt < 5000 ? false : done(); }
+    if (step.resume) { s.guide.step = step.resume; Save.commit(); step = STEPS[idx(step.resume)]; }
+    if (step.open && !safe(step.at)) { try { step.open(); } catch (e) { console.warn('Lantern Road: the guide could not open its screen again', step.id, e); } }
+    return done();
+  }
   // Skip, in the story: straight to the name box.
   function jump(id) { const s = st(); if (!s || !on()) return; s.guide.step = id; Save.commit(); jumped = true; if (H) H.close(); jumped = false; }
   function present(step, o) {
@@ -234,12 +260,13 @@ const FirstSession = (() => {
   function tick() {
     const s = st();
     // another save took this one's place (Start over, the cloud's copy, another server's): the step on show goes
-    if (s !== seenSave) { const was = seenSave; seenSave = s; dismissed = null; if (was && H) { const h0 = H; h0.close(); H = null; } }
+    if (s !== seenSave) { const was = seenSave; seenSave = s; dismissed = null; resuming = !!s; resumeAt = 0; if (was && H) { const h0 = H; h0.close(); H = null; } }
     // A forced step up for a save whose session is over goes at once: its gate would hold back every press, and on
     // touch a held-back press loses its tap.
     if (s && H && H.forced && !on()) { H.close(); return; }
     if (!s || H || deciding || titleUp()) return;
     if (!s.guide.done) {
+      if (resuming && !resumed(s)) return;
       replaying = false;
       const i = current();
       if (i >= STEPS.length) { advance(STEPS[STEPS.length - 1].id); return; }
