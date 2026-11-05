@@ -119,7 +119,7 @@ def main():
 
             def shot(folder, name):
                 if a.shots:
-                    js("document.querySelectorAll('#toasts .toast').forEach(t => t.remove())")
+                    js("document.querySelectorAll('#toasts .toast').forEach(t => t.remove()); Tip.hide()")
                     page.wait_for_timeout(150)
                     page.screenshot(path=os.path.join(a.shots, folder, f'{name}-{w}x{h}.png'))
 
