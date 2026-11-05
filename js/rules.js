@@ -1,12 +1,11 @@
 'use strict';
-// Lantern Road · Tactics: the rules model and the rules editor.
+// Lantern Road · Tactics: the rules model and the Tactics screen.
 //
 // Tactics is the model: each hero's rules and rule slots, the party rules, the party's item loadout, which
 // conditions the player knows, and the saved rule sets. It touches no page, so tools/simtest.js tests it in Node.
 // Every change goes through it.
-// TacticsEditor is the view: it draws the editor screen from the model and turns taps into model calls. Its look
-// lives in css/rules.css. The final design will come from the screen mockups; only the view and the stylesheet
-// should need to change for it.
+// TacticsEditor is the view: it draws the Tactics screen (screen 11, docs/mockups/tactics.html) from the model and
+// turns taps into model calls. Its look lives in css/rules.css. On screen rules are tactics; the code keeps rules.
 //
 // Rules are { if, n?, s?, do, on } (see CONDITIONS and PARTY_ACTIONS in js/data.js). An "owner" is a character's id
 // (Save.state.roster) or 'party' for the party rules. A character's rule slots come from the character (js/hero.js):
@@ -345,307 +344,516 @@ if (typeof UI_ICONS !== 'undefined') {
   UI_ICONS.oil = { map: ['...k...', '..kkk..', '..ggg..', '.gyyyg.', 'gyywyyg', 'gyyyyyg', '.ggggg.'], pal: { k: '#8a5a3a', g: '#9a8a6a', y: '#f4a646', w: '#ffe9a0' } };
 }
 
-// ── the editor screen
+// ── the Tactics screen (screen 11), after docs/mockups/tactics.html (play-test note 1.35)
+// Landscape, in three columns, so nothing pops over what is being edited:
+//   the owners   down the left: the heroes in formation order, then the Party, then the Loadout, each with an n/slots
+//                badge, and a red dot on a hero with a tactic that can't run
+//   the panel    the chosen owner's tactics in a framed panel (js/kit.js): one line each, with a grip to drag it, its
+//                number, a "when" chip → a "do" chip (with mana), and a lantern, lit when on. Then the open slots
+//                (+ add), the locked ones folded into one line, and for a hero the Otherwise → basic line. The
+//                Loadout's lines are its item slots, each with the party tactic that uses it.
+//   the picker   at the right, for the chip last tapped: When (the conditions in four groups, those still to find
+//                greyed, and a ‹ › stepper at the top for a number or a status) or Do (the hero's skills, or the
+//                party's items, Focus fire and Return to the Hearth). The Loadout's picker is its items.
+// A long press on a chip or a choice shows its line from the glossary (js/glossary.js); on a tactic that can't run,
+// the "!" chip's long press says why (Tactics.explain). Saved sets are one chip at the top right, with a small menu.
+// The guide points at it through data-tut: tactics-owners, tactics-row-1, tactics-when, tactics-do, tactics-lamp and
+// tactics-picker. Styles in css/rules.css, classes prefixed tx-.
 const TacticsEditor = (() => {
   const SHAPES = { foe: 'One foe', front: 'The front row', back: 'The back row', random3: '3 random foes', foes: 'All foes', ally: 'One ally', allies: 'All allies', self: 'Self' };
-  const ui = { owner: null, back: null, pick: null, draft: '' };
+  const GROUPS = [['self', 'Self'], ['ally', 'Ally'], ['foe', 'Foe'], ['battle', 'Battle']];
+  const GROUP_ICON = { self: 'helm', ally: 'heart', foe: 'eye', battle: 'hourglass', between: 'lantern' };
+  // What the party's actions are called on this screen, where it differs from js/data.js (the rename pass changes it there).
+  const ACT_NAME = { home: 'Return to the Hearth' };
+  const PRESS = 450; // ms for a long press
+  // owner: a hero's id, 'party' or 'loadout'. sel: the line being edited { i, part: 'when' | 'do' }, i = -1 for a new
+  // tactic (draft: { cond, do }). pane: the picker's tab.
+  const ui = { owner: null, back: null, sel: null, pane: 'when', draft: null, menu: false, arm: -1, name: '', view: null, scroll: {}, seek: false, tip: null };
   const click = () => { if (typeof sfx === 'function') sfx('click'); };
   const say = text => { if (typeof toast === 'function') toast(text); };
-  const nameOf = o => (o === 'party' ? 'Party' : (Tactics.charOf(o) || { name: o }).name);
-  const clsOf = o => Tactics.charOf(o).cls;
-  const owners = () => [...Tactics.formation().filter(Boolean), 'party'];
+  const G = id => (typeof GLOSSARY !== 'undefined' && GLOSSARY[id]) || null;
+  const isParty = o => o === 'party', isLoad = o => o === 'loadout';
+  const char = o => Tactics.charOf(o);
+  const nameOf = o => (isParty(o) ? 'Party' : isLoad(o) ? 'Loadout' : (char(o) || { name: o }).name);
+  // The heroes in formation order (and the one being edited, if they're resting), then the Party and the Loadout.
+  const owners = () => { const f = Tactics.formation().filter(Boolean); if (ui.owner && !isParty(ui.owner) && !isLoad(ui.owner) && !f.includes(ui.owner)) f.push(ui.owner); return [...f, 'party', 'loadout']; };
+  const ownerOk = o => isLoad(o) || Tactics.ownerOk(o);
+  const pxImg = (src, s, cls = '') => h('img', { class: 'px ' + cls, src, alt: '', width: s, height: s, draggable: 'false' });
+  const icon = (name, s) => pxImg(iconURL(typeof UI_ICONS !== 'undefined' && !UI_ICONS[name] ? 'scroll' : name), s);
+  const portrait = (o, s) => (isParty(o) ? icon('lantern', s - 6) : isLoad(o) ? icon('bag', s - 6) : pxImg(heroPortrait(char(o)), s, 'tx-port'));
 
-  // Opens the editor on an owner's tab (a hero's key or 'party'). back is called to leave it.
-  function open(back, owner) {
-    ui.back = back || null;
-    ui.pick = null;
-    if (owner && Tactics.ownerOk(owner)) ui.owner = owner;
-    if (!ui.owner || !Tactics.ownerOk(ui.owner)) ui.owner = owners()[0];
-    render(true);
+  // ── words and numbers for a tactic's parts
+  const actName = id => ACT_NAME[id] || (SKILLS[id] || PARTY_ACTIONS[id] || { name: id }).name;
+  const actIcon = (o, id) => (isParty(o) ? PARTY_ACTIONS[id].icon : SKILLS[id] ? SKILLS[id].icon : 'sword') || 'sword';
+  const mana = (o, id) => (!isParty(o) && SKILLS[id] && SKILLS[id].cost ? SKILLS[id].cost : 0);
+  const condGroup = id => { const g = CONDITIONS[id] ? CONDITIONS[id].group : 'battle'; return g === 'between' ? 'battle' : g; };
+  const condIcon = id => GROUP_ICON[CONDITIONS[id] ? CONDITIONS[id].group : 'battle'];
+  // The glossary's line for a condition or an action, or the game's own text where the glossary has none (a skill).
+  const condLine = id => { const e = G('cond_' + id); return e ? e.line : (CONDITIONS[id] && CONDITIONS[id].tip) || ''; };
+  const descText = (sk, o) => { const c = char(o); return typeof skillText === 'function' ? skillText(sk, (c && c.skills[sk.id]) || 1) : sk.d || ''; };
+  function actLine(o, id) {
+    if (isParty(o)) { const A = PARTY_ACTIONS[id], e = G(A.kind === 'item' ? A.item : A.kind === 'focus' ? 'focus_fire' : 'return_to_hearth'); return e ? e.line : A.tip; }
+    if (Tactics.SHARED.includes(id) && G(id)) return G(id).line;
+    const sk = SKILLS[id];
+    return sk ? [SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') : '';
   }
-  function close() {
-    closePicker();
-    if (ui.back) ui.back();
-    else { const s = $('#screen'); s.hidden = true; s.replaceChildren(); }
-  }
-  // Draws the whole screen again, keeping the scroll position unless asked to start at the top.
-  function render(top) {
-    const s = $('#screen'), y = s.scrollTop;
-    s.replaceChildren(screen());
-    s.hidden = false;
-    s.scrollTop = top ? 0 : y;
-    renderPicker();
-  }
+  // A party action the road hasn't opened yet: the stage or building that opens it, for its chip.
+  const actLock = id => { const A = PARTY_ACTIONS[id]; return !A ? null : A.kind === 'focus' && !Tactics.gate('tactician') ? ['TACTICIAN', 'Focus fire comes with Tactician I, at 1-11'] : A.kind === 'item' && !Tactics.gate('items') ? ['1-3', 'Party items open at 1-3'] : A.kind === 'home' && !Tactics.gate('keepgoing') ? ['1-6', 'Return to the Hearth opens with Keep going, at 1-6'] : null; };
+  // Why a tactic can't run, or null. The red dot is for a hero with one switched on.
+  const warnOf = (o, r) => { const x = Tactics.explain(o, r); return x.warn ? x.text : null; };
+  const hasWarn = o => !isLoad(o) && !isParty(o) && Tactics.owner(o).rules.some(r => r.on && warnOf(o, r));
 
-  // ── pieces
-  const actionInfo = (o, id) => {
-    if (o === 'party') {
-      const A = PARTY_ACTIONS[id], n = A.kind === 'item' ? Tactics.loadout().items.filter(x => x === A.item).length : 0;
-      return { name: A.name, icon: A.icon, note: A.kind === 'item' ? (n ? `${n} packed` : 'Not packed') : 'Targeting', tip: A.tip };
+  // The conditions the picker offers, one per condition (its numbers and statuses step at the picker's top), grouped.
+  function condMenu(o) {
+    const out = GROUPS.map(([g, name]) => ({ g, name, items: [] })), seen = {};
+    for (const grp of Tactics.conditionMenu(o, null)) for (const it of grp.items) {
+      const id = it.rule.if, G2 = out.find(x => x.g === condGroup(id));
+      if (!seen[id]) { seen[id] = { id, known: false, from: it.from }; G2.items.push(seen[id]); }
+      if (it.known) seen[id].known = true;
     }
-    const sk = SKILLS[id], basic = id === CLASSES[clsOf(o)].basic || Tactics.SHARED.includes(id), on = Tactics.equipped(o, id), learned = basic || !!Tactics.charOf(o).skills[id];
-    const note = id === 'move' ? 'Uses the turn' : id === 'gather' ? 'Twice the mana' : basic ? 'Basic · no mana' : !learned ? 'Not learned' : on ? `${sk.cost || 0} mana` : 'Not equipped';
-    return { name: sk.name, icon: sk.icon, note, off: !on, tip: [id === 'move' || id === 'gather' ? null : SHAPES[sk.shape], sk.tip || descText(sk, o)].filter(Boolean).join('. ') };
-  };
-  const portrait = o => (o === 'party' ? h('span', { class: 'tx-pp' }, ico('lantern')) : h('img', { src: heroPortrait(Tactics.charOf(o)), alt: '' }));
-  // A skill's text at the character's level, for tips.
-  const descText = (sk, o) => { const c = Tactics.charOf(o); return typeof skillText === 'function' ? skillText(sk, (c && c.skills[sk.id]) || 1) : sk.d || ''; };
+    return out.filter(x => x.items.length);
+  }
+  const knownVariants = id => Tactics.variants(id).filter(v => Tactics.isKnown(v));
+  const sameVar = (a, b) => (a.n != null ? a.n === b.n : a.s != null ? a.s === b.s : true);
+  // The version of a condition to pick: the tactic's own if it has this one, else its starting number, else the middle.
+  function variantFor(id, cur) {
+    const vs = knownVariants(id), C = CONDITIONS[id];
+    if (!vs.length) return Tactics.variants(id)[0];
+    if (cur && cur.if === id) { const v = vs.find(v => sameVar(v, cur)); if (v) return v; }
+    const st = Array.isArray(C.start) ? vs.find(v => C.start.includes(v.n != null ? v.n : v.s)) : null;
+    return st || vs[Math.floor((vs.length - 1) / 2)];
+  }
+  // A condition's label split around the part that steps: [before, value, after]. Two versions' labels differ only there.
+  function splitLabel(r) {
+    const vs = Tactics.variants(r.if), L = ruleCond(r);
+    if (vs.length < 2) return null;
+    const a = ruleCond(vs[0]), b = ruleCond(vs[1]);
+    let p = 0; while (p < a.length && a[p] === b[p]) p++;
+    let q = 0; while (q < a.length - p && q < b.length - p && a[a.length - 1 - q] === b[b.length - 1 - q]) q++;
+    let val = L.slice(p, L.length - q), after = L.slice(L.length - q);
+    if (after[0] === '%') { val += '%'; after = after.slice(1); }
+    return [L.slice(0, p), val, after];
+  }
+  // Whether a condition and an action go together (only the party's can clash: between battles → Return to the Hearth).
+  const fits = (o, cond, act) => !isParty(o) || Tactics.conditionMenu(o, act).some(g => g.items.some(it => it.rule.if === cond.if));
+  const partnerAct = (o, cond) => Tactics.actions(o).find(id => !actLock(id) && fits(o, cond, id));
+  const partnerCond = (o, act) => { for (const g of condMenu(o)) for (const it of g.items) if (it.known && fits(o, { if: it.id }, act)) return variantFor(it.id); return null; };
 
-  function tabs() {
-    return h('div', { class: 'tx-tabs', role: 'tablist', 'aria-label': 'Whose rules' }, owners().map(o => {
-      const on = ui.owner === o, d = Tactics.owner(o);
-      return h('button', { class: 'tx-tab' + (on ? ' on' : '') + (o === 'party' ? ' party' : ''), role: 'tab', 'aria-selected': on ? 'true' : 'false', title: nameOf(o), onclick: () => { click(); ui.owner = o; render(); } },
-        portrait(o), h('span', { class: 'nm', text: nameOf(o) }), h('span', { class: 'ct', title: 'Rules / open slots', text: `${d.rules.length}/${d.slots}` }));
+  // ── opening and leaving
+  function open(back, owner) { App.go('tactics', { back, owner }); }
+  function enter(p) {
+    ui.back = () => (typeof p.back === 'function' ? p.back() : App.go(p.back || 'party'));
+    ui.owner = p.owner && ownerOk(p.owner) ? p.owner : ui.owner && ownerOk(ui.owner) ? ui.owner : owners()[0];
+    ui.menu = false; ui.arm = -1; ui.scroll = {};
+    pickDefault();
+  }
+  function close() { tipHide(); ui.menu = false; if (ui.back) ui.back(); else App.go('home'); }
+  // The first tactic's "when" is chosen as an owner opens, or a new tactic when it has none.
+  function pickDefault() {
+    ui.draft = null; ui.seek = true;
+    if (isLoad(ui.owner)) { ui.sel = Tactics.gate('items') ? { i: 0, part: 'item' } : null; ui.pane = 'item'; return; }
+    const d = Tactics.owner(ui.owner);
+    if (d.rules.length) { ui.sel = { i: 0, part: 'when' }; ui.pane = 'when'; }
+    else if (d.slots) { ui.sel = { i: -1, part: 'when' }; ui.draft = {}; ui.pane = 'when'; }
+    else { ui.sel = null; ui.pane = 'when'; }
+  }
+  function setOwner(o) { if (!ownerOk(o) || o === ui.owner) return; ui.owner = o; ui.scroll = {}; pickDefault(); draw(); }
+  function select(i, part) { ui.sel = { i, part }; ui.pane = part; if (i >= 0) ui.draft = null; ui.seek = true; draw(); }
+
+  // Draws the whole view again, keeping each list's scroll.
+  function draw(force) {
+    if (!ui.view || (!ui.view.isConnected && !force)) return;
+    for (const el of ui.view.querySelectorAll('[data-scroll]')) ui.scroll[el.dataset.scroll] = el.scrollTop;
+    tipHide();
+    if (!ownerOk(ui.owner)) { ui.owner = owners()[0]; pickDefault(); }
+    const o = ui.owner;
+    if (ui.sel && ui.sel.i >= 0 && !isLoad(o) && !Tactics.owner(o).rules[ui.sel.i]) pickDefault();
+    ui.view.replaceChildren(
+      h('button', { class: 'tx-back', type: 'button', 'aria-label': 'Back', onclick: () => { click(); close(); } }, '‹'),
+      h('div', { class: 'tx-title' }, icon('scroll', 28), h('b', { text: 'Tactics' })),
+      ownerColumn(), mainPanel(o), picker(o), ...setChip());
+    for (const el of ui.view.querySelectorAll('[data-scroll]')) el.scrollTop = ui.scroll[el.dataset.scroll] || 0;
+    if (ui.view.isConnected) seek();
+  }
+  // Brings the picker's current choice into view after a new pick or owner.
+  function seek() {
+    if (ui.seek && ui.view && ui.view.isConnected) {
+      ui.seek = false;
+      // By hand, not scrollIntoView, which would also scroll the frame's clipped boxes.
+      const l = ui.view.querySelector('.tx-opts'), cur = l && l.querySelector('.tx-opt.cur');
+      if (l) l.scrollTop = cur ? cur.offsetTop - (l.clientHeight - cur.offsetHeight) / 2 : 0;
+    }
+  }
+
+  // ── the owners
+  function ownerColumn() {
+    return h('div', { class: 'tx-owners', 'data-tut': 'tactics-owners', role: 'tablist', 'aria-label': 'Whose tactics' }, owners().map(o => {
+      const on = o === ui.owner, L = isLoad(o) ? Tactics.loadout() : null, d = L ? null : Tactics.owner(o);
+      const badge = L ? (Tactics.gate('items') ? `${L.items.filter(Boolean).length}/${L.slots}` : '') : `${d.rules.length}/${d.slots}`;
+      const b = h('button', { class: 'tx-ow' + (on ? ' on' : '') + (isParty(o) || isLoad(o) ? ' grp' : '') + (!L && !isParty(o) && !Tactics.formation().includes(o) ? ' bench' : ''), type: 'button', role: 'tab', 'aria-selected': on ? 'true' : 'false', 'aria-label': nameOf(o), title: nameOf(o), 'data-owner': o, onclick: () => { click(); setOwner(o); } },
+        h('span', { class: 'tx-pf' }, portrait(o, 28)), badge ? h('em', { text: badge }) : null, L && !Tactics.gate('items') ? h('span', { class: 'tx-owlk' }, icon('lock', 10)) : null, hasWarn(o) ? h('i', { class: 'tx-dot' }) : null);
+      press(b, () => [nameOf(o), badge ? (L ? `${badge} slots filled` : `${badge} tactics`) : '']);
+      return b;
     }));
   }
 
-  function ruleRow(o, r, i) {
-    const a = actionInfo(o, r.do), x = Tactics.explain(o, r);
-    return h('li', { class: 'tx-rule' + (r.on ? '' : ' off'), 'data-i': i },
-      h('button', { class: 'tx-grip', 'aria-label': `Rule ${i + 1}. Drag, or use the arrow keys, to move it`, onpointerdown: e => dragStart(e, i), onkeydown: e => gripKey(e, i) },
-        h('b', { text: String(i + 1) }), h('i', { 'aria-hidden': 'true' })),
-      h('div', { class: 'tx-body' },
-        h('button', { class: 'tx-cond', 'aria-label': `Condition: ${ruleCond(r)}. Change it`, onclick: () => { click(); openPicker({ kind: 'cond', i }); } }, ruleCond(r)),
-        h('button', { class: 'tx-act', 'aria-label': `Action: ${a.name}. Change it`, onclick: () => { click(); openPicker({ kind: 'act', i }); } },
-          h('span', { class: 'arrow', text: '→' }), ico(a.icon), h('span', { class: 'nm', text: a.name }), h('span', { class: 'cost', text: a.note })),
-        h('div', { class: 'tx-hint' + (x.warn ? ' warn' : ''), text: r.on ? x.text : 'Switched off: skipped in battle' })),
-      h('div', { class: 'tx-side' },
-        h('button', { class: 'tx-sw' + (r.on ? ' on' : ''), role: 'switch', 'aria-checked': r.on ? 'true' : 'false', 'aria-label': `Rule ${i + 1} on`, onclick: () => { click(); Tactics.toggle(o, i); render(); } }, r.on ? 'On' : 'Off'),
-        h('button', { class: 'tx-del', 'aria-label': `Remove rule ${i + 1}`, onclick: () => { click(); Tactics.remove(o, i); render(); } }, '×')));
-  }
-
-  function card() {
-    const o = ui.owner, d = Tactics.owner(o), party = o === 'party';
-    const rows = d.rules.map((r, i) => ruleRow(o, r, i));
-    for (let i = d.rules.length; i < d.slots; i++) {
-      rows.push(h('li', { class: 'tx-slot' }, h('button', { class: 'tx-add', onclick: () => { click(); openPicker({ kind: 'cond', i: -1 }); } },
-        h('b', { text: String(i + 1) }), h('span', { text: '+ Add a rule' }))));
+  // ── the panel: the plate, then a line per tactic
+  function mainPanel(o) {
+    const K = Kit.panel({ title: nameOf(o), count: '', cls: 'tx-main' });
+    K.close.remove();
+    let rows, count;
+    if (isLoad(o)) [rows, count] = loadoutRows();
+    else {
+      const d = Tactics.owner(o);
+      rows = tacticRows(o, d);
+      count = `${d.rules.length} / ${d.slots}`;
     }
-    for (let i = d.slots; i < d.max; i++) {
-      const next = i === d.slots;
-      rows.push(h('li', { class: 'tx-slot locked' },
-        h('span', { class: 'tx-lock' }, ico('lock')),
-        h('div', { class: 'tx-lk' }, h('b', { text: 'Locked slot' }),
-          h('span', { text: party ? 'The Tactician adds more party rule slots' : next ? 'A Masters’ Hall lesson teaches it' : 'Learn the one above first' })),
-        next && App.actions.building ? h('button', { class: 'small tx-unlock', onclick: () => { click(); App.actions.building(party ? 'tactician' : 'mastershall'); } }, party ? 'Tactician' : 'Hall') : null));
-    }
-    const C = party ? null : CLASSES[clsOf(o)];
-    const foot = party
-      ? h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'When' }), h('span', { text: 'Item rules: between every two turns, taking no one’s turn. Focus fire: on each hero’s turn. Return to base: after each win on the road.' }))
-      : h('div', { class: 'tx-default' }, h('span', { class: 'k', text: 'Otherwise' }), ico(SKILLS[C.basic].icon), h('b', { text: SKILLS[C.basic].name }), h('span', { text: 'basic attack' }));
-    return h('section', { class: 'tx-card', 'aria-label': `${nameOf(o)} rules` },
-      h('div', { class: 'tx-who' },
-        portrait(o),
-        h('div', {}, h('div', { class: 'nm', text: party ? 'Party rules' : nameOf(o) }), h('div', { class: 'k', text: party ? 'Team-wide: items, focus fire and coming home' : `${C.role} · Lv ${Tactics.charOf(o).level}` })),
-        h('div', { class: 'tx-count' }, h('b', { text: `${d.rules.length}/${d.slots}` }), h('span', { text: `${d.slots} of ${d.max} slots open` }))),
-      h('ol', { class: 'tx-rules' }, rows),
-      foot,
-      party ? loadoutCard() : null);
+    const c = char(o);
+    K.plate.replaceChildren(h('span', { class: 'tx-pport' }, portrait(o, 28)),
+      h('div', { class: 'tx-pnm' }, h('h3', { text: nameOf(o) }), c ? h('span', { text: `${CLASSES[c.cls].name} · Lv ${c.level}` }) : null),
+      count ? h('span', { class: 'kp-ct', text: count }) : null);
+    K.body.append(h('ol', { class: 'tx-list', 'data-scroll': 'list:' + o, 'aria-label': `${nameOf(o)} tactics` }, rows));
+    return K.root;
   }
-
-  // The party's loadout: what it brings into each battle, one item per slot, each used once.
-  function loadoutCard() {
-    if (!Tactics.gate('items')) return h('div', { class: 'tx-load' }, h('h4', {}, 'Bring into battle'), h('p', { class: 'tx-note' }, ico('lock'), ' Party items open when you first clear 1-3, Gnawed Headstones.'));
-    const L = Tactics.loadout(), cells = [];
-    L.items.forEach((id, i) => {
-      const it = id && ITEMS[id];
-      cells.push(h('button', { class: 'tx-item' + (it ? '' : ' empty'), 'aria-label': it ? `Slot ${i + 1}: ${it.name}. Change it` : `Slot ${i + 1}: empty. Choose an item`, onclick: () => { click(); openPicker({ kind: 'item', i }); } },
-        it ? ico(it.icon) : h('span', { class: 'plus', text: '+' }), h('b', { text: it ? it.name : 'Empty' })));
+  const chip = (cls, kids, o) => h('button', Object.assign({ class: 'tx-chip ' + cls, type: 'button' }, o || {}), kids);
+  function tacticRows(o, d) {
+    const party = isParty(o), rows = [];
+    d.rules.forEach((r, i) => {
+      const first = i === 0, selW = ui.sel && ui.sel.i === i && ui.sel.part === 'when', selD = ui.sel && ui.sel.i === i && ui.sel.part === 'do';
+      const warn = warnOf(o, r), m = mana(o, r.do), cond = ruleCond(r);
+      const when = chip('tx-when' + (selW ? ' sel' : ''), [icon(condIcon(r.if), 16), h('span', { text: cond })],
+        { 'aria-label': `When: ${cond}`, 'data-tut': first ? 'tactics-when' : null, onclick: () => { click(); select(i, 'when'); } });
+      press(when, () => [cond, condLine(r.if)]);
+      const doo = chip('tx-do' + (selD ? ' sel' : '') + (warn ? ' warn' : ''), [icon(actIcon(o, r.do), 16), h('span', { text: actName(r.do) }), warn ? h('b', { class: 'tx-bad', text: '!' }) : m ? h('em', { text: String(m) }) : null],
+        { 'aria-label': `Do: ${actName(r.do)}${warn ? '. ' + warn : ''}`, 'data-tut': first ? 'tactics-do' : null, onclick: () => { click(); select(i, 'do'); } });
+      press(doo, () => [actName(r.do), warn || actLine(o, r.do)]);
+      const lamp = h('button', { class: 'tx-lamp' + (r.on ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': r.on ? 'true' : 'false', 'aria-label': `Tactic ${i + 1} on`, 'data-tut': first ? 'tactics-lamp' : null,
+        onclick: () => { click(); Tactics.toggle(o, i); draw(); } }, icon('lantern', 18));
+      const grip = h('button', { class: 'tx-grip', type: 'button', 'aria-label': `Tactic ${i + 1}: drag, or use the arrow keys, to move it`, onpointerdown: e => dragStart(e, i), onkeydown: e => gripKey(e, i) }, h('i'), h('i'), h('i'));
+      rows.push(h('li', { class: 'tx-rule' + (r.on ? '' : ' off') + (ui.sel && ui.sel.i === i ? ' sel' : ''), 'data-i': i, 'data-tut': first ? 'tactics-row-1' : null },
+        grip, h('span', { class: 'tx-num', text: String(i + 1) }), when, h('span', { class: 'tx-to', text: '→' }), doo, lamp));
     });
-    for (let i = L.slots; i < L.max; i++) {
-      const next = i === L.slots;
-      cells.push(h('div', { class: 'tx-item locked', title: 'The Tactician adds it' }, ico('lock'), h('b', { text: next ? 'Tactician' : 'Locked' })));
+    for (let i = d.rules.length; i < d.slots; i++) {
+      const tut = !d.rules.length && i === 0 ? 'tactics-row-1' : null;
+      if (i === d.rules.length && ui.sel && ui.sel.i === -1) { rows.push(draftRow(o, i, tut)); continue; }
+      rows.push(h('li', { class: 'tx-rule tx-open', 'data-tut': tut }, h('button', { class: 'tx-add', type: 'button', 'aria-label': `Slot ${i + 1}: add a tactic`, onclick: () => { click(); ui.draft = {}; select(-1, 'when'); } },
+        h('span', { class: 'tx-num', text: String(i + 1) }), h('span', { text: 'Open slot' }), h('em', { text: '+ add' }))));
     }
-    return h('div', { class: 'tx-load' },
-      h('h4', {}, 'Bring into battle', h('span', { text: `${L.slots} of ${L.max} slots` })),
-      h('div', { class: 'tx-items' }, cells),
-      h('p', { class: 'tx-note', text: 'Each item is used once per battle. Tap it in battle to use it yourself, at any moment, or let an item rule above use it. Either way it takes no one’s turn. Each use draws one from the Bag. The Tactician adds a 3rd and a 4th slot.' }));
+    if (d.max > d.slots) {
+      const where = party ? 'tactician' : 'mastershall';
+      rows.push(h('li', { class: 'tx-rule tx-lock' }, h('button', { class: 'tx-add', type: 'button', 'aria-label': `${d.max - d.slots} more slots: ${party ? 'the Tactician' : 'the Masters’ Hall'}`,
+        onclick: () => { click(); if (App.actions.building) App.actions.building(where); } },
+        icon('lock', 16), h('span', { text: `${d.max - d.slots} more` }), h('em', { text: party ? 'Tactician' : 'Masters’ Hall' }))));
+    }
+    if (!party) {
+      const b = CLASSES[char(o).cls].basic;
+      const other = h('div', { class: 'tx-chip tx-do' }, icon(actIcon(o, b), 16), h('span', { text: actName(b) }));
+      press(other, () => [actName(b), actLine(o, b)]);
+      rows.push(h('li', { class: 'tx-rule tx-dflt' }, h('span', { class: 'tx-k', text: 'Else' }), h('div', { class: 'tx-chip tx-when' }, h('span', { text: 'Otherwise' })), h('span', { class: 'tx-to', text: '→' }), other, h('span')));
+    }
+    return rows;
+  }
+  // A tactic being made: its "when" and "do" fill in as they're picked; ✕ drops it.
+  function draftRow(o, i, tut) {
+    const D = ui.draft || {}, selW = ui.sel.part === 'when', selD = ui.sel.part === 'do';
+    const when = chip('tx-when' + (selW ? ' sel' : '') + (D.cond ? '' : ' empty'), D.cond ? [icon(condIcon(D.cond.if), 16), h('span', { text: ruleCond(D.cond) })] : [h('span', { text: 'When' })], { 'aria-label': 'When', 'data-tut': tut ? 'tactics-when' : null, onclick: () => { click(); ui.sel.part = 'when'; ui.pane = 'when'; draw(); } });
+    const doo = chip('tx-do' + (selD ? ' sel' : '') + (D.do ? '' : ' empty'), D.do ? [icon(actIcon(o, D.do), 16), h('span', { text: actName(D.do) })] : [h('span', { text: 'Do' })], { 'aria-label': 'Do', 'data-tut': tut ? 'tactics-do' : null, onclick: () => { click(); ui.sel.part = 'do'; ui.pane = 'do'; draw(); } });
+    const x = h('button', { class: 'tx-lamp tx-drop-x', type: 'button', 'aria-label': 'Drop this tactic', onclick: () => { click(); pickDefaultKeep(); } }, '✕');
+    return h('li', { class: 'tx-rule tx-draft sel', 'data-tut': tut }, h('span'), h('span', { class: 'tx-num', text: String(i + 1) }), when, h('span', { class: 'tx-to', text: '→' }), doo, x);
+  }
+  function pickDefaultKeep() { const p = ui.pane; pickDefault(); if (ui.sel && ui.sel.i === -1) { ui.sel = null; ui.draft = null; } ui.pane = p === 'do' ? 'do' : 'when'; draw(); }
+
+  // The Loadout: one line per item slot, with the party tactic that uses it.
+  function loadoutRows() {
+    if (!Tactics.gate('items')) return [[h('li', { class: 'tx-rule tx-lock' }, h('div', { class: 'tx-add' }, icon('lock', 16), h('span', { text: 'Party items' }), h('em', { text: '1-3' })))], ''];
+    const L = Tactics.loadout(), P = Tactics.owner('party'), rows = [], bag = (Save.state && Save.state.inventory && Save.state.inventory.potions) || {};
+    L.items.forEach((id, i) => {
+      const it = id && ITEMS[id], sel = ui.sel && ui.sel.i === i;
+      const item = chip('tx-do tx-item' + (sel ? ' sel' : '') + (it ? '' : ' empty'), it ? [icon(it.icon, 16), h('span', { text: it.name }), h('em', { text: '×' + (bag[id] || 0) })] : [h('span', { text: 'Empty' })],
+        { 'aria-label': it ? `Slot ${i + 1}: ${it.name}` : `Slot ${i + 1}: empty`, 'data-tut': i === 0 ? 'tactics-do' : null, onclick: () => { click(); select(i, 'item'); } });
+      if (it) press(item, () => [it.name, actLine('party', id)]);
+      const k = it ? P.rules.findIndex(r => r.do === id) : -1, r = k >= 0 ? P.rules[k] : null;
+      const by = r ? chip('tx-when' + (r.on ? '' : ' dim'), [icon(condIcon(r.if), 16), h('span', { text: ruleCond(r) })], { 'aria-label': `Party tactic ${k + 1}: ${ruleCond(r)}`, onclick: () => { click(); ui.owner = 'party'; ui.scroll = {}; ui.draft = null; select(k, 'when'); } })
+        : h('div', { class: 'tx-chip tx-when empty' }, h('span', { text: it ? 'By hand' : '' }));
+      rows.push(h('li', { class: 'tx-rule tx-slotln' + (sel ? ' sel' : ''), 'data-i': i, 'data-tut': i === 0 ? 'tactics-row-1' : null }, h('span'), h('span', { class: 'tx-num', text: String(i + 1) }), item, h('span', { class: 'tx-to', text: '←' }), by, h('span')));
+    });
+    if (L.max > L.slots) rows.push(h('li', { class: 'tx-rule tx-lock' }, h('button', { class: 'tx-add', type: 'button', onclick: () => { click(); if (App.actions.building) App.actions.building('tactician'); } }, icon('lock', 16), h('span', { text: `${L.max - L.slots} more` }), h('em', { text: 'Tactician' }))));
+    return [rows, `${L.items.filter(Boolean).length} / ${L.slots}`];
   }
 
-  function sets() {
-    if (!Tactics.gate('tactician')) return h('section', { class: 'tx-sets', 'aria-label': 'Saved rule sets' }, h('h3', { text: 'Rule sets' }), h('p', {}, ico('lock'), ' Saved rule sets come with Tactician I, when you first clear 1-11, the Mourning Path.'));
-    const list = Tactics.sets();
-    const input = h('input', { class: 'tx-name', type: 'text', maxlength: '24', placeholder: 'Name this set', 'aria-label': 'Name for the rule set', value: ui.draft, oninput: e => { ui.draft = e.target.value; } });
-    const saveIt = () => {
+  // ── the picker
+  function picker(o) {
+    const K = Kit.panel({ title: 'Pick', cls: 'tx-pick' });
+    K.close.remove();
+    K.root.dataset.tut = 'tactics-picker';
+    const tab = (id, label) => h('button', { class: 'tx-ptab' + (ui.pane === id ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': ui.pane === id ? 'true' : 'false', onclick: () => { click(); ui.pane = id; if (ui.sel) ui.sel.part = id; ui.seek = true; draw(); } }, label);
+    K.plate.replaceChildren(...(isLoad(o) ? [h('span', { class: 'tx-ptab on solo', text: 'Items' })] : [tab('when', 'When'), tab('do', 'Do')]));
+    K.plate.classList.add('tx-ptabs');
+    const opts = h('div', { class: 'tx-opts', 'data-scroll': 'opts:' + o + ':' + ui.pane });
+    let top = null, foot = null;
+    if (isLoad(o)) opts.append(...itemOpts());
+    else if (ui.pane === 'when') { top = stepBar(o); opts.append(...condOpts(o)); }
+    else opts.append(...actOpts(o));
+    if (!isLoad(o)) {
+      const cur = ui.sel && ui.sel.i >= 0 ? Tactics.owner(o).rules[ui.sel.i] : null;
+      const unknown = ui.pane === 'when' && condMenu(o).some(g => g.items.some(it => !it.known));
+      foot = cur || unknown ? h('div', { class: 'tx-pfoot' },
+        unknown ? h('button', { class: 'tx-learn proto-only', type: 'button', onclick: () => { click(); Tactics.learnAll(); draw(); } }, icon('book', 12), 'Learn all') : null,
+        cur ? h('button', { class: 'tx-rm', type: 'button', 'aria-label': `Remove tactic ${ui.sel.i + 1}`, onclick: () => { click(); Tactics.remove(o, ui.sel.i); ui.sel = null; pickDefault(); draw(); } }, `✕ Tactic ${ui.sel.i + 1}`) : null) : null;
+    }
+    K.body.append(...[top, opts, foot].filter(Boolean));
+    return K.root;
+  }
+  // The rule the picker is editing: a tactic's, or the new one's.
+  const editing = o => (ui.sel && ui.sel.i >= 0 ? Tactics.owner(o).rules[ui.sel.i] : ui.sel && ui.sel.i === -1 ? Object.assign({}, ui.draft && ui.draft.cond, ui.draft && ui.draft.do ? { do: ui.draft.do } : {}) : null);
+  function stepBar(o) {
+    const cur = editing(o);
+    if (!cur || !cur.if || !CONDITIONS[cur.if]) return null;
+    const parts = splitLabel(cur);
+    if (!parts) return null;
+    const vs = knownVariants(cur.if), k = vs.findIndex(v => sameVar(v, cur));
+    const go = d => { const v = vs[k + d]; if (!v) return; click(); setCond(o, Object.assign({}, v)); };
+    return h('div', { class: 'tx-stepbar' },
+      parts[0].trim() ? h('span', { text: parts[0].trim() }) : null,
+      h('span', { class: 'tx-stepin' }, h('button', { type: 'button', 'aria-label': 'Less', disabled: k <= 0 ? '' : null, onclick: () => go(-1) }, '‹'), h('b', { text: parts[1] }), h('button', { type: 'button', 'aria-label': 'More', disabled: k < 0 || k >= vs.length - 1 ? '' : null, onclick: () => go(1) }, '›')),
+      parts[2].trim() ? h('span', { text: parts[2].trim() }) : null);
+  }
+  function condOpts(o) {
+    const cur = editing(o), out = [];
+    for (const g of condMenu(o)) {
+      out.push(h('div', { class: 'tx-grp', text: g.name }));
+      for (const it of g.items) {
+        const v = variantFor(it.id, cur), label = ruleCond(cur && cur.if === it.id ? cur : v), on = cur && cur.if === it.id;
+        const b = h('button', { class: 'tx-opt' + (on ? ' cur' : '') + (it.known ? '' : ' locked'), type: 'button', 'data-cond': it.id, 'aria-label': it.known ? label : `${label}: to find`,
+          onclick: () => { click(); if (!it.known) { say(`To find: ${it.from}`); return; } if (!on) setCond(o, v); } },
+          icon(it.known ? GROUP_ICON[CONDITIONS[it.id].group] : 'lock', 15), h('span', { text: label }), it.known ? null : h('em', { text: 'to find' }));
+        press(b, () => [label, condLine(it.id)]);
+        out.push(b);
+      }
+    }
+    return out;
+  }
+  function actOpts(o) {
+    const cur = editing(o), out = [], party = isParty(o), c = char(o);
+    const groups = party ? [['Items', Tactics.actions(o).filter(id => PARTY_ACTIONS[id].kind === 'item')], ['Party', Tactics.actions(o).filter(id => PARTY_ACTIONS[id].kind !== 'item')]]
+      : [['Skills', Tactics.actions(o).filter(id => !Tactics.SHARED.includes(id))], ['Every hero', Tactics.actions(o).filter(id => Tactics.SHARED.includes(id))]];
+    const packed = id => Tactics.loadout().items.filter(x => x === PARTY_ACTIONS[id].item).length;
+    for (const [name, ids] of groups) {
+      if (!ids.length) continue;
+      out.push(h('div', { class: 'tx-grp', text: name }));
+      for (const id of ids) {
+        const lock = party ? actLock(id) : null, not = !party && !Tactics.equipped(o, id), m = mana(o, id), on = cur && cur.do === id;
+        const item = party && PARTY_ACTIONS[id].kind === 'item', n = item ? packed(id) : 0;
+        const em = lock ? lock[0] : not ? 'not equipped' : item ? (n ? '×' + n : 'not packed') : m ? m + ' MP' : '';
+        const b = h('button', { class: 'tx-opt' + (on ? ' cur' : '') + (lock ? ' locked' : '') + (not || (item && !n) ? ' not' : ''), type: 'button', 'data-act': id, 'aria-label': actName(id) + (em ? ': ' + em : ''),
+          onclick: () => { click(); if (lock) { say(lock[1]); return; } if (!on) setAct(o, id); } },
+          icon(lock ? 'lock' : actIcon(o, id), 15), h('span', { text: actName(id) }), em ? h('em', { text: em }) : null);
+        press(b, () => [actName(id), actLine(o, id)]);
+        out.push(b);
+      }
+    }
+    if (c && !out.length) out.push(h('div', { class: 'tx-grp', text: 'Skills' }));
+    return out;
+  }
+  function itemOpts() {
+    if (!Tactics.gate('items') || !ui.sel) return [h('div', { class: 'tx-grp', text: 'Items' })];
+    const i = ui.sel.i, cur = Tactics.loadout().items[i], bag = (Save.state && Save.state.inventory && Save.state.inventory.potions) || {};
+    const put = id => { click(); Tactics.setItem(i, id); draw(); };
+    const out = [h('div', { class: 'tx-grp', text: `Slot ${i + 1}` })];
+    for (const id of Object.keys(ITEMS)) {
+      const it = ITEMS[id], b = h('button', { class: 'tx-opt' + (cur === id ? ' cur' : '') + (bag[id] ? '' : ' not'), type: 'button', 'data-item': id, onclick: () => { if (cur !== id) put(id); } },
+        icon(it.icon, 15), h('span', { text: it.name }), h('em', { text: '×' + (bag[id] || 0) }));
+      press(b, () => [it.name, actLine('party', id)]);
+      out.push(b);
+    }
+    if (cur) out.push(h('button', { class: 'tx-opt empty', type: 'button', 'data-item': '', onclick: () => put(null) }, h('span', { text: 'Empty' })));
+    return out;
+  }
+
+  // ── picking: a condition or an action for the tactic being edited, or the new one
+  function setCond(o, v) {
+    const p = ui.sel;
+    if (!p) { if (Tactics.owner(o).rules.length >= Tactics.owner(o).slots) { say('No open slot'); return; } ui.sel = { i: -1, part: 'when' }; ui.draft = {}; return setCond(o, v); }
+    if (p.i === -1) {
+      ui.draft = Object.assign(ui.draft || {}, { cond: v });
+      if (ui.draft.do && !fits(o, v, ui.draft.do)) ui.draft.do = null;
+      return ui.draft.do ? commitDraft(o) : (ui.sel.part = ui.pane = 'do', ui.seek = true, draw());
+    }
+    const cur = Tactics.owner(o).rules[p.i];
+    if (fits(o, v, cur.do)) Tactics.replace(o, p.i, v);
+    else {
+      const a = partnerAct(o, v);
+      if (!a || !Tactics.replace(o, p.i, Object.assign({}, v, { do: a }))) { say(`Not with ${actName(cur.do)}`); return; }
+      ui.sel.part = ui.pane = 'do'; ui.seek = true;
+    }
+    draw();
+  }
+  function setAct(o, id) {
+    const p = ui.sel;
+    if (!p) { if (Tactics.owner(o).rules.length >= Tactics.owner(o).slots) { say('No open slot'); return; } ui.sel = { i: -1, part: 'do' }; ui.draft = {}; return setAct(o, id); }
+    if (p.i === -1) {
+      ui.draft = Object.assign(ui.draft || {}, { do: id });
+      if (ui.draft.cond && !fits(o, ui.draft.cond, id)) ui.draft.cond = null;
+      return ui.draft.cond ? commitDraft(o) : (ui.sel.part = ui.pane = 'when', ui.seek = true, draw());
+    }
+    const cur = Tactics.owner(o).rules[p.i];
+    if (fits(o, cur, id)) Tactics.replace(o, p.i, { do: id });
+    else {
+      const c = partnerCond(o, id);
+      if (!c || !Tactics.replace(o, p.i, Object.assign({}, c, { do: id }))) { say(`Not with ${ruleCond(cur)}`); return; }
+      ui.sel.part = ui.pane = 'when'; ui.seek = true;
+    }
+    draw();
+  }
+  function commitDraft(o) {
+    const D = ui.draft;
+    if (!Tactics.add(o, Object.assign({}, D.cond, { do: D.do, on: true }))) { say('That tactic can’t be made'); return draw(); }
+    ui.draft = null; ui.sel = { i: Tactics.owner(o).rules.length - 1, part: ui.pane };
+    draw();
+  }
+
+  // ── the saved sets: one chip at the top right, and its menu
+  function setChip() {
+    if (!Tactics.gate('tactician')) return [h('button', { class: 'tx-setchip locked', type: 'button', 'aria-label': 'Saved sets: Tactician', onclick: () => { click(); say('Saved sets come with Tactician I, at 1-11'); } }, icon('lock', 12), h('span', { text: 'Sets' }))];
+    const list = Tactics.sets(), now = currentSet();
+    const chipB = h('button', { class: 'tx-setchip' + (ui.menu ? ' open' : ''), type: 'button', 'aria-expanded': ui.menu ? 'true' : 'false', 'aria-label': 'Saved sets', onclick: () => { click(); ui.menu = !ui.menu; ui.arm = -1; draw(); } },
+      h('span', { text: 'Set' }), h('b', { text: now >= 0 ? list[now].name : '—' }), h('i', { text: '▾' }));
+    if (!ui.menu) return [chipB];
+    const input = h('input', { class: 'tx-name', type: 'text', maxlength: '24', placeholder: 'Name', 'aria-label': 'Set name', value: ui.name, oninput: e => { ui.name = e.target.value; } });
+    const save = () => {
       const name = input.value.trim();
       if (!name) { input.focus(); return; }
       const over = list.some(x => x.name.toLowerCase() === name.toLowerCase());
-      if (Tactics.saveSet(name)) { ui.draft = ''; say(over ? `Updated “${name}”` : `Saved “${name}”`); render(); }
-      else say('Rule sets are full. Delete one first.');
+      if (Tactics.saveSet(name)) { ui.name = ''; ui.menu = false; say(over ? `Updated “${name}”` : `Saved “${name}”`); draw(); }
+      else say('Sets are full');
     };
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); click(); saveIt(); } });
-    return h('section', { class: 'tx-sets', 'aria-label': 'Saved rule sets' },
-      h('h3', { text: 'Rule sets' }),
-      h('p', { text: 'Save every hero’s rules, the party rules and the loadout under one name, then switch between sets for different stages.' }),
-      list.length ? h('ul', {}, list.map((x, i) => h('li', {},
-        h('span', { class: 'nm', text: x.name }), h('span', { class: 'ct', text: `${x.count} rules` }),
-        h('button', { class: 'small', onclick: () => { click(); Tactics.loadSet(i); say(`Loaded “${x.name}”`); render(); } }, 'Load'),
-        h('button', { class: 'small tx-x', 'aria-label': `Delete ${x.name}`, onclick: () => { click(); Tactics.deleteSet(i); render(); } }, '×')))) : null,
-      h('div', { class: 'tx-save' }, input, h('button', { class: 'small on', onclick: () => { click(); saveIt(); } }, 'Save')));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); click(); save(); } else if (e.key === 'Escape') { e.stopPropagation(); ui.menu = false; draw(); } });
+    const menu = h('div', { class: 'tx-menu', role: 'menu' },
+      list.map((x, i) => h('div', { class: 'tx-set' + (i === now ? ' cur' : '') },
+        h('button', { class: 'tx-setnm', type: 'button', role: 'menuitem', onclick: () => { click(); Tactics.loadSet(i); say(`Loaded “${x.name}”`); ui.menu = false; pickDefault(); draw(); } }, h('span', { text: x.name }), h('em', { text: String(x.count) })),
+        h('button', { class: 'tx-setx' + (ui.arm === i ? ' arm' : ''), type: 'button', 'aria-label': ui.arm === i ? `Delete ${x.name}: tap again` : `Delete ${x.name}`, onclick: () => { click(); if (ui.arm === i) { Tactics.deleteSet(i); ui.arm = -1; } else ui.arm = i; draw(); } }, ui.arm === i ? 'Delete' : '✕'))),
+      h('div', { class: 'tx-save' }, input, Kit.button('Save', save)));
+    const scrim = h('div', { class: 'tx-scrim', onclick: () => { ui.menu = false; ui.arm = -1; draw(); } });
+    return [scrim, chipB, menu];
+  }
+  // The saved set that matches every list as it stands now, or -1.
+  function currentSet() {
+    const D = Tactics.dump(), same = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
+    return D.sets.findIndex(x => Tactics.roster().every(c => same(x.heroes[c.id], D.heroes[c.id] && D.heroes[c.id].rules)) && same(x.party, D.party.rules) && same(x.loadout.slice(0, D.loadout.slots).concat(Array(Math.max(0, D.loadout.slots - x.loadout.length)).fill(null)), D.loadout.items));
   }
 
-  function screen() {
-    return h('div', { class: 'page tx' },
-      h('button', { class: 'btn back', onclick: () => { click(); close(); } }, '‹ Back'),
-      h('div', { class: 'kicker', text: 'Tactics' }),
-      h('h1', { text: 'Rules' }),
-      h('p', { class: 'tx-lede', text: 'On each turn, a hero reads their rules from the top and uses the first one that is true and possible. If none is, they use their basic attack.' }),
-      tabs(), card(), sets());
+  // ── a long press: the glossary's line (or why a tactic can't run) in a small card by the finger
+  function press(el, what) {
+    let t = 0, x0 = 0, y0 = 0;
+    const stop = () => { clearTimeout(t); t = 0; };
+    el.addEventListener('pointerdown', e => {
+      if (e.button > 0) return;
+      const p = Frame.point(e); x0 = p.x; y0 = p.y;
+      stop(); delete el.dataset.pressed;
+      t = setTimeout(() => { t = 0; const [name, line] = what(); if (line) { tipShow(el, name, line); el.dataset.pressed = '1'; } }, PRESS);
+    });
+    el.addEventListener('pointermove', e => { if (!t) return; const p = Frame.point(e); if (Math.abs(p.x - x0) > 8 || Math.abs(p.y - y0) > 8) stop(); });
+    el.addEventListener('pointerup', stop); el.addEventListener('pointercancel', stop); el.addEventListener('pointerleave', stop);
+    // The tap that ends a long press doesn't also pick.
+    el.addEventListener('click', e => { if (el.dataset.pressed) { delete el.dataset.pressed; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+    const [name, line] = what();
+    if (line) el.title = `${name}: ${line}`;
   }
+  function tipShow(el, name, line) {
+    tipHide();
+    if (!ui.view) return;
+    const b = Frame.box(el, ui.view), W = ui.view.clientWidth;
+    const tip = h('div', { class: 'tx-tip', role: 'tooltip' }, h('b', { text: name }), h('span', { text: words(line) }));
+    ui.view.append(tip);
+    const w = tip.offsetWidth, hh = tip.offsetHeight, below = b.top - hh - 8 < 4;
+    tip.style.left = clamp(b.left + b.width / 2 - w / 2, 6, W - w - 6) + 'px';
+    tip.style.top = (below ? b.bottom + 8 : b.top - hh - 8) + 'px';
+    ui.tip = tip;
+    const off = () => { document.removeEventListener('pointerdown', off, true); tipHide(); };
+    setTimeout(() => document.addEventListener('pointerdown', off, true), 0);
+  }
+  // The glossary and the model still say rule; this screen says tactic (until the rename pass changes them there).
+  const words = t => t.replace(/\b([Rr])ule(s?)\b/g, (m, r, s2) => (r === 'R' ? 'Tactic' : 'tactic') + s2);
+  function tipHide() { if (ui.tip) { ui.tip.remove(); ui.tip = null; } }
 
-  // ── reordering by drag: the row follows the finger and the others make room; the model changes on release.
-  let drag = null;
+  // ── reordering by drag: the line lifts, a copy follows the finger and a line shows where it lands
+  const MOVE = 4;
   function dragStart(e, i) {
     if (e.button > 0) return;
-    const row = e.currentTarget.closest('.tx-rule'), list = [...row.parentNode.querySelectorAll('.tx-rule')];
+    const grip = e.currentTarget, row = grip.closest('.tx-rule'), panel = row.closest('.kp'), list = [...row.parentNode.querySelectorAll('.tx-rule[data-i]')];
     if (list.length < 2) return;
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    // Measured in the landscape frame's design pixels (js/frame.js), so the row follows the finger when the frame is
-    // scaled or turned.
-    const tops = list.map(el => Frame.box(el)), step = tops.length > 1 ? tops[1].top - tops[0].top : tops[0].height;
-    drag = { i, to: i, y0: Frame.point(e).y, row, list, step, moved: false };
-    const grip = e.currentTarget;
+    try { grip.setPointerCapture(e.pointerId); } catch (err) { }
+    const y0 = Frame.point(e, panel).y, boxes = list.map(el => Frame.box(el, panel));
+    const d = { i, to: i, moved: false, ghost: null, line: null };
+    const slotAt = y => { let k = 0; boxes.forEach((b, j) => { if (y > b.top + b.height / 2) k = j + 1; }); return k; };
     const move = ev => {
-      const dy = Frame.point(ev).y - drag.y0;
-      if (Math.abs(dy) > 4) drag.moved = true;
-      if (!drag.moved) return;
-      row.classList.add('lift');
-      row.style.transform = `translateY(${dy}px)`;
-      drag.to = clamp(i + Math.round(dy / drag.step), 0, list.length - 1);
-      list.forEach((el, k) => {
-        if (k === i) return;
-        const shift = k > i && k <= drag.to ? -1 : k < i && k >= drag.to ? 1 : 0;
-        el.style.transform = shift ? `translateY(${shift * drag.step}px)` : '';
-      });
+      const y = Frame.point(ev, panel).y;
+      if (!d.moved && Math.abs(y - y0) <= MOVE) return;
+      if (!d.moved) {
+        d.moved = true; row.classList.add('lift');
+        d.ghost = row.cloneNode(true); d.ghost.classList.remove('lift', 'sel'); d.ghost.classList.add('tx-ghost'); d.ghost.removeAttribute('data-tut'); d.ghost.querySelectorAll('[data-tut]').forEach(x => x.removeAttribute('data-tut'));
+        d.ghost.style.width = boxes[i].width + 'px'; d.ghost.style.left = boxes[i].left + 'px';
+        d.line = h('div', { class: 'tx-dropline' }); d.line.style.left = boxes[i].left + 'px'; d.line.style.width = boxes[i].width + 'px';
+        panel.append(d.ghost, d.line);
+      }
+      d.ghost.style.top = (boxes[i].top + (y - y0)) + 'px';
+      const k = slotAt(y);
+      d.to = k > i ? k - 1 : k;
+      d.line.style.top = (k >= boxes.length ? boxes[boxes.length - 1].bottom + 1 : boxes[k].top - 4) + 'px';
     };
     const up = () => {
-      grip.removeEventListener('pointermove', move);
-      grip.removeEventListener('pointerup', up);
-      grip.removeEventListener('pointercancel', up);
-      const d = drag;
-      drag = null;
-      if (d.moved && d.to !== d.i) { click(); Tactics.move(ui.owner, d.i, d.to); }
-      render();
+      grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+      if (d.ghost) d.ghost.remove(); if (d.line) d.line.remove(); row.classList.remove('lift');
+      if (d.moved && d.to !== d.i && Tactics.move(ui.owner, d.i, d.to)) { click(); follow(d.i, d.to); say(`Moved to ${d.to + 1}`); }
+      draw();
     };
-    grip.addEventListener('pointermove', move);
-    grip.addEventListener('pointerup', up);
-    grip.addEventListener('pointercancel', up);
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+  }
+  // The selection stays on the tactic that moved, wherever it went.
+  function follow(from, to) {
+    if (!ui.sel || ui.sel.i < 0) return;
+    const s = ui.sel.i;
+    ui.sel.i = s === from ? to : from < s && to >= s ? s - 1 : from > s && to <= s ? s + 1 : s;
   }
   function gripKey(e, i) {
     const d = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
     if (!d) return;
     e.preventDefault();
     if (Tactics.move(ui.owner, i, i + d)) {
-      click();
-      render();
-      const g = document.querySelectorAll('.tx-rule .tx-grip')[i + d];
+      click(); follow(i, i + d); draw();
+      const g = ui.view.querySelectorAll('.tx-rule .tx-grip')[i + d];
       if (g) g.focus();
     }
   }
 
-  // ── the picker: a sheet to choose a condition, then (for a new rule) an action
-  // pick: { kind: 'cond' | 'act', i: rule index or -1 for a new rule, cond: the condition chosen for a new rule }
-  function openPicker(p) { ui.pick = p; renderPicker(); }
-  function closePicker() { ui.pick = null; renderPicker(); }
-  function renderPicker() {
-    const old = document.getElementById('txPick');
-    if (old) old.remove();
-    if (!ui.pick) return;
-    const sheet = ui.pick.kind === 'cond' ? condSheet() : ui.pick.kind === 'item' ? itemSheet() : actSheet();
-    const el = h('div', { id: 'txPick', class: 'tx-pick', onclick: e => { if (e.target === el) { click(); closePicker(); } } }, sheet);
-    el.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); closePicker(); } });
-    $('#frame').append(el);
-    // Start at the current choice, scrolled into view, so the player sees what the rule has now.
-    const cur = el.querySelector('.tx-opt.cur');
-    if (cur) { cur.scrollIntoView({ block: 'center' }); cur.focus({ preventScroll: true }); }
-    else { const b = el.querySelector('.tx-ph .small'); if (b) b.focus({ preventScroll: true }); }
-  }
-  const sheetHead = (title, sub) => h('div', { class: 'tx-ph' },
-    h('div', {}, h('div', { class: 'kicker', text: ui.pick.kind === 'item' ? `Loadout · slot ${ui.pick.i + 1}` : `${nameOf(ui.owner)} · ${ui.pick.i < 0 ? 'new rule' : 'rule ' + (ui.pick.i + 1)}` }), h('h2', { text: title }), sub ? h('p', { text: sub }) : null),
-    h('button', { class: 'small', 'aria-label': 'Close', onclick: () => { click(); closePicker(); } }, '×'));
+  // Escape goes back, or closes the sets menu.
+  document.addEventListener('keydown', ev => {
+    if (typeof App === 'undefined' || App.current !== 'tactics' || !ui.view || !ui.view.isConnected || ev.key !== 'Escape' || (ev.target.closest && ev.target.closest('input,textarea,select'))) return;
+    ev.preventDefault();
+    if (ui.menu) { ui.menu = false; draw(); } else close();
+  });
 
-  function condSheet() {
-    const o = ui.owner, p = ui.pick, cur = p.i >= 0 ? Tactics.owner(o).rules[p.i] : null;
-    const curKey = cur && Tactics.condKey(cur);
-    // A condition that doesn't suit the rule's action (focus fire needs a foe) isn't offered.
-    const menu = Tactics.conditionMenu(o, cur ? cur.do : null);
-    let locked = 0;
-    const groups = menu.map(g => h('div', { class: 'tx-grp' }, h('h4', { text: g.name }), g.items.map(it => {
-      if (!it.known) locked++;
-      return h('button', { class: 'tx-opt' + (it.key === curKey ? ' cur' : ''), disabled: !it.known, title: it.tip,
-        onclick: () => { click(); chooseCond(it.rule); } },
-        it.known ? null : ico('lock'), h('span', { class: 'nm', text: it.label }),
-        h('span', { class: 'sub', text: it.known ? it.tip : `Locked · learned from ${it.from}` }));
-    })));
-    return h('div', { class: 'box tx-sheet', role: 'dialog', 'aria-label': 'Choose a condition' },
-      sheetHead('When…', p.i < 0 ? 'Step 1 of 2: when should this rule fire?' : null),
-      groups,
-      locked ? h('div', { class: 'tx-proto' }, h('span', { text: `${locked} locked: the road and the Tactician teach these.` }),
-        h('button', { class: 'textbtn proto-only', onclick: () => { click(); Tactics.learnAll(); render(); } }, ico('book'), 'Learn all (prototype)')) : null);
+  function render(p) {
+    enter(p || {});
+    ui.view = h('div', { class: 'tx-view', oncontextmenu: e => e.preventDefault() });
+    draw(true);
+    requestAnimationFrame(seek);
+    return ui.view;
   }
-  function chooseCond(cond) {
-    const o = ui.owner, p = ui.pick;
-    if (p.i >= 0) {
-      if (!Tactics.replace(o, p.i, cond)) say('That condition doesn’t suit this action.');
-      ui.pick = null;
-      render();
-    } else openPicker({ kind: 'act', i: -1, cond });
-  }
+  function dismiss() { tipHide(); ui.menu = false; }
 
-  function actSheet() {
-    const o = ui.owner, p = ui.pick, cur = p.i >= 0 ? Tactics.owner(o).rules[p.i] : null;
-    const cond = p.i >= 0 ? cur : p.cond;
-    const opts = Tactics.actions(o).map(id => {
-      const A = o === 'party' && PARTY_ACTIONS[id];
-      const lock = A && (A.kind === 'focus' && !Tactics.gate('tactician') ? 'Taught by Tactician I, at 1-11' : A.kind === 'item' && !Tactics.gate('items') ? 'Party items open at 1-3' : A.kind === 'home' && !Tactics.gate('keepgoing') ? 'Opens with Keep going, at 1-6' : null);
-      const a = actionInfo(o, id), fitsIt = o !== 'party' || Tactics.conditionMenu(o, id).some(g => g.items.some(it => it.key === Tactics.condKey(cond))), ok = fitsIt && !lock;
-      return h('button', { class: 'tx-opt act' + (cur && cur.do === id ? ' cur' : '') + (a.off ? ' off' : ''), disabled: !ok, onclick: () => { click(); chooseAct(id); } },
-        lock ? ico('lock') : ico(a.icon), h('span', { class: 'nm', text: a.name }), h('span', { class: 'cost', text: a.note }),
-        h('span', { class: 'sub', text: lock || (fitsIt ? a.tip : A && A.kind === 'home' ? 'Needs a between-battle condition' : A && A.kind !== 'home' && CONDITIONS[cond.if] && CONDITIONS[cond.if].between ? 'A between-battle condition only goes with Return to base' : 'Needs a condition that names a foe') }));
-    });
-    return h('div', { class: 'box tx-sheet', role: 'dialog', 'aria-label': 'Choose an action' },
-      sheetHead('Then…', `${p.i < 0 ? 'Step 2 of 2. ' : ''}When “${ruleCond(cond)}”:`),
-      h('div', { class: 'tx-grp' }, opts));
-  }
-  function chooseAct(id) {
-    const o = ui.owner, p = ui.pick;
-    const ok = p.i >= 0 ? Tactics.replace(o, p.i, { do: id }) : Tactics.add(o, Object.assign({}, p.cond, { do: id, on: true }));
-    if (!ok) say('That rule can’t be made.');
-    ui.pick = null;
-    render();
-  }
-
-  function itemSheet() {
-    const i = ui.pick.i, cur = Tactics.loadout().items[i];
-    const pick = id => { click(); Tactics.setItem(i, id); ui.pick = null; render(); };
-    return h('div', { class: 'box tx-sheet', role: 'dialog', 'aria-label': 'Choose an item' },
-      sheetHead('Bring…', 'One use per battle, by your hand or an item rule.'),
-      h('div', { class: 'tx-grp' },
-        Object.keys(ITEMS).map(id => {
-          const it = ITEMS[id], sk = SKILLS[it.skill];
-          return h('button', { class: 'tx-opt act' + (cur === id ? ' cur' : ''), onclick: () => pick(id) },
-            ico(it.icon), h('span', { class: 'nm', text: it.name }), h('span', { class: 'cost', text: SHAPES[sk.shape] }), h('span', { class: 'sub', text: it.tip }));
-        }),
-        cur ? h('button', { class: 'tx-opt', onclick: () => pick(null) }, h('span', { class: 'nm', text: 'Leave this slot empty' })) : null));
-  }
-
-  // Leaves without going anywhere: the app calls this when it moves to another screen.
-  function dismiss() {
-    closePicker();
-    const s = $('#screen');
-    if (s.querySelector('.tx')) { s.hidden = true; s.replaceChildren(); }
-  }
-
-  return { open, close, dismiss, get owner() { return ui.owner; }, set owner(o) { if (Tactics.ownerOk(o)) ui.owner = o; } };
+  return { open, close, dismiss, render, draw, setOwner, get owner() { return ui.owner; }, set owner(o) { if (ownerOk(o)) { ui.owner = o; pickDefault(); draw(); } }, get sel() { return ui.sel; }, get pane() { return ui.pane; } };
 })();
 
-// ── opening the editor from the app shell (js/app.js)
-// The character sheet's Tactics button opens it on that hero's tab. App.go('tactics', { owner: 'party' }) opens the
-// party rules and loadout. Leaving goes back to the Party screen.
+// ── opening the screen from the app shell (js/app.js)
+// The hero screen's Edit tactics opens it on that hero. App.go('tactics', { owner: 'party' }) opens the party's
+// tactics. Back returns where it was opened from (by default the Party screen).
 if (typeof App !== 'undefined') {
   App.screen('tactics', {
-    enter: p => TacticsEditor.open(() => (typeof p.back === 'function' ? p.back() : App.go(p.back || 'party')), p.owner),
+    tab: true, full: true, bare: true,
+    render: p => TacticsEditor.render(p),
+    refresh: () => TacticsEditor.draw(),
     leave: () => TacticsEditor.dismiss(),
   });
   App.actions.tactics = (id, back) => {

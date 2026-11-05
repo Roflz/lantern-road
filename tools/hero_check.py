@@ -247,7 +247,7 @@ def main():
             shot('rules')
             tap('.hr-edit', wait=500)
             check(js("App.current") == 'tactics', f'{tag}: Edit tactics opens the editor')
-            tap('#screen .btn.back', wait=600)
+            tap('.tx-back', wait=600)
             check(on() and js("HeroSheet.tab") == 'rules' and who() == ids['agnes'], f'{tag}: the editor\'s Back comes back to Tactics')
 
             # Respec
