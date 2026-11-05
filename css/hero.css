@@ -38,6 +38,8 @@
 .hc-btn[disabled]{opacity:.35}
 .hc-btn:not([disabled]):active,.hc-ib:not([disabled]):active{transform:translateY(1px)}
 .hc-badge{position:absolute;right:-8px;top:-8px;min-width:18px;height:18px;padding:0 4px;display:grid;place-items:center;border-radius:9px;font:600 11px/1 var(--f-body);font-style:normal;color:#1a1008;background:var(--ember);border:1px solid #000}
+/* a header plate's button sits near the frame's top edge: its badge goes below */
+.hc-plate .hc-badge{top:auto;bottom:-8px}
 /* a section: a header plate, then its contents on the ground */
 .hc-plate{position:relative;height:24px;display:grid;place-items:center;background:linear-gradient(90deg,transparent,#2a1e17 14%,#2a1e17 86%,transparent);border-top:1px solid;border-bottom:1px solid;border-image:linear-gradient(90deg,transparent,#5e4428 20%,#5e4428 80%,transparent) 1}
 .hc-plate h4{margin:0;font:400 19px/1 var(--f-display);color:var(--plate);text-shadow:0 1px 0 #000;white-space:nowrap}
