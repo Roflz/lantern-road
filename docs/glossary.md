@@ -68,7 +68,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Reach** | Lets a melee skill hit any row, and be used from either. |  | `reach` · claw |
 | **Shape** | Who a skill hits: one foe, a row, all foes, allies or itself. | The eight: one foe, the front row, the back row, 3 random foes, all foes, one ally, all allies and self. A row skill hits the other row when its own is empty. | `shape` · mark |
 | **Guard** | Draws attacks aimed at a single ally onto the one guarding, for less damage. | Hits on a whole row or every ally still land where they fall. Cover goes further and takes those too. | `guard` · shield |
-| **Enrage** | From round 15 the foes hit harder every round, so no battle drags on. | Each round of enrage adds 25% to their damage, and from round 40 it doubles every round too. | `enrage` · rage |
+| **Enrage** | From round 15 the foes hit harder every round, so no battle drags on. | Each round of enrage adds 25% to their damage, and from round 40 it doubles every round too, and breaks through Unbroken. | `enrage` · rage |
 | **Fallen** | At 0 health a hero falls, and is out of the fight. | They’re back on their feet after the battle, at full health. Smelling Salts raise them sooner. | `fallen` · skull |
 | **Called foe** | A foe called into battle by another; it drops no gold, XP or loot. | Beat the one calling them, and the calls stop. | `called_foe` · bone |
 | **Step Up** | A melee foe waiting behind steps forward when a front slot opens. | The stage sheet marks these foes “waits”. | `step_up` · boot |
@@ -209,7 +209,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Common** | Everyday gear; every recruit carries a Common weapon. |  | `common` · star |
 | **Fine** | A step above Common, and worth more gold. |  | `fine` · star |
 | **Rare** | Hard to find, and among the strongest gear on the road. |  | `rare` · star |
-| **Relic** | A boss’s one-of-a-kind treasure: you can only ever own one. | Each boss gives its Relic on the first clear. Relics never sell, and always find room in the Bag. | `relic` · star |
+| **Relic** | A boss’s one-of-a-kind treasure: you can only ever own one. | Each boss gives its Relic on the first clear, at the boss’s level. Relics never sell, and always find room in the Bag. | `relic` · star |
 | **Region gear** | Gear that drops only in its own region; its card names the region. | A region’s gear rolls try its own line first: 40% of them on the road, 70% at elites, every one at its boss. | `region_gear` · lantern |
 | **Item level** | The level of the stage a piece came from; higher means stronger stats. | Health, Mana, Power and Defence grow with it. The rest stay as they are. | `item_level` · star |
 | **Bag** | Where unworn gear and party items wait; it holds 60 pieces of gear. | When it’s full, new gear sells where it drops, so a full Bag never sends the party home. | `bag` · bag |

@@ -86,7 +86,7 @@ Gear stats use the plain stats in `js/items.js` (hp, mp, pow, def, spd, crit, do
 | Pall-bearer's Sabre | Weapon, sword | pow 6 | +25% damage while any ally is down / Speed -1 | `out` with `aFall`; `cost.spd` |
 | Sexton's Crook | Weapon, bone staff | pow 5, mp 8 | Restore 8 mana on a kill / Max Health -8% | `kill` via `killMana`; `maxHpCut` |
 | Shroud Coat | Light armour | hp 12, dodge 5 | The first hit each battle deals half damage / Fatigue +10% | `taken`; `fatigue` 1.1 |
-| Headstone Mantle | Heavy armour | hp 24, def 4 | At half health, take 20% less damage (Fortified) / Speed -2 | `turnStart` + `E.status`; `cost.spd` |
+| Headstone Mantle | Heavy armour | hp 45, def 6 | At half health, take 20% less damage (Fortified) / Speed -2 | `turnStart` + `E.status`; `cost.spd` |
 | Coffin-nail Locket | Accessory | hp 15 | +25 Bleed resistance / Crit -3 | `stat` (`u.res.bleed`); `cost.crit` |
 
 #### II. Drowned Chapel: bell and font
@@ -104,7 +104,7 @@ Gear stats use the plain stats in `js/items.js` (hp, mp, pow, def, spd, crit, do
 | Tollbell | Weapon, handbell | pow 4, mp 12 | Skills cost 10% less mana / Healing -10% | `cost`; `healOut` |
 | Font-water Censer | Weapon, censer | pow 3, mp 10 | Healing +15% / Max Health -5% | `healOut`; `maxHpCut` |
 | Wax-sealed Vestments | Light armour | hp 14, mp 12 | +30 Debuff resistance (Silence) / Dodge -4 | `stat` (`u.res.debuff`); `cost.dodge` |
-| Reliquary Plate | Heavy armour | hp 20, def 5 | Turn push-backs against the wearer halved / Speed -2 | `pushMul`; `cost.spd` |
+| Reliquary Plate | Heavy armour | hp 45, def 6 | Turn push-backs against the wearer halved / Speed -2 | `pushMul`; `cost.spd` |
 | Wick-end Ring | Accessory | mp 6 | +3 mana at the start of each turn / Defense -2 | `turnStart` via `E.mana`; `cost.def` |
 
 #### III. Thornwood: the hunt

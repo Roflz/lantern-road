@@ -578,8 +578,11 @@ function simulate(setup) {
     return Math.max(0, m);
   }
   // Takes damage off t, through Wards, Unyielding and Unbroken. Returns { d (health lost), absorbed }.
+  // From the surge (SIM.ENRAGE_SURGE) a foe's damage breaks through Unbroken, so a hero who can't fall can't hold a
+  // battle open until the action cap (a lone Warden recasting it against the Drowned Acolyte's heals did).
   function takeDamage(t, dmg, src, c) {
     let left = Math.max(0, Math.round(dmg)), absorbed = 0;
+    const surge = !!src && src.side === 1 && t.side === 0 && round >= SIM.ENRAGE_SURGE;
     if (t.st.unyielding) left = Math.min(left, Math.max(1, Math.round(t.maxHp * (t.st.unyielding.v || 10) / 100)));
     const w = t.st.warded;
     if (w && left > 0) {
@@ -591,7 +594,7 @@ function simulate(setup) {
         if (w.ember && src && src.alive && src.side !== t.side) addStatus(byId[w.src] || null, src, 'burn', { turns: 2, p: 0.3 });
       }
     }
-    if (t.st.unbroken) left = Math.min(left, Math.max(0, t.hp - 1));
+    if (t.st.unbroken && !surge) left = Math.min(left, Math.max(0, t.hp - 1));
     if (left >= t.hp && t.alive) {
       // Soul Anchor: a thrall falls instead.
       if (t.st.anchor) { const th = thrallsOf(t.side)[0]; if (th) { destroy(t, th); left = 0; } }
