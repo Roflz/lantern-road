@@ -161,6 +161,34 @@ button{font:inherit;color:inherit}
 .ctl.skip,#bStep{color:var(--bone)}
 #pausedTag{position:absolute;left:50%;bottom:calc(100% - 4px);transform:translateX(-50%);padding:4px 10px;font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--ember);background:rgba(11,9,19,.92);border:1px solid rgba(244,166,70,.5);white-space:nowrap;pointer-events:none;animation:fadein .3s}
 
+/* Items in battle: the tray beside the controls (these lived in css/rules.css until the Tactics screen replaced it) */
+.it-tray{display:flex;gap:6px;margin-left:4px;padding-left:10px;border-left:2px solid var(--rule)}
+.it-btn{position:relative;min-width:46px;padding:0 8px}
+.it-btn .ico{width:20px;height:20px}
+.it-btn .it-tag{position:absolute;right:2px;bottom:1px;font:9px var(--f-pixel);color:var(--good)}
+.it-btn.used{opacity:.4}
+.it-btn.idle{opacity:.6}
+.it-btn.pending{border-color:var(--ember);animation:it-pulse .6s steps(2) infinite}
+.it-btn:disabled{cursor:default}
+@keyframes it-pulse{50%{box-shadow:0 0 10px rgba(244,166,70,.6)}}
+
+/* Aiming an item: pick a hero */
+.it-aim{position:absolute;inset:0;z-index:6;pointer-events:none;background:rgba(6,4,10,.35)}
+.it-aim > *{pointer-events:auto}
+.it-pick{position:absolute;padding:0;background:rgba(244,166,70,.12);border:2px dashed var(--ember);cursor:pointer;animation:it-pulse .7s steps(2) infinite}
+.it-pick:hover{background:rgba(244,166,70,.25)}
+.it-hint{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;min-height:40px;padding:6px 12px;background:rgba(14,10,22,.94);border:2px solid var(--ember);color:var(--bone);font:10px var(--f-pixel);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
+.it-hint .ico{width:16px;height:16px}
+.it-hint span{color:var(--ash);padding-left:8px;border-left:1px solid var(--rule)}
+
+/* The item callout */
+.it-call{position:absolute;left:50%;bottom:70px;z-index:5;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;background:rgba(14,10,22,.92);border:2px solid var(--ember);box-shadow:0 0 18px rgba(244,166,70,.3);transform:translate(-50%,10px);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.it-call.show{opacity:1;transform:translate(-50%,0)}
+.it-call .ico{width:22px;height:22px}
+.it-call b{display:block;font:11px var(--f-pixel);letter-spacing:.05em;text-transform:uppercase;color:var(--bone)}
+.it-call span{font-size:12px;color:var(--ash)}
+.num.mana{color:#a8c4ff}
+
 /* Toasts */
 #toasts{position:absolute;left:10px;right:10px;bottom:84px;z-index:6;display:grid;justify-items:center;gap:4px;pointer-events:none}
 .toast{max-width:100%;font:10px/1.5 var(--f-pixel);padding:6px 10px;background:rgba(10,7,16,.94);border:1px solid var(--rule);color:var(--bone);animation:toast 2.6s forwards;text-align:center}
