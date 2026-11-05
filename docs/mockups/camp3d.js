@@ -6,6 +6,15 @@
 // snaps to whole pixels.
 const Camp3D = (() => {
   const IW = 422, IH = 195, K = 2, RAD = Math.PI / 180;
+  // Hooks a page can set (the Hearth detail mockup, hearth.html, uses them; the camp views set none):
+  //   building(k)  a canvas to draw instead of the art for plot or board k, with .lights [x, y, kind, r] and .smoke [x, y]
+  //                points; .mirror flips it for plots west of the fire
+  //   plotScreen   [frame x, frame y, ground height] for each plot, in place of PLOT_SCREEN; or plotsWorld, [x, z]
+  //   ground(x, z) the ground's height south of the hills; scenery(list, wallR) edits the scenery once
+  //   sky(x, cam, hz, t) draws on the skyline, in place of the far tower; under(x, cam, t, plots, S) draws on the
+  //   ground; pads(x, cam, S, plots) draws the plots' pads and paths; scene(o) adds billboards; front(x, cam, t, L)
+  //   draws over the scene; dark(cam) scales the dark around the fire
+  const HOOKS = {};
   // The views, by the direction the camera looks (yaw, from north, clockwise). The party view looks north, past the
   // fire and up the road; the buildings view looks south from higher and further back, over the fire to the plots.
   const VIEWS = {
@@ -43,7 +52,7 @@ const Camp3D = (() => {
   })();
   const roadAt = z => { for (let i = 1; i < ROAD.length; i++) if (ROAD[i][1] >= z) { const [x0, z0] = ROAD[i - 1], [x1, z1] = ROAD[i]; return lerp(x0, x1, (z - z0) / Math.max(1e-6, z1 - z0)); } return ROAD[ROAD.length - 1][0]; };
   const ROAD_W = 16, HILL0 = 205, HILL1 = 3000, GATE_Z = 3240;
-  const groundY = (x, z) => { if (z <= HILL0) return 0; const zz = Math.min(z, HILL1); return 0.17 * (zz - HILL0) * (1 + 0.22 * Math.sin(x / 240 + zz / 700)); };
+  const groundY = (x, z) => { if (z <= HILL0) return HOOKS.ground ? HOOKS.ground(x, z) : 0; const zz = Math.min(z, HILL1); return 0.17 * (zz - HILL0) * (1 + 0.22 * Math.sin(x / 240 + zz / 700)); };
   // Region I's eighteen stages along the road; elites and the boss marked.
   const STAGE_Z = Array.from({ length: 18 }, (_, k) => 80 * Math.pow(35, Math.pow(k / 17, 0.85)));
   const STAGE_KIND = Array.from({ length: 18 }, (_, k) => (typeof STAGES !== 'undefined' && STAGES[k] ? STAGES[k].kind : 'road'));
@@ -151,8 +160,8 @@ const Camp3D = (() => {
         if (d < 6) return null;
         return { x: cx + v.f * (rx * R[0] + rz * R[2]) / d, y: v.cy - v.f * (rx * U[0] + ry * U[1] + rz * U[2]) / d, s: v.f / d, d };
       },
-      unproj(sx, sy) {
-        const a = (sx - cx) / v.f, b = -(sy - v.cy) / v.f, dir = [F[0] + a * R[0] + b * U[0], F[1] + a * R[1] + b * U[1], F[2] + a * R[2] + b * U[2]], k = -C[1] / dir[1];
+      unproj(sx, sy, h = 0) {
+        const a = (sx - cx) / v.f, b = -(sy - v.cy) / v.f, dir = [F[0] + a * R[0] + b * U[0], F[1] + a * R[1] + b * U[1], F[2] + a * R[2] + b * U[2]], k = (h - C[1]) / dir[1];
         return [C[0] + k * dir[0], C[2] + k * dir[2]];
       },
       // A billboard's scale: smooth while moving, whole pixels at rest (small, far things keep theirs)
@@ -177,7 +186,7 @@ const Camp3D = (() => {
 
   function draw(x, S, yaw, t, restness) {
     const camIn = yaw;
-    if (!PLOTS) { const bc = camera(VIEWS.build.yaw); PLOTS = PLOT_SCREEN.map(([px, py]) => bc.unproj(px / K, py / K)); WALL_R = Math.max(...PLOTS.map(([a, b]) => Math.hypot(a, b))) + 40; SCENERY = makeScenery(); }
+    if (!PLOTS) { const bc = camera(VIEWS.build.yaw); PLOTS = HOOKS.plotsWorld ? HOOKS.plotsWorld.map(q => q.slice(0, 2)) : (HOOKS.plotScreen || PLOT_SCREEN).map(([px, py, hh]) => bc.unproj(px / K, py / K, hh || 0)); WALL_R = Math.max(...PLOTS.map(([a, b]) => Math.hypot(a, b))) + 40; SCENERY = HOOKS.scenery ? HOOKS.scenery(makeScenery(), WALL_R) : makeScenery(); }
     const cam = camera(camIn, restness), anchors = [], hz = cam.horizon, R = cam.road, roadPts = [];
     yaw = cam.yaw;
     x.imageSmoothingEnabled = false;
@@ -197,7 +206,8 @@ const Camp3D = (() => {
         for (let sx = 0; sx < IW; sx++) { const hh = hillH(cam.bearing(sx) + k * 40, k); x.fillStyle = col; x.fillRect(sx, Math.round(hz - hh), 1, Math.ceil(hh) + 2); if (rim) { x.fillStyle = rim; x.fillRect(sx, Math.round(hz - hh), 1, 1); } }
       }
       const tw = cam.screenOfBearing(204);
-      if (tw != null) { const hh = hillH(204 + 56, 1.4), T = sprite(['..k.k..', '..kkk..', '.kSSSk.', '.kSySk.', '.kSSSk.', '.kSSSk.', 'kSSSSSk', 'kSSySSk', 'kSSSSSk', 'kSSSSSk', 'kkkkkkk'], { k: '#06040a', S: '#0f0b15', y: '#6a4224' }, 'c3:tower'); x.drawImage(T, Math.round(tw - 3), Math.round(hz - hh - T.height + 2), 7, 11); }
+      if (tw != null && !HOOKS.sky) { const hh = hillH(204 + 56, 1.4), T = sprite(['..k.k..', '..kkk..', '.kSSSk.', '.kSySk.', '.kSSSk.', '.kSSSk.', 'kSSSSSk', 'kSSySSk', 'kSSSSSk', 'kSSSSSk', 'kkkkkkk'], { k: '#06040a', S: '#0f0b15', y: '#6a4224' }, 'c3:tower'); x.drawImage(T, Math.round(tw - 3), Math.round(hz - hh - T.height + 2), 7, 11); }
+      if (HOOKS.sky) HOOKS.sky(x, cam, hz, t);
       const mist = x.createLinearGradient(0, hz - 10, 0, hz + 14); mist.addColorStop(0, 'rgba(70,58,100,0)'); mist.addColorStop(0.5, 'rgba(80,66,110,.28)'); mist.addColorStop(1, 'rgba(70,58,100,0)');
       x.fillStyle = mist; x.fillRect(0, hz - 10, IW, 24);
     }
@@ -212,8 +222,9 @@ const Camp3D = (() => {
       z1 = z0;
       if (z0 <= HILL0) break;
     }
+    if (HOOKS.under) HOOKS.under(x, cam, t, PLOTS, S);
     for (const [tx, tz, k] of TUFTS) { const p = cam.proj(tx, groundY(tx, tz), tz); if (!p || p.y < hz) continue; const s = Math.max(1, Math.round(p.s)); x.fillStyle = k > 0.66 ? '#26301f' : k > 0.33 ? '#1f2719' : '#2a2026'; x.fillRect(Math.round(p.x), Math.round(p.y), s * (k > 0.5 ? 2 : 1), s); if (k > 0.8) x.fillRect(Math.round(p.x) + s, Math.round(p.y) - s, s, s); }
-    S.plots.forEach((pl, i) => {
+    if (HOOKS.pads) HOOKS.pads(x, cam, S, PLOTS); else S.plots.forEach((pl, i) => {
       if (!pl) return;
       const [wx, wz] = PLOTS[i], len = Math.hypot(wx, wz), ux = wx / len, uz = wz / len, c = cam.proj(wx, 0, wz);
       x.globalAlpha = c ? nearFade(c.d) : 0;
@@ -242,7 +253,7 @@ const Camp3D = (() => {
       if (on) quad(e0, e1, ROAD_W * 0.18, '#a8743e');
     }
     // billboards, far to near
-    const L = [], P = [], items = [];
+    const L = [], P = [], items = [], SMK = [];
     const add = (wx, wz, fn) => { const p = cam.proj(wx, groundY(wx, wz), wz); if (p) items.push({ p, fn }); };
     const northA = Math.max(0, 1 - 1.8 * cam.w);
     const addN = (wx, wz, fn) => add(wx, wz, p => { if (northA <= 0.01) return; x.globalAlpha = northA; fn(p); x.globalAlpha = 1; });
@@ -312,20 +323,21 @@ const Camp3D = (() => {
       const [wx, wz] = PLOTS[i];
       add(wx, wz, p => {
         const fade = nearFade(p.d); if (fade <= 0) return;
-        const a = pl.empty ? 'plot' : pl.art, img = bart(a), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s;
+        const a = pl.empty ? 'plot' : pl.art, img = (HOOKS.building && HOOKS.building(a)) || bart(a), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s, flip = !!img.mirror && wx < 0, mx = v => (flip ? img.width - 1 - v : v);
         x.globalAlpha = fade * 0.5; x.fillStyle = '#050308'; x.fillRect(Math.round(p.x - img.width * s / 2), Math.round(p.y), Math.round(img.width * s), Math.max(1, Math.round(s))); x.globalAlpha = fade;
-        if (S.focus === 'plot' + i) { const o = tinted(img, '#f4a646'); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) blit(x, o, bx + ox, by + oy, s); }
-        blit(x, img, bx, by, s);
+        if (S.focus === 'plot' + i) { const o = tinted(img, '#f4a646'); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) blit(x, o, bx + ox, by + oy, s, flip); }
+        blit(x, img, bx, by, s, flip);
         x.globalAlpha = 1;
-        if (!pl.empty && fade > 0.5) for (const [lx, ly, kind] of lights(a)) L.push([bx + (lx + 0.5) * s, by + (ly + 0.5) * s, 4 * s, kind === 'v' ? 'rgba(190,140,255,.5)' : 'rgba(255,200,110,.5)']);
-        anchors.push({ id: 'plot' + i, x: p.x * K, y: p.y * K, top: by * K, d: p.d, name: pl.empty ? 'Empty plot' : NAMES[a], empty: !!pl.empty, chip: pl.chip, view: 'build' });
+        if (img.smoke && fade > 0.5) for (const [sx, sy] of img.smoke) SMK.push([bx + (mx(sx) + 0.5) * s, by + sy * s, s]);
+        if ((!pl.empty || img.lights) && fade > 0.5) for (const [lx, ly, kind, r] of (img.lights || lights(a))) L.push([bx + (mx(lx) + 0.5) * s, by + (ly + 0.5) * s, (r || 4) * s, kind === 'v' ? 'rgba(190,140,255,.5)' : kind === 'g' ? 'rgba(120,220,200,.45)' : 'rgba(255,200,110,.5)']);
+        anchors.push({ id: 'plot' + i, x: p.x * K, y: p.y * K, top: by * K, w: img.width * s * K, d: p.d, art: a, name: pl.empty ? 'Empty plot' : NAMES[a], empty: !!pl.empty, chip: pl.chip, view: 'build' });
       });
     });
     addN(BOARD[0], BOARD[1], p => {
-      const img = bart('board'), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s;
+      const img = (HOOKS.building && HOOKS.building('board')) || bart('board'), s = cam.scale(p.s), bx = p.x - img.width * s / 2, by = p.y - img.height * s;
       if (S.focus === 'board') { const o = tinted(img, '#f4a646'); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) blit(x, o, bx + ox, by + oy, s); }
-      blit(x, img, bx, by, s); L.push([bx + 10.5 * s, by + 14.5 * s, 6 * s, 'rgba(255,200,110,.6)']);
-      anchors.push({ id: 'board', x: p.x * K, y: p.y * K, top: by * K, d: p.d, name: 'Recruit Board', chip: S.boardChip, view: 'party' });
+      blit(x, img, bx, by, s); if (img.lights) for (const [lx, ly, kind, r] of img.lights) L.push([bx + (lx + 0.5) * s, by + (ly + 0.5) * s, (r || 6) * s, 'rgba(255,200,110,.6)']); else L.push([bx + 10.5 * s, by + 14.5 * s, 6 * s, 'rgba(255,200,110,.6)']);
+      anchors.push({ id: 'board', x: p.x * K, y: p.y * K, top: by * K, w: img.width * s * K, d: p.d, name: 'Recruit Board', chip: S.boardChip, view: 'party' });
     });
     addN(SIGN[0], SIGN[1], p => {
       const img = bart('road'), s = cam.scale(p.s), bx = p.x - 8 * s, by = p.y - img.height * s;
@@ -349,8 +361,13 @@ const Camp3D = (() => {
       anchors.push({ id: 'wick', x: p.x * K, y: p.y * K, top: by * K, view: 'both' });
     });
     if (fireP) items.push({ p: fireP, fn: p => { const img = paintFire(t, S.fireLow ? 0.7 : 1), s = cam.scale(p.s); blit(x, img, p.x - 13 * s, p.y - 27 * s, s); anchors.push({ id: 'fire', x: p.x * K, y: p.y * K, top: (p.y - 27 * s) * K, view: 'both' }); } });
+    if (HOOKS.scene) HOOKS.scene({ x, cam, t, S, add, addN, items, L, P, SMK, anchors });
     items.sort((a, b) => b.p.d - a.p.d);
     for (const it of items) it.fn(it.p);
+    // chimney smoke, drifting up and away
+    for (const [sx, sy, ss] of SMK) { const seed = (Math.abs(sx * 7.31 + sy * 3.17) % 1); for (let j = 0; j < 10; j++) { const q = ((t / 5200) + j / 10 + seed) % 1, r = (1 + q * 5) * ss, px = sx + (Math.sin(q * 4 + j * 1.3 + seed * 6) * 1.6 + q * q * 18) * ss, py = sy - q * 38 * ss; x.globalAlpha = 0.34 * Math.min(1, q * 6) * (1 - q); x.fillStyle = q < 0.2 ? '#8a7a86' : '#6e6688'; x.beginPath(); x.arc(px, py, r, 0, 7); x.fill(); } }
+    x.globalAlpha = 1;
+    if (HOOKS.front) HOOKS.front(x, cam, t, L);
     // beyond your light: the road ahead lies in the dark
     const fz = cam.proj(roadAt(litZ), groundY(roadAt(litZ), litZ), litZ);
     if (fz && cam.w < 0.5 && fz.y > hz && R < 0.5) { const dg = x.createLinearGradient(0, fz.y + 4, 0, Math.max(hz - 20, fz.y - 60)); dg.addColorStop(0, 'rgba(7,5,11,0)'); dg.addColorStop(1, `rgba(7,5,11,${(0.5 * (1 - 2 * cam.w)).toFixed(3)})`); x.fillStyle = dg; x.fillRect(0, 0, IW, fz.y + 4); }
@@ -358,7 +375,7 @@ const Camp3D = (() => {
     if (fireP && R < 1) {
       const dk = x.createRadialGradient(fireP.x, fireP.y - 8 * fireP.s, 12 * fireP.s, fireP.x, fireP.y - 8 * fireP.s, Math.max(130 * fireP.s, 120));
       dk.addColorStop(0, 'rgba(6,4,10,0)'); dk.addColorStop(0.5, 'rgba(6,4,10,.18)'); dk.addColorStop(1, 'rgba(6,4,10,.72)');
-      x.globalAlpha = 1 - R; x.fillStyle = dk; x.fillRect(0, 0, IW, IH); x.globalAlpha = 1;
+      x.globalAlpha = (1 - R) * (HOOKS.dark ? HOOKS.dark(cam) : 1); x.fillStyle = dk; x.fillRect(0, 0, IW, IH); x.globalAlpha = 1;
     }
     if (R > 0) {
       const vg = x.createRadialGradient(IW / 2, IH * 0.42, IH * 0.35, IW / 2, IH * 0.42, IW * 0.62);
@@ -456,5 +473,5 @@ const Camp3D = (() => {
     requestAnimationFrame(frame);
     return api;
   }
-  return { IW, IH, K, VIEWS, weightOf, draw, live, NAMES, STAGE_Z, GATE_Z, roadParams, orbitParams, blendParams };
+  return { IW, IH, K, VIEWS, weightOf, draw, live, NAMES, STAGE_Z, GATE_Z, roadParams, orbitParams, blendParams, hooks: HOOKS };
 })();

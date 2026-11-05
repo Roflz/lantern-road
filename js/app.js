@@ -7,6 +7,8 @@
 //   def.full    true for a screen built for the landscape frame, drawn on the whole stage (the battle). Every other
 //               screen keeps its portrait layout in the frame's centred column until it is redesigned (js/frame.js).
 //   def.tab     true to show the top bar and tab bar (and to slide between tabs)
+//   def.bare    with tab: no top bar or tab bar (the camp draws its own HUD)
+//   def.refresh (params) => void: App.refresh() calls it instead of building the screen again (the camp updates in place)
 //   def.parent  the tab to light while it shows (the hero sheet lights Party)
 //   def.render  (params) => element: builds the screen's page, every time it is shown
 //   def.enter   (params) => void: called after it is shown (the battle starts its fight here)
@@ -17,7 +19,7 @@ const App = (() => {
   const shell = $('#shell'), views = $('#views'), tabbar = $('#tabbar'), purse = $('#purse');
   const screens = {};
   const TABS = [
-    { id: 'home', label: 'Base', icon: 'kindle' },
+    { id: 'home', label: 'Hearth', icon: 'kindle' },
     { id: 'map', label: 'Road', icon: 'lantern' },
     { id: 'party', label: 'Party', icon: 'shield' },
     { id: 'bag', label: 'Bag', icon: 'bag' },          // js/bag.js
@@ -42,11 +44,13 @@ const App = (() => {
     if (def.tab) {
       const el = def.render(params);
       el.classList.add('view');
-      // Slide toward the tab you picked; fade when coming from somewhere with no tab.
+      shell.classList.toggle('bare', !!def.bare);
+      // Slide toward the tab you picked; fade when coming from somewhere with no tab. Between the whole stage and the
+      // column there's nothing to slide: the old screen goes at once.
       const ti = TABS.findIndex(t => t.id === name), fi = TABS.findIndex(t => t.id === from);
       const dir = fi < 0 || ti < 0 || ti === fi ? 0 : ti > fi ? 1 : -1;
-      const old = [...views.children];
-      if (fast() || opts.instant) old.forEach(o => o.remove());
+      const old = [...views.children], reshaped = !!prev && !!prev.full !== !!def.full;
+      if (fast() || opts.instant || reshaped) old.forEach(o => o.remove());
       else old.forEach(o => { o.classList.add('out'); o.style.setProperty('--dir', -dir); o.inert = true; setTimeout(() => o.remove(), 260); });
       if (!fast() && !opts.instant) { el.classList.add('in'); el.style.setProperty('--dir', dir); el.addEventListener('animationend', () => el.classList.remove('in'), { once: true }); }
       views.append(el);
@@ -59,7 +63,10 @@ const App = (() => {
     if (def.enter) def.enter(params);
     if (G()) { if (from !== name) G().onScreen(name); syncTabs(); }
   }
-  function refresh() { if (cur && screens[cur].tab) go(cur, curParams, { instant: true }); else { syncPurse(); syncTabs(); } }
+  function refresh() {
+    if (cur && screens[cur].refresh) { screens[cur].refresh(curParams); syncPurse(); syncTabs(); return; }
+    if (cur && screens[cur].tab) go(cur, curParams, { instant: true }); else { syncPurse(); syncTabs(); }
+  }
   function showShell(on) {
     if (on) { shell.hidden = false; shell.classList.remove('gone'); }
     else { shell.classList.add('gone'); views.replaceChildren(); shell.hidden = true; }
@@ -110,6 +117,15 @@ const App = (() => {
     for (const [id, slot] of moves) { const c = id && Save.char(id); if (c && slot >= 2 && Items.fixedFront(c)) { toast(`${c.name} wears the Oathbound Gorget: front row only`); return true; } }
     return false;
   }
+  // Swaps two formation slots (either may be empty), as Arrange does. False when the Oathbound Gorget refuses it.
+  function swapSlots(a, b) {
+    const p = Save.state.party;
+    if (a === b || a < 0 || b < 0 || a > 5 || b > 5) return false;
+    if (frontLocked([[p[a], b], [p[b], a]])) return false;
+    [p[a], p[b]] = [p[b], p[a]];
+    Save.commit();
+    return true;
+  }
   function placeIn(slot, id) {
     const p = Save.state.party, was = p.indexOf(id);
     if (frontLocked([[id, slot], [p[slot], was]])) return;
@@ -119,8 +135,10 @@ const App = (() => {
   }
   screen('party', {
     tab: true,
-    render() {
+    // params.arrange: open arranging, with that slot picked (the camp's empty formation slot)
+    render(p) {
       const s = Save.state;
+      if (p && p.arrange != null) { arrange = p.arrange; delete p.arrange; }
       // What a character has waiting: points to spend, or a threshold to choose.
       const flags = c => {
         const P = Hero.points(c), t = Hero.pending(c).length;
@@ -132,9 +150,8 @@ const App = (() => {
         sfx('click');
         if (arrange == null || arrange < 0) { arrange = i; refresh(); return; }
         if (arrange === i) { arrange = -1; refresh(); return; }
-        const a = s.party[arrange], b = s.party[i];
-        if (frontLocked([[a, i], [b, arrange]])) return;
-        s.party[arrange] = b; s.party[i] = a; arrange = -1; Save.commit(); refresh();
+        if (!swapSlots(arrange, i)) return;
+        arrange = -1; refresh();
       };
       const slot = i => {
         const c = Save.char(s.party[i]);
@@ -280,7 +297,7 @@ const App = (() => {
   }
 
   return {
-    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene, syncTabs,
+    screen, go, refresh, start, applySettings, actions, awayGains, showAway, showCharacter, openSettings, rest: restScene, syncTabs, swapSlots,
     get current() { return cur; },
   };
 })();

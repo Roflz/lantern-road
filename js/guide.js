@@ -8,7 +8,8 @@
 //                 Recruit Board, build the blueprint, see the Relic. The results popup's New chips do the same
 //                 (js/results.js), and the trip summary on the Road tab lists them for a trip that ended while the app
 //                 was closed.
-//   tab dots      a dot on Base, Party, Bag or Road when something there waits for you.
+//   tab dots      a dot on Hearth, Party, Bag or Road when something there waits for you (the Hearth's Heroes
+//                 and Bag buttons show them too).
 // The title card over a new game's first pick is now the title screen, on every boot (js/title.js).
 // Battle tips (js/main.js, §8.3) go through Guide.tip. Every coach mark and tip shows once (campaign.tips in the save),
 // and Settings → First-time tips turns them all off. The new-thing rows are part of the trip summary and always show.
@@ -96,8 +97,9 @@ const Guide = (() => {
     if (!tipsOn()) return;
     const s = st();
     if (name === 'tactics') setTimeout(() => coach('c:tactics', '.tx-rule .tx-grip', 'Rules run from the top. Drag one to move it; switch one off to skip it.', { place: 'below', ms: 7000 }), 450);
+    // the free recruit: the Recruit Board's chip in the camp's party view (its plaque, if the chip isn't up)
     if (name === 'home' && typeof Base !== 'undefined' && Base.boardOpen(s) && s.board.free && s.board.recruits.length)
-      setTimeout(() => coach('c:board', '.camp .bcard', 'Your first recruit is free: open the Recruit Board.', { place: 'above', ms: 6500 }), 700);
+      setTimeout(() => coach('c:board', $('.camp .cv-wait[data-id="board"]') ? '.camp .cv-wait[data-id="board"]' : '.camp .cv-plq[data-id="board"]', 'Your first recruit is free: open the Recruit Board.', { place: 'above', ms: 6500 }), 700);
   }
 
   // ── new things: what a trip unlocked, with a way to each (the trip summary on the Road tab, js/map.js)
@@ -160,7 +162,7 @@ const Guide = (() => {
     const s = st(), out = {};
     if (!s || !s.roster.length) return out;
     try {
-      if (typeof Camp !== 'undefined' && typeof Base !== 'undefined') out.home = Camp.entries(s).some(e => e && !e.gap && Camp.badge(e, s));
+      if (typeof Camp !== 'undefined' && typeof Base !== 'undefined') out.home = Camp.anyWaiting(s);
       out.party = partySigs(s).some(k => !seenSig.party.has(k));
       out.bag = bagSigs(s).some(k => !seenSig.bag.has(k));
       const T = s.campaign.lastTrip;

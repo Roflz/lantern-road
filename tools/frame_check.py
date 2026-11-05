@@ -6,8 +6,11 @@ Run it turned (a touch phone held upright, the default), flat, and at desktop si
   python tools/frame_check.py --w 1280 --h 720         # a desktop window with a mouse: letterboxed, never turned
 
 It checks that the title covers the frame with its scene at 3×, and its server picker opens, asks before a new server,
-and closes; a tap lands where it was aimed, in design pixels, and on the title it begins; the camp turns under a drag
-along the frame and not across it; a roster row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings,
+and closes; a tap lands where it was aimed, in design pixels, and on the title it begins; the camp (views around the
+fire) fills the stage with its scene at 2×, its Set out opens the Road with the stage sheet, the camera nudges back
+while no blueprint has come, turns under a drag along the frame and not across it, and settles on the nearer view;
+taps in its scene find the fire, the road and the Recruit Board, and its formation swaps places by drag; a roster
+row's swipe opens Dismiss; rules reorder by drag; the Party tab, Settings,
 the Road map and Tactics scroll the way the finger goes (or the wheel, with a mouse); in a battle the art is drawn at
 3×, the coach mark rings the thing it points at, and a tap on the HUD answers; starting S2 from the title, playing,
 reloading and switching back to S1 leaves both saves intact; and, with touch, the frame keeps clear of emulated notches.
@@ -138,33 +141,58 @@ def main():
         check(bool(seen) and abs(seen[-1][1] - 200) < 1.5 and abs(seen[-1][2] - 120) < 1.5, f'a tap at design (200, 120) reads as {seen[-1:]}')
         check(js("!Title.up && App.current === 'home'"), f'that tap on the title begins: the game opens on the camp ({js("App.current")})')
 
-        # 2. a new game; the camp card's Map button, tapped where it is drawn
+        # 2. a new game: the camp fills the stage with its scene at 2x; its Set out, tapped where it is drawn, opens the
+        # Road with the frontier's stage sheet
         js("Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1200)
         shot('camp')
-        check(tap_el('.camp .bcard [data-role=btns] .btn') and js('App.current') == 'map', f'tapping the camp card\'s Map opens the Road (now {js("App.current")})')
+        cv = js("(() => { const cv = document.querySelector('.camp .cv-scene'), b = Frame.box(cv); return [cv.width, cv.height, b.width, b.height, document.getElementById('frame').className, getComputedStyle(document.getElementById('tabbar')).display]; })()")
+        check(cv[1] == 195 and abs(cv[3] - 390) < 1 and abs(cv[2] - cv[0] * 2) < 1 and cv[2] >= info['W'] and 'column' not in cv[4] and cv[5] == 'none',
+              f'the camp fills the stage with its scene at 2x ({cv[0]}x{cv[1]} -> {cv[2]:.0f}x{cv[3]:.0f}), and no tab bar')
+        check(tap_el('.camp .cv-big:not([hidden])') and js("App.current === 'map' && !!document.querySelector('#sheet .stagebox')"), f'the camp\'s Set out opens the Road with the stage sheet (now {js("App.current")})')
+        js("closeSheet(); App.go('home', {}, {instant: true}); 'ok'")
+        page.wait_for_timeout(1000)
+        yaw = lambda: js('Math.round(Camp.scene.yaw)')
+        cx, cy = info['W'] / 2, 150
 
-        # 3. the camp turns under a drag along the frame, and not across it
-        js("App.go('home', {}, {instant: true}); 'ok'")
+        # 3. the camera: before the first blueprint a drag only nudges it, and it eases back
+        drag(cx + 80, cy, cx - 80, cy, still=True)
         page.wait_for_timeout(1200)
-        face = lambda: js("document.querySelector('.bcard [data-role=name]').textContent")
-        name0 = face()
-        cx, cy = js("__design('.camp canvas')")[:2]
-        drag(cx - 40, cy - 30, cx - 40, cy + 30)
+        check(js('Camp.scene.locked') and yaw() == 0, f'no blueprint yet: a drag along the frame nudges the camp and it eases back ({yaw()})')
+        # a tap on the fire, where the scene draws it, answers; a tap on the road opens the Road map
+        def scene_tap(anchor):
+            p = js(f"(() => {{ const a = Camp.scene.out.anchors.find(q => q.id === {json.dumps(anchor)}); return a ? [(a.box[0] + a.box[2]), (a.box[1] + a.box[3])] : null; }})()")
+            if p:
+                tap_at(to_client(p[0], p[1]))
+            return bool(p)
+        check(scene_tap('fire') and js("[...document.querySelectorAll('#toasts .toast')].some(t => /fire|Draught/.test(t.textContent))"), 'a tap on the fire, where the scene draws it, answers')
+        check(scene_tap('stage2') and js("App.current") == 'map', f'a tap on the road in the scene opens the Road map (now {js("App.current")})')
+        # a blueprint opens the buildings view: a drag across the frame doesn't turn the camera; along it, it turns, and
+        # let go part-way it settles on the nearer view; a quick tap on the Recruit Board's plaque opens the board
+        js("Save.state.unlocks.tollhouse = Date.now(); Base.ensure(Save.state); Save.commit(); App.go('home', {}, {instant: true}); 'ok'")
+        page.wait_for_timeout(1200)
+        drag(cx - 60, cy - 70, cx - 60, cy + 70)
         page.wait_for_timeout(600)
-        check(face() == name0, f'a drag across the frame leaves the camp facing {name0!r} (now {face()!r})')
-        # one building's worth each way, stopping before letting go: left brings the plot round, right the Recruit Board
-        # (as a mouse does on a desktop window, which is never turned)
-        drag(cx + 30, cy - 30, cx - 30, cy - 30, still=True)
-        page.wait_for_timeout(900)
-        name2 = face()
-        check(name2 == 'Empty Plot', f'a drag to the left turns the camp from {name0!r} to the plot ({name2!r})')
-        drag(cx - 30, cy - 30, cx + 30, cy - 30, still=True)
-        page.wait_for_timeout(900)
-        drag(cx - 30, cy - 30, cx + 30, cy - 30, still=True)
-        page.wait_for_timeout(900)
-        name3 = face()
-        check(name3 == 'Recruit Board', f'two drags to the right turn it on to the Recruit Board ({name3!r})')
+        check(not js('Camp.scene.locked') and yaw() == 0, f'a drag across the frame leaves the camera in the party view ({yaw()})')
+        drag(cx + 60, cy, cx - 60 - info['W'] * 0.18, cy, still=True)
+        page.wait_for_timeout(1600)
+        check(yaw() % 360 == 180 and js('Camp.scene.view') == 'build', f'a drag to the left past a quarter turn settles on the buildings view ({yaw()})')
+        shot('camp-build')
+        drag(cx - 60, cy, cx + 40, cy, still=True)
+        page.wait_for_timeout(1600)
+        check(yaw() % 360 == 180, f'a short drag back settles on the buildings view again ({yaw()})')
+        drag(cx - 60, cy, cx + 60 + info['W'] * 0.18, cy, still=True)
+        page.wait_for_timeout(1600)
+        check(yaw() % 360 == 0 and js('Camp.scene.view') == 'party', f'a drag to the right turns back to the party view ({yaw()})')
+        check(tap_el('.camp .cv-plq[data-id="board"]') and js("App.current") == 'building', f'a tap on the Recruit Board\'s plaque opens the board (now {js("App.current")})')
+        # the formation: drag the hero from the front slot to a back one, and they swap places
+        js("App.go('home', {}, {instant: true}); 'ok'")
+        page.wait_for_timeout(1000)
+        a0, a2 = js("__design('.cv-tile[data-slot=\"0\"]')"), js("__design('.cv-tile[data-slot=\"2\"]')")
+        before = js('JSON.stringify(Save.state.party)')
+        drag(a0[0], a0[1], a2[0], a2[1], n=12)
+        after = js('JSON.stringify(Save.state.party)')
+        check(js('Save.state.party[2] && !Save.state.party[0]') and js('App.current') == 'home', f'dragging a face in the camp\'s formation moves the hero there ({before} -> {after})')
 
         # 4. a roster row's swipe left opens Dismiss, and a swipe along the frame's height from a row still scrolls
         js("App.go('party', {}, {instant: true}); 'ok'")
