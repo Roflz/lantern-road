@@ -227,6 +227,8 @@ says('sell', pct(BASE.ITEM_SELL));
 says('plot', `start with ${BASE.START_PLOTS}`, `up to ${BASE.START_PLOTS + BASE.PLOT_RENOWN.length}`);
 says('threshold', HERO.THRESHOLDS.slice(0, -1).join(', ') + ' and ' + last(HERO.THRESHOLDS));
 says('level', `up to ${HERO.CAP}`);
+says('xp', `at least ${pct(XP_FLOOR)} of a level`);
+says('too_easy', `under ${pct(XP_TOO_EASY)}`);
 says('combine', `level ${HERO.COMBINE_AT[0]}`, `at ${HERO.COMBINE_AT[1]}`);
 says('awakening', `${HERO.AWAKEN_COST} more skill points`, `level ${HERO.AWAKEN_FROM}`);
 says('tier', `${HERO.TIERS} tiers`);

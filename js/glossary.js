@@ -149,7 +149,8 @@ const GLOSSARY = (() => {
   // ═══════════════════════════════════════════════════════════════════ heroes
   topic('heroes', {
     class: { name: 'Class', icon: 'helm', line: 'What a hero is, like Sellsword or Pilgrim: their stats, weapon and skills.', more: 'There are twelve. Six are on the Recruit Board from the start, and six join as the road goes on.', see: ['skill_tree', 'combine', 'recruit'] },
-    xp: { name: 'XP', icon: 'star', line: 'Experience from battles and training; enough of it brings a new level.', more: 'Battle XP is a share of a level at the stage’s level, so a hero below it catches up fast.', see: ['level', 'trainingyard'] },
+    xp: { name: 'XP', icon: 'star', line: 'Experience from battles and training; enough of it brings a new level.', more: 'Battle XP is a share of a level at the stage’s level, so a hero below it catches up fast. A first clear pays at least 30% of a level at your top hero’s level.', see: ['level', 'trainingyard', 'too_easy', 'first_clear'] },
+    too_easy: { name: 'Too easy', icon: 'star', line: 'A stage that pays a hero under 10% of their own level in XP.', more: 'A stage below a hero’s level pays less of theirs. New stages on the road pay more.', see: ['xp', 'farm'] },
     level: { name: 'Level', icon: 'star', line: 'How far a hero has grown, from 1 up to 200.', more: 'Each level brings a stat point and the class’s own growth. Every fifth brings a skill point.', see: ['xp', 'stat_point', 'skill_point', 'threshold'] },
     stat_point: { name: 'Stat point', icon: 'plus', line: 'One for every level: spend it on a stat or a resistance.', more: 'Speed, Crit, Dodge and each resistance take 25 points at most.', see: ['level', 'resistance', 'respec'] },
     skill_point: { name: 'Skill point', icon: 'plus', line: 'One for every fifth level: learn a skill, or raise one a level.', see: ['skill_level', 'awakening', 'respec'] },

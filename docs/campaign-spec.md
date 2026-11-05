@@ -389,6 +389,8 @@ First-clear unlocks happen once. "Blueprint" means the building becomes availabl
 
 - The home-base spec sets recruit prices, gold per stage, picks per board and the starting roster cap. Together they must allow this pace *(tune)*.
 - Recruits arrive at level 1 while the leader is near the frontier's level, and should catch up within 2–3 stages. The home-base spec's XP rule does most of this: battle XP is a share of a level at the *stage's* level, so a level-1 recruit in a level-6 stage gains several of its own levels. The Training Yard (1-8) and replays do the rest. How fast depends on step 3's XP curve.
+- **The first-clear floor** (regions study §5.3, decision 7, 2026-11-05): a first clear on the road pays every hero at least 30% *(tune: `XP_FLOOR` in `js/data.js`)* of a level at the party's top hero's level, on top of the rule above. So the road never stalls for a hero at or above the stage's level: after 1-1's level, 1-2's first clear pays a level 2 hero 27 XP, 30% of a level, where the plain rule paid 6. 1-1 still brings the first level (`firstXp`). Replays keep the plain rule, so farming a stage below a hero's level pays them less and less of theirs; the road is the faster way.
+- **Each hero's own share** is what the screens show. The stage sheet's XP chip is measured for the lead hero ("~27 XP · 30%"), each hero in its party strip shows theirs, and the results popup shows each hero's XP and its share of their level. Where a stage pays a hero under 10% *(tune: `XP_TOO_EASY`)* of their level, a **Too easy** tag says so, and its tooltip says why: a stage below a hero's level pays less of theirs, and new stages pay more.
 - The stage sheet shows the recommended level and party size, so a player a hero short knows why a stage is hard.
 - In Region I the recruit board offers the six original classes. The Gravecaller joins after the Sexton.
 
@@ -771,7 +773,7 @@ This builds on the screen mockups' Road screens: the region map, the stage sheet
 | Red | Two or more levels below, or two or more heroes short |
 
 - **Foes:** their battle sprites in their formation, front and back, so you can plan rows before setting out. Tapping a foe shows its level, skills and resistances.
-- **Rewards:** the stage's tier as icons (gold, XP, material, gear chance). Until the first clear, a "First clear" ribbon shows the doubled gold and materials and the stage's one-off unlock.
+- **Rewards:** the stage's tier as icons (gold, XP, material, gear chance). XP shows the amount each hero gets and, for the lead hero, its share of their level, with Too easy where it pays a hero little (section 5.4). Until the first clear, a "First clear" ribbon shows the doubled gold and materials and the stage's one-off unlock.
 - **Road settings:**
   - **Keep going after a win:** a toggle, available from 1-6.
   - **Come home when:** chips such as "Fatigue 75+", "An ally fell", "Out of draughts" and "Before a boss or elite". Each chip is a between-battle party rule, so toggling one here edits the party rules. There is one list of rules, seen from two places.

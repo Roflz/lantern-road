@@ -767,6 +767,7 @@ const WANDERERS = [{ key: 'moths', chance: 0.05 }, { key: 'mimic', chance: 0.02 
 // ── Rewards (home-base spec §5, tune)
 // Amounts scale with the stage's level through S = 1 + L ÷ 5. XP is a share of a level at the stage's level: what a
 // hero needs to go from L to L + 1, so a hero below the stage's level gains more than that share of their own level.
+// A first clear pays at least XP_FLOOR of a level at the party's top hero's level (below).
 const GOLD_SCALE = L => 1 + L / 5;
 // Battle spoils, from every foe defeated (not summoned, not fled): gold × S, XP for each hero, and the loot chance.
 const SPOILS = {
@@ -784,6 +785,11 @@ const CLEAR = {
   elite: { name: 'Elite', gold: 60, xp: 0.38, mat: 8, other: [1, 1], items: [1, 1], gear: 1 },
   boss: { name: 'Boss', gold: 200, xp: 0.9, mat: 20, other: [1, 3], items: [1, 2], gear: 1 },
 };
+// The first-clear floor (regions study §5.3, tune): a first clear on the road pays every hero at least this share of a
+// level at the party's top hero's level, so the road never stalls. Replays keep the plain rule, which shrinks.
+const XP_FLOOR = 0.3;
+// A stage that pays a hero less than this share of their own level is tagged Too easy for them (tune).
+const XP_TOO_EASY = 0.1;
 // A loot roll is a party item 60% of the time, by these odds, and a gear roll otherwise.
 const LOOT_ITEM = 0.6;
 const LOOT_ITEMS = [['draught', 50], ['lampoil', 25], ['tincture', 15], ['salts', 10]];

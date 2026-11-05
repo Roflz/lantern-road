@@ -146,6 +146,7 @@
 .stagebox .tag{display:inline-flex;align-items:center;gap:4px;padding:4px 6px;font:8px var(--f-pixel);letter-spacing:.04em;text-transform:uppercase;background:rgba(7,5,11,.6);border:1px solid var(--rule);color:var(--bone)}
 .stagebox .tag .ico{width:11px;height:11px}
 .stagebox .tag.y{color:var(--gold)}.stagebox .tag.w{color:var(--ward)}.stagebox .tag.e{color:var(--ember);border-color:#6a4a2a}
+.stagebox .tag.b{color:var(--bad);border-color:#6a3030;cursor:help}
 .panel.roadset{display:grid;gap:8px;padding:9px 10px;background:rgba(7,5,11,.5);border:1px solid var(--rule)}
 .roadset .row{display:flex;align-items:center;gap:8px;min-height:36px}
 .roadset .row.wrap{flex-wrap:wrap}
@@ -168,6 +169,9 @@
 .pstrip .ph b{position:absolute;top:1px;left:2px;font:7px var(--f-pixel);color:var(--gold)}
 .pstrip .ph b.low{color:var(--bad)}
 .pstrip .ph .fbar{width:30px;height:3px}
+/* the XP each hero would get, as a share of their own level; red when the stage is too easy for them */
+.pstrip .ph .xpp{font:7px/1 var(--f-pixel);color:var(--gold)}
+.pstrip .ph .xpp.easy{color:var(--bad)}
 .pstrip .ph.weary{box-shadow:0 0 0 1px #8a6a2a}.pstrip .ph.exh{box-shadow:0 0 0 2px #a8502a}.pstrip .ph.spent{box-shadow:0 0 0 2px var(--blood)}.pstrip .ph.spent img{filter:grayscale(.8) brightness(.6)}
 .ps-acts{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .textbtn.proto{min-height:28px;font-size:7px;color:var(--dim)}

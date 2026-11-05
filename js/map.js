@@ -261,6 +261,7 @@ const RoadMap = (() => {
     const st = STAGES[i], state = Campaign.stateOf(i), s = Save.state;
     if (state === 'dark') return darkSheet(st);
     const ready = Campaign.readiness(st), best = s.campaign.best[st.id], first = state === 'frontier';
+    const p = Campaign.preview(st, first);
     const kids = [
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
       h('div', { class: 'ss-top' },
@@ -270,9 +271,9 @@ const RoadMap = (() => {
         h('span', { class: 'rec ' + ready, title: READY[ready] }, `Rec. lv ${st.level} · ${plural(st.party, 'hero').replace('heros', 'heroes')}`)),
       h('p', { class: 'ss-teach', text: st.teaches }),
       formation(st, info),
-      rewards(st, first),
+      rewards(st, first, p),
       roadSettings(i),
-      partyStrip(st),
+      partyStrip(st, p),
     ];
     const fit = Campaign.fit().length > 0;
     kids.push(h('button', { class: 'btn primary go', disabled: !fit, onclick: () => setOut(i) }, first ? 'Set out' : 'Farm', h('span', { class: 'sub', text: fit ? (first ? `Light ${st.id} · ${st.name}` : `Replay ${st.id} for its rewards`) : 'No one is fit to set out' })));
@@ -318,13 +319,18 @@ const RoadMap = (() => {
       h('div', { class: 'fi-res' }, RES_KEYS.map(k => h('span', {}, RESISTS[k].name, h('b', { text: Math.round(fs.res[k]) + '%' })))));
   }
   // The stage's rewards, by its tier; and until the first clear, the ribbon with what lighting it brings.
-  function rewards(st, first) {
-    const p = Campaign.preview(st, first), R = REGIONS[st.region];
+  // XP is measured for the lead hero: what it is as a share of their own level (p.each, from Campaign.preview).
+  const pctOf = k => `${Math.round(k * 100)}%`;
+  function rewards(st, first, p = Campaign.preview(st, first)) {
+    const R = REGIONS[st.region];
     const tag = (cls, icon, text, title) => h('span', { class: 'tag ' + cls, title: title || '' }, icon ? ico(icon) : null, text);
+    const lead = p.each.find(x => x.share != null), easy = p.each.filter(x => x.easy);
+    const floor = p.floor ? ` First clear: at least ${pctOf(XP_FLOOR)} of a level at level ${p.floor}, your top hero’s.` : '';
     const kids = [
       h('span', { class: 'k', text: p.tier }),
       tag('y', 'coin', `~${fmt(p.gold)}`, 'Gold for clearing it, every foe defeated'),
-      tag('', 'star', `~${fmt(p.xp)} XP`, `About ${Math.round(p.xpLv * 100)}% of a level at level ${st.level}`),
+      tag('', 'star', `~${fmt(p.xp)} XP${lead ? ' · ' + pctOf(lead.share) : ''}`, (lead ? `XP for each hero: ${pctOf(lead.share)} of a level for ${lead.c.name} (Lv ${lead.c.level}).` : `About ${Math.round(p.xpLv * 100)}% of a level at level ${st.level}.`) + floor),
+      easy.length ? tag('b', null, 'Too easy', `Under ${pctOf(XP_TOO_EASY)} of a level for ${easy.map(x => x.c.name).join(', ')}. A stage below a hero’s level pays less of theirs; new stages on the road pay more.`) : null,
       tag('', typeof Base !== 'undefined' ? Base.matIcon(R.mat) : 'bone', `${MATERIALS.find(m => m.id === R.mat).name} ×${p.mat}`),
       tag('w', 'bag', p.gear >= 1 ? 'Gear' : `Gear ${Math.round(p.gear * 100)}%`, st.kind === 'boss' ? 'Boss rarity: up to Rare' : st.kind === 'elite' ? 'Elite rarity' : `${REGIONS[st.region].name} rarity`),
     ];
@@ -372,7 +378,8 @@ const RoadMap = (() => {
   // fit again (below 50): the strip says when, and leads to the beds. Edit opens the Party board.
   const timeStr = ms => (typeof Camp !== 'undefined' ? Camp.timeStr(ms) : `${Math.max(1, Math.ceil(ms / 60000))}m`);
   const fitIn = (c, s) => (typeof Fatigue !== 'undefined' ? Fatigue.timeTo(c, REST.FIT - 0.01, s) : null);
-  function partyStrip(st) {
+  // Under each hero who would set out: the XP as a share of their own level, red when the stage is too easy for them.
+  function partyStrip(st, p = Campaign.preview(st, Campaign.stateOf(st.index) === 'frontier')) {
     const s = Save.state, list = s.party.map(id => Save.char(id)).filter(Boolean);
     const out = list.filter(c => Campaign.spent(c));
     return h('div', { class: 'pstrip' },
@@ -380,8 +387,10 @@ const RoadMap = (() => {
         const f = c.fatigue || 0, cls = Campaign.spent(c) ? 'spent' : f >= FATIGUE.EXHAUSTED ? 'exh' : f >= FATIGUE.WEARY ? 'weary' : '';
         const low = c.level < st.level;
         const t = Campaign.spent(c) ? fitIn(c, s) : null;
-        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? (t != null ? ` · Spent: fit in ${timeStr(t)}` : ' · Spent: can’t set out') : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}` },
-          h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })));
+        const x = p.each.find(e => e.c === c && e.share != null);
+        return h('span', { class: 'ph ' + cls, title: `${c.name} · Lv ${c.level} · fatigue ${Math.floor(f)}${Campaign.spent(c) ? (t != null ? ` · Spent: fit in ${timeStr(t)}` : ' · Spent: can’t set out') : f >= FATIGUE.EXHAUSTED ? ' · Exhausted' : f >= FATIGUE.WEARY ? ' · Weary' : ''}${x ? ` · XP: ${pctOf(x.share)} of a level${x.easy ? ' · Too easy' : ''}` : ''}` },
+          h('img', { src: heroImgURL(c.cls, Items.look(c)), alt: '' }), h('b', { class: low ? 'low' : '', text: c.level }), h('span', { class: 'fbar' }, h('i', { style: `width:${f}%` })),
+          x ? h('span', { class: 'xpp' + (x.easy ? ' easy' : ''), text: '+' + pctOf(x.share) }) : null);
       })),
       h('div', { class: 'ps-acts' },
         out.length ? restNote(out, s) : h('span'),

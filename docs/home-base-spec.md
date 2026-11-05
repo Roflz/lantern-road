@@ -55,6 +55,8 @@ XP is measured in **levels' worth**: "10% of a level" at level L means 10% of th
 
 Battle XP is a share of a level at the *stage's* level. A character below the stage's level gains more than that share of their own level, and a character above it gains less. This keeps the numbers here valid whatever the curve turns out to be.
 
+A first clear pays every character at least 30% *(tune)* of a level at the party's top character's level (the regions study §5.3, 2026-11-05; the campaign spec §5.4). Replays keep the plain rule. Renown's battle experience (section 8) still counts the stage's own share.
+
 ### Stage levels by region
 These are the campaign session's proposed levels. The estimates in this spec use them, and the campaign spec decides the real ones.
 
