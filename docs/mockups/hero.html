@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Hero</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Screen 8, the hero (docs/idle-heroes-study.md §6; docs/darkest-dungeon-study.md §3). The hero full length in an
+   arched stone window at the left (Darkest Dungeon); a framed panel at the right with four tabs and one-tap
+   conveniences, Auto for points and Auto-equip (Idle Heroes). */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a;
+  --panel:rgba(14,10,20,.86); --trim:#6b4a2a; --iron:#6e7480;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;font-size:15px;user-select:none;background:radial-gradient(ellipse 50% 70% at 20% 70%,#2a1a1c 0,#120c18 60%,#08060c 100%)}
+
+/* the top: back, the hero's name with the arrows to the next, what you hold */
+.back{position:absolute;left:12px;top:10px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:700 16px/1 var(--f-pixel);color:var(--gold);background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.who{position:absolute;left:58px;top:8px;display:flex;align-items:center;gap:8px}
+.who .arr{width:26px;height:26px;display:grid;place-items:center;font:700 11px/1 var(--f-pixel);color:var(--bone);background:#1a1320;border:1px solid var(--rule)}
+.who .nm{display:grid;gap:3px;min-width:150px}
+.who .nm b{font:400 25px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.who .nm span{font:700 8px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.purse{position:absolute;right:16px;top:12px;display:flex;gap:22px}
+.cur{position:relative;display:flex;align-items:center;height:24px;min-width:104px;padding:0 10px 0 28px;border-radius:12px;background:linear-gradient(#1a1220,#0c0910);border:1px solid var(--trim)}
+.cur .ci{position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2614,#120c0a);border:1px solid var(--trim)}
+.cur .ci img{width:20px;height:20px}
+.cur .cv{flex:1;text-align:center;font:700 10px/1 var(--f-pixel);color:var(--bone)}
+
+/* the arch: the hero full length, in a stone window */
+.arch{position:absolute;left:18px;top:52px;width:280px;height:332px}
+.arch .win{position:absolute;inset:0}
+.arch .hero{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);filter:drop-shadow(0 3px 0 rgba(0,0,0,.6))}
+.arch .path{position:absolute;left:50%;top:20px;transform:translateX(-50%);height:20px;padding:0 9px;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:#1a1008;background:linear-gradient(#e8c24a,#a8802a);border:1px solid #000}
+.arch .foot{position:absolute;left:24px;right:24px;bottom:12px;display:grid;gap:5px}
+.arch .xp{position:relative;height:14px;background:#160f14;border:1px solid #4a3424;box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
+.arch .xp i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#b48cf0,#6a3fa0)}
+.arch .xp span{position:absolute;inset:0;display:grid;place-items:center;font:700 8px/1 var(--f-pixel);color:#f2e7d0;text-shadow:0 1px 0 #000}
+.arch .tags{display:flex;justify-content:space-between;align-items:center}
+.lvbig{display:flex;align-items:baseline;gap:5px;font:700 9px/1 var(--f-pixel);color:var(--ash)}
+.lvbig b{font:400 26px/1 var(--f-display);color:#f6e6c4}
+.fatigue{display:flex;align-items:center;gap:5px;height:20px;padding:0 7px;font:700 8px/1 var(--f-pixel);letter-spacing:.08em;border:1px solid #000;background:#18241a;color:var(--good)}
+.fatigue.weary{background:#2a2414;color:var(--gold)}
+.fatigue img{width:12px;height:12px}
+
+/* the panel: the Hearth's framed-panel kit, tabs on its plate */
+.fp{position:absolute;left:314px;top:52px;width:516px;height:330px;background:linear-gradient(#1c1521,#120d17);border:3px solid #3a2a1c;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 18px 44px rgba(0,0,0,.6)}
+.fp .cn{position:absolute;width:16px;height:16px;border:3px solid var(--iron);box-shadow:0 0 0 1px #000;z-index:2}
+.fp .cn::after{content:"";position:absolute;width:4px;height:4px;background:#c8ccd4;border:1px solid #000}
+.fp .cn.tl{left:-7px;top:-7px;border-right:0;border-bottom:0}.fp .cn.tl::after{left:1px;top:1px}
+.fp .cn.tr{right:-7px;top:-7px;border-left:0;border-bottom:0}.fp .cn.tr::after{right:1px;top:1px}
+.fp .cn.bl{left:-7px;bottom:-7px;border-right:0;border-top:0}.fp .cn.bl::after{left:1px;bottom:1px}
+.fp .cn.br{right:-7px;bottom:-7px;border-left:0;border-top:0}.fp .cn.br::after{right:1px;bottom:1px}
+.tabs{display:flex;height:40px;background:linear-gradient(#34303c,#1c1922);border-bottom:2px solid #000;box-shadow:0 1px 0 #7a5a36}
+.tabs button{position:relative;flex:1;display:flex;align-items:center;justify-content:center;gap:7px;font:400 19px/1 var(--f-display);color:var(--ash);border-right:1px solid #000}
+.tabs button:last-child{border-right:0}
+.tabs button img{width:16px;height:16px;opacity:.7}
+.tabs button.on{color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a)}
+.tabs button.on img{opacity:1}
+.tabs .dot{position:absolute;top:5px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--blood);border:1px solid #120c16}
+.body{padding:12px 14px 10px;height:calc(100% - 42px);display:grid;align-content:start;gap:10px}
+.sect{display:grid;gap:7px}
+.sect>h4{margin:0;display:flex;align-items:center;gap:8px;font:400 10px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.sect>h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#6b4a2a,transparent)}
+.sect>h4 em{font-style:normal;color:var(--bone);background:#7a1c1c;border:1px solid #000;padding:3px 5px;letter-spacing:.08em}
+.row{display:flex;align-items:center;gap:8px}
+.sp{flex:1}
+.btn{height:32px;padding:0 14px;font:400 17px/1 var(--f-display);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000;box-shadow:0 0 0 1px #8a5a2a,inset 0 1px 0 rgba(255,255,255,.5)}
+.btn.green{background:linear-gradient(#cfeeb2,#5e9a3e)}
+.btn.sec{color:var(--bone);background:linear-gradient(#3a2c40,#1e1624);box-shadow:0 0 0 1px #6b4a2a,inset 0 1px 0 rgba(255,255,255,.1)}
+.btn[disabled]{opacity:.35;cursor:default}
+
+/* stats: a tidy grid, + when there are points */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.st{position:relative;display:grid;grid-template-columns:18px 1fr;align-items:center;column-gap:6px;height:42px;padding:0 6px 0 7px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.st img{width:16px;height:16px;grid-row:span 2}
+.st span{font:700 7px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.st b{font:700 12px/1 var(--f-pixel);color:var(--bone)}
+.st b em{font-style:normal;color:var(--good);margin-left:4px;font-size:9px}
+.st .plus{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:20px;height:20px;display:grid;place-items:center;font:700 13px/1 var(--f-pixel);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000}
+.st.up{border-color:var(--good)}
+.res{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.rs{display:grid;justify-items:center;gap:3px;padding:6px 0 5px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.rs img{width:16px;height:16px}
+.rs b{font:700 9px/1 var(--f-pixel);color:var(--bone)}
+.rs span{font:700 6px/1 var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+
+/* skills, gear, rules */
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sk{position:relative;display:grid;grid-template-columns:34px 1fr;align-items:center;column-gap:8px;height:52px;padding:0 8px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.sk.on{border-color:var(--ember);box-shadow:0 0 10px rgba(244,166,70,.25)}
+.sk .ic{width:34px;height:34px;display:grid;place-items:center;background:#0f0b14;border:1px solid #4a3a52}
+.sk .ic img{width:22px;height:22px}
+.sk span{font:700 7px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.sk b{display:block;margin-top:4px;font:400 17px/1 var(--f-display);color:var(--bone)}
+.sk .mp{position:absolute;right:7px;top:6px;font:700 8px/1 var(--f-pixel);color:#8ab8f0}
+.sk.lock{border-style:dashed;opacity:.6}
+.list{display:grid;gap:6px}
+.li{display:grid;grid-template-columns:30px 1fr auto;align-items:center;column-gap:9px;height:36px;padding:0 9px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.li img{width:22px;height:22px}
+.li b{font:400 16px/1 var(--f-display);color:var(--bone)}
+.li i{font:italic 400 12px/1.2 var(--f-body);color:var(--ash)}
+.li .n{font:700 8px/1 var(--f-pixel);color:#8ab8f0}
+.li.on{border-color:var(--ember)}
+.gear{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.gs{position:relative;display:grid;justify-items:center;gap:6px;padding:10px 8px 9px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.gs .ic{width:58px;height:58px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#2a2030,#0f0b14);border:1px solid #5a4632}
+.gs .ic img{width:44px;height:44px}
+.gs.empty .ic{border-style:dashed}
+.gs.empty .ic::after{content:"+";font:700 18px/1 var(--f-pixel);color:#6a5642}
+.gs span{font:700 7px/1 var(--f-pixel);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.gs b{font:400 15px/1.05 var(--f-display);color:var(--bone);text-align:center;min-height:16px}
+.gs i{font:700 8px/1 var(--f-pixel);color:var(--good);font-style:normal}
+.gs.r-fine .ic{border-color:#4a8a4a}.gs.r-rare .ic{border-color:#4a7ad8}
+.bagrow{display:flex;gap:6px;align-items:center}
+.bagrow .it{width:40px;height:40px;display:grid;place-items:center;background:#0f0b14;border:1px solid #4a3a52}
+.bagrow .it img{width:30px;height:30px}
+.bagrow .it.up{border-color:var(--good);box-shadow:0 0 6px rgba(180,222,152,.35)}
+.bagrow small{font:700 7px/1.3 var(--f-pixel);letter-spacing:.1em;color:var(--dim);text-transform:uppercase;width:52px}
+.rule{display:grid;grid-template-columns:22px 1fr 18px 1fr;align-items:center;column-gap:8px;height:44px;padding:0 10px;background:rgba(10,7,14,.6);border:1px solid #3a2c22}
+.rule .num{font:700 10px/1 var(--f-pixel);color:var(--ember)}
+.rule .if,.rule .do{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px;font:600 13px/1 var(--f-body);color:var(--bone);background:#1a1320;border:1px solid #4a3a52}
+.rule .do{border-color:#6b4a2a;background:#241a14}
+.rule .if img,.rule .do img{width:16px;height:16px}
+.rule .to{font:700 10px/1 var(--f-pixel);color:var(--dim);text-align:center}
+.hint{font:italic 400 13px/1.3 var(--f-body);color:var(--ash)}
+
+/* Wick's first visit (the first session, step 8) */
+.spotlight{position:absolute;inset:0;z-index:6;pointer-events:none}
+.wickc{position:absolute;z-index:8;left:4px;bottom:-6px;width:108px;height:146px;filter:drop-shadow(0 0 14px rgba(244,166,70,.3)) drop-shadow(0 3px 0 rgba(0,0,0,.6));pointer-events:none}
+.wbub{position:absolute;z-index:8;left:112px;bottom:104px;max-width:240px;padding:9px 13px 10px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px var(--trim),0 8px 18px rgba(0,0,0,.5);font:600 14px/1.3 var(--f-body);pointer-events:none}
+.wbub::after{content:"";position:absolute;left:-16px;bottom:14px;border:8px solid transparent;border-right:8px solid #f2e7d0;border-left:0}
+.arrowdn{position:absolute;z-index:9;width:27px;height:30px;animation:bob 1.1s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(244,166,70,.7));pointer-events:none}
+@keyframes bob{50%{translate:0 -4px}}
+.toast{position:absolute;left:50%;top:14px;z-index:10;transform:translateX(-50%);padding:6px 12px;font:600 13px/1.2 var(--f-body);color:var(--bone);background:#1e1016;border:1px solid #9a3a34;box-shadow:0 0 0 1px #000;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 8 · the hero</div>
+    <h1>The Hero</h1>
+    <p class="lede">Tap a hero anywhere (the party panel, Formation, the roster) to open this. The hero stands full length in an arched window; the panel beside has four tabs and two one-tap conveniences. The top frame is live: switch tabs, step through the party with the arrows, try Auto and Auto-equip.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="live"></div></div></div><figcaption><b>Live</b> Tabs, the arrows to the next hero, Auto to place points, Auto-equip.</figcaption></figure>
+
+  <section class="band">
+    <h2>The tabs</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="stats"></div></div></div><figcaption><b>H1</b> Stats: three points to place. Tap + on a stat, or Auto to place them as the class likes; Keep confirms. Resistances sit under it as icons with numbers.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="gear"></div></div></div><figcaption><b>H2</b> Gear: weapon, armour, accessory. An empty slot and a better piece in the Bag both light Auto-equip.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="skills"></div></div></div><figcaption><b>H3</b> Skills: the three slots, then what this hero knows for the one picked, with its mana cost.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="rules"></div></div></div><figcaption><b>H4</b> Tactics, at step 8 of the first session: Wick points at the tab once. Tactics read as “when → do”, top first.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>What changed</h2>
+    <ul class="notes">
+      <li><b>The hero is the picture:</b> full length in a stone arch, wearing their gear, with the path’s name above and level, XP and fatigue at its foot.</li>
+      <li><b>One framed panel, four tabs</b> (Stats, Skills, Gear, Tactics) on its header plate, each with a red dot when something waits.</li>
+      <li><b>One-tap conveniences:</b> Auto places stat points the way the class likes (Keep or Reset after); Auto-equip fills slots with the best that fits.</li>
+      <li><b>Darkest Dungeon’s sheet:</b> sections under plates, resistances as coloured icons with numbers.</li>
+      <li><b>The arrows</b> by the name step through the party without going back.</li>
+      <li><b>Gone from the screen:</b> the paragraphs and hints. A skill’s or item’s words show on a tap, in a card.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>For you</h2>
+    <ol class="notes qs">
+      <li><b>Auto for points:</b> should it place them as the class likes, or ask which stat to favour?</li>
+      <li><b>The watch preview</b> (the hero acting out a skill) moves into the arch: tap a skill to watch it there. Keep it?</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+(() => { const stub = new Proxy(function () {}, { get: (t, k) => (k in t ? t[k] : stub), apply: () => stub }); window.App = stub; window.Base = stub; window.Save = { state: null }; })();
+</script>
+<script src="../../js/camp.js"></script>
+<script src="wick.js"></script>
+<script src="camp3d.js"></script>
+<script src="hearth-art.js"></script>
+<script>
+'use strict';
+(() => {
+  const C = HearthArt.C;
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; i.draggable = false; return i; };
+  const icon = (name, size) => pxImg(iconURL(name), size, size);
+  const big = (c, k) => { const o = document.createElement('canvas'); o.width = c.width * k; o.height = c.height * k; const g = o.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL(); };
+  const ARROW = { map: ['..kkkkk..', '..kyYyk..', '..kyYyk..', '..kyYyk..', 'kkkyYykkk', 'kyyyYyyyk', '.kyyYyyk.', '..kyYyk..', '...kyk...', '....k....'], pal: { k: '#1a1008', y: '#f4a646', Y: '#ffd68a' } };
+
+  // ── the arched window, in stone, with the Hearth at night behind
+  const archArt = (() => {
+    const W = 140, Hh = 166, P = HearthArt.painter(W, Hh), cx = 70, cy = 70, R = 70, r = 60, SILL = 152;
+    const inOuter = (x, y) => (y >= cy ? x >= 0 && x < W : Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= R);
+    const inInner = (x, y) => y < SILL && (y >= cy ? x >= cx - r && x < cx + r : Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= r);
+    // the night inside: sky, a far lantern, graves, the warm ground
+    for (let y = 0; y < SILL; y++) for (let x = 0; x < W; x++) if (inInner(x, y)) { const k = y / SILL; P.px(x, y, k < 0.62 ? (HearthArt.hs(x, y, 3) > 0.995 ? '#d8ccb4' : `rgb(${Math.round(18 + k * 14)},${Math.round(12 + k * 8)},${Math.round(30 + k * 6)})`) : `rgb(${Math.round(30 + (k - 0.62) * 60)},${Math.round(20 + (k - 0.62) * 30)},${Math.round(30 - (k - 0.62) * 10)})`); }
+    for (const [gx, gy] of [[22, 96], [104, 92], [36, 100], [92, 99]]) { P.rect(gx, gy, 5, 8, '#1a1424'); P.rect(gx + 1, gy - 1, 3, 1, '#1a1424'); }
+    P.vl(114, 70, 104, '#140f1c'); P.rect(112, 68, 5, 1, '#140f1c'); P.rect(113, 69, 3, 3, '#f4a646'); P.px(114, 70, '#ffe2a0');
+    for (let x = cx - r; x < cx + r; x++) { const y = 136 + Math.round(Math.sin(x / 7) * 1.5); for (let yy = y; yy < SILL; yy++) P.px(x, yy, (Math.floor(x / 9) + Math.floor(yy / 5)) % 2 ? '#3a2c26' : '#33262a'); }
+    // the stone frame, its voussoirs radiating, the keystone, the sill
+    for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+      if (!inOuter(x, y) || inInner(x, y)) continue;
+      let col;
+      if (y >= SILL) col = y === SILL ? '#7d8088' : (Math.floor(x / 10) + y) % 7 === 0 ? '#34353c' : y < SILL + 4 ? '#5a5d64' : '#45474e';
+      else if (y < cy) { const a = Math.atan2(y + 0.5 - cy, x + 0.5 - cx), seg = Math.floor((a + Math.PI) / (Math.PI / 11)); const joint = Math.abs(((a + Math.PI) / (Math.PI / 11)) - Math.round((a + Math.PI) / (Math.PI / 11))) < 0.06; col = joint ? '#24242a' : seg % 2 ? '#5a5d64' : '#4e5158'; if (Math.abs(x - cx) < 6 && y < cy - r + 2) col = '#74777f'; }
+      else { const course = Math.floor((y - cy) / 8), off = course % 2 ? 0 : 4; col = (y - cy) % 8 === 7 || (x + off) % 9 === 0 ? '#24242a' : HearthArt.hs(x >> 2, course, 9) > 0.6 ? '#5a5d64' : '#4e5158'; }
+      P.px(x, y, col);
+    }
+    for (let x = 0; x < W; x++) for (let y = 0; y < cy; y++) if (inOuter(x, y) && !inOuter(x, y - 1) && x < cx) P.px(x, y, '#7e70a0');
+    P.rect(cx - 5, 0, 10, 12, '#74777f'); P.hl(cx - 5, cx + 4, 0, '#93959c'); P.vl(cx - 6, 1, 11, '#24242a'); P.vl(cx + 5, 1, 11, '#24242a');
+    return P.finish({ warm: 0.05 });
+  })();
+
+  // ── the heroes: stats from their class's ranges, skills, resistances, rules and paths from the game's data
+  const LOOK = (cls, gear) => [gear.weapon || Items.starter(cls, 1).id, gear.armor || null, gear.accessory || null];
+  const statOf = (cls, k, lv) => { const [a, b, per] = CLASSES[cls].stats[k]; return (a + b) / 2 + per * (lv - 1); };
+  const HEROES = [
+    { cls: 'pilgrim', name: 'Agnes', lv: 6, xp: 212, next: 276, fat: 56, pts: 3, path: 'Mercy', gear: { armor: null, accessory: null } },
+    { cls: 'sellsword', name: 'Fulke', lv: 6, xp: 180, next: 276, fat: 41, pts: 0, path: null, gear: { armor: 'travellerscoat', accessory: 'knucklebone' } },
+    { cls: 'warden', name: 'Brand', lv: 5, xp: 90, next: 220, fat: 22, pts: 1, path: null, gear: { armor: 'travellerscoat', accessory: null } },
+    { cls: 'crossbowman', name: 'Isolde', lv: 4, xp: 40, next: 180, fat: 18, pts: 0, path: null, gear: { armor: null, accessory: 'haresfoot' } },
+  ];
+  const STATS = [['hp', 'Health', 'heart'], ['mp', 'Mana', 'mana'], ['pow', 'Power', 'sword'], ['def', 'Defence', 'shield'], ['spd', 'Speed', 'boot'], ['crit', 'Crit', 'star'], ['dodge', 'Dodge', 'feather']];
+  const RES = [['stun', 'Stun', 'stun'], ['move', 'Move', 'anchor'], ['bleed', 'Bleed', 'bleed'], ['blight', 'Blight', 'poison'], ['curse', 'Curse', 'curse'], ['debuff', 'Debuff', 'weak']];
+  const PICKS = { hp: 0.35, pow: 0.3, def: 0.15, spd: 0.2 }; // what Auto favours, here: a stand-in for the class's build
+  const fmt = (k, v) => (k === 'crit' || k === 'dodge' ? Math.round(v) + '%' : k === 'spd' ? v.toFixed(1) : String(Math.round(v)));
+  const gearName = id => (id && GEAR[id] ? GEAR[id].name : '');
+  const RULE_TEXT = { ally_hp_lt: r => `Ally under ${r.n}%`, foe_lowest: () => 'Weakest foe', always: () => 'Always', foe_front: () => 'Front foe' };
+
+  function screen(el, F) {
+    const st = { i: F.hero || 0, tab: F.tab || 'stats', placed: {}, sel: 1, bagUp: true };
+    const root = h('div', {}); el.append(root);
+    const toast = msg => { const t = h('div', { class: 'toast', text: msg }); el.append(t); setTimeout(() => { t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 1500); };
+    const draw = () => {
+      const H = HEROES[st.i], c = CLASSES[H.cls], left = H.pts - Object.values(st.placed).reduce((a, b) => a + b, 0);
+      root.innerHTML = '';
+      // top
+      const prev = h('button', { class: 'arr', text: '‹' }), next = h('button', { class: 'arr', text: '›' });
+      prev.onclick = () => { st.i = (st.i + HEROES.length - 1) % HEROES.length; st.placed = {}; draw(); };
+      next.onclick = () => { st.i = (st.i + 1) % HEROES.length; st.placed = {}; draw(); };
+      root.append(h('button', { class: 'back', text: '‹', 'aria-label': 'Back' }), h('div', { class: 'who' }, prev, h('div', { class: 'nm' }, h('b', { text: H.name }), h('span', { text: `${c.name} · ${c.row === 'front' ? 'Front' : 'Back'}` })), next),
+        h('div', { class: 'purse' }, h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon('coin', 20)), h('span', { class: 'cv', text: '1,240' })), h('div', { class: 'cur' }, h('span', { class: 'ci' }, icon('bone', 20)), h('span', { class: 'cv', text: '34' }))));
+      // the arch
+      const hc = heroSide(H.cls, 0, LOOK(H.cls, H.gear)), k = 6;
+      const arch = h('div', { class: 'arch' }, pxImg(big(archArt, 2), 280, 332, 'px win'), pxImg(big(hc, k), hc.width * k, hc.height * k, 'px hero'),
+        H.path ? h('span', { class: 'path', text: H.path }) : null,
+        h('div', { class: 'foot' }, h('div', { class: 'tags' }, h('span', { class: 'lvbig' }, 'LV', h('b', { text: String(H.lv) })), h('span', { class: 'fatigue' + (H.fat >= 50 ? ' weary' : '') }, icon('fatigue', 12), H.fat >= 50 ? `WEARY ${H.fat}%` : `RESTED ${H.fat}%`)),
+          h('div', { class: 'xp' }, h('i', { style: `width:${Math.round(100 * H.xp / H.next)}%` }), h('span', { text: `${H.xp} / ${H.next}` }))));
+      // the panel
+      const tabsEl = h('div', { class: 'tabs' }, ...[['stats', 'Stats', 'heart', H.pts > 0], ['skills', 'Skills', 'book', false], ['gear', 'Gear', 'helm', !H.gear.armor || !H.gear.accessory], ['rules', 'Tactics', 'scroll', false]].map(([key, label, ic, dot]) => {
+        const b = h('button', { class: st.tab === key ? 'on' : '' }, icon(ic, 16), label, dot ? h('i', { class: 'dot' }) : null); b.onclick = () => { st.tab = key; draw(); }; return b; }));
+      const body = h('div', { class: 'body' });
+      if (st.tab === 'stats') {
+        const grid = h('div', { class: 'stats' }, ...STATS.map(([key, label, ic]) => {
+          const add = st.placed[key] || 0, per = { hp: 6, mp: 2, pow: 1, def: 1, spd: 0.1, crit: 1, dodge: 1 }[key];
+          const cell = h('div', { class: 'st' + (add ? ' up' : '') }, icon(ic, 16), h('span', { text: label }), h('b', {}, fmt(key, statOf(H.cls, key, H.lv) + add * per), add ? h('em', { text: '+' + fmt(key, add * per).replace('%', '') }) : null));
+          if (left > 0) { const p = h('button', { class: 'plus', text: '+' }); p.onclick = () => { st.placed[key] = (st.placed[key] || 0) + 1; draw(); }; cell.append(p); }
+          return cell;
+        }));
+        const auto = h('button', { class: 'btn sec', text: 'Auto' }), keep = h('button', { class: 'btn', text: 'Keep' }), reset = h('button', { class: 'btn sec', text: 'Reset' });
+        auto.disabled = left <= 0; keep.disabled = !Object.keys(st.placed).length; reset.disabled = keep.disabled;
+        auto.onclick = () => { let n = left; const keys = Object.keys(PICKS); for (let j = 0; n > 0; j++, n--) { const key = keys[j % keys.length]; st.placed[key] = (st.placed[key] || 0) + 1; } draw(); };
+        keep.onclick = () => { H.pts = left; st.placed = {}; toast('Kept'); draw(); };
+        reset.onclick = () => { st.placed = {}; draw(); };
+        body.append(h('div', { class: 'sect' }, h('h4', {}, 'Stats', left > 0 ? h('em', { text: `${left} TO PLACE` }) : null), grid),
+          h('div', { class: 'row' }, h('span', { class: 'sp' }), reset, auto, keep),
+          h('div', { class: 'sect' }, h('h4', { text: 'Resists' }), h('div', { class: 'res' }, ...RES.map(([key, label, ic]) => h('div', { class: 'rs' }, icon(ic, 16), h('b', { text: (c.res[key] || 0) + '%' }), h('span', { text: label }))))));
+      } else if (st.tab === 'skills') {
+        const ids = [c.basic, c.starter, c.second], names = ['Basic', 'Skill I', 'Skill II'];
+        body.append(h('div', { class: 'sect' }, h('h4', { text: 'Slots' }), h('div', { class: 'slots' }, ...ids.map((id, j) => {
+          const S = SKILLS[id], locked = j === 2 && H.lv < 50, cell = h('button', { class: 'sk' + (st.sel === j ? ' on' : '') + (locked ? ' lock' : '') }, h('span', { class: 'ic' }, locked ? icon('lock', 18) : icon(S.icon || 'sword', 22)), h('div', {}, h('span', { text: names[j] }), h('b', { text: locked ? 'Lv 50' : S.name })), S.cost && !locked ? h('span', { class: 'mp', text: String(S.cost) }) : null);
+          cell.onclick = () => { if (!locked) { st.sel = j; draw(); } }; return cell;
+        }))));
+        const known = Object.entries(SKILLS).filter(([id, S]) => S && S.name && !S.basic && (id === c.starter || id === c.second || S.cls === H.cls)).slice(0, 3);
+        const sel = ids[st.sel], pool = st.sel === 0 ? [[c.basic, SKILLS[c.basic]]] : (known.length ? known : [[c.starter, SKILLS[c.starter]]]);
+        body.append(h('div', { class: 'sect' }, h('h4', { text: st.sel === 0 ? 'Basic' : 'Known' }), h('div', { class: 'list' }, ...pool.map(([id, S]) => h('div', { class: 'li' + (id === sel ? ' on' : '') }, icon(S.icon || 'sword', 22), h('div', {}, h('b', { text: S.name })), S.cost ? h('span', { class: 'n', text: S.cost + ' MP' }) : h('span', { class: 'n', text: 'FREE' }))))),
+          h('div', { class: 'hint', text: 'Tap a skill for its card; tap it again to watch it in the arch.' }));
+      } else if (st.tab === 'gear') {
+        const slot = (key, label, id) => { const g = id && GEAR[id]; return h('div', { class: 'gs' + (g ? ' r-' + g.rarity : ' empty') }, h('span', { text: label }), h('span', { class: 'ic' }, g ? pxImg(gearIconURL(id), 44, 44) : null), h('b', { text: g ? g.name : '' }), h('i', { text: g && g.stats ? Object.entries(g.stats).map(([k2, v]) => `+${v} ${k2.toUpperCase()}`).join(' ') : '' })); };
+        const weapon = Items.starter(H.cls, 1).id;
+        const auto = h('button', { class: 'btn green', text: 'Auto-equip' }), un = h('button', { class: 'btn sec', text: 'Unequip' });
+        auto.disabled = !!(H.gear.armor && H.gear.accessory && !st.bagUp);
+        auto.onclick = () => { H.gear.armor = H.gear.armor || 'gravediggersleathers'; H.gear.accessory = H.gear.accessory || 'bonecharm'; st.bagUp = false; toast('Best that fits, equipped'); draw(); };
+        un.onclick = () => { H.gear.armor = null; H.gear.accessory = null; st.bagUp = true; draw(); };
+        const bag = ['gravediggersleathers', 'penitentsrags', 'bonecharm', 'haresfoot'].filter(id => GEAR[id]);
+        body.append(h('div', { class: 'sect' }, h('h4', { text: 'Worn' }), h('div', { class: 'gear' }, slot('weapon', 'Weapon', weapon), slot('armor', 'Armour', H.gear.armor), slot('accessory', 'Accessory', H.gear.accessory))),
+          h('div', { class: 'sect' }, h('h4', { text: 'In the Bag' }), h('div', { class: 'bagrow' }, h('small', { text: 'FITS' }), ...bag.map((id, j) => h('span', { class: 'it' + (st.bagUp && j === 0 ? ' up' : '') }, pxImg(gearIconURL(id), 30, 30))), h('span', { class: 'sp' }), un, auto)));
+      } else {
+        const rules = c.rules || [];
+        body.append(h('div', { class: 'sect' }, h('h4', { text: 'Tactics, top first' }), h('div', { class: 'list' }, ...rules.map((r, j) => { const S = SKILLS[r.do] || {}; return h('div', { class: 'rule' }, h('span', { class: 'num', text: String(j + 1) }), h('span', { class: 'if' }, icon(r.if.startsWith('ally') ? 'heart' : 'eye', 16), (RULE_TEXT[r.if] || (() => r.if))(r)), h('span', { class: 'to', text: '→' }), h('span', { class: 'do' }, icon(S.icon || 'sword', 16), S.name || r.do)); }),
+          h('div', { class: 'rule', style: 'opacity:.55' }, h('span', { class: 'num', text: '·' }), h('span', { class: 'if' }, 'Otherwise'), h('span', { class: 'to', text: '→' }), h('span', { class: 'do' }, icon(SKILLS[c.basic].icon || 'sword', 16), SKILLS[c.basic].name)))),
+          h('div', { class: 'row' }, h('span', { class: 'sp' }), h('button', { class: 'btn', text: 'Edit tactics' })));
+      }
+      const fp = h('div', { class: 'fp' }, ...['tl', 'tr', 'bl', 'br'].map(cn => h('i', { class: 'cn ' + cn })), tabsEl, body);
+      root.append(arch, fp);
+      if (F.first) {
+        requestAnimationFrame(() => {
+          const t = tabsEl.children[3], R = el.getBoundingClientRect(), r = t.getBoundingClientRect(), k2 = R.width / 844, x = (r.left - R.left) / k2, y = (r.top - R.top) / k2, w = r.width / k2;
+          const spot = h('div', { class: 'spotlight', style: `background:radial-gradient(ellipse 120px 70px at ${x + w / 2}px ${y + 20}px,rgba(5,3,9,0) 0,rgba(5,3,9,0) 60%,rgba(5,3,9,.7) 100%)` });
+          const arrow = pxImg(big(sprite(ARROW.map, ARROW.pal, 'arrow'), 3), 27, 30, 'px arrowdn'); arrow.style.left = (x + w / 2 - 13) + 'px'; arrow.style.top = (y + r.height / k2 + 6) + 'px'; arrow.style.rotate = '180deg';
+          el.append(spot, arrow, pxImg(big(wickPortrait(), 3), 108, 146, 'px wickc'), h('div', { class: 'wbub', text: 'Your hero fights by tactics. Let’s look at them.' }));
+        });
+      }
+    };
+    draw();
+  }
+
+  const FRAMES = { live: { tab: 'stats' }, stats: { tab: 'stats' }, gear: { tab: 'gear' }, skills: { tab: 'skills' }, rules: { tab: 'rules', first: true } };
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+  for (const el of document.querySelectorAll('.frame')) screen(el, FRAMES[el.dataset.f]);
+})();
+</script>
+</body>
+</html>

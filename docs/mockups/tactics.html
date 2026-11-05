@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tactics</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+/* Screen 11, Tactics (docs/idle-heroes-study.md §6). Each hero's tactics, the party's and the loadout, edited in
+   place: the owners down the left, the chosen one's tactics in a framed panel, and a picker at the right for the part
+   being changed, so nothing pops over what you're editing. Built on the game's own conditions, skills and actions. */
+@font-face{font-family:"Pirata One";src:url(../../fonts/pirata-one-400.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Silkscreen";src:url(../../fonts/silkscreen-700.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-400-italic.woff2) format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Spectral";src:url(../../fonts/spectral-600.woff2) format("woff2");font-weight:600;font-display:swap}
+:root{
+  --void:#0b0913; --stone:#18121f; --rule:#3f344b; --bone:#f2e7d0; --ash:#b4a8b6; --dim:#7d7186;
+  --ember:#f4a646; --gold:#f1d36a; --good:#b4de98; --bad:#f08c76; --blood:#d4484a; --mana:#8ab8f0;
+  --trim:#6b4a2a; --iron:#6e7480;
+  --f-display:"Pirata One",Georgia,serif; --f-body:"Spectral",Georgia,serif; --f-pixel:"Silkscreen","Courier New",monospace;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--bone);font:16px/1.5 var(--f-body)}
+body{background-image:radial-gradient(ellipse 70% 30% at 50% 0%,#241629 0%,transparent 70%);background-repeat:no-repeat}
+img.px{image-rendering:pixelated;display:block}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.page{max-width:960px;margin:0 auto;padding:36px max(16px,env(safe-area-inset-left,0px)) 80px max(16px,env(safe-area-inset-right,0px))}
+.page>header{display:grid;gap:10px;margin-bottom:26px}
+.kick{font:400 10px/1.3 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.page h1{margin:0;font:400 clamp(40px,7vw,58px)/1 var(--f-display);text-shadow:0 0 30px rgba(244,166,70,.25)}
+.lede{margin:0;color:var(--ash);max-width:62ch}
+.band{margin:40px 0 0}
+.band>h2{margin:0 0 6px;font:400 32px/1.1 var(--f-display)}
+.shot{margin:0 0 22px}
+.shot figcaption{display:flex;gap:10px;align-items:baseline;margin-top:8px;color:var(--ash);font-size:15px}
+.shot figcaption b{font:400 10px/1.3 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
+.notes{margin:0;padding:16px 18px 16px 36px;background:var(--stone);border:1px solid var(--rule);display:grid;gap:8px;color:var(--ash)}
+.notes b{color:var(--bone);font-weight:400}
+.notes.qs{border-color:var(--ember)}
+
+/* a phone on its side */
+.fw{position:relative;width:100%;aspect-ratio:860/406}
+.phone{position:absolute;left:0;top:0;width:860px;height:406px;transform-origin:0 0;border-radius:30px;background:#050308;padding:8px;box-shadow:0 0 0 1px #2a2233,0 18px 50px rgba(0,0,0,.6)}
+.frame{position:relative;width:844px;height:390px;overflow:hidden;border-radius:22px;font-size:15px;user-select:none;background:radial-gradient(ellipse 60% 70% at 40% 40%,#22162a 0,#120c18 60%,#08060c 100%)}
+
+/* the top */
+.back{position:absolute;left:12px;top:9px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:700 16px/1 var(--f-pixel);color:var(--gold);background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.title{position:absolute;left:58px;top:9px;display:flex;align-items:center;gap:9px;height:36px}
+.title img{width:28px;height:28px}
+.title b{font:400 27px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.setchip{position:absolute;right:14px;top:12px;display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;font:700 9px/1 var(--f-pixel);letter-spacing:.1em;color:var(--bone);background:linear-gradient(#2a2030,#160f1c);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
+.setchip span{color:var(--dim)}
+.setchip i{font-style:normal;color:var(--ember)}
+
+/* the owners, down the left */
+.owners{position:absolute;left:10px;top:54px;width:50px;display:grid;gap:4px}
+.ow{position:relative;display:grid;place-items:center;height:37px;padding:0;background:rgba(14,10,20,.8);border:1px solid #3a2c22}
+.ow .pf{width:34px;height:33px;display:grid;place-items:center}
+.ow .pf img{width:28px;height:28px}
+.ow b{display:block;font:700 7px/1 var(--f-pixel);letter-spacing:.08em;text-transform:uppercase;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ow em{position:absolute;right:1px;bottom:1px;height:12px;padding:0 2px;display:grid;place-items:center;font:700 7px/1 var(--f-pixel);font-style:normal;color:var(--bone);background:#0b0810;border:1px solid #3a2c22}
+.ow.on{border-color:var(--ember);background:linear-gradient(90deg,rgba(244,166,70,.18),rgba(14,10,20,.8));box-shadow:0 0 10px rgba(244,166,70,.2)}
+.ow.on b{color:var(--bone)}
+.ow.grp{border-style:dashed}
+.ow .warn{position:absolute;top:3px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--blood);border:1px solid #120c16}
+
+/* the framed panels: the kit from Formation */
+.fp{position:absolute;background:linear-gradient(#1c1521,#120d17);border:3px solid #3a2a1c;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #7a5a36,0 18px 44px rgba(0,0,0,.6)}
+.fp .cn{position:absolute;width:16px;height:16px;border:3px solid var(--iron);box-shadow:0 0 0 1px #000;z-index:2}
+.fp .cn::after{content:"";position:absolute;width:4px;height:4px;background:#c8ccd4;border:1px solid #000}
+.fp .cn.tl{left:-7px;top:-7px;border-right:0;border-bottom:0}.fp .cn.tl::after{left:1px;top:1px}
+.fp .cn.tr{right:-7px;top:-7px;border-left:0;border-bottom:0}.fp .cn.tr::after{right:1px;top:1px}
+.fp .cn.bl{left:-7px;bottom:-7px;border-right:0;border-top:0}.fp .cn.bl::after{left:1px;bottom:1px}
+.fp .cn.br{right:-7px;bottom:-7px;border-left:0;border-top:0}.fp .cn.br::after{right:1px;bottom:1px}
+.plate{display:flex;align-items:center;gap:9px;height:40px;padding:0 12px;background:linear-gradient(#34303c,#1c1922);border-bottom:2px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 1px 0 #7a5a36}
+.plate img.port{width:28px;height:28px;border:1px solid var(--trim);background:#0f0b14}
+.plate h3{margin:0;font:400 22px/1 var(--f-display);color:#f6e6c4;text-shadow:0 1px 0 #000}
+.plate .sub{font:700 8px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--ash)}
+.plate .ct{margin-left:auto;font:700 10px/1 var(--f-pixel);color:var(--bone);background:#0f0b14;border:1px solid var(--trim);padding:5px 7px}
+.main{left:70px;top:52px;width:482px;height:330px}
+.list{position:relative;display:grid;gap:5px;padding:9px 10px}
+
+/* a tactic: grip, number, when → do, the lantern that switches it */
+.tac{position:relative;display:grid;grid-template-columns:14px 12px 1.55fr 14px 1fr 28px;align-items:center;column-gap:6px;height:42px;padding:0 6px 0 4px;background:rgba(10,7,14,.7);border:1px solid #3a2c22}
+.tac .grip{display:grid;gap:2px;cursor:grab;touch-action:none}
+.tac .grip i{display:block;height:2px;background:#5a4a62}
+.tac .num{font:700 10px/1 var(--f-pixel);color:var(--ember);text-align:center}
+.chip{position:relative;display:flex;align-items:center;gap:6px;height:30px;padding:0 8px;overflow:hidden;white-space:nowrap;text-align:left;border:1px solid #4a3a52;background:#1a1320}
+.chip img{width:16px;height:16px;flex:none}
+.chip span{font:600 13px/1 var(--f-body);color:var(--bone);overflow:hidden;text-overflow:ellipsis}
+.chip.do{border-color:#6b4a2a;background:#241a14}
+.chip.do span{font:400 16px/1 var(--f-display)}
+.stepbar{display:flex;align-items:center;gap:8px;margin:8px 0 2px;padding:6px 8px;background:rgba(244,166,70,.12);border:1px solid #8a6a3a}
+.stepbar span{flex:1;font:600 13px/1.1 var(--f-body);color:var(--bone)}
+.stepbar .stepin{display:flex;align-items:center;height:24px;font:700 10px/1 var(--f-pixel);color:#1a1008;background:var(--ember);border:1px solid #000}
+.stepbar .stepin button{width:22px;height:22px;font:700 12px/1 var(--f-pixel);color:#1a1008}
+.stepbar .stepin b{padding:0 4px}
+.chip.do em{margin-left:auto;font:700 8px/1 var(--f-pixel);font-style:normal;color:var(--mana);flex:none}
+.chip.sel{border-color:var(--ember);box-shadow:0 0 0 1px var(--ember),0 0 10px rgba(244,166,70,.35)}
+.chip .bad{margin-left:auto;flex:none;width:16px;height:16px;display:grid;place-items:center;font:700 10px/1 var(--f-pixel);color:#ffe8e0;background:#7a1c1c;border:1px solid #000}
+.chip.warnc{border-color:#9a3a34;background:#2a1418}
+.chip .stepin{margin-left:auto;flex:none;display:flex;align-items:center;height:20px;font:700 9px/1 var(--f-pixel);color:#1a1008;background:var(--ember);border:1px solid #000}
+.chip .stepin button{width:16px;height:18px;font:700 10px/1 var(--f-pixel);color:#1a1008}
+.chip .stepin b{padding:0 3px}
+.tac .to{font:700 11px/1 var(--f-pixel);color:var(--dim);text-align:center}
+.lamp{width:26px;height:30px;display:grid;place-items:center;border:1px solid #3a2c22;background:#0f0b14}
+.lamp img{width:18px;height:18px;filter:grayscale(1) brightness(.45)}
+.lamp.on{border-color:#8a6a3a;background:radial-gradient(circle,#4a2c14,#140c0a)}
+.lamp.on img{filter:drop-shadow(0 0 4px rgba(255,190,100,.9))}
+.tac.off .chip{opacity:.45}
+.tac.sel{border-color:#8a6a3a}
+.tac.lift{opacity:.25}
+.tac.lock{grid-template-columns:26px 1fr auto;border-style:dashed;opacity:.65}
+.tac.lock img{width:16px;height:16px;justify-self:center}
+.tac.lock span{font:700 8px/1 var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.tac.lock em{font:700 8px/1 var(--f-pixel);font-style:normal;letter-spacing:.06em;color:var(--ember);border:1px solid #4a3424;padding:4px 6px}
+.tac.dflt{grid-template-columns:26px 1fr 14px 1fr 28px;opacity:.6;background:transparent;border-style:dotted}
+.tac.dflt .k{font:700 7px/1 var(--f-pixel);letter-spacing:.1em;color:var(--dim)}
+.step{position:absolute;left:var(--x);top:-12px;z-index:3;display:flex;align-items:center;height:20px;font:700 9px/1 var(--f-pixel);color:#1a1008;background:var(--ember);border:1px solid #000;box-shadow:0 0 0 1px #8a5a2a}
+.step button{width:20px;height:18px;font:700 10px/1 var(--f-pixel);color:#1a1008}
+.step b{padding:0 4px;font-weight:700}
+.ghost{position:absolute;left:10px;z-index:8;width:462px;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.7),0 0 0 2px var(--ember);background:#1c1420}
+.dropline{position:absolute;left:10px;width:462px;height:3px;z-index:7;background:var(--ember);box-shadow:0 0 8px rgba(244,166,70,.8);pointer-events:none}
+
+/* the picker, at the right */
+.pick{left:562px;top:52px;width:270px;height:330px}
+.ptabs{display:flex;height:40px;background:linear-gradient(#34303c,#1c1922);border-bottom:2px solid #000;box-shadow:0 1px 0 #7a5a36}
+.ptabs button{flex:1;font:400 19px/1 var(--f-display);color:var(--ash);border-right:1px solid #000}
+.ptabs button:last-child{border-right:0}
+.ptabs button.on{color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a)}
+.opts{height:calc(100% - 42px);overflow:auto;padding:4px 10px 10px;scrollbar-width:thin;scrollbar-color:#5a4632 transparent}
+.grp{margin:8px 0 5px;display:flex;align-items:center;gap:7px;font:700 8px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.grp::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#6b4a2a,transparent)}
+.opt{display:flex;align-items:center;gap:7px;width:100%;height:30px;margin-bottom:4px;padding:0 8px;text-align:left;border:1px solid #3a2c22;background:rgba(10,7,14,.6)}
+.opt img{width:15px;height:15px;flex:none}
+.opt span{font:600 13px/1 var(--f-body);color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.opt em{margin-left:auto;flex:none;font:700 8px/1 var(--f-pixel);font-style:normal;color:var(--mana)}
+.opt.cur{border-color:var(--ember);background:linear-gradient(90deg,rgba(244,166,70,.2),rgba(10,7,14,.6))}
+.opt.locked{opacity:.4}
+.opt.locked em{color:var(--dim)}
+.opt.not span{color:var(--ash)}
+.opt.not em{color:var(--bad)}
+.toast{position:absolute;left:50%;top:14px;z-index:10;transform:translateX(-50%);padding:6px 12px;font:600 13px/1.2 var(--f-body);color:var(--bone);background:#1e1016;border:1px solid #9a3a34;box-shadow:0 0 0 1px #000;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="kick">Screen 11 · Tactics</div>
+    <h1>Tactics</h1>
+    <p class="lede">Every hero’s tactics, the party’s and the loadout, edited in place. The owners run down the left; the chosen one’s tactics fill a framed panel; a picker at the right changes whichever part you tapped, so nothing pops over what you’re editing. The top frame is live: switch owners, tap a “when” or a “do” and pick, step a number, light or snuff a lantern, drag a grip.</p>
+  </header>
+
+  <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="live"></div></div></div><figcaption><b>Live</b> Tap a chip, then pick on the right. The lantern switches a tactic on or off; the grip drags it up or down.</figcaption></figure>
+
+  <section class="band">
+    <h2>The screen</h2>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="t1"></div></div></div><figcaption><b>T1</b> The Warden’s tactics, top first. The first one’s “when” is picked; the conditions you know are on the right, in four groups, with those still to find locked.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="t2"></div></div></div><figcaption><b>T2</b> A “do” picked: the hero’s skills with their mana. Shield Bash isn’t equipped, so the tactic says so in red rather than in a sentence.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="t3"></div></div></div><figcaption><b>T3</b> The party’s tactics: a draught for a hurt ally, focus fire (snuffed), and coming home when the party is tired.</figcaption></figure>
+    <figure class="shot"><div class="fw"><div class="phone"><div class="frame" data-f="t4"></div></div></div><figcaption><b>T4</b> Dragging a tactic by its grip: it lifts, and a line shows where it lands.</figcaption></figure>
+  </section>
+
+  <section class="band">
+    <h2>What changed</h2>
+    <ul class="notes">
+      <li><b>Landscape, in three columns:</b> who, their tactics, and the picker. Choosing a condition or an action no longer opens a sheet over the list.</li>
+      <li><b>Each tactic is one line:</b> grip, number, “when” → “do”, and a lantern: lit is on, dark is off.</li>
+      <li><b>No paragraphs:</b> “Only a check” and “isn’t learned: skipped in battle” become a red chip on the action (Not equipped). A condition’s or action’s meaning shows on a long press, from the glossary.</li>
+      <li><b>Numbers step in place:</b> the “below 50%” of a condition changes with ‹ › on the chip.</li>
+      <li><b>Locked slots</b> fold into one line that says how many and who unlocks them (the Masters’ Hall for heroes, the Tactician for the party), not why.</li>
+      <li><b>Saved sets</b> sit in the top right as one chip, for switching between stages.</li>
+    </ul>
+  </section>
+
+  <section class="band">
+    <h2>For you</h2>
+    <ol class="notes qs">
+      <li><b>The lantern for on and off:</b> keep it, or a plain switch?</li>
+      <li><b>Locked conditions</b> shown greyed (so you know there’s more to find), or hidden until found?</li>
+    </ol>
+  </section>
+</div>
+
+<script src="../../js/core.js"></script>
+<script src="../../js/data.js"></script>
+<script src="../../js/classes.js"></script>
+<script src="../../js/classes-late.js"></script>
+<script src="../../js/items.js"></script>
+<script src="../../js/art.js"></script>
+<script>
+'use strict';
+(() => {
+  const pxImg = (src, w, hgt, cls = 'px') => { const i = new Image(); i.src = src; i.className = cls; i.width = w; i.height = hgt; i.alt = ''; i.draggable = false; return i; };
+  const icon = (name, size) => pxImg(iconURL(UI_ICONS[name] ? name : 'scroll'), size, size);
+  const portrait = cls => portraitURL(cls, true, [Items.starter(cls, 1).id, null, null]);
+  const GROUP_ICON = { self: 'helm', ally: 'heart', foe: 'eye', battle: 'hourglass' };
+  const condLabel = r => { const C = CONDITIONS[r.if]; if (!C) return r.if; const rr = Object.assign({}, r); if (C.n && rr.n == null) rr.n = Array.isArray(C.start) ? C.start[0] : C.n[0]; if (C.s && rr.s == null) rr.s = C.s[0]; try { return C.label(rr); } catch (e) { return r.if; } };
+  const actName = id => (id === 'home' ? 'Return to the Hearth' : PARTY_ACTIONS[id] ? PARTY_ACTIONS[id].name : SKILLS[id] ? SKILLS[id].name : id);
+  const actIcon = id => (PARTY_ACTIONS[id] ? PARTY_ACTIONS[id].icon : SKILLS[id] ? SKILLS[id].icon : 'sword') || 'sword';
+  const actCost = id => (SKILLS[id] && SKILLS[id].cost ? String(SKILLS[id].cost) : '');
+
+  // ── the party: who sets out, their tactics and slots; the party's own; the loadout
+  const HEROES = [
+    { id: 'brand', cls: 'warden', name: 'Brand', lv: 5, slots: 3, max: 5, equipped: ['guard'], tactics: [{ if: 'foe_charging', do: 'guard', on: true }, { if: 'ally_hp_lt', n: 50, do: 'guard', on: true }, { if: 'front_foe', do: 'bash', on: true }] },
+    { id: 'fulke', cls: 'sellsword', name: 'Fulke', lv: 6, slots: 3, max: 5, tactics: [{ if: 'foe_lowest', do: 'cleave', on: true }, { if: 'foes_at_least', n: 3, do: 'cleave', on: true }] },
+    { id: 'isolde', cls: 'crossbowman', name: 'Isolde', lv: 4, slots: 3, max: 5, tactics: [{ if: 'foe_back', do: CLASSES.crossbowman.starter, on: true }] },
+    { id: 'agnes', cls: 'pilgrim', name: 'Agnes', lv: 6, slots: 3, max: 6, tactics: [{ if: 'ally_hp_lt', n: 50, do: 'mend', on: true }, { if: 'foe_lowest', do: 'smite', on: true }] },
+  ];
+  for (const H of HEROES) { const c = CLASSES[H.cls]; H.known = [c.basic, c.starter, c.second].filter(Boolean); H.equipped = [c.basic, ...(H.equipped || [c.starter])]; }
+  const PARTY = { id: 'party', name: 'Party', slots: 3, max: 5, tactics: [{ if: 'ally_hp_lt', n: 30, do: 'draught', on: true }, { if: 'foe_lowest', do: 'focus', on: false }, { if: 'bb_fatigue', n: 75, do: 'home', on: true }] };
+  const KNOWN = new Set(Object.keys(CONDITIONS).filter(k => CONDITIONS[k].start || ['foe_charging', 'foe_back', 'foes_at_least', 'ally_hurt', 'one_foe', 'battle_start', 'self_mp_lt'].includes(k)));
+  const label = (r) => (r.if === 'bb_fatigue' ? `Party: fatigue ${r.n}% or more` : condLabel(r));
+  const condGroup = k => (k === 'bb_fatigue' ? 'battle' : CONDITIONS[k] ? CONDITIONS[k].group : 'battle');
+
+  function screen(el, F) {
+    const st = { o: F.owner || 0, sel: F.sel || null, pane: F.pane || 'when' };
+    const owners = [...HEROES, PARTY];
+    const root = h('div', {}); el.append(root);
+    const toast = msg => { const t = h('div', { class: 'toast', text: msg }); el.append(t); setTimeout(() => { t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 1400); };
+    let drag = null;
+    const draw = () => {
+      const O = owners[st.o], isParty = O.id === 'party', T = O.tactics;
+      root.innerHTML = ''; st.stepper = null;
+      root.append(h('button', { class: 'back', text: '‹', 'aria-label': 'Back' }), h('div', { class: 'title' }, icon('scroll', 28), h('b', { text: 'Tactics' })),
+        h('button', { class: 'setchip' }, h('span', { text: 'SET' }), 'GRAVEFIELDS', h('i', { text: '▾' })));
+      // owners
+      const ol = h('div', { class: 'owners' });
+      owners.forEach((W, i) => {
+        const party = W.id === 'party', warn = !party && W.tactics.some(t => !(W.equipped || []).includes(t.do));
+        const b = h('button', { class: 'ow' + (i === st.o ? ' on' : '') + (party ? ' grp' : ''), title: W.name }, h('span', { class: 'pf' }, party ? icon('lantern', 22) : pxImg(portrait(W.cls), 28, 28)), h('em', { text: `${W.tactics.length}/${W.slots}` }), warn ? h('i', { class: 'warn' }) : null);
+        b.onclick = () => { st.o = i; st.sel = null; draw(); }; ol.append(b);
+      });
+      ol.append(h('button', { class: 'ow grp', title: 'Loadout' }, h('span', { class: 'pf' }, icon('bag', 22)), h('em', { text: '2/3' })));
+      // the tactics
+      const list = h('div', { class: 'list' });
+      T.forEach((t, i) => {
+        const selW = st.sel && st.sel.i === i && st.sel.part === 'when', selD = st.sel && st.sel.i === i && st.sel.part === 'do';
+        const notEq = !isParty && !O.equipped.includes(t.do);
+        const when = h('button', { class: 'chip' + (selW ? ' sel' : '') }, icon(GROUP_ICON[condGroup(t.if)], 16), h('span', { text: label(t) }));
+        const doo = h('button', { class: 'chip do' + (selD ? ' sel' : '') + (notEq ? ' warnc' : ''), title: notEq ? 'Not equipped: skipped in battle' : '' }, icon(actIcon(t.do), 16), h('span', { text: actName(t.do) }), notEq ? h('b', { class: 'bad', text: '!' }) : actCost(t.do) ? h('em', { text: actCost(t.do) }) : null);
+        when.onclick = () => { st.sel = { i, part: 'when' }; st.pane = 'when'; draw(); };
+        doo.onclick = () => { st.sel = { i, part: 'do' }; st.pane = 'do'; draw(); };
+        const lamp = h('button', { class: 'lamp' + (t.on ? ' on' : ''), title: t.on ? 'On' : 'Off' }, icon('lantern', 18));
+        lamp.onclick = () => { t.on = !t.on; draw(); };
+        const grip = h('span', { class: 'grip' }, h('i'), h('i'), h('i'));
+        const row = h('div', { class: 'tac' + (t.on ? '' : ' off') + (st.sel && st.sel.i === i ? ' sel' : '') + (F.lift === i ? ' lift' : '') }, grip, h('span', { class: 'num', text: String(i + 1) }), when, h('span', { class: 'to', text: '→' }), doo, lamp);
+        row.dataset.i = i;
+        if (selW && CONDITIONS[t.if] && CONDITIONS[t.if].n || selW && t.if === 'bb_fatigue') {
+          const steps = t.if === 'bb_fatigue' ? [50, 60, 75, 90] : CONDITIONS[t.if].n, k = Math.max(0, steps.indexOf(t.n));
+          const minus = h('button', { text: '‹' }), plus = h('button', { text: '›' });
+          minus.onclick = e => { e.stopPropagation(); t.n = steps[Math.max(0, k - 1)]; draw(); }; plus.onclick = e => { e.stopPropagation(); t.n = steps[Math.min(steps.length - 1, k + 1)]; draw(); };
+          st.stepper = h('div', { class: 'stepbar' }, h('span', { text: label(Object.assign({}, t, { n: '' })).replace(/\s*%.*$/, '').replace(/\s+or more.*$/, '') }), h('span', { class: 'stepin' }, minus, h('b', { text: (t.n != null ? t.n : steps[0]) + (t.if === 'foes_at_least' ? '' : '%') }), plus));
+        }
+        grip.addEventListener('pointerdown', e => { e.preventDefault(); drag = { i, y0: e.clientY }; el.setPointerCapture(e.pointerId); });
+        list.append(row);
+      });
+      for (let i = T.length; i < O.slots; i++) list.append(h('div', { class: 'tac lock' }, h('span'), h('span', { text: 'Open slot' }), h('em', { text: '+ ADD' })));
+      if (O.max > O.slots) list.append(h('div', { class: 'tac lock' }, icon('lock', 16), h('span', { text: `${O.max - O.slots} more` }), h('em', { text: isParty ? 'TACTICIAN' : 'MASTERS’ HALL' })));
+      if (!isParty) { const b = CLASSES[O.cls].basic; list.append(h('div', { class: 'tac dflt' }, h('span', { class: 'k', text: 'ELSE' }), h('div', { class: 'chip' }, h('span', { text: 'Otherwise' })), h('span', { class: 'to', text: '→' }), h('div', { class: 'chip do' }, icon(actIcon(b), 16), h('span', { text: actName(b) })), h('span'))); }
+      const head = h('div', { class: 'plate' }, isParty ? icon('lantern', 24) : pxImg(portrait(O.cls), 28, 28, 'px port'), h('div', {}, h('h3', { text: isParty ? 'The party' : O.name }), h('span', { class: 'sub', text: isParty ? 'Between and during battles' : `${CLASSES[O.cls].name} · Lv ${O.lv}` })), h('span', { class: 'ct', text: `${T.length} / ${O.slots}` }));
+      const main = h('div', { class: 'fp main' }, ...['tl', 'tr', 'bl', 'br'].map(c => h('i', { class: 'cn ' + c })), head, list);
+      // the picker
+      const opts = h('div', { class: 'opts' });
+      if (st.pane === 'when' && st.stepper) opts.append(st.stepper);
+      const cur = st.sel && T[st.sel.i];
+      if (st.pane === 'when') {
+        const groups = isParty ? ['ally', 'foe', 'battle'] : ['self', 'ally', 'foe', 'battle'];
+        for (const g of groups) {
+          opts.append(h('div', { class: 'grp', text: { self: 'Self', ally: 'Ally', foe: 'Foe', battle: 'Battle' }[g] }));
+          const keys = Object.keys(CONDITIONS).filter(k => CONDITIONS[k].group === g).slice(0, g === 'foe' ? 9 : 6);
+          if (isParty && g === 'battle') keys.unshift('bb_fatigue');
+          for (const k of keys) {
+            const known = KNOWN.has(k) || k === 'bb_fatigue', r = { if: k };
+            const b = h('button', { class: 'opt' + (cur && cur.if === k ? ' cur' : '') + (known ? '' : ' locked') }, icon(known ? GROUP_ICON[g] : 'lock', 15), h('span', { text: known ? label(r) : label(r) }), known ? null : h('em', { text: 'TO FIND' }));
+            b.onclick = () => { if (!known) { toast('Found on the road: a first clear teaches it'); return; } if (cur) { cur.if = k; const C = CONDITIONS[k]; cur.n = C && C.n ? (Array.isArray(C.start) ? C.start[0] : C.n[Math.floor(C.n.length / 2)]) : undefined; } draw(); };
+            opts.append(b);
+          }
+        }
+      } else {
+        const ids = isParty ? ['draught', 'focus', 'home'].filter(id => PARTY_ACTIONS[id] || id === 'home') : [...new Set([...O.equipped, ...O.known, 'guard', 'bash'].filter(id => SKILLS[id] && (!SKILLS[id].cls || true)))].slice(0, 7);
+        opts.append(h('div', { class: 'grp', text: isParty ? 'Party' : 'Skills' }));
+        for (const id of ids) {
+          const notEq = !isParty && !O.equipped.includes(id);
+          const b = h('button', { class: 'opt' + (cur && cur.do === id ? ' cur' : '') + (notEq ? ' not' : '') }, icon(actIcon(id), 15), h('span', { text: actName(id) }), h('em', { text: notEq ? 'NOT EQUIPPED' : actCost(id) ? actCost(id) + ' MP' : '' }));
+          b.onclick = () => { if (cur) cur.do = id; draw(); };
+          opts.append(b);
+        }
+      }
+      const tw = h('button', { class: st.pane === 'when' ? 'on' : '', text: 'When' }), td = h('button', { class: st.pane === 'do' ? 'on' : '', text: 'Do' });
+      tw.onclick = () => { st.pane = 'when'; if (st.sel) st.sel.part = 'when'; draw(); }; td.onclick = () => { st.pane = 'do'; if (st.sel) st.sel.part = 'do'; draw(); };
+      const pick = h('div', { class: 'fp pick' }, ...['tl', 'tr', 'bl', 'br'].map(c => h('i', { class: 'cn ' + c })), h('div', { class: 'ptabs' }, tw, td), opts);
+      root.append(ol, main, pick);
+      if (F.dragStill) requestAnimationFrame(() => {
+        const rows = [...list.querySelectorAll('.tac')], from = rows[F.dragStill.from], Lr = list.getBoundingClientRect(), R = el.getBoundingClientRect(), k = R.width / 844;
+        const fr = from.getBoundingClientRect(), g = from.cloneNode(true); g.classList.remove('lift'); g.className += ' ghost'; g.style.top = ((fr.top - R.top) / k - 18) + 'px'; g.style.left = ((fr.left - R.left) / k + 6) + 'px'; root.append(g);
+        const to = rows[F.dragStill.to].getBoundingClientRect(), line = h('div', { class: 'dropline', style: `top:${(to.top - R.top) / k - 4}px;left:${(to.left - R.left) / k}px` }); root.append(line);
+      });
+      if (st.sel && !F.live) return;
+    };
+    // drag a tactic by its grip: a line shows where it lands; let go to move it there
+    const rowsNow = () => [...el.querySelectorAll('.list .tac[data-i]')];
+    const slotAt = y => { let k = 0; rowsNow().forEach((r, j) => { const b = r.getBoundingClientRect(); if (y > b.top + b.height / 2) k = j + 1; }); return k; };
+    el.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const rows = rowsNow(); if (!rows.length) return;
+      if (!drag.lifted) { drag.lifted = true; rows[drag.i].classList.add('lift'); drag.line = h('div', { class: 'dropline' }); root.append(drag.line); }
+      const k = slotAt(e.clientY), R = el.getBoundingClientRect(), sc = R.width / 844, ref = rows[Math.min(k, rows.length - 1)].getBoundingClientRect();
+      const y = k >= rows.length ? ref.bottom + 2 : ref.top - 3;
+      drag.line.style.top = ((y - R.top) / sc - 1) + 'px'; drag.line.style.left = ((ref.left - R.left) / sc) + 'px';
+    });
+    el.addEventListener('pointerup', e => {
+      if (!drag) return;
+      const O = owners[st.o];
+      let to = slotAt(e.clientY); if (to > drag.i) to -= 1;
+      if (to !== drag.i) { const [t] = O.tactics.splice(drag.i, 1); O.tactics.splice(to, 0, t); toast(`Moved to ${to + 1}`); }
+      drag = null; draw();
+    });
+    draw();
+  }
+
+  const FRAMES = {
+    live: { live: true, owner: 0, sel: { i: 0, part: 'when' }, pane: 'when' },
+    t1: { owner: 0, sel: { i: 1, part: 'when' }, pane: 'when' },
+    t2: { owner: 0, sel: { i: 2, part: 'do' }, pane: 'do' },
+    t3: { owner: 4, sel: { i: 2, part: 'when' }, pane: 'when' },
+    t4: { owner: 3, lift: 1, dragStill: { from: 1, to: 0 } },
+  };
+  const fit = () => document.querySelectorAll('.fw').forEach(w => { w.firstElementChild.style.transform = `scale(${w.clientWidth / 860})`; });
+  addEventListener('resize', fit); fit();
+  for (const el of document.querySelectorAll('.frame')) screen(el, FRAMES[el.dataset.f]);
+})();
+</script>
+</body>
+</html>
