@@ -473,7 +473,8 @@ const TIPS = {
   fell: 'Knocked out: back up after the battle, at full health. “Ally: fallen” is now a condition.',
   step: 'A melee foe in the back row waits, and steps up when a front slot opens.',
   called: 'Called foes drop no spoils. Kill the one calling them.',
-  weary: 'Weary: rest at camp. The Infirmary will speed it up.',
+  // the first session's fatigue line, moved here: it comes the first time a hero gets tired (tutorial study §5)
+  weary: 'Weary: every turn tires a hero a little. They rest at the Hearth.',
   stat: 'A stat point: spend it on the hero’s Stats tab.',
   skill: 'A skill point: learn a tier-1 skill, then choose which one to equip.',
   // Regions II–V (build step 7b): their new foes, the first time each trick is played

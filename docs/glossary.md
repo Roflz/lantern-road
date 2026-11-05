@@ -29,10 +29,10 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | [Heroes](#heroes) | 34 |
 | [Gear](#gear) | 19 |
 | [The Hearth](#the-hearth) | 36 |
-| [The road](#the-road) | 24 |
+| [The road](#the-road) | 25 |
 | [Statuses](#statuses) | 57 |
 | [Resources](#resources) | 7 |
-| **All** | **277** |
+| **All** | **278** |
 
 ## The basics
 
@@ -238,7 +238,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Picks** | A Recruit Board track: more hires from each board. |  | `picks` · scroll |
 | **Veterans** | A Recruit Board track: recruits who arrive at higher levels, points spent. | The top rank brings storied recruits, some already combined or awakened. | `veterans` · scroll |
 | **Recruit Board** | Where new heroes wait to be hired; it stands outside the plots. | A new board comes whenever the party comes home, and every 4 hours. Its first recruit is free. | `recruitboard` · scroll |
-| **Toll House** | Travellers pay to walk the road you’ve lit, even while you’re away. | It earns more the further your light reaches. Its focus can take party items instead of gold. | `tollhouse` · coin |
+| **Toll House** | Raises the tolls travellers pay to use the road you’ve cleared. | It earns more the further you’ve cleared. Its focus can take party items instead of gold. | `tollhouse` · coin |
 | **Infirmary** | Beds where tired heroes rest faster than at the fire. | More levels bring more and better beds, and from level 3 a still-room. | `infirmary` · cross |
 | **Training Yard** | XP for resting heroes, up to the level of your highest lit stage. | You choose who trains. | `trainingyard` · sword |
 | **Shop** | Party items for gold, and a small stall of gear. | Prices rise with the furthest region you’ve reached. | `shop` · bag |
@@ -277,6 +277,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Keep going after a win** | After a win, the party walks on to the next stage. | It comes with 1-6, along with a party rule that brings everyone home at 75 fatigue. | `keep_going` · lantern |
 | **Return when…** | Chips on the stage sheet that end a trip; each is a party rule. | Fatigue 75+, An ally has fallen, Out of draughts and Before a boss or elite. Each needs a free party rule slot. | `return_when` · lantern |
 | **First clear** | Your first win at a stage: double gold and materials, and often something new. |  | `first_clear` · star |
+| **Tolls** | Gold travellers pay to use the road you’ve cleared, even while you’re away. | Each cleared stage earns 5 gold an hour, stored up to 8 hours. The Toll House adds more. | `tolls` · coin |
 | **Unlock** | What a first clear brings: a feature, a condition, a blueprint or a class. |  | `unlock` · star |
 | **Loot** | What a battle brings home: gold, XP, materials, party items and gear. | Every foe beaten drops some, and a win adds more for clearing the stage. | `loot` · bag |
 | **Hint** | After a loss, the stage’s advice on what to try next. |  | `hint` · book |
@@ -394,17 +395,17 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 66 · js/buildings.js 164, 178, 311, 329 · js/camp.js 710 · js/data.js 569 · js/firstsession.js 85, 98 · js/guide.js 122, 137 · js/main.js 386, 476 · js/map.js 396 · js/proto.js 94, 118 |
-| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 124 · js/main.js 115, 175, 316 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 164, 178, 311, 329 · js/camp.js 725 · js/data.js 586 · js/firstsession.js 100, 113, 128 · js/guide.js 129, 145 · js/main.js 386 · js/map.js 396 · js/proto.js 94, 118 |
+| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 175, 316 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 368 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 559, 565 · js/firstsession.js 80, 96 · js/guide.js 87, 93 · js/main.js 374 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 576, 582 · js/firstsession.js 109 · js/guide.js 92, 98 · js/main.js 374 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 374, 376, 388 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 128 · js/battle.js 544 · js/campaign.js 299 · js/classes-late.js 253 · js/data.js 310 · js/main.js 259, 305, 332, 473 · js/map.js 338 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 544 · js/campaign.js 299 · js/classes-late.js 253 · js/data.js 310 · js/main.js 259, 305, 332, 473 · js/map.js 338 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 199, 475 · js/map.js 278 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 87 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 517, 671 · js/hero.js 31 · js/items.js 53 · js/map.js 316 |
-| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 488 |
-| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 493 · js/rules.js 288, 401, 717 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 534, 688 · js/hero.js 31 · js/items.js 53 · js/map.js 316 |
+| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 505 |
+| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 510 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 369 |
 | straight apostrophes | curly ones (’) |  | js/bag.js 203 · js/data.js 295 |

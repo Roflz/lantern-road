@@ -233,7 +233,7 @@ const GLOSSARY = (() => {
 
     // The buildings, one line each
     recruitboard: { name: 'Recruit Board', icon: 'scroll', line: 'Where new heroes wait to be hired; it stands outside the plots.', more: 'A new board comes whenever the party comes home, and every 4 hours. Its first recruit is free.', see: ['recruit', 'notices', 'picks', 'veterans'] },
-    tollhouse: { name: 'Toll House', icon: 'coin', line: 'Travellers pay to walk the road you’ve lit, even while you’re away.', more: 'It earns more the further your light reaches. Its focus can take party items instead of gold.', see: ['idle_building', 'focus'] },
+    tollhouse: { name: 'Toll House', icon: 'coin', line: 'Raises the tolls travellers pay to use the road you’ve cleared.', more: 'It earns more the further you’ve cleared. Its focus can take party items instead of gold.', see: ['tolls', 'idle_building', 'focus'] },
     infirmary: { name: 'Infirmary', icon: 'cross', line: 'Beds where tired heroes rest faster than at the fire.', more: 'More levels bring more and better beds, and from level 3 a still-room.', see: ['bed', 'still_room', 'rest'] },
     trainingyard: { name: 'Training Yard', icon: 'sword', line: 'XP for resting heroes, up to the level of your highest lit stage.', more: 'You choose who trains.', see: ['xp', 'idle_building'] },
     shop: { name: 'Shop', icon: 'bag', line: 'Party items for gold, and a small stall of gear.', more: 'Prices rise with the furthest region you’ve reached.', see: ['party_items', 'gear_stall'] },
@@ -271,6 +271,7 @@ const GLOSSARY = (() => {
     keep_going: { name: 'Keep going after a win', icon: 'lantern', line: 'After a win, the party walks on to the next stage.', more: 'It comes with 1-6, along with a party rule that brings everyone home at 75 fatigue.', see: ['trip', 'return_when', 'cond_bb_fatigue'] },
     return_when: { name: 'Return when…', icon: 'lantern', line: 'Chips on the stage sheet that end a trip; each is a party rule.', more: 'Fatigue 75+, An ally has fallen, Out of draughts and Before a boss or elite. Each needs a free party rule slot.', see: ['between_battles', 'party_rule_slot', 'return_to_hearth'] },
     first_clear: { name: 'First clear', icon: 'star', line: 'Your first win at a stage: double gold and materials, and often something new.', see: ['unlock', 'lit'] },
+    tolls: { name: 'Tolls', icon: 'coin', line: 'Gold travellers pay to use the road you’ve cleared, even while you’re away.', more: 'Each cleared stage earns 5 gold an hour, stored up to 8 hours. The Toll House adds more.', see: ['tollhouse', 'collect', 'away'] },
     unlock: { name: 'Unlock', icon: 'star', line: 'What a first clear brings: a feature, a condition, a blueprint or a class.', see: ['first_clear', 'blueprint', 'condition'] },
     loot: { name: 'Loot', icon: 'bag', line: 'What a battle brings home: gold, XP, materials, party items and gear.', more: 'Every foe beaten drops some, and a win adds more for clearing the stage.', see: ['gold', 'gear_roll', 'first_clear'] },
     hint: { name: 'Hint', icon: 'book', line: 'After a loss, the stage’s advice on what to try next.', see: ['report', 'farm'] },

@@ -1,16 +1,19 @@
 """The play-through again, in the browser, through the game's own buttons (build step 7b).
 
 A new game is played through Region I the way a player taps it: Wick's first session (js/firstsession.js), every
-forced step by touch where it is lit: his welcome and the name box, the first pick at the Recruit Board, 1-1 and 1-2
-with his pauses, the results, the hero's tactics, the free recruit and the drag in Formation; then at the Hearth (screen 2, views around
-the fire) the corner's Set out for the first trip, then a tap on the road in the scene; either flies up the road to the
-frontier's card (the road view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in
-battle, then the results popup (a tap skips its fill; Report and back on the first two trips; its New things, opening
-"+N" when there are more than it shows; Hearth); the Recruit
-Board, tapped in the Hearth's party view; and Build, by turning to the buildings view and tapping an empty plot. No
-prototype tools. Two stand-ins for a player's own time: the clock is moved on to rest the party (the camp's ticking
-does the rest, as when the app stays open), and points are spent as the Stats tab's + buttons would (Hero.autoBuild).
-Taps in the Hearth's scene are real touches at the place on the screen, so they go through the turned frame.
+forced step by touch where it is lit: his story and the name box, the first pick at the Recruit Board, 1-1 with his
+pauses, the results, Grow (a + on the hero's Stats tab, and Keep), the unforced 1-2 (Set out, and the road's Set out),
+the free recruit and the drag in Formation; then at the Hearth (screen 2, views around the fire) the corner's Set out
+for the first trip, then a tap on the road in the scene; either flies up the road to the frontier's card (the road
+view), whose Set out sets out (or after two losses there, ↓ a stage back and Farm); Skip in battle, then the results
+popup (a tap skips its fill; Report and back on the first two trips; its New things, opening "+N" when there are more
+than it shows; Hearth); Wick's card after 1-3 (Show me, and his soft visit to Tactics); the Recruit Board, tapped in
+the Hearth's party view, hiring a class the party lacks (the cheapest of those, as tools/playthrough.js hires); and
+Build, by turning to the buildings view and tapping an empty plot. No prototype tools. Three stand-ins for a player's
+own time: the clock is moved on to rest the party (the camp's ticking does the rest, as when the app stays open),
+points are spent as the Stats tab's + buttons would (Hero.autoBuild), and gear is worn as the Gear tab's Auto-equip
+would wear it (HeroSheet.autoEquipPlan). Taps in the Hearth's scene are real touches at the place on the screen, so they
+go through the turned frame.
 
 It records every console error, every coach mark and tip as it appears, and every new thing the results popup shows,
 and fails when the road stops moving.
@@ -36,8 +39,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 # the flows --quick waits for, each once; in the order a new game first meets them
 FLOWS = {
-    'guide': "Wick's first session, every forced step",
+    'guide': "Wick's first session, every forced step, and the unforced 1-2 in it",
     'pick': 'the first pick',
+    'visit': "Wick's card at the Hearth after 1-3's first clear (Show me), and his soft visit to Tactics",
     'set out': "Set out at the Hearth, up the road to the frontier's card",
     'battle': 'a battle, skipped',
     'results': 'the results popup, with Report',
@@ -79,15 +83,21 @@ ROAD_STILL = """() => { const L = Camp.scene, b = document.querySelector('.cv-ro
 IN_BATTLE = "() => !!(Battle.busy && !document.getElementById('controls').hidden)"
 SHEET_OR_BATTLE = "() => !document.getElementById('sheet').hidden || (Battle.busy && !document.getElementById('controls').hidden)"
 RESULTS = "() => !!document.querySelector('#sheet.results:not([hidden]) .rs-box')"
-# Wick's first session: one of his forced steps is up (js/wick.js), or the session is over. His gate holds back the
-# synthetic clicks tap() makes, so his steps are answered with real touches where they are drawn.
-WICK_UP = "() => { const g = Wick.step; return !FirstSession.on || !!(g && !g.closed && g.root.classList.contains('in')); }"
+# Wick's first session: one of his forced steps is up (js/wick.js), the session is in its unforced 1-2 (setout2, yours:
+# the player sets out), or it is over. His gate holds back the synthetic clicks tap() makes, so his steps are answered
+# with real touches where they are drawn.
+UNFORCED = ['setout2', 'yours']
+WICK_UP = "() => { const g = Wick.step; return !FirstSession.on || !!(g && !g.closed && g.root.classList.contains('in')) || " + json.dumps(UNFORCED) + ".includes(FirstSession.step); }"
 WICK_NOW = """() => { const g = Wick.step; if (!g || g.closed) return null;
   const m = el => { if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; };
   return { step: FirstSession.step, tap: g.tap, hole: m(g.root.querySelector('.wk-hole')) }; }"""
 # the middle of an element on the screen, and a point in the stage's design pixels on the screen (through the turn)
 MID = "sel => { const el = typeof sel === 'string' ? document.querySelector(sel) : sel; if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; }"
 TO_CLIENT = "([x, y]) => { const r = document.getElementById('stage').getBoundingClientRect(), k = Frame.k; return Frame.turned ? [r.left + (Frame.H - y) * k, r.top + x * k] : [r.left + x * k, r.top + y * k]; }"
+# The recruit to hire: a class the party lacks, the cheapest of those that can be paid for (its place on the board).
+WANTED = """() => { const s = Save.state, have = new Set(s.roster.map(c => c.cls)), price = r => Base.recruitPrice(r, s);
+  const list = s.board.recruits.map((r, i) => ({ r, i })).filter(x => price(x.r) <= s.currencies.gold).sort((a, b) => (have.has(a.r.cls) - have.has(b.r.cls)) || (price(a.r) - price(b.r)));
+  return list.length ? list[0].i : 0; }"""
 # The guide's coach marks in battle and between battles (js/guide.js) come with time on screen: until each has shown,
 # battles play (at 4×) before Skip, and the walk between battles takes its time.
 WATCH_KEYS = ['c:flags', 'c:items', 'c:rule']
@@ -261,6 +271,31 @@ def main():
             press(stage_point(js('() => Frame.W') / 2, 200))
             return until("() => !document.querySelector('#sheet .fp')", None, 3000)
 
+        def card():
+            """Wick's card at the Hearth when a first clear opened something (js/visits.js): Show me, then his soft steps
+            on the screen it opens (a press anywhere goes on), then ‹ back to the Hearth. Its gate holds back tap()'s
+            synthetic clicks, so it is answered with real touches."""
+            if not js("() => Visits.card || Object.values(Save.state.guide.visits || {}).includes('new')"):
+                return
+            if not until("() => Visits.card", None, 4000):
+                return
+            page.wait_for_timeout(450)
+            shot('visit-card')
+            press(js(f"() => ({MID})('[data-tut=visit-show]')"))
+            n = 0
+            while js('() => Visits.on') and n < 6:
+                if until("() => !!Wick.soft || !Visits.on", None, 6000) and js('() => !!Wick.soft'):
+                    page.wait_for_timeout(450)
+                    shot(f'visit-{n + 1}')
+                    press(stage_point(js('() => Frame.W') / 2, 24))
+                    page.wait_for_timeout(200)
+                n += 1
+            if js("() => !Visits.on && Save.state.guide.visits.items === 'seen'"):
+                ran('visit')
+            else:
+                problems.append(f"Wick's visit after Show me did not finish: now {where()}")
+            tap('.tx-back', None, "() => App.current === 'home'")
+
         steps = []
         while js('() => FirstSession.on') and time.time() < t_end:
             if not until(WICK_UP, None, 60000):
@@ -268,6 +303,30 @@ def main():
                 break
             if not js('() => FirstSession.on'):
                 break
+            sid = js('() => FirstSession.step')
+            if sid in UNFORCED and not js(WICK_NOW):
+                # the unforced 1-2: Set out glows (a soft step), and the player sets out; on the road a soft line, and
+                # the card's Set out; the battle plays on its own, and its results bring the next forced step
+                page.wait_for_timeout(450)
+                steps.append(sid)
+                shot('wick-' + sid)
+                if sid == 'setout2':
+                    until("() => !!Wick.soft && Wick.soft.root.classList.contains('in')", None, 5000)  # Set out glows
+                    page.wait_for_timeout(400)
+                    press(js(f"() => ({MID})('[data-tut=hearth-setout]')"))
+                    if not until(ROAD_STILL, None, 15000):
+                        problems.append(f"Set out in the unforced 1-2 did not fly up the road: now {where()}")
+                        break
+                    if until("() => FirstSession.step === 'yours' && !!Wick.soft", None, 3000):
+                        page.wait_for_timeout(450)
+                        steps.append('yours')
+                        shot('wick-yours')
+                press(js(f"() => ({MID})('[data-tut=road-go]')"))
+                if not until(IN_BATTLE, None, 8000):
+                    problems.append(f"the road's Set out in the unforced 1-2 did not start 1-2: now {where()}")
+                    break
+                until("() => !" + json.dumps(UNFORCED) + ".includes(FirstSession.step)", None, 3000)
+                continue
             page.wait_for_timeout(450)  # it has risen and settled on what it lights (a tap sooner is taken for a stray one)
             w = js(WICK_NOW)
             if not w:
@@ -289,6 +348,8 @@ def main():
                 drag(d0, to)
             elif sid == 'speed':
                 press(js(f"() => ({MID})('[data-tut=battle-speed]')"))
+            elif sid == 'spend':
+                press(js(f"() => ({MID})('.hr-stats .hr-plus')"))  # Grow: + on a stat (Keep is the next step)
             elif w['tap'] == 'any':
                 press(stage_point(js('() => Frame.W') / 2, 60))
             else:
@@ -306,12 +367,14 @@ def main():
         shot('camp')
 
         trips, last_fr, still, battles = 0, -1, 0, 0
+        at = {}  # trips set out with each stage as the frontier: where a run spent them
         while time.time() < t_end:
             st = state()
             if st['fr'] >= st['n']:
                 break
             if a.quick and all(f in done for f in FLOWS):
                 break
+            at[st['fr']] = at.get(st['fr'], 0) + 1
             if st['fr'] == last_fr:
                 still += 1
             else:
@@ -319,6 +382,8 @@ def main():
             if still > 40:
                 problems.append(f"the road stopped at stage {st['fr'] + 1} for 40 trips")
                 break
+            # Wick's card, if a first clear has just opened something
+            card()
             # rest: the clock moves on, and the camp's own ticking brings the party back
             waited = 0
             while st['tired'] or not st['fit']:
@@ -330,7 +395,12 @@ def main():
                     break
             # points, as the Stats tab's + buttons would place them
             js('() => { for (const c of Save.state.roster) Hero.autoBuild(c); Save.commit(); }')
-            # hire: the Recruit Board, tapped in the camp's party view (its plaque), a card, Hire
+            # gear, as the hero screen's Auto-equip would wear it (the Gear tab's button, HeroSheet.autoEquipPlan), the
+            # formation first. Without it every hero fights Region I with their starting weapon, and a run stalls at a
+            # wall or not as luck has it (on main too).
+            js('() => { const s = Save.state, ids = s.party.filter(Boolean).concat(s.roster.map(c => c.id).filter(id => !s.party.includes(id))); for (const id of ids) { const c = Save.char(id); for (const x of HeroSheet.autoEquipPlan(c)) Items.equip(s, c, x.uid); } Save.commit(); }')
+            # hire: the Recruit Board, tapped in the camp's party view (its plaque), the card of a class the party lacks
+            # (the cheapest of those, as tools/playthrough.js hires), Hire
             while st['board'] and st['picks'] > 0 and st['roster'] < min(st['need'], st['cap']) and st['cheapest'] <= st['gold']:
                 if not to_camp('party'):
                     break
@@ -338,7 +408,8 @@ def main():
                 if not t or js("() => App.current") != 'building':
                     problems.append(f"a tap on the Recruit Board at camp did not open it: touched {t}, now {where()}")
                     break
-                tap('.recruit', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
+                k = js(WANTED)
+                tap(f'.recruits .recruit:nth-child({k + 1})', None, "() => [...document.querySelectorAll('.bld-view .btn.primary')].some(b => b.offsetWidth && !b.disabled && /^Hire/.test(b.textContent))", timeout=2000)
                 n = st['roster']
                 if not tap('.bld-view .btn.primary', '^Hire', 'n => Save.state.roster.length > n', n):
                     break
@@ -363,6 +434,7 @@ def main():
             # camera flies up the road to the frontier with its card open. Its Set out, or after two losses there, a
             # step back down the road (↓) and Farm.
             to_camp('party')
+            card()
             if trips == 0:
                 if not tap('.camp .cv-dock .cv-big', 'Set out', ROAD_STILL):
                     problems.append(f"no Set out at the Hearth, or no flight up the road after it: now {where()}")
@@ -469,6 +541,7 @@ def main():
         problems.append(f"stopped at stage {st['fr'] + 1} of {st['n']} after {trips} trips")
     print(f"UI play-through ({a.hero}{', quick' if a.quick else ''}): {st['cleared']} stages lit in {trips} trips, {battles} battles, {st['roster']} heroes, {st['gold']} gold, {took:.0f} s")
     print('flows:', ', '.join(f"{f} ({done[f]} s)" if f in done else f"{f} (never)" for f in FLOWS))
+    print('trips at one frontier, 5 or more:', ' · '.join(f"stage {k + 1} ×{n}" for k, n in sorted(at.items()) if n >= 5) or 'none')
     print('coach marks:', json.dumps(seen['coach'], ensure_ascii=False))
     print('tips:', json.dumps(seen['tips'], ensure_ascii=False))
     print('new things:', json.dumps(seen['news'], ensure_ascii=False))

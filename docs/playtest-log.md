@@ -17,18 +17,23 @@ Start here after a break or a new session. Builder sessions report to the partne
 - PR #25: the road view (`3074413`). Its play-through lit Region I in 46 trips with no problems, and its hand-over note is `docs/notes/road-view.md`.
 - PR #26: Formation and the shared panel kit, `js/kit.js` and `css/kit.css` (`b2ef0a6`). Its play-through lit all 18 stages with no console errors.
 - PR #29: screen 8, the hero screen (`d233938`). The hero stands in the arch beside a framed panel with four tabs. Its full play-through lit Region I in 29 trips with no console errors.
+- PR #31: the guide, Wick's twelve-step first session (`94e3973`). It also makes 1-1's first clear give a level.
+- PR #32: the Hearth's scene art, phase A (`5f2d1a8`): the buildings, the terrace, the Old Beacon and the mist.
+- PR #33: Tactics, screen 11 (`3d06b1c`).
+  - The full play-through on #31, #32 and #33 together passed: Wick's 30 forced steps, then Region I lit in 49 trips, with no console errors.
+  - The frame, road, Formation and results checks and the sim tests passed.
+  - The hero and Tactics checks fail on touch: see the guide's fix below.
+- PR #34: the guide's touch fix (`6f1cb57`). A forced step now closes as soon as the first session is over, and the hero and Tactics checks skip the session in their own saves. Its full play-through lit Region I in 40 trips with no console errors.
+- PR #30: this log, the two studies, the onboarding spec and the mockups (`8540ec2`). Docs only.
 - PR #28: the quicker UI play-through (`8e4c9df`). The full run went from 467 s to about 150 s, and `--quick` takes about 40 s. The convention: builders run `--quick` before reporting, and the partner session runs the full play-through before merging.
 - PR #27: the cleanup (`77763c0`). It removed 85 lines of dead code and added `docs/code-map.md`, the map of what's current. Its Later list waits for the guide and the hero screen.
 - PR #22: the glossary (`4e5a287`): 277 entries, with the decided names and Bone Retinue. It changes no game behaviour; tooltips, the Codex and Wick will read it.
 
 **Still open:**
 - **The old `camp-views` builder** (local_4ddbc810) is done with #24. It also started its own road view on `claude/road-view-02992c`, a duplicate. You stopped it on 2026-11-05. Leave that branch unused.
-- **The guide** (`guide` builder, local_6a91e94b): Wick and the first session's twelve forced steps, from `main` at `b2ef0a6`. Your walkthrough follows it.
-- **The Hearth in detail, scene art** (`hearth-art` builder, local_fdd41a3e, 1.30, phase A): the buildings, the terrace layout, the Old Beacon and the atmosphere, in `js/campscene.js` and new art files. Phase B, the HUD (crest, drawn menus, names when you look, barks, framed sheets), waits for the guide.
+- **The Hearth in detail, phase B** (1.30): the HUD (the crest, the menus as drawn objects, names when you look, barks, framed sheets) can start now that the guide is in.
 - **The `glossary` builder** (local_ab2f5f2a): its four small text fixes and the rename pass wait for the road view, Formation and the guide build. They'll come as a new PR from `main`.
-- **This folder** (`D:/_/lantern-road`) is on an old `main` (`f9e32d4`, from before #21), with the mockups untracked.
-  - The preview server on port 8766 serves this folder, so the game there is the old one. Bring it up to date before your walkthrough.
-  - `main` now tracks `docs/mockups/camp3d.js`, `wick.js` and `camp-views.html`, so commit or move the untracked mockups before pulling.
+- **This folder** (`D:/_/lantern-road`) is on `main` (`6f1cb57`), up to date. The preview server on port 8766 plays the current game. This log, the studies, the onboarding spec and the mockups are tracked since PR #30. Edits to them show as uncommitted here until a commit is OK'd. Your two `lantern-road-auto-10x*.mp4` videos stay untracked.
 - **The `cleanup` builder** (local_e54bd696): its first PR (#27) is merged. Phase 2, removing the Later list from `docs/code-map.md`, waits for the guide and the hero screen to merge.
 
 **Next, in order:**
@@ -37,7 +42,7 @@ Start here after a break or a new session. Builder sessions report to the partne
    - the first session's script, from `docs/onboarding-spec.md` §6.4, with Wick's welcome from `camp-welcome.html` W1–W3
    - the first pick, from `first-pick.html`
 2. **The rename pass,** by the glossary builder: the Hearth, Turn order, Hero, Fallen, Loot, the paths and British spelling. Run `node tools/glossary.js` first; it lists where each old name still shows.
-3. **Your guided walkthrough** from a fresh server, in the browser pane, or on the play-test link once you OK publishing.
+3. **Your guided walkthrough,** ready now: in the browser pane, choose a server you haven't used (S2 or S3), then Tap to begin. Notes go in Session 2.
 4. **The Hearth build,** from `docs/mockups/hearth.html` (approved for now, 1.30), on top of the camp views.
 5. **Formation (screen 5)** is merged (#26, 1.31). The guide's step 12 opens it, through its `data-tut` anchors.
 
@@ -188,3 +193,21 @@ The three screenshots mentioned with these notes didn't come through. The same s
   - curly apostrophes everywhere
   - Crit on screens
   - the material names stay placeholders for now
+
+## Session 2 · 2026-11-04 · main at 6f1cb57 (PRs #21–#34)
+
+Your guided walkthrough, from a fresh server.
+
+| ID | Screen | Note | Type | Plan | Status |
+|---|---|---|---|---|---|
+| 2.1 | The welcome | There's no background or story at all, so it makes no sense, and the guide introduces the game poorly. Compare it with Idle Heroes. | Onboarding | `docs/tutorial-study.md`: the research, the comparison, how Wick should lead, and the first session with the story (§5), approved with §7's picks 3–5 | Built in PR #35 |
+| 2.2 | Every screen | Help and Settings (top right) should work while the tutorial is running. | Onboarding | The guide lets them through; Wick steps aside while one is open and comes back when it closes | Built in PR #35 |
+| 2.3 | The story | The lantern-lighting premise got old long ago and is frankly stupid now. It was something to build on; now the game needs a real plot and story. | Story | `docs/story.md`: spine A, "the Fallen Kingdom", written in its own session | Decided |
+| 2.4 | The story | Option 1 made lighter "makes absolutely no sense, it is complete nonsense words." | Story | Start again from a story that makes sense, told plainly, with the humour in the voices rather than the world's rules | Done: `docs/story.md` |
+
+### Decisions, session 2
+
+- **Tone (2.3):** more dry humour, and lighter and more approachable in general.
+- **The game can be renamed.** "Lantern Road" goes with the lantern premise.
+- **The story (2.3), approved 2026-11-05:** `docs/story.md`, spine A, "the Fallen Kingdom". You run a company of heroes for hire, clear the old road through a kingdom that fell to its hollow king, and keep what you clear. About as much story as Idle Heroes, and the player gets no backstory.
+- **Working title, 2026-11-05:** "The Lost Kingdom" replaces "Lantern Road" for now. The name is common, so check the app stores before release.

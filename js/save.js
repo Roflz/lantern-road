@@ -67,8 +67,9 @@ function defaultState() {
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
     name: '',               // the name you gave Wick (the Hearth shows it by your Renown); '' until you do
     // Wick's first session (js/firstsession.js): step, the forced step under way; done once it is over (or skipped);
-    // replay: the steps seen again since Settings → Replay the guide, or null.
-    guide: { step: '', done: false, replay: null },
+    // replay: the steps seen again since Settings → Replay the guide, or null. visits: his unlock visits
+    // (js/visits.js), each 'new', 'later' or 'seen'.
+    guide: { step: '', done: false, replay: null, visits: {} },
   };
 }
 

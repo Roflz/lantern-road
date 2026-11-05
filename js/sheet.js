@@ -19,8 +19,8 @@
 // A threshold, the tree and a respec open as framed panels in the panel's place, so the arch stays in sight. Every change
 // goes through the hero model (js/hero.js) or the item model (js/items.js), and is saved.
 // The guide points into it through data-tut: hero-tab-stats, hero-tab-skills, hero-tab-gear, hero-tab-rules (the tabs),
-// hero-points (the "to place" plate), hero-auto, hero-autoequip, hero-rules (the rules list), hero-next (›) and
-// hero-back (‹).
+// hero-points (the "to place" plate), hero-auto, hero-keep, hero-autoequip, hero-rules (the rules list), hero-next (›)
+// and hero-back (‹). HeroSheet.placing: the stat points placed on the Stats tab and not yet kept.
 // Styles in css/hero.css, classes prefixed hr-.
 
 const HeroSheet = (() => {
@@ -244,13 +244,14 @@ const HeroSheet = (() => {
     ui.stage.setLook(lookOf(c));
     const tried = ui.tryOn && Items.find(S(), ui.tryOn), path = pathOf(c);
     const st = Fatigue.state(c), need = Hero.xpToNext(c.level), cap = c.level >= HERO.CAP;
-    ui.archTop.replaceChildren(
+    // (replaceChildren writes a null as the text "null": a hero with no path yet has no plate, so it's left out)
+    ui.archTop.replaceChildren(...[
       tried ? h('span', { class: 'hr-plate try', text: 'Trying on' }) : path ? h('span', { class: 'hr-plate', text: path }) : null,
       h('div', { class: 'hr-foot' },
         h('div', { class: 'hr-tags' }, h('span', { class: 'hr-lv' }, 'Lv', h('b', { text: String(c.level) })),
           h('span', { class: 'hr-fat ' + st, title: 'Fatigue' }, icon('fatigue', 12), `${st === 'fresh' ? 'Rested' : FATIGUE_NAMES[st]} ${Math.floor(c.fatigue || 0)}%`)),
         h('div', { class: 'hr-xp', title: 'XP' }, h('i', { style: `width:${cap ? 100 : Math.min(100, 100 * c.xp / need)}%` }), h('span', { text: cap ? 'Max' : `${fmt(c.xp)} / ${fmt(need)}` }))),
-      proto(c));
+      proto(c)].filter(Boolean));
     return ui.archEl;
   }
   // Prototype tools: XP to try the later thresholds without the grind (hidden with Settings → Prototype tools).
@@ -311,7 +312,7 @@ const HeroSheet = (() => {
       h('div', { class: 'hr-row' }, h('span', { class: 'sp' }),
         btn2('Reset', () => { ui.pending = {}; draw(); }, { sec: true, off: !placed }),
         btn2('Auto', autoPlace, { sec: true, off: left <= 0, tut: 'hero-auto', cls: 'hr-auto' }),
-        btn2('Keep', keep, { off: !placed, cls: 'hr-keep' })),
+        btn2('Keep', keep, { off: !placed, tut: 'hero-keep', cls: 'hr-keep' })),
       sect('Resists', null, h('div', { class: 'hr-res' }, RES_KEYS.map(res))),
     ];
   }
@@ -587,7 +588,7 @@ const HeroSheet = (() => {
     leave() { if (ui.stage) ui.stage.stop(); ui.stage = null; ui.archEl = null; ui.archKey = null; ui.pending = {}; ui.over = null; ui.tryOn = null; ui.worn = null; },
   });
   // playing: a skill is being watched in the arch now (the tools check it)
-  return { open, draw, watch, autoEquipPlan, waiting, get id() { return ui.id; }, get tab() { return ui.tab; }, get playing() { return !!(ui.stage && ui.stage.dummyUntil > performance.now()); } };
+  return { open, draw, watch, autoEquipPlan, waiting, get id() { return ui.id; }, get tab() { return ui.tab; }, get placing() { return pendingTotal(); }, get playing() { return !!(ui.stage && ui.stage.dummyUntil > performance.now()); } };
 })();
 // Every way in (the party panel, Formation, the roster, the Bag) opens the hero screen.
 App.actions.hero = (id, tab) => HeroSheet.open(id, tab);

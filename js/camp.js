@@ -103,6 +103,10 @@ const Camp = (() => {
   // chips: { board | fire | <building id>: [icon, n] }. all: [[icon, n], …]. full: the idle buildings at least half full.
   function waiting(s) {
     const chips = {}, sum = { gold: 0, mats: {}, items: 0, gear: 0, xp: 0 }, full = [];
+    // the road's tolls (js/base.js): in Collect's tag; once the buildings view (and Collect) is open, half full is a goal
+    for (const g of Base.preview('tolls', s)) sum.gold += g.n;
+    const tolls = Base.storage('tolls', s);
+    if (tolls && tolls.pct >= 0.5 && !locked(s)) full.push('tolls');
     for (const id of [...IDLE, 'infirmary']) {
       if (!Base.built(id, s)) continue;
       const got = Base.preview(id, s);
@@ -133,6 +137,9 @@ const Camp = (() => {
   function goal(s, W) {
     if (!s.roster.length) return { text: 'Recruit your first hero', go: () => FirstPick.open({ mode: 'pick' }) };
     if (Base.boardOpen(s) && s.board.free && s.board.picks > 0 && s.board.recruits.length) return { text: 'Hire a free recruit', go: () => Buildings.open('recruitboard') };
+    // what a first clear opened, until Wick's visit to it is seen (js/visits.js)
+    const visit = typeof Visits !== 'undefined' ? Visits.goal(s) : null;
+    if (visit) return visit;
     const team = [...s.party.map(id => Save.char(id)).filter(Boolean), ...s.roster.filter(c => !s.party.includes(c.id))];
     for (const c of team) {
       const P = Hero.points(c);
@@ -141,7 +148,10 @@ const Camp = (() => {
     }
     const plot = firstOpenPlot(s), bp = plot >= 0 && Base.available(s).find(id => Base.canPay(Base.cost(id, 1), s));
     if (bp) return { text: `Build the ${BUILDINGS[bp].name}`, go: () => Buildings.buildSheet(plot, bp) };
-    if (W.full.length) return { text: W.full.length === 1 ? `Collect at the ${BUILDINGS[W.full[0]].name}` : `Collect from ${W.full.length} buildings`, go: () => ui && ui.turnTo('build') };
+    if (W.full.length) {
+      const bl = W.full.filter(id => id !== 'tolls');
+      return { text: !bl.length ? 'Collect the tolls' : bl.length === 1 ? `Collect at the ${BUILDINGS[bl[0]].name}` : `Collect from ${bl.length} buildings`, go: () => ui && ui.turnTo('build') };
+    }
     const R = road(s);
     return R.done ? { text: 'Every lantern is lit', go: setOut } : { text: `Clear ${R.st.id}`, go: setOut };
   }
@@ -191,7 +201,7 @@ const Camp = (() => {
     const canvas = h('canvas', { class: 'cv-scene', 'aria-hidden': 'true' });
     const marks = h('div', { class: 'cv-marks', 'aria-hidden': 'true' });
     const face = h('span', { class: 'cv-face' }), lvl = h('em'), bar = h('i');
-    const nm = h('span', { class: 'cv-nm', text: 'Traveller' });
+    const nm = h('span', { class: 'cv-nm', text: 'Captain' });
     const me = h('button', { class: 'cv-pnl cv-me', 'data-tut': 'hearth-me', onclick: () => { click(); showRenown(); } }, face, h('span', { class: 'cv-t' }, nm, h('span', { class: 'cv-meter' }, bar)));
     face.append(lvl);
     const goalText = h('span', { class: 'cv-gt' });
@@ -200,9 +210,11 @@ const Camp = (() => {
     const purse = h('div', { class: 'cv-purse' },
       h('div', { class: 'cv-cur', title: 'Gold' }, h('span', { class: 'cv-ci' }, icon('coin', 22)), gold, h('button', { class: 'cv-plus', 'aria-label': 'Earn more gold', onclick: () => { click(); earnMore('tollhouse'); } }, '+')),
       h('div', { class: 'cv-cur', title: 'Bone Dust' }, h('span', { class: 'cv-ci' }, icon('bone', 22)), bone, h('button', { class: 'cv-plus', 'aria-label': 'Earn more bone dust', onclick: () => { click(); earnMore('scavengercamp'); } }, '+')));
+    // Help and Settings take a tap at every step of Wick's guide (data-wk-free: js/wick.js's gate lets them through,
+    // and Wick steps aside while their page is open; play-test note 2.2)
     const corner = h('div', { class: 'cv-corner' },
-      h('button', { class: 'cv-round', 'aria-label': 'Help', onclick: () => { click(); showHow(() => closeScreen()); } }, '?'),
-      h('button', { class: 'cv-round', 'aria-label': 'Settings', onclick: () => { click(); App.openSettings(); } }, icon('gear', 18)));
+      h('button', { class: 'cv-round', 'aria-label': 'Help', 'data-wk-free': '', onclick: () => { click(); showHow(() => closeScreen()); } }, '?'),
+      h('button', { class: 'cv-round', 'aria-label': 'Settings', 'data-wk-free': '', onclick: () => { click(); App.openSettings(); } }, icon('gear', 18)));
     const proto = h('button', { class: 'chip proto proto-only cv-proto', 'data-wk-free': '', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
     const rb = (ic, label, fn) => h('button', { class: 'cv-rb', 'data-tut': 'hearth-' + label.toLowerCase(), onclick: () => { click(); fn(); } }, h('span', { class: 'cv-orb' }, icon(ic, 26), h('i', { class: 'cv-dot', hidden: true })), h('span', { text: label }));
     const heroesB = rb('helm', 'Heroes', () => App.go('party'));
@@ -237,7 +249,7 @@ const Camp = (() => {
       const R = Base.renown(s), lead = leader(s), W = waiting(s);
       face.replaceChildren(lead ? pxImg(heroPortrait(lead), 32) : icon('lantern', 22), lvl);
       lvl.textContent = String(R.level);
-      nm.textContent = (s.name || '').trim() || 'Traveller';
+      nm.textContent = (s.name || '').trim() || 'Captain';
       bar.style.width = Math.round(100 * R.into / R.need) + '%';
       me.setAttribute('aria-label', `Renown ${R.level}: open the Renown track`);
       goalNow = goal(s, W);
@@ -596,21 +608,25 @@ const Camp = (() => {
     const rep = (Base.now(s) - s.base.clock > 60000 ? Base.catchUp(s) : (Base.tick(s), Base.lastReport())) || { rows: [], rested: [], learned: [], board: false };
     const rows = [];
     const row = (iconEl, name, sub, value, cls) => rows.push(h('div', { class: 'gain' }, iconEl, h('div', {}, h('span', { class: 'nm', text: name }), sub ? h('span', { class: 'k ' + (cls || ''), text: sub }) : null), value));
-    const order = ['tollhouse', 'scavengercamp', 'salvagepit', 'infirmary', 'fire', 'trainingyard'];
+    const STORE_UP = { tollhouse: 'A Strongbox stores 12 hours.', scavengercamp: 'Deep Packs store 12 hours.', salvagepit: 'A Deep Pit stores 12 hours.', trainingyard: 'Long Drills store 12 hours.' };
+    const order = ['tolls', 'tollhouse', 'scavengercamp', 'salvagepit', 'infirmary', 'fire', 'trainingyard'];
     const waiting = {};
+    // the road's tolls, from the first cleared stage (js/base.js), then the buildings
+    const tolls = Base.preview('tolls', s);
+    if (tolls.length) waiting.tolls = tolls;
     for (const id of ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard', 'infirmary']) if (Base.built(id, s)) { const got = Base.preview(id, s); if (got.length) waiting[id] = got; }
     if (s.freePotion.waiting) waiting.fire = [{ kind: 'item', item: 'draught', n: s.freePotion.waiting, text: `+${s.freePotion.waiting}` }];
     let fullName = null;
     for (const id of order) {
       const got = waiting[id];
       if (!got) continue;
-      const st = BUILDINGS[id] && BUILDINGS[id].idle ? Base.storage(id, s) : null, full = st && st.fullFor > 60000 ? `Full for the last ${timeStr(st.fullFor)}` : '';
-      if (full && !fullName) fullName = id;
+      const st = id === 'tolls' || (BUILDINGS[id] && BUILDINGS[id].idle) ? Base.storage(id, s) : null, full = st && st.fullFor > 60000 ? `Full for the last ${timeStr(st.fullFor)}` : '';
+      if (full && !fullName && STORE_UP[id]) fullName = id;
       if (id === 'trainingyard') { for (const g of got) row(h('img', { class: 'sbox', src: heroPortrait(g.c), alt: '' }), g.c.name, `Trained · +${fmt(g.n)} XP${g.capped ? ' · at the road’s level' : ''}`, g.to > g.from ? h('span', { class: 'lvup', text: 'Lv ' + g.to }) : h('span', { class: 'v', text: '' })); continue; }
-      const name = id === 'fire' ? 'By the fire' : BUILDINGS[id].name;
-      const sub = id === 'fire' ? 'Free Healing Draughts' : id === 'scavengercamp' ? Base.regionName(Base.scavRegions(s)[0] || 0) + (full ? ' · ' + full : '') : id === 'infirmary' ? 'The still-room' : full;
-      const val = h('span', { class: 'v' + (id === 'tollhouse' ? ' y' : '') }, got.map(g => h('span', {}, g.kind === 'gear' ? g.text : `+${fmt(g.n)} `, g.kind === 'gear' ? null : ico(g.kind === 'gold' ? 'coin' : g.kind === 'mat' ? Base.matIcon(g.mat) : ITEMS[g.item].icon))));
-      row(ico(id === 'fire' ? 'fire' : BUILDINGS[id].icon, 'l'), name, sub, val, full ? 'b' : '');
+      const name = id === 'tolls' ? 'Tolls' : id === 'fire' ? 'By the fire' : BUILDINGS[id].name;
+      const sub = id === 'tolls' ? full || `${noun(s.campaign.cleared.length, 'stage')} cleared` : id === 'fire' ? 'Free Healing Draughts' : id === 'scavengercamp' ? Base.regionName(Base.scavRegions(s)[0] || 0) + (full ? ' · ' + full : '') : id === 'infirmary' ? 'The still-room' : full;
+      const val = h('span', { class: 'v' + (id === 'tollhouse' || id === 'tolls' ? ' y' : '') }, got.map(g => h('span', {}, g.kind === 'gear' ? g.text : `+${fmt(g.n)} `, g.kind === 'gear' ? null : ico(g.kind === 'gold' ? 'coin' : g.kind === 'mat' ? Base.matIcon(g.mat) : ITEMS[g.item].icon))));
+      row(ico(id === 'tolls' ? 'coin' : id === 'fire' ? 'fire' : BUILDINGS[id].icon, 'l'), name, sub, val, full ? 'b' : '');
     }
     for (const r of rep.rested) {
       const ready = r.to <= 0.5, fit = r.wasSpent && !r.c.spent;
@@ -618,12 +634,11 @@ const Camp = (() => {
     }
     for (const l of rep.learned) row(ico('star', 'l'), l.c.name, `Learned ${l.L.name} at the Masters’ Hall`, h('span', { class: 'v e', text: 'Done' }));
     if (rep.board && Base.boardOpen(s)) row(ico('scroll', 'l'), 'Recruit Board', noun(s.board.recruits.length, 'new face'), h('span', { class: 'v e', text: 'New' }));
-    const STORE_UP = { tollhouse: 'A Strongbox stores 12 hours.', scavengercamp: 'Deep Packs store 12 hours.', salvagepit: 'A Deep Pit stores 12 hours.', trainingyard: 'Long Drills store 12 hours.' };
     openSheet(h('div', { class: 'box awaybox' },
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
       h('span', { class: 'kicker c', text: `${timeStr(ms)} by lantern-light` }),
       h('h2', { class: 'c', text: 'While you were away' }),
-      rows.length ? h('div', { class: 'gains' }, rows) : h('p', { class: 'flavor', text: 'The lantern burned low and the road kept quiet. Idle buildings earn while you are gone: the Toll House is the first.' }),
+      rows.length ? h('div', { class: 'gains' }, rows) : h('p', { class: 'flavor', text: 'The lantern burned low and the road kept quiet. Every cleared stage earns tolls while you are gone.' }),
       fullName && STORE_UP[fullName] ? h('div', { class: 'banner warm' }, ico(BUILDINGS[fullName].icon, 'm'), h('span', { text: `The ${BUILDINGS[fullName].name} filled up. ${STORE_UP[fullName]}` })) : null,
       btn(Object.keys(waiting).length ? 'Gather it all' : 'Back to the fire', () => {
         const got = Base.collectAll(Save.state);

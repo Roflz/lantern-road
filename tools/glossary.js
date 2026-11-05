@@ -241,6 +241,7 @@ says('roster', `holds ${BLV.roster[0]}`, `up to ${last(BLV.roster)}`);
 says('barracks', `holds ${BLV.roster[0]}`, `up to ${last(BLV.roster)}`);
 says('gold', `start with ${BASE.START_GOLD}`);
 says('storage', `${BASE.STORE} hours`);
+says('tolls', `${BASE.TOLL} gold an hour`, `${BASE.STORE} hours`);
 says('gear_stall', `every ${BASE.STALL_EVERY} hours`);
 says('recruitboard', `every ${BASE.BOARD.every} hours`);
 says('salvagepit', `every ${Math.round(1 / BLV.pit[1])} hours`, `every ${Math.round(1 / BLV.pit[4])} from level 4`);
