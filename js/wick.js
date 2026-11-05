@@ -172,8 +172,12 @@ const Wick = (() => {
   //   target    what it is about (see boxOf): the spotlight (kept clear of the dim) and the pointer go on it. Without
   //             one the stage dims.
   //   round     an oval spotlight (for things drawn in the scene) instead of a rounded box. pad: room around it.
-  //   dim       false: no dimming (a soft line in battle). arrow: false for no pointer (then nothing marks the target
-  //             but the hole in the dim: keep the pointer on a step with no dim).
+  //   dim       how dark the rest goes (css/guide.css, --wk-dim and --wk-dim-light, play-test note 3.8): by default
+  //             light for a step that explains what it lights (a target it doesn't ask a tap on, callouts, a hand),
+  //             else the full dim. 'light' or 'full' to choose; false for none (a soft line in battle); a number for
+  //             this step's own (0 … 1).
+  //   arrow     false for no pointer (then nothing marks the target but the hole in the dim: keep the pointer on a
+  //             step with no dim).
   //   say       Wick's line in his bubble, with his portrait on the side away from the target (side: 'l' or 'r').
   //   panel     his line in the wide panel along the bottom instead (the welcome), with his name and a ▼.
   //   skip      with panel: a Skip button in its corner, which calls this (the story jumps to the name box).
@@ -191,10 +195,13 @@ const Wick = (() => {
     const L = layer(), FH = 390;
     L.classList.toggle('narrow', Frame.W < 780); // a 16:9 frame, 694 wide
     const tap = o.tap || 'any';
-    const root = h('div', { class: 'wk-step' + (o.small ? ' small' : '') + (tap === 'free' ? ' soft' : '') + (o.dim === false ? ' nodim' : '') });
+    const explains = (o.callouts && o.callouts.length) || o.hand || (o.target && tap !== 'target');
+    const dim = o.dim === false ? 'none' : typeof o.dim === 'number' || o.dim === 'light' || o.dim === 'full' ? o.dim : explains ? 'light' : 'full';
+    const root = h('div', { class: 'wk-step' + (o.small ? ' small' : '') + (tap === 'free' ? ' soft' : '') + (dim === 'none' ? ' nodim' : dim === 'light' ? ' light' : '') });
+    if (typeof dim === 'number') root.style.setProperty('--wk-dim', String(clamp(dim, 0, 1)));
     const hole = h('div', { class: 'wk-hole' + (o.round ? ' round' : '') });
     const arrow = h('img', { class: 'wk-arrow', src: arrowSrc(), alt: '', draggable: 'false' });
-    if (!o.target && o.dim !== false) root.append(h('div', { class: 'wk-veil' }));
+    if (!o.target && dim !== 'none') root.append(h('div', { class: 'wk-veil' }));
     if (o.target) root.append(hole);
     if (o.target && o.arrow !== false) root.append(arrow);
     let pt = null, bubble = null, panel = null;

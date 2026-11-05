@@ -133,7 +133,7 @@ const FirstSession = (() => {
     // 11: Formation (F3)
     { id: 'form', phase: 'form', at: () => atHearth() && !!q('[data-tut=hearth-formation]'), show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
     { id: 'place', phase: 'form', forced: true, at: () => Formation.shown && !!q('[data-tut=formation-front]'), show: placeStep },
-    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', tap: 'target', until: () => !Formation.shown }) },
+    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', tap: 'target', until: () => !Formation.shown }) },
     // 12: the goodbye: the region's end, a reason to come back, and where he'll be
     { id: 'bye', phase: 'form', at: atHearth, show: () => ({ panel: 'The Sexton’s at the end of the Gravefields. Plenty of road before him.' }) },
     { id: 'tolls', phase: 'form', at: atHearth, show: () => ({ panel: 'The road earns tolls while you’re away. Come back and collect.' }) },
