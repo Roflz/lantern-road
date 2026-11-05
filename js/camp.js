@@ -13,7 +13,8 @@
 // game's first pick is the Recruit Board's own panel (js/firstpick.js), led by Wick (js/firstsession.js). Building screens are js/buildings.js; the model is js/base.js.
 
 // ── building art: pixel maps in one palette. Most come from the screen mockups; the Shop, the Masters' Hall and the
-// four passive-bonus buildings are new, in the same style.
+// four passive-bonus buildings are new, in the same style. The Hearth's scene draws js/hearthart.js's buildings instead;
+// these stay for the building sheets (js/buildings.js) and the road's sign.
 const BP = { w: '#5a4030', W: '#7a5a3a', d: '#2e2219', r: '#4a2228', R: '#6b3238', s: '#5f6266', S: '#7d8088', t: '#3a3c41', p: '#d8d0bc', y: '#f4a646', Y: '#ffe2a0', c: '#bfb29a', C: '#8a7e6a', x: '#a83a2a', g: '#e8c24a', b: '#2c3b55', B: '#3a4f75', h: '#c8a050', k: '#0d0911', m: '#9a8ea4', n: '#d8a878', v: '#6a3fa0', V: '#c9a6ff', e: '#5d7a34', E: '#86a84a' };
 const BUILD_ART = {
   board: ['...rrrrrrrrrrrrrr...', '..rRRRRRRRRRRRRRRr..', '.rrrrrrrrrrrrrrrrrr.', '...d............d...', '...dwwwwwwwwwwwwd...', '...dwppwwpppwwpwd...', '...dwppwwpxpwwpwd...', '...dwppwwpppwwwwd...', '...dwwwwwwwwwppwd...', '...dwwpppwwwwppwd...', '...dwwpppwwwwwwwd...', '...dwwwwwwwwwwwwd...', '...d............d...', '...d......y.....d...', '...d.....yYy....d...', '..ddd.....y....ddd..'],
