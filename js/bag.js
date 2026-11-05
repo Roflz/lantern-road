@@ -3,7 +3,9 @@
 // After the screen mockups (docs/mockups/index.html, "Equipment"). The hero sheet's Gear tab (js/sheet.js) uses the
 // card and the try-on. Every change goes through the item model (js/items.js) and is saved.
 //   The card    a Now and With pair of sprites, then the bands Always, Costs and When (a row condition is checked
-//               against where the hero stands), what it changes against what they wear, and Equip, Unequip or Sell.
+//               against where the hero stands) and its enchantment lines, what it changes against what they wear, and
+//               Equip, Unequip or Sell. Star pips sit bottom right on the card's icon and on every tile (the gear study
+//               §4.1).
 //   The Bag     every piece not worn, filtered by slot, with selling and the prototype's gear roll.
 
 const GearUI = (() => {
@@ -17,8 +19,11 @@ const GearUI = (() => {
   const sorted = list => list.slice().sort(ui.sort === 'level' ? (a, b) => b.lv - a.lv || byOrder(a, b) : ui.sort === 'new' ? (a, b) => (b.fresh ? 1 : 0) - (a.fresh ? 1 : 0) || byOrder(a, b) : byOrder);
   const stopStages = () => { ui.stages.forEach(s => s.stop()); ui.stages = []; };
 
-  // ── a piece's tile: its icon in a frame of its rarity's colour, with what it means against what is worn
-  // o: { c (the hero it is compared with), sel, onclick }
+  // A piece's stars as pips: one small gold star each (none at ★0).
+  const pips = n => (n > 0 ? h('span', { class: 'pips', 'aria-hidden': 'true' }, Array.from({ length: n }, () => h('i'))) : null);
+  const starWord = n => (n === 1 ? '1 star' : `${n} stars`);
+  // ── a piece's tile: its icon in a frame of its rarity's colour, with its level and stars, and what it means against
+  // what is worn. o: { c (the hero it is compared with), sel, onclick }
   function tile(x, o = {}) {
     const D = Items.def(x), c = o.c, worn = c && c.gear[D.slot] && c.gear[D.slot].uid === x.uid;
     const can = !c || Items.canUse(c, x);
@@ -27,11 +32,11 @@ const GearUI = (() => {
       const now = c.gear[D.slot], d = Items.score(x) - (now ? Items.score(now) : 0);
       mark = d > 0.5 ? h('span', { class: 'up', text: '▲' }) : d < -0.5 ? h('span', { class: 'dn', text: '▼' }) : null;
     }
-    return h('button', { class: `gr-it r-${D.rarity}${o.sel ? ' sel' : ''}${can ? '' : ' no'}`, 'aria-label': `${D.name}, ${RARITY_NAMES[D.rarity]}, level ${x.lv}${worn ? ', worn' : ''}`, onclick: o.onclick },
-      gearIco(x.id, 'l'), x.fresh ? h('span', { class: 'nw' }) : null, mark, worn ? h('span', { class: 'worn', text: 'ON' }) : null, h('span', { class: 'lv', text: String(x.lv) }));
+    return h('button', { class: `gr-it r-${D.rarity}${o.sel ? ' sel' : ''}${can ? '' : ' no'}`, 'aria-label': `${D.name}, ${RARITY_NAMES[D.rarity]}, level ${x.lv}${x.st ? ', ' + starWord(x.st) : ''}${worn ? ', worn' : ''}`, onclick: o.onclick },
+      gearIco(x.id, 'l'), x.fresh ? h('span', { class: 'nw' }) : null, mark, worn ? h('span', { class: 'worn', text: 'ON' }) : null, h('span', { class: 'lv', text: String(x.lv) }), pips(x.st || 0));
   }
 
-  // ── the bands: Always, Costs, When
+  // ── the bands: Always, Costs, When, and the enchantment lines (one short line each; a tap or hover says what it is)
   function bandsEl(x, where) {
     const B = Items.bands(x, where);
     const later = l => (l.later ? h('span', { class: 'hs-tag ph-l', text: 'Later' }) : null);
@@ -43,6 +48,10 @@ const GearUI = (() => {
       out.push(h('span', { class: 'band e', text: 'When' }));
       for (const l of B.when) out.push(h('p', { class: 'ln w' + (l.on === false ? ' off' : '') + (l.cost ? ' cost' : '') }, h('span', { class: 'hs-tag ' + (l.cost ? 'b' : 'e'), text: l.tag }), ico(l.icon || 'star'), h('span', { text: l.text }),
         l.on === false ? h('span', { class: 'hs-tag', text: 'Off · ' + rowWord(where.row) }) : l.on === true ? h('span', { class: 'hs-tag g', text: 'On · ' + rowWord(where.row) }) : null, later(l)));
+    }
+    if (B.lines.length) {
+      out.push(h('span', { class: 'band s', title: `${starWord(B.stars)}: ${B.lines.length === 1 ? 'one enchantment line' : B.lines.length + ' enchantment lines'}` }, pips(B.stars), 'Enchantments'));
+      for (const l of B.lines) out.push(h('p', { class: 'ln s', title: l.tip, onclick: () => { click(); toast(l.tip); } }, ico(l.icon || 'star'), h('span', { text: l.text })));
     }
     if (!out.length) out.push(h('p', { class: 'ln', text: 'No effect.' }));
     return h('div', { class: 'gr-eff' }, out);
@@ -98,7 +107,7 @@ const GearUI = (() => {
       : null;
     // A region's own gear (regions study §3.1) names its region: "Gravefields line"
     const rg = Items.regionOf(x), line = rg != null ? h('span', { class: 'gr-region', title: `Drops only in the ${REGIONS[rg].name}` }, ico('lantern'), `${REGIONS[rg].name} line`) : null;
-    const head = h('div', { class: 'gr-head' }, h('span', { class: 'gr-well r-' + D.rarity }, gearIco(x.id, 'xl')),
+    const head = h('div', { class: 'gr-head' }, h('span', { class: 'gr-well r-' + D.rarity, title: x.st ? starWord(x.st) : null }, gearIco(x.id, 'xl'), pips(x.st || 0)),
       h('div', {}, h('h2', { text: D.name }), h('span', { class: 'gr-kind r-' + D.rarity, text: Items.kind(x) }), line,
         h('span', { class: 'hs-kv', text: `Item level ${x.lv}${D.rarity === 'relic' ? ' · unique' : price ? ` · sells for ${fmt(price)} gold` : ''}` })));
     const kids = [h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); done(); } }, '×'), top,
@@ -227,5 +236,5 @@ const GearUI = (() => {
     render() { stopStages(); return bagView(); },
     enter() { App.rest(); },
   });
-  return { card, tile, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
+  return { card, tile, pips, pickHero, rollPrototype, prototypeBox, stopStages, rowOf, sorted };
 })();

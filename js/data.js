@@ -810,5 +810,21 @@ function trophyOf(F, region) {
 // A loot roll is a party item 60% of the time, by these odds, and a gear roll otherwise.
 const LOOT_ITEM = 0.6;
 const LOOT_ITEMS = [['draught', 50], ['lampoil', 25], ['tincture', 15], ['salts', 10]];
+// Stars (the gear study §4.2 and §4.4, tune): every new piece rolls ★0–★4, and each star brings one enchantment line
+// (js/items.js, ENCHANT). STEPS[n] is the chance to climb from ★n to ★n+1, tried only once the step before has passed:
+// 40% of drops have a star, 12% two, 2.4% three and 1 in 420 four.
+//   FLOOR  the fewest stars a source gives: elite and boss stages, a Cage Mimic and the daily jobs' bonus ★1. The
+//          Salvage Pit, the Scavenger Camp and the Shop stall roll with no floor.
+//   RELIC  every Relic has exactly this many
+//   PLAIN  stages whose first clear gives ★0 pieces: the first session's 1-1, so its lesson stays "better"
+//   SELL   selling rises × (1 + SELL × stars)
+const STARS = {
+  MAX: 4,
+  STEPS: [0.4, 0.3, 0.2, 0.1],
+  FLOOR: { normal: 0, elite: 1, boss: 1, mimic: 1, jobs: 1 },
+  RELIC: 2,
+  PLAIN: ['1-1'],
+  SELL: 0.5,
+};
 // Fatigue (home-base spec §6): +1 for each turn a hero takes, nothing else. Weary 50, Exhausted 75, Spent 100.
 const FATIGUE = { PER_TURN: 1, WEARY: 50, EXHAUSTED: 75, SPENT: 100, FIT: 50 };

@@ -20,7 +20,7 @@ that changes a screen.
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build; Pause and the turn order checked by `tools/battle_check.py` |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
 | 8 The hero | `js/sheet.js` (`HeroSheet`, the `'hero'` screen), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`) | Redesigned (`docs/mockups/hero.html`, 1.32); checked by `tools/hero_check.py` |
-| 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout |
+| 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout; star pips on the tiles and the card, and the enchantment lines' band (the gear study, step 1) |
 | 10 Buildings | `js/buildings.js`, `css/base.css` | Old layout |
 | 11 Tactics | `js/rules.js` (`Tactics`, the model, and `TacticsEditor`, the `'tactics'` screen), `css/rules.css` (`tx-`) | Redesigned (`docs/mockups/tactics.html`, 1.35); checked by `tools/tactics_check.py` |
 | 12 Settings, help | `openSettings` in `js/app.js`; "How battles work" (`showHow`) in `js/main.js` | Old layout |
@@ -38,7 +38,7 @@ that changes a screen.
 | Classes and skills | `js/classes.js`, `js/classes-late.js` |
 | The battle simulation (seed and setup in, event log out) | `js/sim.js` |
 | Heroes: rolls, levels, points, thresholds, trees | `js/hero.js` |
-| Gear and loot | `js/items.js` |
+| Gear and loot: pieces, rolls, stars and enchantment lines (`ENCHANT`; the star odds and floors are `STARS` in `js/data.js`) | `js/items.js` |
 | The home base model: buildings, plots, Renown, the Recruit Board, idle buildings, the road's tolls | `js/base.js` |
 | Fatigue and rest | `js/rest.js` |
 | The campaign: progress, rewards, unlocks, trips | `js/campaign.js` |

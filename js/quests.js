@@ -217,14 +217,15 @@ const Quests = (() => {
     return R;
   }
   const bonusReady = (s = st()) => { const D = today(s); return !!D && !D.bonus && D.jobs.length > 0 && D.jobs.every(jobDone); };
-  // All three done: a gear roll at the frontier stage (its level and region), Fine or better, given as battle loot is
-  // (into the Bag, or sold where it drops when the Bag is full), and QUEST.BONUS_ITEMS party items.
+  // All three done: a gear roll at the frontier stage (its level and region), Fine or better and ★1 or more
+  // (STARS.FLOOR.jobs), given as battle loot is (into the Bag, or sold where it drops when the Bag is full), and
+  // QUEST.BONUS_ITEMS party items.
   function claimBonus(s = st()) {
     if (!bonusReady(s)) return null;
     const D = today(s), fr = STAGES[Math.min(Campaign.frontier(s), STAGES.length - 1)];
     const rng = makeRng((strSeed(`${s.created || 1}:bonus:${D.day}`) >>> 0) || 9), od = Items.odds(fr.region);
     const rarity = rng() * (od.fine + od.rare) < od.fine ? 'fine' : 'rare';
-    const piece = Items.roll(fr.level, fr.region, rng, { classes: s.roster.map(c => c.cls), rarity });
+    const piece = Items.roll(fr.level, fr.region, rng, { classes: s.roster.map(c => c.cls), rarity, minStars: STARS.FLOOR.jobs });
     const got = Items.add(s, piece), items = {};
     for (let k = 0; k < QUEST.BONUS_ITEMS; k++) {
       let x = rng() * LOOT_ITEMS.reduce((a, [, w]) => a + w, 0), id = LOOT_ITEMS[0][0];

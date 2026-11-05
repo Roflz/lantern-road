@@ -27,12 +27,12 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | [Battle](#battle) | 36 |
 | [Rules](#rules) | 56 |
 | [Heroes](#heroes) | 35 |
-| [Gear](#gear) | 20 |
+| [Gear](#gear) | 22 |
 | [The Hearth](#the-hearth) | 36 |
 | [The road](#the-road) | 25 |
 | [Statuses](#statuses) | 57 |
 | [Resources](#resources) | 10 |
-| **All** | **287** |
+| **All** | **289** |
 
 ## The basics
 
@@ -205,15 +205,17 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Medium armour** | Health and Defence, at a small cost to Dodge. |  | `medium_armour` · shield |
 | **Heavy armour** | The most health and Defence, at a cost to Speed. |  | `heavy_armour` · plate |
 | **Class-only** | An accessory that only one class can wear. |  | `class_only` · bag |
-| **Rarity** | How rare a piece is: Common, Fine, Rare or Relic. | Later regions roll rarer gear, and elites and bosses rarer still. | `rarity` · star |
+| **Rarity** | What kind of piece it is: Common, Fine, Rare or Relic, by its frame. | Later regions roll rarer gear, and elites and bosses rarer still. How well a copy rolled is its stars. | `rarity` · star |
+| **Stars** | How well a piece rolled: up to four, each bringing an enchantment. | Two pieces in five have a star, and four stars come about once in 420. Elites, bosses, the Cage Mimic and Bess’s daily bonus give at least one, and a Relic always has two. | `stars` · star |
+| **Enchantment** | A small bonus a star brings, on top of the piece’s own. | Most add a share of the hero’s own Power, Health, Defence or Mana, so they grow as the hero does. A Pair gives two stats; a Bargain trades a little of one for more of another. | `enchantment` · star |
 | **Common** | Everyday gear; every recruit carries a Common weapon. |  | `common` · star |
 | **Fine** | A step above Common, and worth more gold. |  | `fine` · star |
 | **Rare** | Hard to find, and among the strongest gear on the road. |  | `rare` · star |
-| **Relic** | A boss’s one-of-a-kind treasure: you can only ever own one. | Each boss gives its Relic on the first clear, at the boss’s level. Relics never sell, and always find room in the Bag. | `relic` · star |
+| **Relic** | A boss’s one-of-a-kind treasure: you can only ever own one. | Each boss gives its Relic on the first clear, at the boss’s level and with two stars. Relics never sell, and always find room in the Bag. | `relic` · star |
 | **Region gear** | Gear that drops only in its own region; its card names the region. | A region’s gear rolls try its own line first: 40% of them on the road, 70% at elites, every one at its boss. | `region_gear` · lantern |
 | **Item level** | The level of the stage a piece came from; higher means stronger stats. | Health, Mana, Power and Defence grow with it. The rest stay as they are. | `item_level` · star |
 | **Bag** | Where unworn gear and party items wait; it holds 60 pieces of gear. | When it’s full, new gear sells where it drops, so a full Bag never sends the party home. | `bag` · bag |
-| **Sell** | Trade gear you don’t need for gold: rarer, higher-level pieces fetch more. | Party items sell for 30% of their Shop price. Relics never sell. | `sell` · coin |
+| **Sell** | Trade gear you don’t need for gold: rarer, higher-level pieces fetch more. | Each star adds half again to a piece’s price. Party items sell for 30% of their Shop price, and Relics never sell. | `sell` · coin |
 | **Try on** | See a piece on the hero’s sprite before you equip it. |  | `try_on` · helm |
 | **Equip** | Put a piece on a hero; what they wore goes back to the Bag. |  | `equip` · check |
 | **Gear roll** | A random piece of gear, from loot or a building; later stages roll better. |  | `gear_roll` · bag |
@@ -410,14 +412,14 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
 | turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 118 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 324 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 327 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 58 · js/map.js 319 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 42, 54, 196 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
 | Foe: highest attack | Foe: highest Power |  | js/data.js 288, 506 |
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 372 |
-| straight apostrophes | curly ones (’) |  | js/bag.js 205 · js/data.js 295 |
+| straight apostrophes | curly ones (’) |  | js/bag.js 214 · js/data.js 295 |
 | Ossuary, the Gravecaller’s first path | Charnel Host | The Boneward path ends in Charnel Fortress. | js/classes-late.js: CLASSES.gravecaller.paths[0] |
 | Surgeon, the Barber-Surgeon’s second path | Sawbones |  | js/classes-late.js: CLASSES.surgeon.paths[1] |
 | Bastion, the Warden’s second path | Unbroken | Unbroken is also a skill on that path, and the status the skill gives. | js/classes.js: CLASSES.warden.paths[1] |

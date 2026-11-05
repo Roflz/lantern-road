@@ -3,7 +3,7 @@
 // home-base spec §5–6). Campaign is the model: it touches no page, so tools/simtest.js tests it in Node. The map screen
 // (js/map.js) and the battle flow (js/main.js) call it.
 //
-// The save (js/save.js, version 4) holds:
+// The save (js/save.js) holds:
 //   campaign.cleared, campaign.best (fastest win in rounds), campaign.current (a battle under way: { stage, seed })
 //   campaign.road: { keepGoing, sets: { stageId: rule set name } }   the trip settings shared by every stage, and the
 //                                                                     rule set last chosen for each stage
@@ -106,8 +106,11 @@ const Campaign = (() => {
     const L = stage.level, S = GOLD_SCALE(L), won = res.winner === 0, rank = stageRank(stage);
     const r = { won, first: !!(o.first && won), gold: 0, spoilsGold: 0, clearGold: 0, xpLv: 0, mats: {}, items: {}, gear: [], foes: 0, called: 0 };
     const item = () => { const id = pickW(rng, LOOT_ITEMS); r.items[id] = (r.items[id] || 0) + 1; };
-    // a gear roll tries the region's own line first (Items.loot); the Cage Mimic's, with its rarity set, stays general
-    const gear = (gr, why) => r.gear.push({ piece: Items.loot(L, stage.region, rng, Object.assign({ classes: o.classes }, gr)), why });
+    // a gear roll tries the region's own line first (Items.loot); the Cage Mimic's, with its rarity set, stays general.
+    // Stars (the gear study §4.2): an elite or boss stage's pieces have at least STARS.FLOOR of its rank, and a first
+    // clear of a PLAIN stage (the first session's 1-1) gives ★0.
+    const stars = r.first && STARS.PLAIN.includes(stage.id) ? { stars: 0 } : { minStars: STARS.FLOOR[rank] || 0 };
+    const gear = (gr, why) => r.gear.push({ piece: Items.loot(L, stage.region, rng, Object.assign({ classes: o.classes }, stars, gr)), why });
     const lootRoll = () => (rng() < LOOT_ITEM ? item() : gear({ rank }, 'loot'));
     // battle spoils, from every foe defeated
     for (const u of defeated(res)) {
@@ -120,7 +123,7 @@ const Campaign = (() => {
       const T = trophyOf(FOES[u.key], stage.region);
       if (T && (T.chance >= 1 || rng() < T.chance)) r.mats[T.id] = (r.mats[T.id] || 0) + T.n;
       // A Cage Mimic killed drops an extra gear roll, one rarity above the stage's usual (campaign spec §3.4).
-      if (u.key === 'mimic') { const od = Items.odds(stage.region, rank); gear({ rarity: RARITY_UP[pickW(rng, Object.entries(od))] }, 'mimic'); }
+      if (u.key === 'mimic') { const od = Items.odds(stage.region, rank); gear({ rarity: RARITY_UP[pickW(rng, Object.entries(od))], minStars: Math.max(STARS.FLOOR.mimic, stars.minStars || 0) }, 'mimic'); }
     }
     r.called = res.final.filter(u => u.side === 1 && u.summoned).length;
     r.spoilsGold += (res.loot && res.loot.gold) || 0; // gold the Cutpurse stole
@@ -270,7 +273,7 @@ const Campaign = (() => {
     if (!s || !STAGES[i] || stateOf(i, s) === 'dark' || !fit(s).length) return null;
     const farm = isLit(STAGES[i].id, s);
     // fatigue and from: each hero's fatigue, and level and XP, as they set out, for the trip's results (js/results.js).
-    // totals.fought: the stages fought, in order; totals.pieces: the gear found, { uid, id, sold }.
+    // totals.fought: the stages fought, in order; totals.pieces: the gear found, { uid, id, st, sold }.
     s.campaign.trip = {
       stage: i, farm, keep: has('keepgoing', s) && s.campaign.road.keepGoing, home: false, out: [], started: Date.now(), battles: 0,
       totals: { won: 0, lit: [], xp: 0, gold: 0, mats: {}, items: {}, gear: 0, sold: 0, unlocks: [], fought: [], pieces: [] }, fatigue: {}, from: {},
@@ -295,7 +298,7 @@ const Campaign = (() => {
     tt.unlocks.push(...r.unlocks);
     // (a trip that set out before the results popup has no list of stages or pieces)
     if (tt.fought) tt.fought.push(stage.id);
-    if (tt.pieces) for (const g of r.gear) tt.pieces.push({ uid: g.piece.uid, id: g.piece.id, sold: g.sold || 0 });
+    if (tt.pieces) for (const g of r.gear) tt.pieces.push({ uid: g.piece.uid, id: g.piece.id, st: g.piece.st || 0, sold: g.sold || 0 });
     // A hero who reached Spent walks home alone; the rest carry on (campaign spec §7.4).
     const left = [];
     for (const c of chars(s)) if (r.fatigue[c.id] && !T.out.includes(c.id) && spent(c)) { T.out.push(c.id); left.push(c.id); }

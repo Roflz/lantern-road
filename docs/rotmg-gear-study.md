@@ -1,6 +1,6 @@
 # Gear Study: Realm of the Mad God Exalt
 
-Approved 2026-11-05 with every recommendation in §7, and the Relic fix, for play-test note 3.22. Nothing here is built yet. It researches how Realm of the Mad God Exalt (RotMG) handles gear, its Forge and its enchantments (§1–2), maps what fits onto our game (§3), proposes a design (§4), lists what it touches (§5), and ends with a build order and your decisions (§6–7).
+Approved 2026-11-05 with every recommendation in §7, and the Relic fix, for play-test note 3.22. Build step 1 (§6: stars and the plain-stat lines) is built; the rest is not yet. It researches how Realm of the Mad God Exalt (RotMG) handles gear, its Forge and its enchantments (§1–2), maps what fits onto our game (§3), proposes a design (§4), lists what it touches (§5), and ends with a build order and your decisions (§6–7).
 
 - **Priorities,** in your order: a smooth play-through, rewarding progression, easy to understand, continuous and essentially limitless progression.
 - **Patterns only:** no RotMG names, items, art or text. The research uses their names; the proposal uses its own words.

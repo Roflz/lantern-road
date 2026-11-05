@@ -71,6 +71,9 @@
 .rs-it.r-fine{box-shadow:inset 0 0 8px rgba(180,222,152,.25)}
 .rs-it.r-rare{box-shadow:inset 0 0 8px rgba(140,196,230,.3)}
 .rs-it.r-relic{box-shadow:inset 0 0 10px rgba(241,211,106,.35)}
+.rs-it .pips{right:1px;bottom:1px}
+.rs-it .pips i{width:5px;height:5px}
+.rs-it.sold .pips{right:auto;left:1px}
 .rs-it.sold .ico{opacity:.4}
 .rs-it.sold em{color:var(--gold)}
 .rs-it.fold b{font:700 9px/1 var(--f-pixel);color:var(--ash)}
