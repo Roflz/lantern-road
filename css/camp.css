@@ -42,7 +42,7 @@
 .cv-corner{position:absolute;right:18px;top:13px;display:flex;gap:8px}
 .camp .cv-round{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#3a2a40,#1a1320);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;font:400 23px/1 var(--f-display);color:var(--gold)}
 .cv-round img{width:18px;height:18px}
-.camp .cv-proto{position:absolute;right:18px;top:58px;min-height:26px;padding:0 8px;font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:rgba(13,10,18,.7);border:1px dashed var(--rule)}
+.camp .cv-proto{position:absolute;left:18px;top:102px;min-height:26px;padding:0 8px;font:8px var(--f-pixel);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:rgba(13,10,18,.7);border:1px dashed var(--rule)}
 
 /* bottom right: the ribbon of round buttons, and the corner's big button */
 .cv-dock{position:absolute;right:16px;bottom:10px;display:flex;align-items:flex-end;gap:10px}
@@ -61,8 +61,9 @@
 .cv-big .cv-tag img{width:12px;height:12px}
 .camp .cv-rb:active .cv-orb,.camp .cv-big:active .cv-orb{transform:scale(.95)}
 
-/* left: the formation as it stands in battle (two columns behind, the front on the right), with level and fatigue */
-.cv-form{position:absolute;left:18px;top:106px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule);touch-action:none}
+/* right, under gold and bone dust (the user's move of 2026-11-04): the formation as it stands in battle (two columns
+   behind, the front on the right), with level and fatigue */
+.cv-form{position:absolute;right:18px;top:62px;display:grid;grid-template-columns:repeat(3,40px);gap:5px;padding:7px;background:rgba(14,10,20,.72);border:1px solid var(--rule);touch-action:none}
 .camp .cv-tile{position:relative;width:40px;height:46px;display:grid;justify-items:center;align-content:start;gap:3px}
 .cv-fc{position:relative;width:40px;height:40px;border:1px solid #4a3a52;background:#0f0b14;display:grid;place-items:center}
 .cv-fc img{width:34px;height:34px}
