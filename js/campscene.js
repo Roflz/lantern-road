@@ -366,67 +366,78 @@ const CampScene = (() => {
   // ── the Hearth's terrace and skyline (docs/mockups/hearth-scene.js)
   // A point at bearing b, radius r and height h into a list of screen points; false when it's behind the camera.
   const at3 = (cam, out, b, r, h) => { const s = Math.sin(b * RAD), c = Math.cos(b * RAD); if (!cam.p(r * s, h, r * c)) return false; out.push(cam.px, cam.py); return true; };
-  const pt3 = (cam, out, x, y, z) => { if (!cam.p(x, y, z)) return false; out.push(cam.px, cam.py); return true; };
   // The ground between two bearings and two radii, its near edge at h0 and its far edge at h1.
   function quadAt(cam, b0, b1, r0, r1, h0, h1) { const q = []; return at3(cam, q, b0, r0, h0) && at3(cam, q, b1, r0, h1) && at3(cam, q, b1, r1, h1) && at3(cam, q, b0, r1, h0) ? q : null; }
   const mixHex = (a, b, k) => '#' + [1, 3, 5].map(i => Math.round(parseInt(a.substr(i, 2), 16) * (1 - k) + parseInt(b.substr(i, 2), 16) * k).toString(16).padStart(2, '0')).join('');
   const STONES = ['#2c2832', '#27232d', '#312c37', '#231f29', '#2a2630'];
-  // The wall's courses, each stone's colour worked out once: warmer near the fire, low down.
-  const WALL_STEP = 3, COURSE = 5.5, WALL = [];
-  for (let b = W0; b < W1; b += WALL_STEP) {
-    const h0 = th(b), h1 = th(b + WALL_STEP), stairs = Math.abs(b + WALL_STEP / 2 - 180) < 4, courses = [];
-    for (let k = 0; !stairs && k * COURSE < Math.max(h0, h1); k++) {
-      const lo0 = Math.min(h0, k * COURSE), hi0 = Math.min(h0, (k + 1) * COURSE), lo1 = Math.min(h1, k * COURSE), hi1 = Math.min(h1, (k + 1) * COURSE);
-      if (hi0 - lo0 <= 0 && hi1 - lo1 <= 0) continue;
-      const warm = Math.max(0, 1 - Math.abs(b - 180) / 70) * (0.34 - k * 0.07);
-      courses.push([lo0, hi0, lo1, hi1, mixHex(STONES[(Math.floor(b / 6) + k * 3 + (k & 1)) % 5], '#8a5a3a', Math.max(0, warm))]);
-    }
-    WALL.push({ b, h0, h1, stairs, courses });
-  }
-  const RISERS = Array.from({ length: N_STEPS }, (_, i) => mixHex('#2c2832', '#7a4a30', 0.18 + i * 0.01));
-  // The terrace: its top in bands of darkness, the earth banks at either end, the wall course by course with its coping,
-  // and the steps up the middle, far to near, with their cheeks.
-  function drawTerrace(x, cam) {
+  // The terrace never changes, so it's worked out once, in the world: quads (four corners, x y z each) in groups of one
+  // colour, drawn in order, a fill a group. Its top in bands of darkness; the earth banks at either end; the wall,
+  // course by course, warmer near the fire and low down (the warmth in steps of 0.02, so the courses share a few
+  // dozen colours); the coping along the top; then the steps far to near, and their cheeks.
+  const TERRACE = (() => {
+    const groups = [], byCol = new Map(), bands = [];
+    const P = (b, r, h) => [r * Math.sin(b * RAD), h, r * Math.cos(b * RAD)];
+    const add = (col, pts, own) => {
+      let g = own ? null : byCol.get(col);
+      if (!g) { g = { col, q: [] }; groups.push(g); if (!own) byCol.set(col, g); }
+      for (const p of pts) g.q.push(...p);
+    };
+    const quad = (b0, b1, r0, r1, h0, h1) => [P(b0, r0, h0), P(b1, r0, h1), P(b1, r1, h1), P(b0, r1, h0)];
+    // (the top's bands are also kept as one outline each: near edge out, far edge back, drawn whole when every corner is
+    // in front of the camera, which saves the raster dozens of seams)
     for (const [r0, r1, col] of [[RT, 178, '#19141f'], [178, 222, '#16111b'], [222, 300, '#130f18'], [300, 560, '#100c15']]) {
-      x.fillStyle = col; x.beginPath();
-      for (let b = E0; b < E1; b += 4) { const q = quadAt(cam, b, b + 4, r0, r1, th(b), th(b + 4)); if (q) { x.moveTo(q[0], q[1]); x.lineTo(q[2], q[3]); x.lineTo(q[4], q[5]); x.lineTo(q[6], q[7]); x.closePath(); } }
-      x.fill();
+      const near = [], far = [];
+      for (let b = E0; b <= E1; b += 4) { near.push(...P(b, r0, th(b))); far.unshift(...P(b, r1, th(b))); }
+      bands.push({ col, out: Float32Array.from(near.concat(far)), q: Float32Array.from([].concat(...[...Array((E1 - E0) / 4)].map((_, i) => quad(E0 + i * 4, E0 + i * 4 + 4, r0, r1, th(E0 + i * 4), th(E0 + i * 4 + 4))).flat())) });
     }
-    x.fillStyle = '#18131d'; x.beginPath();
-    for (let b = E0; b < E1; b += 2) {
-      if (b >= W0 && b + 2 <= W1) continue;
-      const q = [];
-      if (at3(cam, q, b, RT - 16, 0) && at3(cam, q, b + 2, RT - 16, 0) && at3(cam, q, b + 2, RT, th(b + 2)) && at3(cam, q, b, RT, th(b))) { x.moveTo(q[0], q[1]); x.lineTo(q[2], q[3]); x.lineTo(q[4], q[5]); x.lineTo(q[6], q[7]); x.closePath(); }
-    }
-    x.fill();
-    const cope = new Path2D(), capTop = new Path2D(), q = [];
-    for (const { b, h0, h1, stairs, courses } of WALL) {
-      if (h0 <= 0.2 && h1 <= 0.2) continue;
-      for (const [lo0, hi0, lo1, hi1, col] of courses) {
-        q.length = 0;
-        if (at3(cam, q, b, RT, lo0) && at3(cam, q, b + WALL_STEP, RT, lo1) && at3(cam, q, b + WALL_STEP, RT, hi1) && at3(cam, q, b, RT, hi0)) poly(x, q, col);
+    for (let b = E0; b < E1; b += 2) { if (b >= W0 && b + 2 <= W1) continue; add('#18131d', [P(b, RT - 16, 0), P(b + 2, RT - 16, 0), P(b + 2, RT, th(b + 2)), P(b, RT, th(b))]); }
+    const STEP = 3, COURSE = 5.5, cope = [], cap = [];
+    for (let b = W0; b < W1; b += STEP) {
+      const h0 = th(b), h1 = th(b + STEP), stairs = Math.abs(b + STEP / 2 - 180) < 4;
+      if ((h0 <= 0.2 && h1 <= 0.2) || stairs) continue;
+      for (let k = 0; k * COURSE < Math.max(h0, h1); k++) {
+        const lo0 = Math.min(h0, k * COURSE), hi0 = Math.min(h0, (k + 1) * COURSE), lo1 = Math.min(h1, k * COURSE), hi1 = Math.min(h1, (k + 1) * COURSE);
+        if (hi0 - lo0 <= 0 && hi1 - lo1 <= 0) continue;
+        const warm = Math.round(Math.max(0, Math.max(0, 1 - Math.abs(b - 180) / 70) * (0.34 - k * 0.07)) * 50) / 50;
+        add(mixHex(STONES[(Math.floor(b / 6) + k * 3 + (k & 1)) % 5], '#8a5a3a', warm), [P(b, RT, lo0), P(b + STEP, RT, lo1), P(b + STEP, RT, hi1), P(b, RT, hi0)]);
       }
-      if (stairs) continue;
-      q.length = 0;
-      if (at3(cam, q, b, RT - 1.5, h0 - 1.2) && at3(cam, q, b + WALL_STEP, RT - 1.5, h1 - 1.2) && at3(cam, q, b + WALL_STEP, RT - 1.5, h1 + 0.2) && at3(cam, q, b, RT - 1.5, h0 + 0.2)) { cope.moveTo(q[0], q[1]); cope.lineTo(q[2], q[3]); cope.lineTo(q[4], q[5]); cope.lineTo(q[6], q[7]); cope.closePath(); }
-      const tp = quadAt(cam, b, b + WALL_STEP, RT - 1.5, RT + 2, h0 + 0.2, h1 + 0.2);
-      if (tp) { capTop.moveTo(tp[0], tp[1]); capTop.lineTo(tp[2], tp[3]); capTop.lineTo(tp[4], tp[5]); capTop.lineTo(tp[6], tp[7]); capTop.closePath(); }
+      cope.push(P(b, RT - 1.5, h0 - 1.2), P(b + STEP, RT - 1.5, h1 - 1.2), P(b + STEP, RT - 1.5, h1 + 0.2), P(b, RT - 1.5, h0 + 0.2));
+      cap.push(...quad(b, b + STEP, RT - 1.5, RT + 2, h0 + 0.2, h1 + 0.2));
     }
-    x.fillStyle = '#46404e'; x.fill(cope); x.fillStyle = '#383240'; x.fill(capTop);
+    add('#46404e', cope, true); add('#383240', cap, true);
     for (let i = N_STEPS - 1; i >= 0; i--) {
       const zf = -(RT - i * RUN) - (i === N_STEPS - 1 ? 2 : 0), zn = -(RT - i * RUN) + RUN, h = (i + 1) * (TH / N_STEPS), hl = i * (TH / N_STEPS);
-      q.length = 0;
-      if (pt3(cam, q, -STEP_W, h, zf) && pt3(cam, q, STEP_W, h, zf) && pt3(cam, q, STEP_W, h, zn) && pt3(cam, q, -STEP_W, h, zn)) poly(x, q, i % 2 ? '#4a4452' : '#45404d');
-      q.length = 0;
-      if (pt3(cam, q, -STEP_W, hl, zn) && pt3(cam, q, STEP_W, hl, zn) && pt3(cam, q, STEP_W, h, zn) && pt3(cam, q, -STEP_W, h, zn)) poly(x, q, RISERS[i]);
+      add(i % 2 ? '#4a4452' : '#45404d', [[-STEP_W, h, zf], [STEP_W, h, zf], [STEP_W, h, zn], [-STEP_W, h, zn]], true);
+      add(mixHex('#2c2832', '#7a4a30', 0.18 + i * 0.01), [[-STEP_W, hl, zn], [STEP_W, hl, zn], [STEP_W, h, zn], [-STEP_W, h, zn]], true);
     }
     const z0 = -RT + N_STEPS * RUN;
     for (const sd of [-1, 1]) {
-      q.length = 0;
-      if (pt3(cam, q, sd * STEP_W, 0, z0) && pt3(cam, q, sd * (STEP_W + 2.5), 0, z0) && pt3(cam, q, sd * (STEP_W + 2.5), TH + 1.5, -RT) && pt3(cam, q, sd * STEP_W, TH + 1.5, -RT)) poly(x, q, '#3a3442');
+      add('#3a3442', [[sd * STEP_W, 0, z0], [sd * (STEP_W + 2.5), 0, z0], [sd * (STEP_W + 2.5), TH + 1.5, -RT], [sd * STEP_W, TH + 1.5, -RT]], true);
       const fx = sd * (STEP_W + (sd < 0 ? 0 : 2.5));
-      q.length = 0;
-      if (pt3(cam, q, fx, 0, z0) && pt3(cam, q, fx, 1.5, z0) && pt3(cam, q, fx, TH + 1.5, -RT) && pt3(cam, q, fx, TH, -RT)) poly(x, q, '#2e2936');
+      add('#2e2936', [[fx, 0, z0], [fx, 1.5, z0], [fx, TH + 1.5, -RT], [fx, TH, -RT]], true);
+    }
+    return { bands, groups: groups.map(g => ({ col: g.col, q: Float32Array.from(g.q) })) };
+  })();
+  function drawTerrace(x, cam) {
+    const s = [0, 0, 0, 0, 0, 0, 0, 0];
+    const quads = [];
+    for (const B of TERRACE.bands) {
+      const o = B.out;
+      let ok = true;
+      x.fillStyle = B.col; x.beginPath();
+      for (let i = 0; i < o.length && ok; i += 3) { ok = cam.p(o[i], o[i + 1], o[i + 2]); if (ok) (i ? x.lineTo(cam.px, cam.py) : x.moveTo(cam.px, cam.py)); }
+      if (ok) { x.closePath(); x.fill(); } else quads.push(B);
+    }
+    for (const { col, q } of quads.concat(TERRACE.groups)) {
+      x.fillStyle = col; x.beginPath();
+      let any = false;
+      for (let i = 0; i < q.length; i += 12) {
+        let ok = true;
+        for (let j = 0; j < 4 && ok; j++) { ok = cam.p(q[i + j * 3], q[i + j * 3 + 1], q[i + j * 3 + 2]); s[j * 2] = cam.px; s[j * 2 + 1] = cam.py; }
+        if (!ok || (s[0] < -40 && s[2] < -40 && s[4] < -40 && s[6] < -40) || (s[0] > cam.IW + 40 && s[2] > cam.IW + 40 && s[4] > cam.IW + 40 && s[6] > cam.IW + 40)) continue;
+        x.moveTo(s[0], s[1]); x.lineTo(s[2], s[3]); x.lineTo(s[4], s[5]); x.lineTo(s[6], s[7]); x.closePath(); any = true;
+      }
+      if (any) x.fill();
     }
   }
   // The Old Beacon on the southern skyline, against long streaks of cloud whose upper edges catch the moon. Its crows
