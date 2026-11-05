@@ -20,7 +20,7 @@ that changes a screen.
 | 6 Battle | `js/battle.js` (drawing, the event log's playback), `js/main.js` (controls, trips, the report, tips), `css/game.css` | Landscape since the overnight build; Pause and the turn order checked by `tools/battle_check.py` |
 | 7 Results popup | `js/results.js`, `css/results.css`, `showResults` in `js/main.js` | Redesigned (PR #23) |
 | 8 The hero card | `js/sheet.js` (`HeroSheet`, the `'hero'` screen, and `tipsFor`, which gives every `data-tip` its tooltip through `js/tip.js`), `js/stage.js` (the sprite stage), `css/hero.css` (`hr-`, and the card kit `hc-` the Bag and the Heroes list share), the tall card and the piece's card in `js/bag.js` (`GearUI.tall`, `GearUI.pieceLines`) and `css/gear.css` (`gc-`, `pc-`) | Redesigned again as one page (`docs/mockups/hero-card.html`, D1, approved 2026-11-05, to `docs/ui-rules.md`); checked by `tools/hero_check.py` |
-| 9 The Bag and the item card | `js/bag.js`, `css/gear.css` | Old layout; star pips on the tiles and the card, and the enchantment lines' band (the gear study, step 1) |
+| 9 The Bag and the item card | `js/bag.js` (`GearUI`), `css/gear.css` (`bg-`, with the card kit in `css/hero.css`) | The Bag redesigned (the hero card mockup's Bag state: tall cards with the stars' pips, icon sorts, the compare portraits, Give to and Sell); checked by `tools/bag_heroes_check.py`. The item card's bottom sheet (`GearUI.card`, which the results popup and the guide's Relic line open) keeps its old layout |
 | 10 Buildings | `js/buildings.js`, `css/base.css`; the Recruit Board's panel is `RecruitBoard` (end of `js/buildings.js`), `css/board.css` (`rb-`) | Old layout, but the Recruit Board: redesigned (`docs/mockups/recruit-board.html`, 2026-11-05: the stagecoach rows, the confirmation, the reveal, the Upgrades tab; the recruit's card is a placeholder until the new hero card); checked by `tools/board_check.py` |
 | 11 Tactics | `js/rules.js` (`Tactics`, the model, and `TacticsEditor`, the `'tactics'` screen), `css/rules.css` (`tx-`) | Redesigned (`docs/mockups/tactics.html`, 1.35); checked by `tools/tactics_check.py` |
 | 12 Settings, help | `openSettings` in `js/app.js`; "How battles work" (`showHow`) in `js/main.js` | Old layout; opened from the Hearth's dock: Settings is the candle, Help the Codex's book |
@@ -49,14 +49,14 @@ that changes a screen.
 | Pixel art, icons, scenery | `js/art.js` |
 | Sound | `js/audio.js` |
 | The glossary (Tactics' long presses read it) | `js/glossary.js`, checked by `node tools/glossary.js`, written out to `docs/glossary.md` |
-| Tests | `tools/simtest.js` (the sim, the models, balance), `tools/playthrough.js` (headless runs through Regions I–II), `tools/playthrough_ui.py` (the UI, Region I), `tools/frame_check.py`, `tools/board_check.py` (the Recruit Board and the Hearth's dock), `tools/hero_check.py`, `tools/tactics_check.py`, `tools/results_check.py`, `tools/battle_check.py`, `tools/quests_check.py`, `tools/cloud_check.py`, `tools/camp_perf.py`; `tools/shot.py` for screenshots |
+| Tests | `tools/simtest.js` (the sim, the models, balance), `tools/playthrough.js` (headless runs through Regions I–II), `tools/playthrough_ui.py` (the UI, Region I), `tools/frame_check.py`, `tools/bag_heroes_check.py`, `tools/board_check.py` (the Recruit Board and the Hearth's dock), `tools/hero_check.py`, `tools/tactics_check.py`, `tools/results_check.py`, `tools/battle_check.py`, `tools/quests_check.py`, `tools/cloud_check.py`, `tools/camp_perf.py`; `tools/shot.py` for screenshots |
 
 ## Legacy code still running
 
 This code still runs, but a redesign will replace it. Read it as old behaviour, not as the design.
 
 - **The battle canvas's `'camp'` mode** (`Battle.idle` in `js/battle.js`): a road scene seen from behind the party, with
-  heroes in rows looking up the road. The Road map, Party and Bag call it as they open (`App.rest()`), and
+  heroes in rows looking up the road. The Road map and Party call it as they open (`App.rest()`), and
   it shows faintly behind their 95%-opaque pages. It is not the Hearth (the Hearth holds it undrawn, `Battle.hold`).
   Only this mode uses `S.rows`, `COL`, `field()`'s camp half, `place()`'s second half, the back-view hero sprites in
   `sprOf` and `drawGround`'s road. It becomes dead once those three screens leave the column; then remove it, with `restScene` in
@@ -118,6 +118,10 @@ Each was checked with grep across `js/`, `index.html` and `tools/` first.
   `.gr-try` in `css/gear.css`.
 - **The hero screen's tabs** (Stats, Skills, Gear, Tactics) and their styles in `css/hero.css`, the skill watched on a
   dummy in the arch (`HeroSheet.watch`, `.playing`), the Gear tab's Card and Unequip, and `HeroSheet.waiting` (no caller).
+- **The old Bag** (`js/bag.js`): its portrait page, the slot filters and sort chip, the Bag's meter, Sell every Common
+  piece, the Worn by your heroes rows, its prototype box (the Prototype tools panel keeps it), `GearUI.tile` and
+  `GearUI.sorted`; their styles in `css/gear.css` (`.view.bag`, `.gr-inv`, `.gr-it`, `.gr-meter`, `.gr-worn`, `.gr-wrow`,
+  `.gr-mini-it`, `.gr-legend`).
 
 ## Later: dead code in files a builder is working in
 
@@ -129,8 +133,8 @@ because those builds may already have removed or reused it.
 | `js/app.js` | `placeholder` (the "Placeholder" note helper) | No callers: `grep -n "placeholder(" js/*.js` finds none |
 | `js/app.js` | `showAway`'s own sheet, after `if (actions.away) return actions.away(ms)`, and `awayGains` (and its export) | `js/camp.js` always sets `App.actions.away` (`camp.js` is in `index.html`), so the fallback never runs. Nothing pushes to `awayGains`: `grep -rn awayGains js tools` finds only `js/app.js` |
 | `css/map.css` | `.ts-unl` | No element has the class: `grep -rn ts-unl js` finds nothing (its last use went in `aba4b1e`) |
-| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map, Party and Bag leave the column. That is not yet; they still call it |
-| `css/gear.css` | `.gr-slots`, `.gr-slot`, `.gr-bagrow`, `.gr-fits`, `.gr-legend` | No element has these classes (`grep -rn` across `js/` finds none); dead before the hero card, so left for this table |
+| `js/battle.js`, `js/app.js` | the camp mode and `restScene` (see Legacy) | Dead once the Road map and Party leave the column (the Bag left it with its redesign). That is not yet; they still call it |
+| `css/gear.css` | `.gr-slots`, `.gr-slot`, `.gr-bagrow`, `.gr-fits` | No element has these classes (`grep -rn` across `js/` finds none); dead before the hero card, so left for this table |
 
 No dead code was found in `js/camp.js`, `js/campscene.js`, `css/camp.css`, `js/map.js` or `js/guide.js`. Their
 exports that no other file reads (`Camp.sceneState`, `CampScene.weightOf` and the like) are used inside their own
