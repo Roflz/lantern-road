@@ -244,13 +244,14 @@ const HeroSheet = (() => {
     ui.stage.setLook(lookOf(c));
     const tried = ui.tryOn && Items.find(S(), ui.tryOn), path = pathOf(c);
     const st = Fatigue.state(c), need = Hero.xpToNext(c.level), cap = c.level >= HERO.CAP;
-    ui.archTop.replaceChildren(
+    // (replaceChildren writes a null as the text "null": a hero with no path yet has no plate, so it's left out)
+    ui.archTop.replaceChildren(...[
       tried ? h('span', { class: 'hr-plate try', text: 'Trying on' }) : path ? h('span', { class: 'hr-plate', text: path }) : null,
       h('div', { class: 'hr-foot' },
         h('div', { class: 'hr-tags' }, h('span', { class: 'hr-lv' }, 'Lv', h('b', { text: String(c.level) })),
           h('span', { class: 'hr-fat ' + st, title: 'Fatigue' }, icon('fatigue', 12), `${st === 'fresh' ? 'Rested' : FATIGUE_NAMES[st]} ${Math.floor(c.fatigue || 0)}%`)),
         h('div', { class: 'hr-xp', title: 'XP' }, h('i', { style: `width:${cap ? 100 : Math.min(100, 100 * c.xp / need)}%` }), h('span', { text: cap ? 'Max' : `${fmt(c.xp)} / ${fmt(need)}` }))),
-      proto(c));
+      proto(c)].filter(Boolean));
     return ui.archEl;
   }
   // Prototype tools: XP to try the later thresholds without the grind (hidden with Settings → Prototype tools).

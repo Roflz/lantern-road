@@ -233,7 +233,9 @@ Small permanent bonuses for every character in battle. Each one has a **focus** 
 - **Choices.** Levels 3 and 5 each offer a choice of two upgrades. One always adds storage; the other changes what the building does. You can switch a choice later by paying that level's cost again.
 
 ### Toll House
-Travellers pay to walk the road you've lit, so the further your light reaches, the more it earns.
+Travellers pay to use the road you've cleared, so the further you've cleared, the more it earns.
+
+**The road's own tolls** come first, from 1-1 (the tutorial study's §7, item 4; built in PR #35): every cleared stage earns 5 gold an hour *(tune)*, stored up to 8 hours like an idle building's output. "While you were away" and Collect take them. The Toll House, from 1-5, adds its own output on top.
 
 **Focus:** **Coin** (gold) or **Kind** (party items instead of gold).
 
