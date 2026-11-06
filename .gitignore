@@ -1,1 +1,12 @@
 .claude/
+
+# Secrets: keep real values out of the repository (commit a .env.example instead)
+.env
+.env.*
+!.env.example
+
+# Reference screenshots of other games, for design study only: not ours to publish
+Idle_Heroes_pics/
+
+# Large recordings of play: share them outside the repository
+*.mp4

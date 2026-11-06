@@ -2,6 +2,12 @@
 
 A dark-fantasy idle party battler, built for a phone on its side: every screen is landscape. Six lantern-bearers fight on their own, by the rules you give them. The design lives in [docs/design.md](docs/design.md).
 
+- **Who it's for:** players who like idle and auto-battler games but want the fights to turn on their own tactics, not on grinding: you write each hero's rules, then watch the party carry them out.
+- **Built with:** plain HTML, CSS and JavaScript, with no framework, no build step and no dependencies to install. Sprites, scenery and music are drawn and generated in code. The tests run on Node.js (`tools/simtest.js`, `tools/playthrough.js`) and on Python with Playwright and headless Chromium (the `tools/*_check.py` screen checks).
+- **Run it:** clone the repository and open `index.html` in a browser. The fonts ship in `fonts/`, so it works offline. To run the tests, see [Tests](#tests).
+- **What's next:** [ROADMAP.md](ROADMAP.md).
+- **License:** [MIT](LICENSE). The bundled fonts keep their own license (see [Fonts](#fonts)).
+
 ## The idle battle prototype (build steps 1–7)
 
 Open `index.html` in a browser. It needs no build step and no internet connection; the fonts ship in `fonts/`. A new game starts with one hero, picked from the Sellsword, the Hexblade and the Pilgrim, and 100 gold. The camp brings the rest of the party, and they walk the whole Lantern Road: 88 stages through five regions, each with two elites and a boss.
