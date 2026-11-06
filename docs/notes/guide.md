@@ -1,7 +1,8 @@
 # Wick's guide and the first session: notes for the builds that follow
 
-From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`, 2026-11-04. The script is
-`docs/onboarding-spec.md` §6.4 (brought up to date in this branch); screenshots of every step are in `docs/screens/guide/`.
+From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`, 2026-11-04. The script was
+`docs/onboarding-spec.md` §6.4; since `claude/first-session` (below) it is `docs/first-session-spec.md`. Screenshots of
+every step are in `docs/screens/guide/`.
 
 ## Where it lives
 - `js/wick.js`: the guide's kit. `Wick.show(o)` puts one step on screen and returns its handle (`next()`, `close()`,
@@ -18,12 +19,63 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
 - `js/firstsession.js` (`FirstSession`): the steps, in order, each with a phase (when its part still has a moment),
   `at()` (its moment is now) and `show()` (the `Wick.show` options). A 250 ms tick shows the next step when its
   moment comes; the battle's events come through `Guide.battleEvent` (`FirstSession.battleEvent(e, stage)`). Save:
-  `guide.step` (the step under way), `guide.done`, `guide.replay` (the steps seen since Replay the guide), and `name`.
-  `FirstSession.skip()`, `.replay()`, `.on`, `.step`, `.boardTap()`.
+  `guide.step` (the step under way), `guide.done`, `guide.camp` (the buildings view is open), `guide.gear` (1-1's
+  pieces), `guide.offer` (the first pick's three), and `name`. `FirstSession.skip()`, `.on`, `.step`, `.boardTap()`,
+  `.dragOnly`, `.lessons()`, `.replayLesson(id)`.
+- `js/wickmenu.js` (`WickMenu`): his menu at the fire once the session is over (below).
 - `js/firstpick.js` (`FirstPick.open({ mode: 'pick' | 'hire', guided, rest, onDone })`): the Recruit Board's panel
   (Kit.panel) with three cards, Wick's line on each (`FirstPick.CARD`), Hire and the reveal. The first session opens
   it for the second recruit too, which is paid (only the first pick is free, `docs/first-session-spec.md` §5).
-- Styles: `css/guide.css` (`wk-` for the kit, `fp-` for the board).
+- Styles: `css/guide.css` (`wk-` for the kit, `fp-` for the board), `css/wick.css` (`wm-`, his menu).
+
+## The first session rebuilt (branch `claude/first-session`, 2026-11-05)
+The script is `docs/first-session-spec.md` (approved 2026-11-05 with every recommendation in its §6), on the rules of
+`claude/session-rules` (300 gold to start, only the first pick free, the board open at 1-1, 1-1's two Fine pieces, 1-2
+with two heroes, no blueprint before the Sexton). Screenshots of every step are in `docs/screens/guide/`.
+- **The steps** (`STEPS` in `js/firstsession.js`, the spec's 22 in 57 ids): the story (`hello` … `offer`), `name`,
+  `welcome`, `board`, `pick`; `setout`, `stage`, `go`; `order`, `speed`; the results' `xp`, `loot` (the two gear tiles,
+  `loot-gear`) and `home`; `heroes`, `hero`; `stats` (step 9: tap two stats or more, each answers with its tooltip, then
+  Next); `spendbtn`, `spend`, `keep`, `strong`, `later`; the gear's `weapon`, `pickw`, `wearw`, `worn`, `armor`,
+  `picka`, `weara`, `worna`, then `heroback`, `tabhome`; `board2` and `hire` (paid); `form`, `place`, `done`; the
+  directed 1-2's `setout2`, `yours`, `home2`; the buildings' `drag`, `plots`, `noplans`; Bess's `bess`, `offer1`,
+  `offer2`, `accept`, `thanks1`, `thanks2`; the goodbye's `bye1` … `bye4`.
+- **A step** has `phase`, `at()`, `show()`, and may have `skip()` (its work is done: a point spent, a piece worn),
+  `prep()` (each tick while it's the step under way: `drag` opens the buildings view, `save.guide.camp`; `bess` calls
+  `Quests.arrive()` once the camera is at the fire), `after()` (once done: `noplans` closes the panel and turns back
+  to the fire; `thanks2` closes Bess's panel), `resume` (the Hearth step its part starts again from after a load, the
+  spec's "Resume at"), `open()` (its screen, opened again after a load: the first pick, Bess's panel) and `rat()` (its
+  moment when Wick's menu replays it). Forced steps that explain a screen use no dim.
+- **Resume:** a load lands at the Hearth; `resumed()` moves a step with `resume` back there, or opens a step's screen
+  with `open`, and `current()` passes over every step whose part is over or whose work is done. Lines that only follow
+  an action of this sitting (`strong`, `later`, `worn`, `worna`) are passed over after a load (`just`, not saved).
+  `tools/guide_check.py --resume` checks every moment against its `RESUME` table.
+- **1-1's pieces:** `Campaign.onSettle` records the uids of 1-1's first-clear pieces in `save.guide.gear`
+  (`{ weapon, armor }`); the gear steps point at them in the dressing (`gear-pick[data-uid]`), and pass over a piece
+  already worn or gone. The first pick's three are kept in `save.guide.offer`, so a reload shows the same three.
+- **Bess:** the session brings her (`Quests.arrive()` at `bess`). Her own fallback in `js/quests.js` (after 1-2, once
+  `guide.done`) only serves a save that skipped the session or finished it before her; `come()` keeps her from coming
+  twice. Her lines are said into her own bubble (`Quests.say`); the steps on her panel have no bubble of Wick's.
+- **Wick.show** has `next: { label, when() }`: a Next button in his bubble (`wick-next`), shown once `when()` holds.
+- **The drag round the camp** (`drag`): the scene's taps wait while it's up (`FirstSession.dragOnly`, read by
+  `tapAt` in `js/camp.js`), so a tap can't open the board or a plot mid-step; the hole is the scene clear of the HUD.
+  It ends only once the finger lifts (`Camp.dragging`): between steps the gate holds a pointerup back, and the scene
+  would think the finger still down and turn with the next move. The plots wait for the camera to settle (`still()`).
+- **Wick's menu** (`js/wickmenu.js`, `WickMenu.open()`, styles `wm-` in `css/wick.css` with Bess's panel's `qs-`
+  layout): a tap on Wick at the fire once the session is over. His hint (`WickMenu.hint(s)`, the first of §3's list that
+  fits), the lessons seen (`FirstSession.lessons()`: nine, then each visit seen and Daily jobs) and the Codex. A lesson
+  closes the panel and replays its lines as soft steps (`FirstSession.replayLesson(id)`), each when its `rat()` holds,
+  from the screen it opens; it ends after its last line or once that screen is left. Battles' lines wait for the next
+  battle. Settings → Wick's lessons opens the menu (it was Replay the guide; `save.guide.replay` is gone).
+- **The moved lessons** (§2): skill points are a visit when any hero first reaches level 5 (`VISITS.skills` in
+  `js/visits.js`: the tree, then a skill slot); the first building is a visit once Bess's quest brings the Toll House's
+  plan (`VISITS.plan`, on an empty plot; `Quests.onChange` says `'plan'`); the tolls are a first-time line of Wick's on
+  the first "While you were away" sheet with tolls (`campaign.tips['away:tolls']`, `away-tolls`).
+- **Old saves** (`MIGRATIONS[10]` in `js/save.js`): a save past the session keeps playing (its buildings view opened by
+  version 9); one part-way through the old script goes on under the new one from the nearest step (Grow's steps and
+  the old 1-2 to `heroes`, after which the gear, the paid hire and Formation pass over what's done; the old goodbye to
+  `drag`); a hero already at level 5 or more has met skill points.
+- **Anchors added:** `loot-gear` (results), `wick-next`, `plot-none` (the empty plot's No plans), `wick-lesson`
+  (`data-id`), `wick-codex`, `away-tolls`, `road-gold`; the Resistances plate has a tooltip (step 9 taps it).
 
 ## Since the 2026-11-05 play-test (branch `claude/hearth-guide-fixes`)
 - **No ring (3.7).** The spotlight is only a clear hole in the dim; the pointer marks the target. Every step keeps its
@@ -65,8 +117,8 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
   first. The goal on a new game is "Recruit your first hero". Your name shows by the Renown. A tap anywhere on the
   party panel opens Formation (between the tiles too). The old first-pick page is gone (`Camp.showPick` opens the
   board's panel).
-- `js/app.js`: no "While you were away" and no road card at boot while the session runs; Settings has Replay the
-  guide. `js/proto.js`: Skip the guide, while the session runs.
+- `js/app.js`: no "While you were away" and no road card at boot while the session runs; Settings has Wick's lessons
+  (his menu; it was Replay the guide). `js/proto.js`: Skip the guide, while the session runs.
 - `js/guide.js`: its coach marks stay quiet while the session runs, and `c:flags`, `c:speed`, `c:rule`, `c:board`
   are marked seen when it ends (Wick said them).
 - The checks that build their own saves (`frame_check`, `road_check`, `formation_check`, `results_check`,
@@ -85,7 +137,10 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
 - Column screens (Party, the hero sheet) scroll: a step there scrolls its target into view first (`seen()`).
 - The Hearth's party panel's tiles have 5 px gaps: a tap there used to do nothing (now it opens Formation).
 - In a turned frame a test's drag must lift in design pixels (`tools/guide_check.py`'s `drag`), or it scrolls the
-  strip sideways instead of lifting the hero.
+  strip sideways instead of lifting the hero. A drag round the camp mustn't lift (`lift=False`): at the fire a drag
+  goes the way it first heads, and up does nothing.
+- `FirstSession.skip()` opens the buildings view (`guide.camp`), as the session's end does: a check of the locked
+  camera sets `Save.state.guide.camp = false` after it (`tools/frame_check.py`, `tools/board_check.py`).
 
 ## Left for the user
 - Keep going: where it would come in is noted in the spec (§6.4, at 1-6). Not decided here.

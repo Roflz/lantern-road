@@ -633,7 +633,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 9, 'save version 9');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 10, 'save version 10');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -1059,6 +1059,18 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     ok(['tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit'].every(id => Base.blueprint(id, past)) && Base.built('tollhouse', past) && past.guide.camp && Base.viewOpen(past),
       'a save past 1-16 keeps every blueprint the road gave it (the Tactician’s apart from Tactician I), the Toll House it built, and the buildings view');
     ok(Quests.storyReward(past).gold === Base.cost('tollhouse', 1).gold, 'with the Toll House known already, Bess’s quest pays its cost instead');
+  }
+  // ── the save: version 9 → 10 (the first session rebuilt): a save part-way through the old script goes on under the
+  // new one from the nearest step; Replay the guide is Wick's menu now; a hero at level 5 has met skill points
+  {
+    const v9 = (step, done, level, f) => { const d = JSON.parse(JSON.stringify(defaultState())); d.v = 9; const c = Hero.create('sellsword', 'c1'); c.level = level || 2; d.roster = [c]; d.party = ['c1', null, null, null, null, null]; d.guide = { step, done: !!done, replay: done ? {} : null, visits: {}, camp: !!done }; if (f) f(d); return upgrade(JSON.parse(JSON.stringify(d))); };
+    const was = { strong: 'heroes', tabhome: 'heroes', setout2: 'heroes', yours: 'heroes', new: 'heroes', home2: 'heroes', bye: 'drag', tolls: 'drag', fire: 'drag', board2: 'board2', hire: 'hire', form: 'form', place: 'place', setout: 'setout', xp: 'xp', heroes: 'heroes', hello: 'hello' };
+    const wrong = Object.entries(was).filter(([o, n]) => v9(o).guide.step !== n);
+    ok(!wrong.length, `version 9 → 10: the old script's steps go on from the nearest of the new (${wrong.map(([o]) => o).join(', ') || 'all'})`);
+    const done = v9('', true, 7);
+    ok(done.v === SAVE_VERSION && done.guide.done && done.guide.step === '' && !('replay' in done.guide) && done.guide.camp && done.guide.visits.skills === 'seen', 'a save past the session keeps playing, with its buildings view, no Replay the guide, and skill points already met at level 7');
+    ok(!v9('', true, 3).guide.visits.skills, 'below level 5, the Skill points visit is still to come');
+    ok(isObj(done.guide) && done.guide.gear === null && done.guide.offer === null, 'the new guide fields, empty');
   }
   console.log('Home base checked: a new game, the board, Region I’s gold, rest and beds, battle fatigue, idle buildings and time away, costs, choices, tearing down, Renown, the Hall, the Shrine, the Tactician, the Shop, dismissing, and the save.');
 }
@@ -1568,7 +1580,10 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const P = protoState(); P.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; Quests.ensure(P); Base.ensure(P);
   for (const x of STAGES.filter(x => x.region === 0)) P.campaign.cleared.push(x.id); // no stage brings the plan
   ok(Quests.story(P).state === 'done' && Quests.story(P).lit === 18 && Quests.ready(P) === 1 && !Base.blueprint('tollhouse', P), 'quests: 1-18 lit, The Gravedigger is done');
+  const heard = [];
+  Quests.onChange(w => heard.push(w));
   const pr = Quests.claimStory(P);
+  ok(heard.includes('claim') && heard.includes('plan'), 'quests: the claim says so, and that it brought the plan (Wick’s first-building visit hears it)');
   ok(pr && pr.plan === 'tollhouse' && Base.blueprint('tollhouse', P) && P.quests.story === 'claimed' && Quests.claimStory(P) === null && Quests.ready(P) === 0, 'quests: claimed once, for the Toll House plan');
   const P2 = protoState(); P2.quests = { bess: true, story: 'on', jobs: '', daily: null }; Quests.ensure(P2); Base.ensure(P2);
   for (const x of STAGES.filter(x => x.region === 0)) { P2.campaign.cleared.push(x.id); for (const id of x.first) Campaign.unlock(id, P2); }

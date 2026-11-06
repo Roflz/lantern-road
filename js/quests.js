@@ -24,14 +24,16 @@
 //
 // For the first session's rewrite (and Wick's guide):
 //   Quests.arrive()        rolls her cart up the road to her place by the fire (at once with reduced motion, or away
-//                          from the Hearth) and offers the story quest. Until the rewrite calls it, she comes by
-//                          herself: the first time the Hearth shows, still, after 1-2 is cleared and the first
-//                          session is over.
+//                          from the Hearth) and offers the story quest. The first session calls it at its step 19,
+//                          after 1-2 (js/firstsession.js). A save that skipped the session (or finished it before
+//                          Bess) has her come by herself: the first time the Hearth shows, still, after 1-2 is
+//                          cleared and the session is over. She comes once (come() says whether she was there).
 //   Quests.arriving        true while the cart rolls in; her scene anchor (id 'bess') and her plaque
 //                          ([data-tut=hearth-bess]) are there once it stands still
 //   Quests.open(o)         her panel (o.line: her first line). A tap on her opens it too. Quests.shown, Quests.close()
 //   Quests.say(text)       her line in the panel's bubble
-//   Quests.accepted(s)     true once the story quest is accepted; Quests.onChange(fn) hears every change
+//   Quests.accepted(s)     true once the story quest is accepted; Quests.onChange(fn) hears every change ('arrive',
+//                          'accept', 'claim', 'plan' (the claim brought the Toll House's plan), 'job', 'bonus', …)
 //   Anchors on the panel: quest-card, quest-accept, quest-claim, jobs, job-claim, bonus-claim; at the Hearth: the
 //   goal tracker's quest line, hearth-quest.
 
@@ -157,6 +159,7 @@ const Quests = (() => {
       if (typeof Campaign !== 'undefined') Campaign.unlock(R.plan, s);
       else s.unlocks[R.plan] = Date.now();
       if (typeof Base !== 'undefined') { Base.ensure(s); Base.changed(s); }
+      changed('plan', s);
     } else {
       s.currencies.gold += R.gold;
       s.currencies.mats[R.mat] = (s.currencies.mats[R.mat] || 0) + R.n;
@@ -491,7 +494,8 @@ const Quests = (() => {
     card = Wick.show({ ui: el, tap: 'none', onDone: () => { card = null; } });
   }
 
-  // ── the ticker: she comes by herself after 1-2 (once the first session is over), and her card shows when the jobs open
+  // ── the ticker: she comes by herself after 1-2 (once the first session is over: the session brings her itself), and
+  // her card shows when the jobs open
   const busy = () => (typeof Title !== 'undefined' && Title.up) || (typeof FirstSession !== 'undefined' && FirstSession.on) || !!Wick.step || !!Wick.soft || (typeof Visits !== 'undefined' && (Visits.card || Visits.on));
   let seenSave = null;
   function tick() {

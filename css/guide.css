@@ -53,6 +53,10 @@
 /* the story's Skip, in the panel's corner: straight to the name box */
 .wk-skip{position:absolute;right:12px;top:9px;padding:6px 10px;font:700 8px/1 var(--f-pixel);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);background:rgba(8,6,12,.6);border:1px solid var(--rule);pointer-events:auto;cursor:pointer}
 .wk-skip:active{transform:translateY(1px)}
+/* Next, in his bubble (the stats step): shown once the step's taps are done */
+.wk-nx{display:block;margin:10px 0 0 auto;height:30px;padding:0 16px;font:400 18px/1 var(--f-display);color:#1a1008;background:linear-gradient(#ffd68a,#e08a2a);border:1px solid #000;box-shadow:0 0 0 1px #8a5a2a,inset 0 1px 0 rgba(255,255,255,.5);pointer-events:auto;cursor:pointer;animation:wk-rise .25s ease-out}
+.wk-nx[hidden]{display:none}
+.wk-nx:active{transform:translateY(1px)}
 
 /* ── callouts on what they explain (F3), and the hand that shows a drag */
 .wk-call{position:absolute;max-width:200px;padding:8px 11px 9px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px #6b4a2a,0 8px 18px rgba(0,0,0,.5);font:600 13px/1.25 var(--f-body);animation:wk-rise .3s ease-out}

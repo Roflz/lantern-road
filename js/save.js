@@ -16,7 +16,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 9;
+const SAVE_VERSION = 10;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
@@ -72,11 +72,11 @@ function defaultState() {
     settings: { sfx: true, music: true, motion: true, speed: 1, tips: true, proto: true }, // tips: first-time tips; proto: show the prototype tools
     away: { last: 0, total: 0, returns: 0, at: 0 },       // the latest time away, the sum of all of it, and when it was seen
     name: '',               // the name you gave Wick (the Hearth shows it by your Renown); '' until you do
-    // Wick's first session (js/firstsession.js): step, the forced step under way; done once it is over (or skipped);
-    // replay: the steps seen again since Settings → Replay the guide, or null. visits: his unlock visits
-    // (js/visits.js), each 'new', 'later' or 'seen'. camp: the Hearth's buildings view is open (Wick has shown it, or
-    // the session is over), with or without a blueprint (Base.viewOpen).
-    guide: { step: '', done: false, replay: null, visits: {}, camp: false },
+    // Wick's first session (js/firstsession.js): step, the forced step under way; done once it is over (or skipped).
+    // visits: his unlock visits (js/visits.js), each 'new', 'later' or 'seen'. camp: the Hearth's buildings view is open
+    // (Wick has shown it, or the session is over), with or without a blueprint (Base.viewOpen). gear: 1-1's two pieces
+    // ({ weapon, armor } uids), for the session's gear steps. offer: the first pick's three, kept across a reload.
+    guide: { step: '', done: false, visits: {}, camp: false, gear: null, offer: null },
     // Bess the carter (js/quests.js): bess, at the Hearth; story, her first quest ('', 'offered', 'on', 'claimed');
     // jobs, the daily jobs ('', 'due', 'new', 'seen'); daily, today's.
     quests: { bess: false, story: '', jobs: '', daily: null },
@@ -259,6 +259,20 @@ const MIGRATIONS = {
     if (u.tactician && !u.tacticianhall) u.tacticianhall = u.tactician;
     // the buildings view no longer waits for a blueprint, but for Wick: a save past his first session has it open
     if (isObj(old.guide) && old.guide.done) old.guide.camp = true;
+    return old;
+  },
+  // Version 10 (the first session rebuilt, docs/first-session-spec.md): a save part-way through Wick's old script goes
+  // on under the new one from the nearest step (the steps it hasn't had come after it: the gear, the paid hire,
+  // Formation, the buildings and Bess, each passed over where its work is done); Settings → Replay the guide is his menu
+  // now; and a hero already at level 5 or more has met skill points, so their visit doesn't come.
+  10: old => {
+    const g = isObj(old.guide) ? old.guide : null, roster = Array.isArray(old.roster) ? old.roster : [];
+    if (!g) return old;
+    const WAS = { hero: 'heroes', stats: 'heroes', spend: 'heroes', keep: 'heroes', strong: 'heroes', heroback: 'heroes', tabhome: 'heroes',
+      setout2: 'heroes', yours: 'heroes', new: 'heroes', home2: 'heroes', bye: 'drag', tolls: 'drag', fire: 'drag' };
+    if (!g.done && typeof g.step === 'string' && WAS[g.step]) g.step = WAS[g.step];
+    delete g.replay;
+    if (roster.some(c => isObj(c) && c.level >= 5)) { if (!isObj(g.visits)) g.visits = {}; if (!g.visits.skills) g.visits.skills = 'seen'; }
     return old;
   },
 };

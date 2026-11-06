@@ -180,7 +180,8 @@ const App = (() => {
         : h('div', { class: 'setting off' }, h('div', { class: 'nm', text: 'Music' }), h('div', { class: 'ds', text: 'Being reworked: it comes back in a later build.' }), h('span', { class: 'ph-tag', text: 'Later' })),
       row('Reduced motion', 'No screen shake or flashes, and no sliding between screens.', !s.motion, () => { s.motion = !s.motion; }),
       row('First-time tips', 'A one-line tip the first time something happens, and a pointer to each new thing the road unlocks.', s.tips, () => { s.tips = !s.tips; }),
-      typeof FirstSession !== 'undefined' ? btn('Replay the guide', () => { closeSheet(); FirstSession.replay(); }) : null,
+      // Wick's lessons are his menu now, by the fire (js/wickmenu.js)
+      typeof WickMenu !== 'undefined' ? btn('Wick’s lessons', () => { closeSheet(); if (typeof FirstSession !== 'undefined' && FirstSession.on) { toast('Wick is showing you round already'); return; } if (App.current !== 'home') go('home'); WickMenu.open(); }, '', 'Tap Wick by the fire') : null,
       h('div', { class: 'savewhere', text: `Saved ${ago == null ? 'never' : ago < 5 ? 'just now' : ago < 60 ? ago + 's ago' : duration(ago * 1000) + ' ago'} · ${Save.info.cloud === 'off' ? 'this device only' : 'synced to your account'}` }),
       btn('How battles work', () => { closeSheet(); showHow(() => closeScreen()); }),
       actions.proto ? h('button', { class: 'btn pt-open', onclick: () => { sfx('click'); actions.proto(); } }, h('span', { class: 'ph-tag', text: 'Prototype' }), ' Prototype tools', h('span', { class: 'sub', text: 'Light the road, add gold and materials, train the party. For play-testing.' })) : null,

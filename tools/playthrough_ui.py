@@ -239,16 +239,20 @@ def main():
         def stage_point(x, y):
             return js(TO_CLIENT, [x, y])
 
-        def drag(d0, d1, steps=14):
-            """A finger from one point to another in design pixels: up first, so it lifts a hero off Formation's strip."""
-            pts = [(d0[0], d0[1]), (d0[0], d0[1] - 14)] + [(d0[0] + (d1[0] - d0[0]) * i / steps, d0[1] - 14 + (d1[1] - d0[1] + 14) * i / steps) for i in range(1, steps + 1)]
+        def drag(d0, d1, steps=14, lift=True):
+            """A finger from one point to another in design pixels: up first, so it lifts a hero off Formation's strip;
+            without lift, straight (a drag round the camp: at the fire a drag goes the way it first heads)."""
+            if lift:
+                pts = [(d0[0], d0[1]), (d0[0], d0[1] - 14)] + [(d0[0] + (d1[0] - d0[0]) * i / steps, d0[1] - 14 + (d1[1] - d0[1] + 14) * i / steps) for i in range(1, steps + 1)]
+            else:
+                pts = [(d0[0], d0[1])] + [(d0[0] + (d1[0] - d0[0]) * i / steps, d0[1] + (d1[1] - d0[1]) * i / steps) for i in range(1, steps + 1)]
             pts = [stage_point(*q) for q in pts]
             cdp = ctx.new_cdp_session(page)
             cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': pts[0][0], 'y': pts[0][1]}]})
             for q in pts[1:]:
                 cdp.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': q[0], 'y': q[1]}]})
                 page.wait_for_timeout(16)
-            page.wait_for_timeout(120)
+            page.wait_for_timeout(120 if lift else 250)
             cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
             cdp.detach()
 
@@ -350,7 +354,17 @@ def main():
             elif sid == 'speed':
                 press(js(f"() => ({MID})('[data-tut=battle-speed]')"))
             elif sid == 'spend':
-                press(js(f"() => ({MID})('[data-tut=hero-plus-pow]')"))  # Grow: + on a stat, after Spend (Done is the next step)
+                press(js(f"() => ({MID})('[data-tut=hero-plus-pow]')"))  # + on a stat, after Spend (Done is the next step)
+            elif sid == 'stats':
+                # the stats: a tap on two (each shows its tooltip), then Next in Wick's bubble
+                for k in ('hp', 'pow'):
+                    press(js(f"() => ({MID})('[data-tut=hero-stat-{k}]')"))
+                    page.wait_for_timeout(350)
+                press(js(f"() => ({MID})('[data-tut=wick-next]')"))
+            elif sid == 'drag':
+                # the buildings view: a drag round the camp, inside the lit part of the scene, still before letting go
+                W = js('() => Frame.W')
+                drag((W - 270, 250), (130, 250), steps=24, lift=False)
             elif w['tap'] == 'any':
                 press(stage_point(js('() => Frame.W') / 2, 60))
             else:

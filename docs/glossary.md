@@ -44,7 +44,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **The Hearth** | Your home: the fire, your heroes and the buildings in a ring around them. | Heroes rest here between trips, even while the app is closed. The Hearth button brings you back. | `hearth` · tent |
 | **The Lantern Road** | The way through five regions of stages, lit one lantern at a time. | Each cleared stage burns on the map, so you can see how far your light reaches. | `road` · lantern |
 | **Battle** | Your party against a stage’s foes, fought on its own while you watch. | You win by preparing: the formation, the rules, the skills and the gear. Speed it up, or skip it, any time. | `battle` · cleave |
-| **Old Wick** | The lamp-keeper at the fire, who knows the road and shows you the way. | Tap the lamp-keeper at the fire for a hand. Settings → Replay the guide plays the lessons again. | `wick` · lantern |
+| **Old Wick** | The innkeeper at the fire, who knows the road and shows you the way. | Tap him at the fire for a hint, and to hear any lesson again. | `wick` · lantern |
 | **Codex** | The book on the Hearth’s dock: how battles work, and every term and foe. | Foes you haven’t met and gear you haven’t found show as silhouettes. | `codex` · book |
 | **Bess** | The carter by the road out of the Hearth, with quests for your company. | She drives the carts that carry travellers on the road you’ve cleared. Tap her for her quests. | `bess` · scroll |
 | **Quests** | Bess’s work for your company: a goal on the road, and pay for it. | Accept one on her panel, and claim what it pays there once it’s done. | `quests` · scroll |
@@ -406,14 +406,14 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 73 · js/buildings.js 167, 181, 276, 293 · js/camp.js 828 · js/data.js 595 · js/firstsession.js 111, 124, 139 · js/guide.js 141 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 73 · js/buildings.js 167, 181, 276, 293 · js/camp.js 837 · js/data.js 595 · js/firstsession.js 152, 166, 207, 287 · js/guide.js 141 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
 | Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 128 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 585, 591 · js/firstsession.js 120 · js/guide.js 92, 98 · js/main.js 377 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 585, 591 · js/firstsession.js 161 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
 | Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 135 · js/battle.js 545 · js/campaign.js 338 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
-| spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
+| spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/firstsession.js 179 · js/main.js 202, 478 · js/map.js 279 |
 | Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 94 · js/buildings.js 45, 57 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 538, 697 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
 | Foe: highest attack | Foe: highest Power |  | js/data.js 288, 507 |
 | Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 512 · js/rules.js 288, 401, 717 |
