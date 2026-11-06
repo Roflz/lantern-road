@@ -22,7 +22,7 @@ From the `guide` builder, branch `claude/guide-2230b2`, base `main` at `b2ef0a6`
   `FirstSession.skip()`, `.replay()`, `.on`, `.step`, `.boardTap()`.
 - `js/firstpick.js` (`FirstPick.open({ mode: 'pick' | 'hire', guided, rest, onDone })`): the Recruit Board's panel
   (Kit.panel) with three cards, Wick's line on each (`FirstPick.CARD`), Hire and the reveal. The first session opens
-  it for the free recruit after 1-2 too.
+  it for the second recruit too, which is paid (only the first pick is free, `docs/first-session-spec.md` §5).
 - Styles: `css/guide.css` (`wk-` for the kit, `fp-` for the board).
 
 ## Since the 2026-11-05 play-test (branch `claude/hearth-guide-fixes`)

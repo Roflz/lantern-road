@@ -307,7 +307,8 @@ const Buildings = (() => {
   setInterval(() => { if (App.current === 'building' && !document.hidden && sheet.hidden) { Base.tick(Save.state); redraw(); } }, 15000);
 
   // ── building on an empty plot (the screen mockups' "Build here")
-  const UNLOCK_WHERE = { recruitboard: '1-2', tollhouse: 'clear 1-5', infirmary: 'clear 1-7', trainingyard: 'clear 1-8', shop: 'clear 1-10', tactician: 'clear 1-11', scavengercamp: 'clear 1-13', barracks: 'clear 1-15', salvagepit: 'clear 1-16', 'region:1': 'reach the Drowned Chapel', 'region:2': 'reach Thornwood', 'region:3': 'reach the Ashen Keep' };
+  // where a blueprint comes from (no building comes before the Sexton: docs/first-session-spec.md §6, decision 1)
+  const UNLOCK_WHERE = { recruitboard: '1-1', tollhouse: 'Bess’s quest', infirmary: 'clear 2-1', trainingyard: 'clear 2-2', shop: 'clear 2-3', tacticianhall: 'clear 2-4', scavengercamp: 'clear 2-5', barracks: 'clear 2-6', salvagepit: 'clear 2-7', 'region:1': 'reach the Drowned Chapel', 'region:2': 'reach Thornwood', 'region:3': 'reach the Ashen Keep' };
   function buildSheet(plot, chosen) {
     const st = s();
     const avail = Base.available(st), later = BUILDING_ORDER.filter(id => BUILDINGS[id].plot !== false && !Base.built(id, st) && !Base.blueprint(id, st));
@@ -320,7 +321,7 @@ const Buildings = (() => {
     openSheet(h('div', { class: 'box buildbox' },
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
       h('div', { class: 'row' }, h('div', {}, h('span', { class: 'ey', text: `Plot ${plot + 1}${Base.renownFor(plot) ? ' · Renown ' + Base.renownFor(plot) : ''}` }), h('h2', { text: 'Build here' })), h('span', { class: 'sp' }), h('span', { class: 'kv', text: `${builtN}/${Base.plotsCleared(st)} built` })),
-      opts.length ? h('div', { class: 'opts' }, opts) : h('p', { class: 'flavor', text: 'No blueprints yet. The road brings them: the Toll House comes with 1-5.' }),
+      opts.length ? h('div', { class: 'opts' }, opts) : h('p', { class: 'flavor', 'data-tut': 'plot-none', text: 'No plans' }),
       later.length ? h('div', { class: 'later' }, h('span', { class: 'ey', text: 'Later' }), later.slice(0, 4).map(id => h('span', { class: 'k' }, ico('lock'), `${BUILDINGS[id].name} · ${UNLOCK_WHERE[BUILDINGS[id].unlock] || 'later'}`))) : null,
       h('div', { class: 'row' }, h('span', { class: 'hint', text: 'Every plot you fill is a choice.' }), h('span', { class: 'sp' }), R.nextPlot ? h('span', { class: 'k', text: `Next plot · Renown ${R.nextPlot}` }) : null),
       pick ? h('button', { class: 'btn primary', disabled: !can, onclick: () => {

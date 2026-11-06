@@ -49,8 +49,8 @@ STEPS = [
     ('spend', 'Tap + on a stat, or Auto', 'plus'), ('keep', None, 'target'), ('strong', 'Stronger already.', 'any'),
     ('heroback', None, 'target'), ('tabhome', None, 'target'),
     ('setout2', None, 'soft-setout'), ('yours', 'First stretch cleared. It’s yours now.', 'soft-go'),
-    ('new', 'The Recruit Board is open', 'any'), ('home2', None, 'target'),
-    ('board2', 'The board has a free recruit', 'target'), ('hire', None, 'hire'),
+    ('home2', None, 'target'),
+    ('board2', 'One hero won’t clear the road.', 'target'), ('hire', None, 'hire'),
     ('form', 'Two of you now', 'target'), ('place', 'Sturdy heroes in front', 'place'), ('done', 'Well placed', 'target'),
     ('bye', 'The Sexton’s at the end of the Gravefields.', 'any'), ('tolls', 'The road earns tolls while you’re away.', 'any'),
     ('fire', 'I’ll be by the fire.', 'any'),
@@ -74,7 +74,7 @@ RESUME = {
     'hero': ('hero', "App.current === 'party'"), 'stats': ('stats', HERO), 'spend': ('spend', SPEND), 'spend-placed': ('spend', SPEND),
     'keep': ('spend', SPEND), 'strong': ('strong', "App.current === 'hero'"),
     'heroback': ('setout2', HEARTH), 'tabhome': ('setout2', HEARTH),
-    'yours': ('yours', ROAD.format('1-2')), 'battle-1-2': ('board2', HEARTH), 'new': ('board2', HEARTH), 'home2': ('board2', HEARTH),
+    'yours': ('yours', ROAD.format('1-2')), 'battle-1-2': ('board2', HEARTH), 'home2': ('board2', HEARTH),
     'hire': ('hire', BOARD), 'hire-card': ('hire', BOARD), 'hire-confirm': ('hire', BOARD), 'hire-reveal': ('form', HEARTH),
     'place': ('place', FORM + " && document.querySelectorAll('#wk .wk-call').length === 2"), 'done': ('done', FORM),
 }
@@ -271,7 +271,7 @@ def main():
                     sid = sid[:-1]
                     if not js(f"FirstSession.step === '{sid}'"):
                         continue
-                s = wait_step(sid, 120 if sid == 'new' else 40)
+                s = wait_step(sid, 120 if sid == 'home2' else 40)
                 if not check(bool(s), f'step {sid} is up'):
                     print('    state:', js('__state()'))
                     broke = True

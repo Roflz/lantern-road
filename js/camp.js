@@ -95,14 +95,15 @@ const Camp = (() => {
     const stages = R.list.map(st => ({ kind: st.boss ? 'boss' : st.elite ? 'elite' : 'road', lit: Campaign.isLit(st.id, s), foes: foesOf(st) }));
     const total = BASE.START_PLOTS + BASE.PLOT_RENOWN.length, open = Base.plotsCleared(s);
     const plots = Array.from({ length: total }, (_, i) => (i >= open ? null : s.base.plots[i] ? { id: s.base.plots[i], art: BUILDINGS[s.base.plots[i]].art } : { empty: true }));
-    // the board stands lit for a new game's first pick (screen 3), then dark until 1-2 opens it
+    // the board stands lit for a new game's first pick (screen 3), then dark until 1-1 opens it
     const board = { open: Base.boardOpen(s) || !s.roster.length }, gate = R.region + 1 < REGIONS.length;
     const bess = typeof Quests !== 'undefined' ? Quests.scene(s) : null; // Bess the carter and her cart (js/quests.js)
     const sig = [heroes.map(x => `${x.c.id}:${x.c.cls}:${lookKey(Items.look(x.c))}:${x.spent ? 1 : 0}`).join(','), R.region, stages.map(x => (x.lit ? 1 : 0)).join(''), R.front, plots.map(p => (p ? p.id || '_' : '.')).join(','), board.open, bess ? bess.arrive : '-'].join('|');
     return { heroes, region: R.region, stages, front: R.front, gate, plots, board, bess, sig };
   }
-  // The buildings view opens with the first blueprint: until then the camera stays with the party.
-  const locked = s => !BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (Base.built(id, s) || Base.blueprint(id, s)));
+  // The buildings view opens once Wick has shown it, or with the first blueprint (Base.viewOpen): until then the camera
+  // stays with the party.
+  const locked = s => !Base.viewOpen(s);
   // What waits at camp: a chip over each place with something to collect, and everything together for Collect.
   // chips: { board | fire | <building id>: [icon, n] }. all: [[icon, n], …]. full: the idle buildings at least half full.
   function waiting(s) {
@@ -128,7 +129,7 @@ const Camp = (() => {
       if (id === 'infirmary' || (st && st.pct >= 0.5)) full.push(id);
     }
     if (s.freePotion.waiting) { chips.fire = ['flask', s.freePotion.waiting]; sum.items += s.freePotion.waiting; }
-    if (Base.boardOpen(s) && s.board.picks > 0 && s.board.recruits.length && (s.board.fresh || s.board.free)) chips.board = ['scroll', s.board.recruits.length];
+    if (Base.boardOpen(s) && s.board.picks > 0 && s.board.recruits.length && s.board.fresh) chips.board = ['scroll', s.board.recruits.length];
     const bq = typeof Quests !== 'undefined' ? Quests.ready(s) : 0; // Bess: a quest on offer, or something to claim
     if (bq) chips.bess = ['scroll', bq];
     const all = [];
@@ -142,7 +143,6 @@ const Camp = (() => {
   // The next goal, from today's state (onboarding spec §6.3, without its rewards yet): the first of these that applies.
   function goal(s, W) {
     if (!s.roster.length) return { text: 'Recruit your first hero', go: () => FirstPick.open({ mode: 'pick' }) };
-    if (Base.boardOpen(s) && s.board.free && s.board.picks > 0 && s.board.recruits.length) return { text: 'Hire a free recruit', go: () => Buildings.open('recruitboard') };
     // what a first clear opened, until Wick's visit to it is seen (js/visits.js)
     const visit = typeof Visits !== 'undefined' ? Visits.goal(s) : null;
     if (visit) return visit;
@@ -182,12 +182,14 @@ const Camp = (() => {
     App.refresh();
   }
   // The dock's + by gold (the Toll House) and by the materials (the Scavenger Camp), until there is a shop: where you
-  // earn more. The building if it stands, its blueprint's build sheet if you have one, or where it comes from.
+  // earn more. The building if it stands, its blueprint's build sheet if you have one, or where it comes from (the
+  // Toll House's plan is Bess's quest's reward, js/quests.js).
   function earnMore(id) {
     const s = Save.state;
     if (Base.built(id, s)) { Buildings.open(id); return; }
     if (Base.blueprint(id, s)) { const plot = firstOpenPlot(s); if (plot >= 0) Buildings.buildSheet(plot, id); else toast('Every plot is taken. Renown clears more of them.'); return; }
-    toast(`${BUILDINGS[id].name}: a blueprint from ${BASE_UNLOCK_STAGE[BUILDINGS[id].unlock]}`);
+    const at = BASE_UNLOCK_STAGE[BUILDINGS[id].unlock];
+    toast(at ? `${BUILDINGS[id].name}: a blueprint from ${at}` : `${BUILDINGS[id].name}: a plan from Bess, for the Sexton`);
   }
   function tapFire() {
     const n = Base.collectPotions(Save.state);
@@ -201,8 +203,9 @@ const Camp = (() => {
   // the formation, as it stands in battle. Along the bottom the dock, after Darkest Dungeon's town: what you hold on
   // the left (gold and each material found, as an icon and a number, with a + by each for where to get more), Set out
   // in the middle, and the menus on the right as drawn things, named in tooltips: the Recruit Board, Heroes, Tactics,
-  // the Bag, the Codex (Help is its first page) and Settings. Collect rises over the gold while something waits, once
-  // the buildings view is open. The scene sits 22 pixels higher (js/campscene.js), so the dock covers ground, not fire.
+  // the Bag, the Codex (Help is its first page) and Settings. Collect rises over the menus at the right while something
+  // waits, once the buildings view is open (over the gold it hid the Recruit Board's plaque). The scene sits 22 pixels
+  // higher (js/campscene.js), so the dock covers ground, not fire.
   const pxImg = (src, size, cls = '') => h('img', { class: 'px ' + cls, src, alt: '', width: size, height: size, draggable: 'false' });
   const pic = (o, cls = '') => h('img', { class: 'px ' + cls, src: o.url, alt: '', width: o.w, height: o.h, draggable: 'false' });
   const icon = (name, size) => pxImg(iconURL(name), size);
@@ -245,7 +248,8 @@ const Camp = (() => {
     // under it, Bess's story quest while it's on (js/quests.js, css/quests.css)
     const questLine = typeof Quests !== 'undefined' ? Quests.tracker() : null;
     const proto = h('button', { class: 'chip proto proto-only cv-proto', 'data-wk-free': '', onclick: () => { click(); App.actions.proto(); } }, 'Prototype');
-    // the dock, left: gold and the materials, each an icon and a number named in its tooltip, a + by each
+    // the dock, left: gold and the materials, each an icon and a number named in its tooltip, a + by each (on the road,
+    // where the dock is down, the gold shows at the top right)
     const coin = h('span', { class: 'cv-coin' }, icon('coin', 24)), goldN = h('b');
     const goldRs = Tip.on(h('span', { class: 'cv-rs gold', 'data-tut': 'hearth-gold' }, coin, goldN), () => ['Gold', `${fmt(Save.state.currencies.gold)} · Hires, buildings, the Shop`]);
     const plus = (id, name, ic) => Tip.on(h('button', { class: 'cv-pl', type: 'button', 'aria-label': name, onclick: () => { click(); earnMore(id); } }, '+'), () => [name, BUILDINGS[id].name, ic]);
@@ -269,7 +273,7 @@ const Camp = (() => {
       ob('book', 'Codex', 'hearth-codex', () => showHow(() => closeScreen()), null, true),
       ob('candle', 'Settings', 'hearth-settings', () => App.openSettings(), null, true));
     const dock = h('div', { class: 'cv-dock cv-nodrag' }, res, go, objs);
-    // Collect: what waits at the idle buildings, the road's tolls and the fire, over the gold
+    // Collect: what waits at the idle buildings, the road's tolls and the fire, over the menus
     const colTag = h('span', { class: 'cv-ct' });
     const collect = h('button', { class: 'cv-col', type: 'button', 'data-tut': 'hearth-collect', hidden: true, onclick: () => { click(); gatherAll(); } }, colTag, h('b', { text: 'Collect' }));
     const form = h('div', { class: 'cv-form cv-nodrag', 'data-tut': 'hearth-formation', role: 'group', 'aria-label': 'The formation' });
@@ -280,7 +284,10 @@ const Camp = (() => {
     const prevR = h('button', { class: 'cv-arw', 'aria-label': 'The region before', onclick: () => otherRegion(-1) }, '‹');
     const nextR = h('button', { class: 'cv-arw', 'aria-label': 'The next region', onclick: () => otherRegion(1) }, '›');
     const cardBox = h('div', { class: 'cv-cardbox' });
-    const roadHud = h('div', { class: 'cv-roadhud' }, back, h('div', { class: 'cv-region' }, h('div', { class: 'cv-rt' }, rk, rn), prevR, nextR), cardBox);
+    // the gold you hold, at the top right: the dock (and its purse) is down while the road shows
+    const roadGoldN = h('b');
+    const roadGold = Tip.on(h('span', { class: 'cv-rgold', 'data-tut': 'road-gold' }, icon('coin', 24), roadGoldN), () => ['Gold', `${fmt(Save.state.currencies.gold)} · Hires, buildings, the Shop`], { side: 'below' });
+    const roadHud = h('div', { class: 'cv-roadhud' }, back, h('div', { class: 'cv-region' }, h('div', { class: 'cv-rt' }, rk, rn), prevR, nextR), roadGold, cardBox);
     const labels = h('div', { class: 'cv-labels', 'aria-hidden': 'true' });
     camp.append(canvas, marks, labels, h('div', { class: 'cv-shade t' }), form, dock, collect, crestEl, banner, me, goalBtn, questLine, roadHud, proto);
     const el = h('div', { class: 'camp-view' }, camp);
@@ -327,6 +334,7 @@ const Camp = (() => {
       // what you hold: gold (the coin glints and the number counts up as it comes in), then each material found, in
       // two rows from three on, their numbers shortened past 999
       setGold(s.currencies.gold);
+      roadGoldN.textContent = shortN(s.currencies.gold);
       const ms = matsShown(s), grid = ms.length > 2, msig = ms.map(m => m.id + ':' + (s.currencies.mats[m.id] || 0)).join(',');
       if (mats.dataset.sig !== msig) {
         mats.dataset.sig = msig;
@@ -817,7 +825,7 @@ const Camp = (() => {
   }
   App.actions.recruitLink = () => {
     const s = Save.state;
-    if (!Base.boardOpen(s)) return h('p', { class: 'ph-note', text: 'The Recruit Board at camp opens when 1-2 is cleared.' });
+    if (!Base.boardOpen(s)) return h('p', { class: 'ph-note', text: `The Recruit Board at camp opens when ${BASE_UNLOCK_STAGE.recruitboard} is cleared.` });
     return btn('Recruit Board', () => Buildings.open('recruitboard'), 'primary', s.board.recruits.length && s.board.picks ? `${noun(s.board.recruits.length, 'face')} waiting · ${noun(s.board.picks, 'pick')}` : `New faces in ${timeStr(Base.boardIn(s))}`);
   };
   App.actions.building = id => Buildings.open(id);

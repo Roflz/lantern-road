@@ -143,7 +143,7 @@ def main():
 
         # 2. a new game: the camp fills the stage with its scene at 2x; its Set out, tapped where it is drawn, flies up the
         # road to the frontier with its card open (tools/road_check.py checks the road view itself)
-        js("if (typeof FirstSession !== 'undefined') FirstSession.skip(); Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
+        js("if (typeof FirstSession !== 'undefined') FirstSession.skip(); Save.state.guide.camp = false; Base.newGame('sellsword', Save.state); Tactics.owner(Save.state.roster[0].id); Base.tick(Save.state); Save.commit(); closeScreen(); App.go('home', {}, {instant: true}); 'ok'")
         page.wait_for_timeout(1200)
         shot('camp')
         cv = js("(() => { const cv = document.querySelector('.camp .cv-scene'), b = Frame.box(cv); return [cv.width, cv.height, b.width, b.height, document.getElementById('frame').className, getComputedStyle(document.getElementById('tabbar')).display]; })()")
@@ -157,7 +157,7 @@ def main():
         yaw = lambda: js('Math.round(Camp.scene.yaw)')
         cx, cy = info['W'] / 2, 150
 
-        # 3. the camera: before the first blueprint a drag only nudges it, and it eases back
+        # 3. the camera: before the first blueprint (or Wick showing the buildings view) a drag only nudges it, and it eases back
         drag(cx + 80, cy, cx - 80, cy, still=True)
         page.wait_for_timeout(1200)
         check(js('Camp.scene.locked') and yaw() == 0, f'no blueprint yet: a drag along the frame nudges the camp and it eases back ({yaw()})')

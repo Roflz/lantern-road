@@ -115,8 +115,9 @@
   .cv-mats.grid .cv-rs b{font-size:12px}
   .camp .cv-mats.grid .cv-rs img{width:14px;height:14px}
 }
-/* Collect: when gains wait (once the buildings view is open), over the gold, in either view */
-.camp .cv-col{position:absolute;left:16px;bottom:56px;z-index:3;display:flex;align-items:center;gap:8px;height:36px;padding:0 4px 0 8px;background:var(--panel);animation:cv-rise .3s ease-out}
+/* Collect: when gains wait (once the buildings view is open), over the menus at the right, in either view (over the
+   gold, at the left, it covered the Recruit Board's plaque in the party view) */
+.camp .cv-col{position:absolute;right:16px;bottom:56px;z-index:3;display:flex;align-items:center;gap:8px;height:36px;padding:0 4px 0 8px;background:var(--panel);animation:cv-rise .3s ease-out}
 .cv-ct{display:flex;align-items:center;gap:8px}
 .cv-ct span{display:flex;align-items:center;gap:4px;font:600 13px/1 var(--f-body);color:var(--good);white-space:nowrap}
 .camp .cv-ct img{width:16px;height:16px}
@@ -147,6 +148,10 @@
 .cv-roadhud button,.cv-roadhud .cv-region{pointer-events:auto}
 .camp .cv-round.cv-back{position:absolute;left:18px;top:13px;width:44px;height:44px;font:400 34px/1 var(--f-display);color:var(--ember)}
 .cv-region{position:absolute;left:72px;top:11px;display:flex;align-items:center;gap:8px}
+/* the gold, at the top right while the road shows (the dock is down) */
+.cv-roadhud .cv-rgold{position:absolute;right:18px;top:13px;height:44px;display:flex;align-items:center;gap:6px;padding:0 14px 0 10px;background:var(--panel);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;pointer-events:auto}
+.cv-rgold b{font:600 15px/1 var(--f-body);color:var(--bone);text-shadow:0 1px 0 #000;white-space:nowrap}
+.camp .cv-rgold img{width:24px;height:24px}
 .cv-rt{display:grid;justify-items:start;gap:3px;padding:6px 14px 7px;background:var(--panel);border:1px solid var(--trim);box-shadow:0 0 0 1px #000}
 .cv-rk{font:700 8px/1 var(--f-pixel);letter-spacing:.14em;text-transform:uppercase;color:var(--ember);white-space:nowrap}
 .cv-rn{font:400 25px/1 var(--f-display);color:var(--bone);white-space:nowrap}

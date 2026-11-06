@@ -75,8 +75,8 @@ const BESS_LINES = {
 };
 // What a kind needs from the home base, kept apart so the table above reads plainly.
 const QUESTS_CAN = {
-  // the tolls can be collected once the buildings view (and its Collect) is open: a blueprint or a building
-  tolls: s => typeof Base !== 'undefined' && (s.campaign.cleared.length > 0) && BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (Base.built(id, s) || Base.blueprint(id, s))),
+  // the tolls can be collected once the buildings view (and its Collect) is open (Base.viewOpen)
+  tolls: s => typeof Base !== 'undefined' && (s.campaign.cleared.length > 0) && Base.viewOpen(s),
 };
 
 const Quests = (() => {
@@ -142,8 +142,8 @@ const Quests = (() => {
     changed('accept', s);
     return true;
   }
-  // The reward: the Toll House plan, or what the Toll House costs to build where the plan is already yours (as it is
-  // while the plan still comes with 1-5; decision 1 moves Region I's building unlocks after the Sexton).
+  // The reward: the Toll House plan (no stage's first clear brings it: decision 1 moved Region I's building unlocks
+  // after the Sexton), or what the Toll House costs to build where the plan is already yours (a save from before).
   function storyReward(s = st()) {
     const id = STORY_QUEST.plan, known = typeof Base !== 'undefined' && (Base.blueprint(id, s) || Base.built(id, s));
     if (!known) return { plan: id };

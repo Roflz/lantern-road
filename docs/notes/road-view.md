@@ -15,7 +15,8 @@ drawing commit (e0596fe, as f81de09); the old branch `claude/road-view-02992c` i
 - **data-tut hooks for Wick's guide:** `road-back` (‹), `stage-card` (the card; a tap opens RoadMap.stageSheet),
   `road-go` (Set out / Farm / Locked). The dock's Set out has no data-tut; select it with `.camp .cv-dock .cv-big`.
 - The road HUD is `.cv-roadhud` (visibility hidden off the road); labels are in `.cv-labels`; `.camp.on-road` is set
-  while the road shows.
+  while the road shows. The gold you hold is at its top right (`.cv-rgold`, `road-gold`): the dock, with its purse, is
+  down while the road shows.
 - `RoadMap.setOut(i)` is exported from js/map.js: the big button calls it (Campaign.setOut, rule set, battle).
 - **The drag down at the fire** (play-test note 3.14, `claude/hearth-guide-fixes`): a drag at the Hearth goes the way it
   first heads (8 design px). Across turns the camera as before; down, in the party view, pulls the camera up the road

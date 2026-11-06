@@ -869,7 +869,8 @@ const Items = (() => {
   // A random piece of the general pool (never a region's own line) from a stage of this level, in this region (0–4).
   // o: { rank: 'normal' | 'elite' | 'boss', classes: class ids on the roster (weapons and class-only accessories follow
   //      them, weighted by how many of each; every class when left out), slot, rarity (to force either), minStars (a
-  //      star floor: STARS.FLOOR, e.g. STARS.FLOOR.jobs for the daily jobs' bonus), stars (exactly this many) }
+  //      star floor: STARS.FLOOR, e.g. STARS.FLOOR.jobs for the daily jobs' bonus), stars (exactly this many), weight (an
+  //      armour's weight, when it can be had), plain (no cost line, when one can be had: 1-1's first clear) }
   function roll(level, region, rng = Math.random, o = {}) {
     const od = odds(region, o.rank);
     const rar = o.rarity || pickW(rng, [['common', od.common], ['fine', od.fine], ['rare', od.rare]]);
@@ -883,10 +884,15 @@ const Items = (() => {
     } else if (slot === 'armor') pool = general.filter(id => GEAR[id].slot === 'armor' && GEAR[id].rarity === rar);
     else pool = general.filter(id => GEAR[id].slot === 'accessory' && GEAR[id].rarity === rar && (!GEAR[id].cls || classes.includes(GEAR[id].cls)));
     if (!pool.length) pool = general.filter(id => GEAR[id].slot === slot && GEAR[id].rarity === rar);
+    const narrow = test => { const p2 = pool.filter(test); if (p2.length) pool = p2; };
+    if (o.weight && slot === 'armor') narrow(id => GEAR[id].weight === o.weight);
+    if (o.plain) narrow(id => plain(GEAR[id]));
     const inst = make(pool[Math.floor(rng() * pool.length)], level);
     inst.fresh = true;
     return enchant(inst, rng, o);
   }
+  // A piece with no cost line: no line that takes something away, and no fixed stat cost (a weight's own −Dodge isn't one).
+  const plain = D => !(D.lines || []).some(l => l[0] === '-') && !Object.values(D.cost || {}).some(v => v < 0);
   // A gear roll on the road (regions study §3.1): the region's own line first, at ITEM.LINE[rank], then the general
   // pool. A roll with a set rarity or slot (the Cage Mimic's) stays general. o: as roll's.
   function loot(level, region, rng = Math.random, o = {}) {

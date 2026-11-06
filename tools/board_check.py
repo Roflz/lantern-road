@@ -12,14 +12,15 @@ The dock, on a save with 1-1 to 1-8 lit: 48 tall along the bottom, 16 from each 
 number with tooltips, a + by each (the Toll House's and the Scavenger Camp's word, or the building); Set out in the
 middle flies up the road (the dock goes, and comes back); the six menu objects, each named in a tooltip, open the board,
 Heroes, Tactics, the Bag, the Codex (Help) and Settings; the anchors Wick's guide hangs on are there; the scene sits 22
-design pixels higher; gold coming in glints and counts up; Collect rises over the gold once the buildings view is
-open; from three materials they sit in two rows, and big numbers shorten (48.2k, 1.9k).
+design pixels higher; gold coming in glints and counts up; Collect rises over the menus at the right once the buildings
+view is open (clear of the Recruit Board's plaque); on the road the gold shows at the top right; from three materials
+they sit in two rows, and big numbers shorten (48.2k, 1.9k).
 The board: a row per recruit (level, portrait, name, class, price, +; no stats), the class's tooltip (where they stand
 and what they do), hires left, the timer and the roster along the top, a locked notice under the last row; + asks first
 (the price, gold before and after, Cancel and Hire); Hire ends in the reveal, then the board without them, the gold
 paid and a pick spent; short of gold Hire is grey and its tooltip says how short; a tap on a row opens the recruit's
 card (their stats, Hire); the Upgrades tab's three ranks (Upgrade grey and named short when you can't pay, a rank
-bought when you can); ✕ closes it. Prices are the model's (Base.recruitPrice), and a free board says Free.
+bought when you can); ✕ closes it. Prices are the model's (Base.recruitPrice): only the first pick is free.
 Everywhere: no pixel font and no letter-spaced capitals on these screens. Console errors fail the run.
 """
 import argparse, functools, http.server, os, socketserver, sys, threading
@@ -45,7 +46,8 @@ window.__type = root => { const out = []; for (const el of document.querySelecto
 """
 
 # 1-1 to 1-8 lit, four heroes at level 5 or 6 (the dock mockup's middle of Region I), 1,240 gold and 34 Bone Dust, the
-# board open with its own three (not the free one).
+# board open with its own three. The buildings view waits (no blueprint comes before the Sexton, and Wick hasn't shown
+# it: save.guide.camp).
 SETUP = """
 () => {
   const s = Save.state;
@@ -59,11 +61,12 @@ SETUP = """
   };
   closeScreen(); closeSheet();
   if (typeof FirstSession !== 'undefined') FirstSession.skip();
+  s.guide.camp = false;
   s.settings.tips = false;
   if (!s.roster.length) P('sellsword', 'Fulke', 6);
   P('pilgrim', 'Agnes', 6); P('warden', 'Osric', 5); P('crossbowman', 'Mira', 4);
   for (let k = 0; k < 8; k++) Proto.lightNext(s);
-  s.board.free = false; s.board.refreshedAt = 0;
+  s.board.refreshedAt = 0;
   Base.tick(s);
   s.currencies.gold = 1240; s.currencies.mats.bone_dust = 34;
   Save.commit();
@@ -232,21 +235,23 @@ def main():
             check(abs(cam[0] - (cam[1] - 11)) < 0.01 and cam[2] is not None and cam[2] < 342 - 24, f'the scene sits 22 design px higher, the fire well clear of the dock ({cam})')
             typeface('.camp .cv-dock, .camp .cv-me, .camp .cv-goal, .camp .cv-form, .camp .cv-banner, .camp .cv-col', 'the Hearth\'s HUD')
             shot('dock', 'party')
-            # + by gold and by the materials: the Toll House and the Scavenger Camp (here, where their plans come from)
+            # + by gold and by the materials: the Toll House and the Scavenger Camp (here, where their plans come from:
+            # Bess's quest, and 2-5)
             js("document.querySelectorAll('#toasts .toast').forEach(t => t.remove()); 'ok'")
             t = tip('.cv-res .cv-pl[aria-label="More gold"]')
             check(bool(t) and t[0] == 'More gold' and 'Toll House' in t[1], f'+ by gold: “More gold”, the Toll House ({t})')
             shot('dock', 'plus')
             untip()
-            # (1-5 is lit, so the Toll House's plan is in hand: its build sheet; the Scavenger Camp's comes with 1-13)
+            # (no building comes before the Sexton: the Toll House's plan is Bess's quest's reward; the Scavenger Camp's
+            # comes with 2-5)
             press('.cv-res .cv-pl[aria-label="More gold"]')
-            sheet = js("document.getElementById('sheet').hidden ? '' : document.querySelector('#sheet .buildbox .opt.sel .nm').textContent")
-            check(sheet == 'Toll House', f'  a tap: the Toll House\'s build sheet ({sheet!r})')
+            toasts = js("[...document.querySelectorAll('#toasts .toast')].map(t => t.textContent).join(' | ')")
+            check(js("document.getElementById('sheet').hidden") and 'Toll House' in toasts and 'Bess' in toasts, f'  a tap: where the Toll House\'s plan comes from, Bess ({toasts})')
             js("closeSheet(); document.querySelectorAll('#toasts .toast').forEach(t => t.remove()); 'ok'")
             page.wait_for_timeout(300)
             press('.cv-res .cv-pl[aria-label="More materials"]')
             toasts = js("[...document.querySelectorAll('#toasts .toast')].map(t => t.textContent).join(' | ')")
-            check('Scavenger Camp' in toasts and '1-13' in toasts, f'+ by the materials: where the Scavenger Camp\'s plan comes from ({toasts})')
+            check('Scavenger Camp' in toasts and '2-5' in toasts, f'+ by the materials: where the Scavenger Camp\'s plan comes from ({toasts})')
             # gold coming in: the coin glints, the gain rises, the number counts up
             js("Save.state.currencies.gold += 25; App.refresh(); 'ok'")
             page.wait_for_timeout(120)
@@ -270,17 +275,20 @@ def main():
             # Set out flies up the road; the dock goes, and comes back at the fire
             press('.camp [data-tut=hearth-setout]', 2200)
             check(js('Camp.scene.onRoad') and js("getComputedStyle(document.querySelector('.cv-dock')).visibility") == 'hidden', 'Set out flies up the road, and the dock goes')
+            rg = js("(() => { const g = document.querySelector('[data-tut=road-gold]'); return g && getComputedStyle(g).visibility === 'visible' ? [__box(g), g.textContent] : null; })()")
+            check(bool(rg) and rg[1] == '1,240' and rg[0][0] + rg[0][2] == js('Frame.W') - 18 and rg[0][1] == 13, f'  on the road the gold shows at the top right ({rg})')
+            shot('dock', 'road')
             js("Camp.scene.toCamp(true); 'ok'")
             page.wait_for_timeout(1000)
             check(js("getComputedStyle(document.querySelector('.cv-dock')).visibility") == 'visible', '  home again, the dock is back')
-            # the buildings view: Collect over the gold while something waits
+            # the buildings view: Collect over the menus while something waits
             check(js("document.querySelector('[data-tut=hearth-collect]').hidden"), 'no Collect before the buildings view opens')
             js("(() => { const s = Save.state; s.unlocks.tollhouse = Date.now(); s.unlocks.trainingyard = Date.now(); Base.ensure(s); s.currencies.gold = 99999; s.currencies.mats.bone_dust = 999; Base.build('tollhouse', 0, s); Base.build('trainingyard', 1, s); Base.proto.skip(6, s); s.currencies.gold = 1240; s.currencies.mats.bone_dust = 34; Save.commit(); App.go('home', {}, { instant: true }); })(); 'ok'")
             page.wait_for_timeout(1200)
             js("Camp.scene.go('build', true); 'ok'")
             page.wait_for_timeout(1500)
             col = js("(() => { const c = document.querySelector('[data-tut=hearth-collect]'); return c && !c.hidden ? [__box(c), c.textContent] : null; })()")
-            check(bool(col) and col[0][0] == 16 and col[0][1] + col[0][3] == 342 - 8 and 'Collect' in col[1], f'the buildings view: Collect rises over the gold, 8 above the dock ({col})')
+            check(bool(col) and col[0][0] + col[0][2] == js('Frame.W') - 16 and col[0][1] + col[0][3] == 342 - 8 and 'Collect' in col[1], f'the buildings view: Collect rises over the menus, 8 above the dock ({col})')
             check(js("getComputedStyle(document.querySelector('[data-tut=hearth-setout]')).visibility") == 'visible', '  and Set out stays in the dock')
             shot('dock', 'build')
             g0 = js('Save.state.currencies.gold')
@@ -288,6 +296,13 @@ def main():
             check(js('Save.state.currencies.gold') > g0 and js("document.querySelector('[data-tut=hearth-collect]').hidden"), f'Collect gathers it, and goes ({g0} → {js("Save.state.currencies.gold")})')
             js("Camp.scene.go('party', true); 'ok'")
             page.wait_for_timeout(1200)
+            # in the party view, Collect stays clear of the Recruit Board's plaque
+            js("(() => { const s = Save.state; Base.proto.skip(6, s); s.currencies.gold = 1240; Save.commit(); App.refresh(); })(); 'ok'")
+            page.wait_for_timeout(1300)
+            clear = js("(() => { const c = document.querySelector('[data-tut=hearth-collect]'), p = document.querySelector('.cv-plq[data-id=board]'); if (!c || c.hidden || !p) return null; const a = __box(c), b = __box(p); return [a, b, a[0] >= b[0] + b[2] || b[0] >= a[0] + a[2] || a[1] >= b[1] + b[3] || b[1] >= a[1] + a[3]]; })()")
+            check(bool(clear) and clear[2], f'the party view: Collect clear of the Recruit Board\'s plaque ({clear})')
+            shot('dock', 'collect')
+            press('[data-tut=hearth-collect]', 700)
             # later: five materials in two rows, big numbers shortened
             js("(() => { const s = Save.state; s.currencies.gold = 48210; Object.assign(s.currencies.mats, { bone_dust: 1904, chapel_wax: 862, heartwood: 411, cinder_iron: 96, throne_tallow: 1 }); Save.commit(); App.refresh(); })(); 'ok'")
             page.wait_for_timeout(1300)
@@ -376,11 +391,11 @@ def main():
             typeface('#sheet.board', 'the Upgrades tab')
             press('#sheet.board .rb-row.trk .rb-btn')
             check(js('Save.state.board.ranks.notices') == 1 and js('Save.state.currencies.gold') == 640 and js("document.querySelectorAll('#sheet.board .rb-row.trk')[0].querySelectorAll('.rb-pips i.on').length") == 1, 'Upgrade buys a rank: 600 gold and 12 Bone Dust, one pip')
-            # a free board says Free, and ✕ closes it
-            js("Save.state.board.free = true; Save.commit(); RecruitBoard.close(); Buildings.open('recruitboard'); 'ok'")
+            # only the first pick is free: the board's every recruit has a price; and ✕ closes it
+            js("RecruitBoard.close(); Base.rollBoard(Save.state, 'home'); Save.commit(); Buildings.open('recruitboard'); 'ok'")
             page.wait_for_timeout(600)
-            frees = js("[...document.querySelectorAll('#sheet.board .rb-row:not(.locked) .rb-price')].map(p => p.textContent)")
-            check(frees and all(f == 'Free' for f in frees), f'a free board: each Free ({frees})')
+            prices = js("[...document.querySelectorAll('#sheet.board .rb-row:not(.locked) .rb-price')].map(p => p.textContent)")
+            check(prices and all(p != 'Free' and p.replace(',', '').isdigit() for p in prices), f'the board: a price on each recruit, none Free ({prices})')
             press('#sheet.board .rb-x')
             check(not js('RecruitBoard.shown') and js("document.getElementById('sheet').hidden"), '✕ closes the board')
             ctx.close()

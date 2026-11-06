@@ -13,8 +13,8 @@
 //   7    the results popup: the first level, then the Hearth button (fatigue waits for its first-time tip, js/main.js)
 //   8    Grow: Heroes, the hero, the hero card's Spend, + or Auto, Done, "Stronger already."; back, and the list's ‹
 //   9    1-2, unforced: the goal tracker says "Clear 1-2" and the pointer bobs over Set out; on the road a soft line on 1-1's marker; the
-//        battle doesn't stop. Its results' New chip: the Recruit Board is open, then the Hearth
-//   10   the Recruit Board's free recruit, hired the same way, who waits at the fire
+//        battle doesn't stop. Then the Hearth (the Recruit Board opened with 1-1)
+//   10   the Recruit Board's second recruit, hired the same way (paid: only the first pick is free), who waits at the fire
 //   11   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done
 //   12   Wick's goodbye: the Sexton, the tolls, the fire
 // Then the goal tracker at the Hearth takes over ("Clear 1-3"). The session runs once per save (save.guide: the step
@@ -136,10 +136,9 @@ const FirstSession = (() => {
     { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', dim: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
     // (Wick small, on the left: the card's Set out, bottom right, stays in sight)
     { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), open: roadAgain, show: () => ({ target: firstMarker, round: true, pad: 4, dim: false, arrow: 'below', say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
-    { id: 'new', phase: 'road', at: () => results(1) && !!q('[data-tut=new]'), show: () => ({ target: '[data-tut=new]', pad: 4, say: 'The Recruit Board is open.' }) },
     { id: 'home2', nav: true, phase: 'road', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
-    // 10: the free recruit
-    { id: 'board2', phase: 'recruit', at: () => atHearth() && !!board(), show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'The board has a free recruit for you.', tap: 'target', until: () => FirstPick.shown }) },
+    // 10: the second recruit, paid
+    { id: 'board2', phase: 'recruit', at: () => atHearth() && !!board(), show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'One hero won’t clear the road. The board has more.', tap: 'target', until: () => FirstPick.shown }) },
     { id: 'hire', phase: 'recruit', forced: true, at: () => FirstPick.shown, open: () => FirstPick.open({ mode: 'hire', guided: true, rest: true }), show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 1 && !FirstPick.shown }) },
     // 11: Formation (F3)
     { id: 'form', phase: 'form', at: () => atHearth() && !!q('[data-tut=hearth-formation]'), show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
@@ -295,7 +294,7 @@ const FirstSession = (() => {
   // its results come up. If no step's moment has come for 15 seconds the hold lets go, so a save in a state the script
   // didn't foresee is never stuck.
   let quietSince = 0;
-  const FREE = ['setout2', 'yours', 'new'];
+  const FREE = ['setout2', 'yours'];
   Wick.hold = () => {
     if (!on() || titleUp() || H) { quietSince = 0; return false; }
     if (App.current === 'battle' && typeof Battle !== 'undefined' && Battle.busy) return false;
@@ -329,7 +328,7 @@ const FirstSession = (() => {
   const COVERS = ['c:flags', 'c:speed', 'c:board', 'stat'];
   function finish() {
     const s = st();
-    s.guide.done = true; s.guide.step = '';
+    s.guide.done = true; s.guide.step = ''; s.guide.camp = true; // the buildings view opens, with nothing to build yet
     for (const k of COVERS) if (!s.campaign.tips[k]) s.campaign.tips[k] = Date.now();
     Save.commit();
   }
