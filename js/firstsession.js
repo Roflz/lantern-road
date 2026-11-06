@@ -1,31 +1,36 @@
 'use strict';
-// Lantern Road · Wick's first session (onboarding spec §6.4; docs/tutorial-study.md §5, with the story in docs/story.md):
-// about ten minutes that tell the story, then teach the basics at the moment they're used. One action a step: a
-// spotlight and a pointer on the one thing to tap, Wick's line beside it, and nothing else takes a press (Wick.show's
-// gate, js/wick.js) except Help and Settings, which Wick steps aside for.
-//   1    the Hearth, after the title: Wick tells the story in his panel, a line a tap (Skip jumps to the name box)
+// Lantern Road · Wick's first session (docs/first-session-spec.md, approved 2026-11-05, with the story in docs/story.md):
+// the story, then the basics at the moment they're used. One action a step: a spotlight and a pointer on the one thing
+// to tap, Wick's line beside it, and nothing else takes a press (Wick.show's gate, js/wick.js) except Help and
+// Settings, which Wick steps aside for. Forced steps use a light dim, or none where they explain a screen.
+//   1    the Hearth: Wick tells the story in his panel, a line a tap (Skip jumps to the name box)
 //   2    "Who's in charge?" and the name box (none given: "Captain"), his welcome, and the Recruit Board lit
-//   3    the Recruit Board's first pick (js/firstpick.js): a line on each of three, Hire (free), and the reveal, where
-//        the new hero says why they signed on
-//   4    back at the Hearth: Set out, which flies up the road with 1-1's card open
-//   5    the road: what a stage is, then the card's Set out
-//   6    battle 1-1, paused twice: the turn order at the first turn, then speed and skip
-//   7    the results popup: the first level, then the Hearth button (fatigue waits for its first-time tip, js/main.js)
-//   8    Grow: Heroes, the hero, the hero card's Spend, + or Auto, Done, "Stronger already."; back, and the list's ‹
-//   9    1-2, unforced: the goal tracker says "Clear 1-2" and the pointer bobs over Set out; on the road a soft line on 1-1's marker; the
-//        battle doesn't stop. Then the Hearth (the Recruit Board opened with 1-1)
-//   10   the Recruit Board's second recruit, hired the same way (paid: only the first pick is free), who waits at the fire
-//   11   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done
-//   12   Wick's goodbye: the Sexton, the tolls, the fire
-// Then the goal tracker at the Hearth takes over ("Clear 1-3"). The session runs once per save (save.guide: the step
-// under way, and done); a reload brings that step back from its start, opening the screen it needs again (the road,
-// the board's panel, the hero, Formation; play-test note 3.6, checked by tools/guide_check.py --resume), and a step
-// whose moment has passed (a battle resolved while the app was closed, its results popup) is skipped. Settings →
-// Replay the guide plays Wick's lines again as soft steps, each when its place comes up, holding nothing back
-// (save.guide.replay); while the session runs it does nothing. The Prototype
-// panel can skip the session. Tactics come later, at 1-3's first clear (js/visits.js).
-// Every step points at a data-tut anchor (or the camp scene's anchors: the board and the road's stage markers), so a
-// redesigned screen keeps its steps by keeping its anchors.
+//   3    the Recruit Board's first pick (js/firstpick.js), Free: a line on each of three, Hire, and the reveal
+//   4–5  Set out, which flies up the road with 1-1's card open; what a stage is, and the card's Set out
+//   6    battle 1-1, paused twice: the turn order, then speed and skip
+//   7    the results: the first level, the two pieces of gear 1-1 always drops, and the Hearth
+//   8    Heroes, then the hero (js/heroes.js)
+//   9    the hero card (js/sheet.js): tap two stats or more to hear what each does (its tooltip), then Next
+//   10   Spend, + or Auto, Done: "Stronger already." "Keep levelling. Bigger rewards come later."
+//   11   the weapon slot, the new weapon in the dressing, Wear
+//   12   the armour, the same way, then ‹ back to the Hearth
+//   13   the Recruit Board again: a second recruit, paid from the crown's advance
+//   14   the board's hire (js/firstpick.js), who waits at the fire
+//   15   Formation (js/formation.js, F3): the two rows, and a hand showing the drag; then Done
+//   16   1-2, directed: the pointer over Set out, a soft line on 1-1's marker; nothing is held and nothing stops
+//   17   the buildings view opens (save.guide.camp): a hand shows the drag round the camp
+//   18   the plots: tap one, its panel says No plans; back to the fire
+//   19   Bess's cart rolls up the road (Quests.arrive, js/quests.js): tap her
+//   20   her panel: her two lines and the quest card; Accept
+//   21   her thanks, and the daily jobs to come
+//   22   Wick's goodbye in his panel: full control, and he waits by the fire (his menu, js/wickmenu.js)
+// The session runs once per save (save.guide: the step under way, and done). A reload brings the step back from its
+// start (play-test note 3.6, checked by tools/guide_check.py --resume): a step on a screen the reload closes starts
+// again from the Hearth step that opens it (resume), or opens its screen again (open); a step already done (a point
+// spent, a piece worn) is passed over (skip); a battle resolved while the app was closed skips its battle steps.
+// After the session, Wick's menu replays each lesson's lines as soft steps (replayLesson), holding nothing back.
+// Every step points at a data-tut anchor (or the camp scene's anchors: the board, the plots, Bess, the road's stage
+// markers), so a redesigned screen keeps its steps by keeping its anchors.
 
 const FirstSession = (() => {
   const st = () => (typeof Save !== 'undefined' ? Save.state : null);
@@ -36,13 +41,20 @@ const FirstSession = (() => {
   const lead = () => { const s = st(); return s.roster[0]; };
   // ── where the player is
   const camp = () => (App.current === 'home' && typeof Camp !== 'undefined' ? Camp.scene : null);
-  const atHearth = () => { const c = camp(); return !!c && !c.onRoad && c.road < 0.01 && !sheetOpen() && $('#screen').hidden && !!q('.camp [data-tut=hearth-setout]'); };
+  const atCamp = () => { const c = camp(); return !!c && !c.onRoad && c.road < 0.01 && !sheetOpen() && $('#screen').hidden && !!q('.camp [data-tut=hearth-setout]'); };
+  // at the fire, in the party view (or turning back to it)
+  const atHearth = () => { const c = camp(); return atCamp() && c.w < 0.5; };
+  // the buildings view, the camera settled (a flick can carry it on past the view and back: still for 300 ms)
+  let wSeen = null, wSince = 0;
+  const still = () => { const c = camp(), w = c ? Math.round(c.w * 1000) : null; if (w !== wSeen) { wSeen = w; wSince = Date.now(); return false; } return Date.now() - wSince > 300; };
+  const atBuild = () => { const c = camp(); return atCamp() && c.w > 0.95 && still(); };
+  const partyView = () => { const c = camp(); return atCamp() && c.w < 0.05; };
   const onRoadCard = () => { const c = camp(); const hud = q('.cv-roadhud'); return !!c && c.onRoad && c.road > 0.99 && !sheetOpen() && !!hud && +getComputedStyle(hud).opacity > 0.95 && !!Wick.boxOf('[data-tut=road-go]'); };
   // the results popup of stage i is up (shown), and its bars have finished filling (results)
   const shown = i => !!(typeof Results !== 'undefined' && sheetOpen() && $('#sheet').classList.contains('results') && Results.res && Results.index === i);
   const results = i => shown(i) && !Results.busy;
   const inBattle = i => App.current === 'battle' && typeof Battle !== 'undefined' && Battle.busy && fight && fight.i === i;
-  // A thing the camp scene draws, as a box on the stage: the Recruit Board, or a stage's marker on the road.
+  // A thing the camp scene draws, as a box on the stage: the Recruit Board, a plot, Bess, or a stage's marker.
   function sceneBox(pick) {
     const c = camp(), el = q('.camp');
     if (!c || !c.out || !el) return null;
@@ -62,38 +74,39 @@ const FirstSession = (() => {
   };
   // 1-1's marker, the first stage of the road, while the road shows Region I
   const firstMarker = () => sceneBox(a => a.stage === 0 && a.kind != null);
+  // the first open plot with nothing on it, in the buildings view
+  const emptyPlot = () => { const s = st(), open = Base.plotsCleared(s), k = s.base.plots.findIndex((p, i) => i < open && !p); return k < 0 ? null : sceneBox(a => a.plot === k); };
+  // Bess and her cart, standing by the fire
+  const bessBox = () => (typeof Quests !== 'undefined' && Quests.here() && !Quests.arriving ? sceneBox(a => a.id === 'bess') : null);
 
-  // ── the steps. phase: when its part of the session still has a moment (otherwise the step is skipped). skip(): the
-  // step isn't needed now (a stat point already spent, a tab already open), so it's passed over.
-  // at(): its moment is now. show(done): puts it on screen with Wick.show, and calls done() when it's over.
-  // forced: an action of the player's, not a line (no replay). nav: a pointer with no line (no replay). solo: a line
-  // for this moment only (no replay). soft: nothing is held back, and a press elsewhere puts it aside until its moment
-  // comes again.
-  // After a load (play-test note 3.6), which always lands at the Hearth: open() opens the screen the step needs again
-  // (the road, the Recruit Board's panel, the Party and hero screens, Formation); resume names the step to go back to
-  // when this one's start can't be had again (Keep: a point placed and not kept is gone with the page).
-  const PHASE = {
-    pick: s => !s.roster.length,
-    first: s => !lit('1-1') || shown(0) || inBattle(0),
-    grow: s => !lit('1-2'),
-    road: s => !lit('1-2') || shown(1) || inBattle(1),
-    recruit: s => s.roster.length < 2,
-    form: () => true,
-  };
+  // ── the hero, their point and their new gear
   const name = () => (st().name || '').trim();
   const who = () => name() || 'Captain';
   const heroName = () => { const c = lead(); return c ? c.name : 'your hero'; };
   const points = () => { const c = lead(); return c && typeof Hero !== 'undefined' ? Hero.points(c).stat : 0; };
   const placing = () => (typeof HeroSheet !== 'undefined' ? HeroSheet.placing : 0);
   const spending = () => typeof HeroSheet !== 'undefined' && HeroSheet.mode === 'spend';
-  const onHero = () => App.current === 'hero' && !sheetOpen();
+  const dressing = slot => typeof HeroSheet !== 'undefined' && HeroSheet.mode === 'dress' && !!q(`[data-tut=gear-tab-${slot}].on`);
+  const onHero = () => App.current === 'hero' && !sheetOpen() && typeof HeroSheet !== 'undefined' && !!lead() && HeroSheet.id === lead().id;
   const onRoad = () => { const c = camp(); return !!c && c.onRoad; };
+  // 1-1's two pieces (save.guide.gear, recorded at its first clear), while they wait in the Bag for the lead to wear
+  function piece(slot) {
+    const s = st(), c = lead(), uid = s.guide.gear && s.guide.gear[slot];
+    if (!c || !uid) return null;
+    const x = s.inventory.items.find(p => p.uid === uid);
+    return x && Items.canUse(c, x) ? x : null;
+  }
+  const gearLeft = () => !!piece('weapon') || !!piece('armor');
+  const pieceEl = slot => { const x = piece(slot); return x ? q(`[data-tut=gear-pick][data-uid="${x.uid}"]`) : null; };
+  const worn = slot => { const c = lead(), uid = st().guide.gear && st().guide.gear[slot]; return !!c && !!uid && !!c.gear[slot] && c.gear[slot].uid === uid; };
   // the lead hero's card on the Heroes list (js/heroes.js)
   const leadCard = () => { const c = lead(); return c ? q(`[data-tut=party-hero][data-id="${c.id}"]`) : null; };
-  // a step's screen, opened again after a load: the road with the frontier's card; the hero from the Party screen, so ‹
-  // goes back there as it did ('stats' opens the hero card's Spend)
-  const roadAgain = () => { if (typeof Camp !== 'undefined' && Camp.toRoad) Camp.toRoad(); };
+  // a step's screen, opened again after a load: the road with the frontier's card; the hero from the Heroes list, so ‹
+  // goes back there as it did
   const heroAgain = tab => { const c = lead(); if (!c) return; App.go('party'); App.showCharacter(c.id, tab); };
+  // what this session has just done (not saved: after a load, the lines that follow them are passed over)
+  const just = { kept: false, weapon: false, armor: false };
+
   // Wick's story at the fire (docs/story.md, the opening), a line a tap
   const STORY = [
     ['hello', 'Another company. Come in. Sit by the fire.'],
@@ -103,9 +116,37 @@ const FirstSession = (() => {
     ['wall', 'His people fled, so he raised their dead to serve him. We walled him in.'],
     ['offer', 'Now the crown has an offer: clear the old road, and keep what you clear.'],
   ];
+  // His goodbye (step 22)
+  const BYE = [
+    ['bye1', 'That’s the job. The rest is up to you.'],
+    ['bye2', 'Not everything’s open yet. The road opens it.'],
+    ['bye3', 'Fight, level up, hire more hands. That’s the work.'],
+    ['bye4', 'Questions? I’ll be by the fire.'],
+  ];
+
+  // ── the steps. phase: when its part of the session still has a moment (otherwise the step is passed over). skip():
+  // the step isn't needed now (a point already spent, a piece already worn). at(): its moment is now. show(): its
+  // Wick.show options. prep(): called each tick while it's the step under way, before at() (the buildings view opening,
+  // Bess's cart rolling in). after(): once it's done, before the next. forced: an action, not a line. nav: a pointer
+  // with no line. solo: a line for this moment only. soft: nothing is held back, and a press elsewhere puts it aside
+  // until its moment comes again. After a load (which always lands at the Hearth): resume names the Hearth step its part
+  // starts again from; open() opens its screen again. rat(): a line's moment when Wick's menu replays it.
+  const PHASE = {
+    pick: s => !s.roster.length,
+    first: s => !lit('1-1') || shown(0) || inBattle(0),
+    grow: () => true,
+    recruit: s => s.roster.length < 2,
+    form: () => true,
+    road: s => !lit('1-2') || shown(1) || inBattle(1),
+    camp: () => true,
+    bess: s => typeof Quests === 'undefined' || !Quests.accepted(s),
+    thanks: () => typeof Quests !== 'undefined' && Quests.shown,
+    bye: () => true,
+  };
+  const unplaced = () => { const s = st(); return s.roster.find(c => !s.party.includes(c.id)) || null; };
   const STEPS = [
     // 1: the story, at the fire; Skip goes straight to the name box
-    ...STORY.map(([id, line]) => ({ id, phase: 'pick', at: atHearth, show: () => ({ panel: line, skip: () => jump('name') }) })),
+    ...STORY.map(([id, line]) => ({ id, phase: 'pick', at: atHearth, rat: atCamp, show: () => ({ panel: line, skip: () => jump('name') }) })),
     // 2: the name box, the welcome, and the board
     { id: 'name', phase: 'pick', forced: true, at: atHearth, show: nameBox },
     { id: 'welcome', phase: 'pick', at: atHearth, show: () => ({ panel: `${who()}. Welcome to the Hearth. Your company can camp here.` }) },
@@ -114,43 +155,76 @@ const FirstSession = (() => {
     { id: 'pick', phase: 'pick', forced: true, at: () => FirstPick.shown, open: () => FirstPick.open({ mode: 'pick', guided: true }), show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 0 && !FirstPick.shown }) },
     // 4–5: the road
     { id: 'setout', phase: 'first', at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', say: `The road starts at the gate. Take ${heroName()} through.`, tap: 'target', until: onRoad }) },
-    { id: 'stage', phase: 'first', at: () => onRoadCard() && !!marker(), open: roadAgain, show: () => ({ target: marker, round: true, pad: 12, say: 'Each stage is a stretch of road. Win its fight, and the stretch is yours.' }) },
-    { id: 'go', phase: 'first', at: onRoadCard, open: roadAgain, show: () => ({ target: '[data-tut=road-go]', say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
+    { id: 'stage', phase: 'first', resume: 'setout', at: () => onRoadCard() && !!marker(), show: () => ({ target: marker, round: true, pad: 12, say: 'Each stage is a stretch of road. Win its fight, and the stretch is yours.' }) },
+    { id: 'go', phase: 'first', resume: 'setout', at: onRoadCard, show: () => ({ target: '[data-tut=road-go]', say: 'Clear the first.', tap: 'target', until: () => App.current === 'battle' }) },
     // 6: battle 1-1, paused twice (shown from the battle's events, below)
-    { id: 'order', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=turn-order] .flag.in', pad: 4, say: 'Battles fight themselves. The turn order shows who acts next.', small: true, side: 'l', pause: true }) },
+    { id: 'order', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=turn-order] .flag.in', pad: 4, say: 'Battles fight themselves. The turn order shows who acts now, and who’s next.', small: true, side: 'l', pause: true }) },
     { id: 'speed', phase: 'first', battle: 0, show: () => ({ target: '[data-tut=battle-speed], [data-tut=battle-skip]', pad: 5, say: 'Speed it up, or skip to the end.', small: true, side: 'l', pause: true, tap: 'target' }) },
-    // 7: the results popup
-    { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one brings a stat point.' : 'Battles bring XP. A full bar is a level.' }) },
-    { id: 'home', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
-    // 8: Grow: the stat point the first level brought, spent on the hero card: Spend, then + (or Auto), then Done
-    { id: 'heroes', phase: 'grow', skip: () => !points(), at: () => atHearth() && points() > 0, show: () => ({ target: '[data-tut=hearth-heroes]', say: `${heroName()} has a stat point. Let’s spend it.`, tap: 'target', until: () => App.current === 'party' }) },
-    { id: 'hero', nav: true, phase: 'grow', skip: () => !points(), at: () => App.current === 'party' && !sheetOpen() && !!leadCard(), open: () => points() && App.go('party'), show: () => ({ target: leadCard, pad: 3, tap: 'target', until: () => App.current === 'hero' }) },
-    { id: 'stats', nav: true, phase: 'grow', skip: () => !points() || (onHero() && spending()), at: () => onHero() && !!q('[data-tut=hero-points]'), open: () => points() && heroAgain(), show: () => ({ target: '[data-tut=hero-points]', pad: 3, tap: 'target', until: spending }) },
-    { id: 'spend', phase: 'grow', skip: () => !points(), at: () => onHero() && spending() && !!q('[data-tut^=hero-plus-]'), open: () => points() && heroAgain('stats'), show: () => ({ target: () => [q('[data-tut=hero-stats]'), ...document.querySelectorAll('[data-tut^=hero-plus-]')], pad: 4, say: 'Tap + on a stat, or Auto to let them choose.', tap: 'target', until: () => placing() > 0 || !points() }) },
-    { id: 'keep', nav: true, phase: 'grow', skip: () => !points(), resume: 'spend', at: () => onHero() && spending() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, tap: 'target', until: () => !points() }) },
-    { id: 'strong', solo: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !spending() && !!q('[data-tut=hero-stats]'), open: () => heroAgain(), show: () => ({ target: '[data-tut=hero-stats]', pad: 4, arrow: false, say: 'Stronger already.' }) },
-    { id: 'heroback', nav: true, phase: 'grow', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
-    { id: 'tabhome', nav: true, phase: 'grow', skip: () => App.current === 'home', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=heroes-back]'), show: () => ({ target: '[data-tut=heroes-back]', pad: 3, tap: 'target', until: () => App.current === 'home' }) },
-    // 9: 1-2, unforced: the pointer over Set out (it was a glow round it, before play-test note 3.7), a soft line on
-    // 1-1's marker, and the battle doesn't stop
+    // 7: the results: the first level, the two pieces of gear, the Hearth
+    { id: 'xp', phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=xp]', pad: 5, say: leveled() ? 'Your first level. Each one makes them stronger.' : 'Battles bring XP. A full bar is a level.' }) },
+    { id: 'loot', phase: 'first', at: () => results(0) && !!q('[data-tut=loot-gear]'), show: () => ({ target: () => [...document.querySelectorAll('[data-tut=loot-gear]')], pad: 4, say: 'Gear, off the road. We’ll put it on.' }) },
+    { id: 'home', nav: true, phase: 'first', at: () => results(0), show: () => ({ target: '[data-tut=camp]', pad: 4, say: 'Back to the Hearth.', tap: 'target', until: () => App.current === 'home' }) },
+    // 8: Heroes, then the hero: the point the first level brought, or the gear waiting
+    { id: 'heroes', phase: 'grow', skip: () => !points() && !gearLeft(), at: atHearth,
+      show: () => ({ target: '[data-tut=hearth-heroes]', say: points() ? `${heroName()} has a stat point. Let’s spend it.` : `${heroName()}’s new gear is waiting. Let’s put it on.`, tap: 'target', until: () => App.current === 'party' }) },
+    { id: 'hero', nav: true, phase: 'grow', resume: 'heroes', skip: () => !points() && !gearLeft(), at: () => App.current === 'party' && !sheetOpen() && !!leadCard(), show: () => ({ target: leadCard, pad: 3, tap: 'target', until: () => App.current === 'hero' }) },
+    // 9: the stats, a tap each to hear what it does (each stat's tooltip), then Next
+    { id: 'stats', phase: 'grow', resume: 'heroes', skip: () => !points() || (onHero() && spending()), at: () => onHero() && !spending() && !!q('[data-tut=hero-points]'), rat: onHero, show: statTaps },
+    // 10: Spend, + or Auto, Done
+    { id: 'spendbtn', nav: true, phase: 'grow', resume: 'heroes', skip: () => !points() || (onHero() && spending()), at: () => onHero() && !!q('[data-tut=hero-points]'), show: () => ({ target: '[data-tut=hero-points]', pad: 3, dim: false, tap: 'target', until: spending }) },
+    { id: 'spend', phase: 'grow', resume: 'heroes', skip: () => !points(), at: () => onHero() && spending() && !!q('[data-tut^=hero-plus-]'), rat: onHero,
+      show: () => ({ target: () => [q('[data-tut=hero-stats]'), ...document.querySelectorAll('[data-tut^=hero-plus-]')], pad: 4, dim: false, say: 'Tap + on the one you want, or Auto.', tap: 'target', until: () => placing() > 0 || !points() }) },
+    { id: 'keep', nav: true, phase: 'grow', resume: 'heroes', skip: () => !points(), at: () => onHero() && spending() && !!q('[data-tut=hero-keep]'), show: () => ({ target: '[data-tut=hero-keep]', pad: 3, dim: false, tap: 'target', until: () => !points() }), after: () => { just.kept = true; } },
+    { id: 'strong', solo: true, phase: 'grow', resume: 'heroes', skip: () => !just.kept, at: () => onHero() && !spending() && !!q('[data-tut=hero-stats]'), rat: onHero, show: () => ({ target: '[data-tut=hero-stats]', pad: 4, arrow: false, dim: false, say: 'Stronger already.' }) },
+    { id: 'later', solo: true, phase: 'grow', resume: 'heroes', skip: () => !just.kept, at: onHero, rat: onHero, show: () => ({ target: '[data-tut=hero-stats]', pad: 4, arrow: false, dim: false, say: 'Keep levelling. Bigger rewards come later.' }) },
+    // 11: the weapon
+    { id: 'weapon', phase: 'grow', resume: 'heroes', skip: () => !piece('weapon'), at: () => onHero() && !!q('[data-tut=hero-slot-weapon], [data-tut=gear-tab-weapon]'), rat: onHero,
+      show: () => ({ target: () => q('[data-tut=hero-slot-weapon]') || q('[data-tut=gear-tab-weapon]'), pad: 3, dim: false, say: 'Now the gear you found. Weapon first.', tap: 'target', until: () => dressing('weapon') }) },
+    { id: 'pickw', phase: 'grow', resume: 'heroes', skip: () => !piece('weapon'), at: () => onHero() && dressing('weapon') && !!pieceEl('weapon'), rat: onHero,
+      show: () => ({ target: () => pieceEl('weapon'), pad: 3, dim: false, say: 'Wear it. Watch the numbers.', tap: 'target', until: () => !!q('[data-tut=gear-wear]') }) },
+    { id: 'wearw', nav: true, phase: 'grow', resume: 'heroes', skip: () => !piece('weapon'), at: () => onHero() && !!q('[data-tut=gear-wear]'), show: () => ({ target: '[data-tut=gear-wear]', pad: 3, dim: false, tap: 'target', until: () => worn('weapon') }), after: () => { just.weapon = true; } },
+    { id: 'worn', solo: true, phase: 'grow', resume: 'heroes', skip: () => !just.weapon, at: onHero, rat: onHero, show: () => ({ target: '[data-tut=hero-stats]', pad: 4, arrow: false, dim: false, say: 'Every piece changes their numbers, and their look.' }) },
+    // 12: the armour, then ‹ back to the Hearth
+    { id: 'armor', phase: 'grow', resume: 'heroes', skip: () => !piece('armor'), at: () => onHero() && !!q('[data-tut=hero-slot-armor], [data-tut=gear-tab-armor]'), rat: onHero,
+      show: () => ({ target: () => q('[data-tut=gear-tab-armor]') || q('[data-tut=hero-slot-armor]'), pad: 3, dim: false, say: 'Now the armour.', tap: 'target', until: () => dressing('armor') }) },
+    { id: 'picka', nav: true, phase: 'grow', resume: 'heroes', skip: () => !piece('armor'), at: () => onHero() && dressing('armor') && !!pieceEl('armor'), show: () => ({ target: () => pieceEl('armor'), pad: 3, dim: false, tap: 'target', until: () => !!q('[data-tut=gear-wear]') }) },
+    { id: 'weara', nav: true, phase: 'grow', resume: 'heroes', skip: () => !piece('armor'), at: () => onHero() && !!q('[data-tut=gear-wear]'), show: () => ({ target: '[data-tut=gear-wear]', pad: 3, dim: false, tap: 'target', until: () => worn('armor') }), after: () => { just.armor = true; } },
+    { id: 'worna', solo: true, phase: 'grow', resume: 'heroes', skip: () => !just.armor, at: onHero, rat: onHero,
+      show: () => ({ target: () => [...document.querySelectorAll('[data-tut^=gear-tab-]')].concat(q('[data-tut^=gear-tab-]') ? [] : [...document.querySelectorAll('[data-tut^=hero-slot-]')]), pad: 4, arrow: false, dim: false, say: 'Weapon, armour, accessory. Some pieces cost as much as they give.' }) },
+    { id: 'heroback', nav: true, phase: 'grow', resume: 'heroes', skip: () => App.current !== 'hero', at: () => onHero() && !!q('[data-tut=hero-back]'), show: () => ({ target: '[data-tut=hero-back]', pad: 3, tap: 'target', until: () => App.current !== 'hero' }) },
+    { id: 'tabhome', nav: true, phase: 'grow', resume: 'heroes', skip: () => App.current === 'home', at: () => App.current === 'party' && !sheetOpen() && !!q('[data-tut=heroes-back]'), show: () => ({ target: '[data-tut=heroes-back]', pad: 3, tap: 'target', until: () => App.current === 'home' }) },
+    // 13–14: a second recruit, paid (only the first pick is free)
+    { id: 'board2', phase: 'recruit', at: () => atHearth() && !!board(), rat: atCamp, show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'One hero won’t clear the road. The board has more.', tap: 'target', until: () => FirstPick.shown }) },
+    { id: 'hire', phase: 'recruit', forced: true, resume: 'board2', at: () => FirstPick.shown, show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 1 && !FirstPick.shown }) },
+    // 15: Formation (F3)
+    { id: 'form', phase: 'form', skip: () => !unplaced(), at: () => atHearth() && !!q('[data-tut=hearth-formation]'), rat: atCamp, show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, dim: false, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
+    { id: 'place', phase: 'form', forced: true, resume: 'form', skip: () => !unplaced(), at: () => Formation.shown && !!q('[data-tut=formation-front]'), rat: () => Formation.shown, show: placeStep },
+    { id: 'done', nav: true, phase: 'form', resume: 'form', skip: () => !Formation.shown, at: () => Formation.shown && !!q('[data-tut=formation-done]'), rat: () => Formation.shown, show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', arrow: 'below', tap: 'target', until: () => !Formation.shown }) },
+    // 16: 1-2, directed: the pointer over Set out, a soft line on 1-1's marker; the battle doesn't stop
     { id: 'setout2', nav: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: atHearth, show: () => ({ target: '[data-tut=hearth-setout]', dim: false, tap: 'free', until: () => onRoad() || App.current === 'battle' }) },
     // (Wick small, on the left: the card's Set out, bottom right, stays in sight)
-    { id: 'yours', solo: true, soft: true, phase: 'road', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), open: roadAgain, show: () => ({ target: firstMarker, round: true, pad: 4, dim: false, arrow: 'below', say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
+    { id: 'yours', solo: true, soft: true, phase: 'road', resume: 'setout2', skip: () => App.current === 'battle' || shown(1), at: () => onRoadCard() && !!firstMarker(), show: () => ({ target: firstMarker, round: true, pad: 4, dim: false, arrow: 'below', say: 'First stretch cleared. It’s yours now.', small: true, side: 'l', tap: 'free', until: () => App.current === 'battle' }) },
     { id: 'home2', nav: true, phase: 'road', at: () => results(1), show: () => ({ target: '[data-tut=camp]', pad: 4, tap: 'target', until: () => App.current === 'home' }) },
-    // 10: the second recruit, paid
-    { id: 'board2', phase: 'recruit', at: () => atHearth() && !!board(), show: () => ({ target: board, round: true, pad: 10, side: 'r', say: 'One hero won’t clear the road. The board has more.', tap: 'target', until: () => FirstPick.shown }) },
-    { id: 'hire', phase: 'recruit', forced: true, at: () => FirstPick.shown, open: () => FirstPick.open({ mode: 'hire', guided: true, rest: true }), show: () => ({ dim: false, tap: 'none', area: '#sheet .fp', until: () => st().roster.length > 1 && !FirstPick.shown }) },
-    // 11: Formation (F3)
-    { id: 'form', phase: 'form', at: () => atHearth() && !!q('[data-tut=hearth-formation]'), show: () => ({ target: '[data-tut=hearth-formation]', pad: 4, say: 'Two of you now. Let’s find them a place.', tap: 'target', until: () => Formation.shown }) },
-    { id: 'place', phase: 'form', forced: true, at: () => Formation.shown && !!q('[data-tut=formation-front]'), open: () => Formation.open(), show: placeStep },
-    { id: 'done', nav: true, phase: 'form', at: () => Formation.shown && !!q('[data-tut=formation-done]'), open: () => Formation.open(), show: () => ({ target: '[data-tut=formation-done]', pad: 4, say: 'Well placed.', small: true, side: 'l', dim: 'light', arrow: 'below', tap: 'target', until: () => !Formation.shown }) },
-    // 12: the goodbye: the region's end, a reason to come back, and where he'll be
-    { id: 'bye', phase: 'form', at: atHearth, show: () => ({ panel: 'The Sexton’s at the end of the Gravefields. Plenty of road before him.' }) },
-    { id: 'tolls', phase: 'form', at: atHearth, show: () => ({ panel: 'The road earns tolls while you’re away. Come back and collect.' }) },
-    { id: 'fire', phase: 'form', at: atHearth, show: () => ({ panel: 'I’ll be by the fire.' }) },
+    // 17–18: the buildings view opens (save.guide.camp): a drag round the camp, a plot, its panel, and back to the fire
+    { id: 'drag', phase: 'camp', at: () => partyView() && camp().locked === false, rat: atCamp, prep: openCamp, show: dragStep },
+    { id: 'plots', phase: 'camp', resume: 'drag', at: () => atBuild() && !!emptyPlot(), rat: atBuild,
+      show: () => ({ target: emptyPlot, round: true, pad: 8, dim: false, say: 'Each plot takes one building. It needs gold, bone dust and a plan.', tap: 'target', until: () => !!q('#sheet:not([hidden]) .buildbox') }) },
+    { id: 'noplans', phase: 'camp', resume: 'drag', at: () => !!q('#sheet:not([hidden]) .buildbox'), rat: () => !!q('#sheet:not([hidden]) .buildbox'),
+      show: () => (q('[data-tut=plot-none]') ? { target: '[data-tut=plot-none]', pad: 6, dim: false, say: 'No plans yet. I know someone who can help.' } : { target: '#sheet .buildbox .opts', pad: 4, dim: false, say: 'A plan already. Build it when you like.' }),
+      after: () => { closeSheet(); const c = camp(); if (c) c.go('party'); } },
+    // 19–21: Bess (js/quests.js): her cart rolls in; her panel, her lines and the quest; Accept; her thanks
+    { id: 'bess', phase: 'bess', at: () => partyView() && !!bessBox(), rat: () => atCamp() && !!bessBox(), prep: () => { if (typeof Quests !== 'undefined' && !Quests.here() && partyView()) Quests.arrive(); },
+      show: () => ({ target: bessBox, round: true, pad: 8, say: 'That’s Bess. She drives the carts on your road. Hear her out.', tap: 'target', until: () => Quests.shown }) },
+    { id: 'offer1', phase: 'bess', at: () => Quests.shown && !!q('.qs-say'), open: () => Quests.open(), rat: () => Quests.shown, show: () => { Quests.say(Quests.LINES.offer[0]); return { target: '.qs-say', pad: 4, arrow: false, dim: 'light' }; } },
+    { id: 'offer2', phase: 'bess', at: () => Quests.shown && !!q('[data-tut=quest-card]'), open: () => Quests.open(), rat: () => Quests.shown, show: () => { Quests.say(Quests.LINES.offer[1]); return { target: '[data-tut=quest-card]', pad: 4, dim: 'light' }; } },
+    { id: 'accept', nav: true, phase: 'bess', at: () => Quests.shown && !!q('[data-tut=quest-accept]'), open: () => Quests.open(), show: () => ({ target: '[data-tut=quest-accept]', pad: 4, tap: 'target', until: () => Quests.accepted() }) },
+    { id: 'thanks1', phase: 'thanks', resume: 'bye1', at: () => Quests.shown && !!q('.qs-say'), rat: () => Quests.shown, show: () => { Quests.say(Quests.LINES.accepted); return { target: '.qs-say', pad: 4, arrow: false, dim: 'light' }; } },
+    { id: 'thanks2', phase: 'thanks', resume: 'bye1', at: () => Quests.shown && !!q('.qs-say'), rat: () => Quests.shown, show: () => { Quests.say(Quests.LINES.jobsSoon); return { target: '.qs-say', pad: 4, arrow: false, dim: 'light' }; }, after: () => Quests.close() },
+    // 22: the goodbye; then full control
+    ...BYE.map(([id, line]) => ({ id, phase: 'bye', at: atHearth, rat: atCamp, show: () => ({ panel: line }) })),
   ];
   const leveled = () => { const r = Results.res; return !!(r && r.gains && r.gains.some(x => x.g.to > x.g.from)); };
-  const fresh = () => { const s = st(); return s.roster.find(c => !s.party.includes(c.id)) || s.roster[s.roster.length - 1]; };
+  const fresh = () => unplaced() || st().roster[st().roster.length - 1];
   // where the new hero belongs: a front-row class in front, the rest at the back (F3 points at the back's lower place)
   function spotFor(c) {
     const p = st().party, order = CLASSES[c.cls].row === 'front' ? [0, 1, 4, 2, 3, 5] : [4, 2, 3, 5, 0, 1];
@@ -179,23 +253,61 @@ const FirstSession = (() => {
     setTimeout(() => { try { input.focus({ preventScroll: true }); } catch (e) { } }, 350);
     return { say: 'Who’s in charge?', side: 'l', ui: box, tap: 'none' };
   }
+  // 9: each stat (and the resistances) answers a tap with its tooltip, the line on what it does (js/sheet.js); after
+  // two or more, Next. Only the stats take a press.
+  function statTaps() {
+    const seen = new Set();
+    const tapped = ev => {
+      const el = ev.target && ev.target.closest && ev.target.closest('.hr-stats [data-tut^=hero-stat-], [data-tut^=hero-stat-res]');
+      if (!el || !el.dataset.tip) return;
+      seen.add(el.dataset.tut);
+      // a click with the mouse hides the tooltip its hover showed (js/tip.js): it comes back for the tap
+      setTimeout(() => { if (el.isConnected) Tip.show(el, () => String(el.dataset.tip).split('|')); }, 0);
+    };
+    document.addEventListener('click', tapped, true);
+    return {
+      target: () => [...document.querySelectorAll('.hr-stats [data-tut^=hero-stat-]')], pad: 4, dim: false, side: 'r',
+      say: 'Each level brings a stat point. Tap a stat to hear what it does.',
+      tap: 'none', area: () => [...document.querySelectorAll('.hr-stats [data-tut^=hero-stat-], [data-tut^=hero-stat-res]')],
+      next: { label: 'Next', when: () => seen.size >= 2 },
+      cleanup: () => { document.removeEventListener('click', tapped, true); Tip.hide(); },
+    };
+  }
+  // 17: the buildings view opens, with nothing to build yet (Base.viewOpen), and a hand shows the drag
+  function openCamp() {
+    const s = st();
+    if (s.guide.camp) return;
+    s.guide.camp = true; Save.commit();
+    App.refresh();
+  }
+  function dragStep() {
+    // the scene, clear of the HUD round it: the drag starts there (camp.js keeps the scene's taps for it: dragOnly)
+    const zone = () => ({ x: 120, y: 156, w: Math.max(200, Frame.W - 360), h: 166 });
+    return {
+      target: zone, arrow: false, dim: false, side: 'l', say: 'Companies that stay, build. Drag to look round the camp.',
+      hand: { from: () => { const z = zone(); return { x: z.x + z.w - 40, y: z.y + 80, w: 1, h: 1 }; }, to: () => { const z = zone(); return { x: z.x + 40, y: z.y + 80, w: 1, h: 1 }; } },
+      // (once the finger lifts: between steps its pointerup would be held back, and the scene would think it still down)
+      tap: 'none', until: () => { const c = camp(); return !!c && c.w > 0.95 && !Camp.dragging; },
+    };
+  }
 
   // ── running it
-  let H = null, fight = null, replaying = false, jumped = false, deciding = false, dismissed = null, seenSave = null;
+  let H = null, showing = null, fight = null, replaying = false, jumped = false, deciding = false, dismissed = null, seenSave = null;
+  let lesson = null; // Wick's menu: { L (the lesson), k (its line under way), since, where (the screen it's on) }
   const on = () => { const s = st(); return !!s && !s.guide.done; };
   const idx = id => STEPS.findIndex(x => x.id === id);
   const safe = fn => { try { return !!fn(); } catch (e) { return false; } };
-  // The step under way: the saved one, moved past every step whose moment has gone or that isn't needed.
+  // The step under way: the saved one, moved past every step whose moment has gone or that isn't needed; and one whose
+  // screen is gone (it's at the Hearth instead) goes back to where its part starts there.
   function current() {
     const s = st();
     let i = Math.max(0, idx(s.guide.step));
     const pass = () => { while (i < STEPS.length && (!PHASE[STEPS[i].phase](s) || (STEPS[i].skip && safe(STEPS[i].skip)))) i++; };
     pass();
-    // a lost battle (1-1 and 1-2 can't be lost, but a save can be odd), or a reload in the middle of Grow: back to
-    // where that part starts at the Hearth
+    const S = STEPS[i];
+    if (S && S.resume && atHearth() && !safe(S.at) && idx(S.resume) !== i) { i = idx(S.resume); pass(); }
+    // a lost battle (1-1 can't be lost, but a save can be odd): back to Set out
     if (STEPS[i] && atHearth() && i > idx('setout') && i <= idx('home') && !lit('1-1')) i = idx('setout');
-    if (STEPS[i] && atHearth() && i > idx('heroes') && i <= idx('tabhome')) { i = idx('heroes'); pass(); }
-    if (STEPS[i] && atHearth() && i > idx('setout2') && i <= idx('home2') && !lit('1-2')) i = idx('setout2');
     return i;
   }
   function advance(from) {
@@ -205,19 +317,17 @@ const FirstSession = (() => {
     Save.commit();
   }
   // After a load (the app opened again, a reload, another save): the step under way comes back from its start. A load
-  // lands at the Hearth, so once it's there a step on another screen opens that screen again (open), and Keep goes
-  // back to + (resume). A step whose moment has passed is still passed over by current(): its battle was resolved
-  // while the app was closed, its results popup is gone, or it only led back to the Hearth (‹, the Hearth tab, the
-  // results' Hearth button). Returns false while it waits for the Hearth (5 seconds at most).
+  // lands at the Hearth, so a step whose screen the load closed goes back to the Hearth step that opens it (resume), or
+  // opens its screen again (open). Returns false while it waits for the Hearth (5 seconds at most).
   let resuming = false, resumeAt = 0;
   function resumed(s) {
     let step = STEPS[idx(s.guide.step)];
     const done = () => { resuming = false; return true; };
     // nothing to bring back: no step yet, its part is over, or its screen is up already
-    if (!step || !PHASE[step.phase](s) || (!step.resume && safe(step.at))) return done();
-    if (!atHearth()) { if (!resumeAt) resumeAt = Date.now(); return Date.now() - resumeAt < 5000 ? false : done(); }
+    if (!step || !PHASE[step.phase](s) || safe(step.at)) return done();
+    if (!atCamp()) { if (!resumeAt) resumeAt = Date.now(); return Date.now() - resumeAt < 5000 ? false : done(); }
     if (step.resume) { s.guide.step = step.resume; Save.commit(); step = STEPS[idx(step.resume)]; }
-    if (step.open && !safe(step.at)) { try { step.open(); } catch (e) { console.warn('Lantern Road: the guide could not open its screen again', step.id, e); } }
+    else if (step.open && !safe(step.at)) { try { step.open(); } catch (e) { console.warn('Lantern Road: the guide could not open its screen again', step.id, e); } }
     return done();
   }
   // Skip, in the story: straight to the name box.
@@ -228,14 +338,16 @@ const FirstSession = (() => {
     if (pause) Battle.setPaused(true);
     quietSince = 0;
     const forced = !replaying, sv = st();
+    showing = step.id;
     H = Wick.show(Object.assign({}, o, {
       onDone: () => {
-        H = null;
+        H = null; showing = null;
+        if (o.cleanup) { try { o.cleanup(); } catch (e) { } }
         if (pause && Battle.busy && Battle.paused) { Battle.play(); if (typeof syncControls === 'function') syncControls(); }
         if (st() !== sv || jumped) return; // another save took this one's place (Start over, the cloud's copy); or Skip
-        if (!forced) { const s = st(); if (s.guide.replay) { s.guide.replay[step.id] = 1; Save.commit(); } return; }
+        if (!forced) { if (lesson) { lesson.k++; lesson.since = Date.now(); } return; }
         if (!on()) return;
-        if (!step.soft) { advance(step.id); return; }
+        if (!step.soft) { if (step.after) { try { step.after(); } catch (e) { } } advance(step.id); return; }
         // a soft step went with a press: once the press has done what it does, it's done (Set out flew up the road), or
         // put aside until its moment comes again
         deciding = true;
@@ -249,17 +361,19 @@ const FirstSession = (() => {
     H.forced = forced && !step.soft;
   }
   function showStep(step) {
-    let o = null;
     const done = () => { if (H) H.next(); };
-    o = step.show(done);
-    if (replaying && o) { o = Object.assign({}, o, { tap: 'free', pause: false, until: null, ms: o.ms || 9000, ui: null, skip: null }); }
+    let o = step.show(done);
+    if (replaying && o) {
+      if (o.cleanup) { try { o.cleanup(); } catch (e) { } }
+      o = Object.assign({}, o, { tap: 'free', pause: false, until: null, ms: o.ms || 9000, ui: null, skip: null, next: null, cleanup: null });
+    }
     present(step, o);
   }
   // Every quarter of a second: is it the next step's moment?
   function tick() {
     const s = st();
     // another save took this one's place (Start over, the cloud's copy, another server's): the step on show goes
-    if (s !== seenSave) { const was = seenSave; seenSave = s; dismissed = null; resuming = !!s; resumeAt = 0; if (was && H) { const h0 = H; h0.close(); H = null; } }
+    if (s !== seenSave) { const was = seenSave; seenSave = s; dismissed = null; lesson = null; resuming = !!s; resumeAt = 0; just.kept = just.weapon = just.armor = false; if (was && H) { const h0 = H; h0.close(); H = null; } }
     // A forced step up for a save whose session is over goes at once: its gate would hold back every press, and on
     // touch a held-back press loses its tap.
     if (s && H && H.forced && !on()) { H.close(); return; }
@@ -272,6 +386,7 @@ const FirstSession = (() => {
       if (STEPS[i].id !== s.guide.step) { s.guide.step = STEPS[i].id; Save.commit(); }
       const step = STEPS[i];
       if (step.battle) return;
+      if (step.prep) { try { step.prep(); } catch (e) { } }
       const now = safe(step.at);
       // put aside with a press: back once its moment has gone and come again
       if (dismissed === step.id) { if (!now) dismissed = null; return; }
@@ -279,18 +394,20 @@ const FirstSession = (() => {
       if (now) showStep(step);
       return;
     }
-    // Replay the guide: each of Wick's lines once more, when its place comes up, holding nothing back
-    if (s.guide.replay) {
+    // Wick's menu: a lesson's lines once more, each when its place comes up, holding nothing back
+    if (lesson) {
+      const L = lesson.L;
+      // over after its last line, or once the player leaves the screen it was on
+      if (lesson.k >= L.steps.length || (lesson.where && App.current !== lesson.where)) { lesson = null; return; }
+      const step = STEPS[idx(L.steps[lesson.k])];
+      if (step.battle) return; // shown from the battle's events
       replaying = true;
-      // the lines, not the forced picks, the pointers from one screen to the next, or a line for one moment only
-      const left = STEPS.filter(x => !x.forced && !x.nav && !x.solo && !s.guide.replay[x.id] && x.id !== 'board2');
-      if (!left.length) { s.guide.replay = null; Save.commit(); return; }
-      const step = left.find(x => !x.battle && safe(x.at));
-      if (step) showStep(step);
+      if (safe(step.rat || step.at)) { lesson.where = lesson.where || App.current; showStep(step); }
+      else if (Date.now() - lesson.since > 30000) lesson = null; // its moment never came: the replay ends
     }
   }
   setInterval(() => { try { tick(); } catch (e) { console.warn('Lantern Road: the guide', e); } }, 250);
-  // Between forced steps nothing takes a press (Wick.show's gate), except during a battle, and in the unforced 1-2 until
+  // Between forced steps nothing takes a press (Wick.show's gate), except during a battle, and in the directed 1-2 until
   // its results come up. If no step's moment has come for 15 seconds the hold lets go, so a save in a state the script
   // didn't foresee is never stuck.
   let quietSince = 0;
@@ -304,7 +421,7 @@ const FirstSession = (() => {
   };
 
   // The battle's events, as they play (js/guide.js passes them on): 1-1 stops at its first turn for the turn order,
-  // and two turns later for speed and skip. 1-2 doesn't stop.
+  // and two turns later for speed and skip. 1-2 doesn't stop. Wick's menu's Battles lesson says them in the next battle.
   function battleEvent(e, i) {
     const s = st();
     if (!s) return;
@@ -312,7 +429,7 @@ const FirstSession = (() => {
     if (e.t === 'turn') fight.turns++;
     const step = on() ? STEPS[current()] : null;
     if (H) return;
-    const want = id => (on() ? step && step.id === id : s.guide.replay && !s.guide.replay[id]);
+    const want = id => (on() ? step && step.id === id : !!lesson && lesson.L.steps[lesson.k] === id);
     replaying = !on();
     if (e.t === 'turn' && fight.turns === 1 && want('order') && (i === 0 || replaying)) setTimeout(() => { if (!H && Battle.busy) showStep(STEPS[idx('order')]); }, 450);
     else if (e.t === 'turn' && fight.turns === 3 && want('speed') && (i === 0 || replaying)) setTimeout(() => { if (!H && Battle.busy) showStep(STEPS[idx('speed')]); }, 200);
@@ -322,32 +439,69 @@ const FirstSession = (() => {
     // a step still up when the battle ends (a soft line) goes with it
     if (H && App.current === 'battle' && (H.tap === 'free' || !Battle.busy)) H.close();
   }
+  // 1-1's first clear: its two pieces, for steps 11–12 (save.guide.gear)
+  if (typeof Campaign !== 'undefined' && Campaign.onSettle) Campaign.onSettle((r, stage, res, s) => {
+    if (!s || !s.guide || s.guide.done || !r || !r.first || !stage.firstGear) return;
+    const g = {};
+    for (const x of r.gear) if (x.why === 'first' && !x.sold) g[Items.def(x.piece).slot] = x.piece.uid;
+    s.guide.gear = g;
+  });
 
-  // The session is over: the coach marks and tips it stood in for (js/guide.js, js/main.js) have had their moment.
-  // c:rule isn't one: the session no longer says what the turn order's tactic names, so its coach mark does, once.
+  // The session is over: the coach marks and tips it stood in for (js/guide.js, js/main.js) have had their moment, and
+  // the buildings view is open.
   const COVERS = ['c:flags', 'c:speed', 'c:board', 'stat'];
   function finish() {
     const s = st();
-    s.guide.done = true; s.guide.step = ''; s.guide.camp = true; // the buildings view opens, with nothing to build yet
+    s.guide.done = true; s.guide.step = ''; s.guide.camp = true;
     for (const k of COVERS) if (!s.campaign.tips[k]) s.campaign.tips[k] = Date.now();
     Save.commit();
   }
-  // Settings → Replay the guide (nothing while the session runs: Wick is showing you round), and the Prototype panel's
-  // Skip the guide.
-  function replay() {
-    const s = st();
-    if (!s) return;
-    if (on()) { toast('Wick is showing you round already'); return; }
-    s.guide.replay = {}; Save.commit(); toast('Wick will show you round again');
-  }
   function skip() { if (!st()) return; if (H) H.close(); Wick.hide(); finish(); }
-  // The Recruit Board's tap at the Hearth: the first pick, or the free recruit while the session wants it.
+  // The Recruit Board's tap at the Hearth: the first pick, or the paid hire while the session wants it.
   function boardTap() {
     const s = st();
     if (!s.roster.length) { FirstPick.open({ mode: 'pick', guided: on() }); return true; }
     if (on() && STEPS[current()] && STEPS[current()].id === 'board2') { FirstPick.open({ mode: 'hire', guided: true, rest: true }); return true; }
     return false;
   }
+
+  // ── Wick's menu's lessons (docs/first-session-spec.md §3): the session's lines by lesson, each replayed as soft steps,
+  // each when its place comes up, from the screen it opens. A visit's lesson replays the visit (js/visits.js).
+  const goHome = () => { if (App.current !== 'home') App.go('home'); };
+  const LESSONS = [
+    { id: 'story', name: 'The story', icon: 'kindle', steps: STORY.map(x => x[0]), open: goHome },
+    { id: 'road', name: 'The road', icon: 'boot', steps: ['setout', 'stage', 'go'], open: goHome },
+    { id: 'battles', name: 'Battles', icon: 'sword', steps: ['order', 'speed'], open: goHome },
+    { id: 'levels', name: 'Levels and stats', icon: 'star', steps: ['stats', 'spend', 'strong', 'later'], open: () => heroAgain() },
+    { id: 'gear', name: 'Gear', icon: 'bag', steps: ['weapon', 'pickw', 'worn', 'armor', 'worna'], open: () => heroAgain() },
+    { id: 'recruiting', name: 'Recruiting', icon: 'scroll', steps: ['board2'], open: goHome },
+    { id: 'formation', name: 'Formation', icon: 'shield', steps: ['form', 'place', 'done'], open: goHome },
+    { id: 'buildings', name: 'Buildings', icon: 'plus', steps: ['drag', 'plots', 'noplans'], open: goHome },
+    { id: 'quests', name: 'Quests', icon: 'scroll', steps: ['bess', 'offer1', 'offer2', 'thanks1', 'thanks2'], open: goHome },
+  ];
+  // The lessons seen so far: the session's (all of them once it's over; while it runs, those it has passed).
+  function lessons() {
+    const s = st();
+    if (!s) return [];
+    const at = s.guide.done ? STEPS.length : idx(s.guide.step);
+    return LESSONS.filter(L => idx(L.steps[0]) < at).map(L => ({ id: L.id, name: L.name, icon: L.icon }));
+  }
+  function replayLesson(id) {
+    const L = LESSONS.find(x => x.id === id), s = st();
+    if (!L || !s || on()) return false;
+    if (H) H.close();
+    Wick.hide();
+    lesson = { L, k: 0, since: Date.now() };
+    try { L.open(); } catch (e) { }
+    return true;
+  }
+
   // covers(key): a first-time tip or coach mark the session says itself, held back while it runs (js/guide.js)
-  return { get on() { return on(); }, get step() { const s = st(); return s && !s.guide.done ? s.guide.step : null; }, covers: k => on() && COVERS.includes(k), battleEvent, battleStart, battleEnd, replay, skip, boardTap, STEPS };
+  return {
+    get on() { return on(); }, get step() { const s = st(); return s && !s.guide.done ? s.guide.step : null; },
+    // the drag round the camp (step 17) is up: the scene's taps wait (js/camp.js), so a tap can't open what it lands on
+    get dragOnly() { return showing === 'drag' && !replaying; },
+    get replaying() { return !!lesson; },
+    covers: k => on() && COVERS.includes(k), battleEvent, battleStart, battleEnd, skip, boardTap, lessons, replayLesson, LESSONS, STEPS,
+  };
 })();

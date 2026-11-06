@@ -17,8 +17,8 @@
 // shows the end at once. It replaces the level-up sheet and the report that opened by itself; Report opens that.
 // A trip of several battles shows the trip's totals: the XP and fatigue since setting out, all its loot, and the
 // stages fought. (Provisional: the popup for a trip that keeps going waits for the Keep going decision.)
-// The guide points at it through data-tut: xp and fatigue (the first hero's bars), report, camp (the Hearth button),
-// again, next (Next, or Farm) and new.
+// The guide points at it through data-tut: xp and fatigue (the first hero's bars), loot-gear (each gear tile), report,
+// camp (the Hearth button), again, next (Next, or Farm) and new.
 // Styles in css/results.css.
 
 const Results = (() => {
@@ -148,7 +148,7 @@ const Results = (() => {
     if (L.gold) tile('', ico('coin'), short(L.gold), `${fmt(L.gold)} gold`, () => toast(L.clear ? `${fmt(L.gold)} gold: ${fmt(L.spoils)} from the foes, ${fmt(L.clear)} for the clear` : `${fmt(L.gold)} gold`));
     for (const mt of MATERIALS) if (L.mats[mt.id]) tile('', ico(matIcon(mt.id)), short(L.mats[mt.id]), `${mt.name} ×${L.mats[mt.id]}`, () => toast(`${mt.name} ×${fmt(L.mats[mt.id])}${mt.trophy ? '. ' + matUse(mt.id) : ''}`));
     for (const id in L.items) if (ITEMS[id] && L.items[id]) tile('', ico(ITEMS[id].icon), String(L.items[id]), `${ITEMS[id].name} ×${L.items[id]}`, () => toast(`${ITEMS[id].name}: ${ITEMS[id].tip}`));
-    for (const g of L.gear) if (GEAR[g.id]) tile('gear r-' + GEAR[g.id].rarity + (g.sold ? ' sold' : ''), gearIco(g.id), g.sold ? 'sold' : null, GEAR[g.id].name + (g.st ? `, ${g.st} star${g.st === 1 ? '' : 's'}` : ''), () => gearTap(g), GearUI.pips(g.st || 0));
+    for (const g of L.gear) if (GEAR[g.id]) tile('gear r-' + GEAR[g.id].rarity + (g.sold ? ' sold' : ''), gearIco(g.id), g.sold ? 'sold' : null, GEAR[g.id].name + (g.st ? `, ${g.st} star${g.st === 1 ? '' : 's'}` : ''), () => gearTap(g), GearUI.pips(g.st || 0)).dataset.tut = 'loot-gear';
     const ids = [...new Set(L.unlocks || [])].filter(id => UNLOCKS[id] && Guide.newThing(id));
     const chip = (id, k) => { const nt = Guide.newThing(id); return h('button', { class: 'rs-new', type: 'button', 'data-tut': k === 0 ? 'new' : null, 'aria-label': nt.name, onclick: () => { sfx('click'); newTap(nt); } }, ico(nt.icon), h('b', { text: 'New' }), h('span', { text: shortName(UNLOCKS[id]) })); };
     const more = k => h('button', { class: 'rs-new more', type: 'button', 'aria-label': `${k} more new`, onclick: () => { sfx('click'); newList(ids); } }, h('b', { text: '+' + k }));

@@ -190,6 +190,7 @@ const Wick = (() => {
   //   area      what takes presses besides the target: an element, a selector, or a function returning them.
   //   until     () => true once the step is done, checked every frame. ms: the step ends by itself after this.
   //   ui        elements of the step's own that take taps (the name box): marked .wk-ui.
+  //   next      { label, when() }: a button in his bubble that ends the step, shown once when() holds (the stats).
   //   onDone    called once, when the step ends (a tap, its until(), its ms, or close()).
   function show(o = {}) {
     const L = layer(), FH = 390;
@@ -204,7 +205,7 @@ const Wick = (() => {
     if (!o.target && dim !== 'none') root.append(h('div', { class: 'wk-veil' }));
     if (o.target) root.append(hole);
     if (o.target && o.arrow !== false) root.append(arrow);
-    let pt = null, bubble = null, panel = null;
+    let pt = null, bubble = null, panel = null, nx = null;
     if (o.panel) {
       pt = h('img', { class: 'wk-pt big', src: portraitURL(), alt: 'Old Wick', draggable: 'false' });
       panel = h('div', { class: 'wk-panel' }, h('div', { class: 'wk-who', text: 'Old Wick' }), h('p', { text: o.panel }), tap === 'any' ? h('span', { class: 'wk-more' }) : null,
@@ -213,6 +214,7 @@ const Wick = (() => {
     } else if (o.say) {
       pt = h('img', { class: 'wk-pt', src: portraitURL(), alt: 'Old Wick', draggable: 'false' });
       bubble = h('div', { class: 'wk-bubble' }, h('span', { text: o.say }), tap === 'any' ? h('span', { class: 'wk-more' }) : null);
+      if (o.next) { nx = h('button', { class: 'wk-nx wk-ui', type: 'button', 'data-tut': 'wick-next', hidden: true, onclick: () => { if (typeof sfx === 'function') sfx('click'); H.next(); } }, o.next.label || 'Next'); bubble.append(nx); }
       root.append(pt, bubble);
     }
     const calls = (o.callouts || []).map(c => { const el = h('div', { class: 'wk-call' }, c.title ? h('b', { text: c.title }) : null, h('span', { text: c.text })); root.append(el); return { c, el }; });
@@ -293,6 +295,7 @@ const Wick = (() => {
       if (tap === 'target' && !o.until && H.tapped) { H.next(); return; }
       const b = o.target ? boxOf(o.target) : null;
       root.classList.toggle('lost', !!o.target && !b);
+      if (nx) { let on = true; try { on = !o.next.when || !!o.next.when(); } catch (e) { } if (nx.hidden === on) { nx.hidden = !on; last = null; } }
       // the target moves with the scene; callouts and the hand follow their own targets, a few times a second
       if (!same(b, last) || ((calls.length || hand) && ++n % 6 === 0)) { lay(b); last = b; }
       raf = requestAnimationFrame(tick);

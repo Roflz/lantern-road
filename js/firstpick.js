@@ -4,7 +4,7 @@
 // for work, each Free, and Wick at its left. A tap on a row is his line on the class, and the pointer moves to its +;
 // + asks first (the recruit, Free, Cancel and Hire), and Hire ends in the reveal: the hero in the light, their name,
 // class and level, and why they signed on (SIGN_ON in js/data.js). A tap goes on, back to the Hearth.
-// The first session (js/firstsession.js) opens it again after 1-2 for the free recruit, with the board's own three.
+// The first session (js/firstsession.js) opens it again after 1-1 for a paid recruit, with the board's own three.
 // FirstPick.open({ mode: 'pick' | 'hire', guided, rest, onDone }): rest leaves the hired hero out of the formation
 // (Formation is the next step, F3); guided (and the first pick) hides ✕. The rows hang on data-tut: pick-card (each),
 // pick-plus (each +), pick-hire (the confirmation's Hire), pick-reveal and pick-says (the new hero's line); Wick's line
@@ -30,12 +30,16 @@ const FirstPick = (() => {
   const arrowSrc = () => arrowURL || (arrowURL = DockArt.big(sprite(ARROW.map, ARROW.pal, 'fp:arrow'), 3));
   let P = null; // { mode, list, sel, wrap, view, bubble, arrow, onDone, rest, guided }
 
-  // Who is on offer: the three starters (each with a name now, kept if picked), or the board's recruits (its first three).
+  // Who is on offer: the three starters (each with a name now, kept if picked, and the same three after a reload:
+  // save.guide.offer), or the board's recruits (its first three).
   function offer(mode) {
     const s = Save.state;
     if (mode === 'pick') {
+      const was = s.guide && Array.isArray(s.guide.offer) && s.guide.offer.length === STARTERS.length && s.guide.offer.every((x, i) => x && x.cls === STARTERS[i] && typeof x.name === 'string') ? s.guide.offer : null;
+      if (was) return was.map(x => ({ cls: x.cls, name: x.name, level: 1, price: 0 }));
       const names = RECRUIT_NAMES.slice(), out = [];
       for (const cls of STARTERS) { const name = names.splice(Math.floor(Math.random() * names.length), 1)[0]; out.push({ cls, name, level: 1, price: 0 }); }
+      if (s.guide) { s.guide.offer = out.map(x => ({ cls: x.cls, name: x.name })); Save.commit(); }
       return out;
     }
     return s.board.recruits.slice(0, 3).map(r => ({ cls: r.cls, name: r.name, level: r.level, price: Base.recruitPrice(r, s), r }));
@@ -63,7 +67,7 @@ const FirstPick = (() => {
   }
   function say() {
     const x = P.sel != null ? P.list[P.sel] : null;
-    P.bubble.textContent = x ? lineOf(x.cls) : P.mode === 'pick' ? 'Three looking for work. Tap each to hear about them.' : 'Three new faces. Tap each to hear about them.';
+    P.bubble.textContent = x ? lineOf(x.cls) : P.mode === 'pick' ? 'Three looking for work. Tap each to hear about them.' : P.guided ? 'This lot want paying. The crown’s advance covers one.' : 'Three new faces. Tap each to hear about them.';
     // the pointer over the picked row's + (from the layout, not the screen: the rows may still be rising into place)
     P.arrow.hidden = !x;
     if (!x) return;

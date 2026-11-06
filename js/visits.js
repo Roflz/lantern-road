@@ -4,8 +4,11 @@
 //   2. Wick's card back at the Hearth: its icon, its name and one line, with Show me or Later
 //   3. Show me: a soft visit of two to four steps on the screen it opened. Soft: a press anywhere goes on (and still
 //      does what it pressed), and nothing is held back. Later: the goal tracker carries it until it's seen (js/camp.js).
-// The first is Party items, at 1-3's first clear (docs/tutorial-study.md §5, pick 3): the Tactics screen, where the
-// party's draught tactic is the first when → do, then the hero's own tactics. Another unlock gets its own entry in VISITS.
+// Region I's, in order (docs/first-session-spec.md §2): Party items, at 1-3's first clear (docs/tutorial-study.md §5,
+// pick 3): the Tactics screen, where the party's draught tactic is the first when → do, then the hero's own tactics.
+// Skill points, when any hero first reaches level 5: their hero card, the tree and a skill slot. (Daily jobs are Bess's
+// card, js/quests.js.) The first building, once Bess's quest brings the Toll House's plan: the buildings view, on an
+// empty plot. Another unlock gets its own entry in VISITS.
 // A visit stands in for the coach marks it says (covers: js/guide.js), which are marked seen once it's over. With
 // Settings → First-time tips off there's no card and no steps: the goal tracker still carries it, and its Go opens the
 // screen. The forced first session comes first (js/firstsession.js): no card while it runs.
@@ -18,6 +21,19 @@ const Visits = (() => {
   const tipsOn = () => { const s = st(); return !!s && s.settings.tips !== false; };
   const lead = s => s.party.map(id => Save.char(id)).find(Boolean) || s.roster[0] || null;
   const onTactics = owner => App.current === 'tactics' && typeof TacticsEditor !== 'undefined' && TacticsEditor.owner === owner && !!q('[data-tut=tactics-row-1]');
+  // the hero with a skill point (the first to reach level 5), and their card
+  const skilled = (s = st()) => s.roster.find(c => Hero.points(c).skill > 0) || s.roster.find(c => c.level >= 5) || null;
+  const onSkills = () => App.current === 'hero' && $('#sheet').hidden && !!q('[data-tut=hero-tree]');
+  // the buildings view, settled, and its first open plot with nothing on it
+  const scene = () => (App.current === 'home' && typeof Camp !== 'undefined' ? Camp.scene : null);
+  function emptyPlot() {
+    const c = scene(), el = q('.camp'), s = st();
+    if (!c || !c.out || !el || c.w < 0.95 || c.onRoad || !$('#sheet').hidden) return null;
+    const open = Base.plotsCleared(s), k = s.base.plots.findIndex((p, i) => i < open && !p), a = k < 0 ? null : c.out.anchors.find(x => x.plot === k);
+    if (!a || !a.box) return null;
+    const o = Frame.box(el, $('#stage'));
+    return { x: o.left + a.box[0] * 2, y: o.top + a.box[1] * 2, w: (a.box[2] - a.box[0]) * 2, h: (a.box[3] - a.box[1]) * 2 };
+  }
   // id: { icon, name, line (the card's), goal (the tracker's), screen (where the visit happens), open(), steps, covers }
   // A step: { before() (once, as it comes up), unless() (passed over), at() (its moment), show() (Wick.show's options) }
   const VISITS = {
@@ -33,6 +49,21 @@ const Visits = (() => {
         { unless: () => typeof Guide !== 'undefined' && Guide.seen('c:tactics'), at: () => { const c = lead(st()); return !!c && onTactics(c.id); }, show: () => ({ target: '.tx-main .tx-list', pad: 4, say: 'Tactics run from the top. The first one that fits is used.' }) },
       ],
       covers: ['c:tactics'],
+    },
+    skills: {
+      icon: 'book', name: 'Skill points', line: 'A skill point every fifth level.', goal: 'Skill points', screen: 'hero',
+      open: () => { const c = skilled(); if (c) App.showCharacter(c.id); },
+      steps: [
+        { at: onSkills, show: () => ({ target: '[data-tut=hero-tree]', pad: 4, say: 'A skill point. Learn a new skill, or sharpen one.' }) },
+        { at: () => onSkills() && !!q('[data-tut=hero-skill-slot]'), show: () => ({ target: '[data-tut=hero-skill-slot]', pad: 4, say: 'Equip it here. Up to two at once.' }) },
+      ],
+    },
+    plan: {
+      icon: 'coin', name: 'The Toll House', line: 'The travellers sent a plan.', goal: 'The Toll House', screen: 'home',
+      open: () => { if (App.current !== 'home') App.go('home'); setTimeout(() => { const c = scene(); if (c) c.go('build'); }, 60); },
+      steps: [
+        { at: () => !!emptyPlot(), show: () => ({ target: emptyPlot, round: true, pad: 8, say: 'The travellers sent a plan. Build it on a plot.' }) },
+      ],
     },
   };
 
@@ -101,6 +132,8 @@ const Visits = (() => {
     // another save took this one's place (Start over, the cloud's copy): its card or visit goes
     if (s !== seenSave) { const was = seenSave; seenSave = s; if (was) { if (card) { const h0 = card; card = null; h0.close(); } if (run) { const r = run; run = null; if (r.H) r.H.close(); } } }
     if (run) { step(); return; }
+    // skill points: when any hero first reaches level 5, once the first session is over
+    if (s.guide && s.guide.done && !state('skills', s) && s.roster.some(c => c.level >= 5)) mark('skills', 'new');
     if (card || busy() || !tipsOn() || !atHearth()) return;
     const id = Object.keys(VISITS).find(k => state(k, s) === 'new');
     if (id) showCard(id);
@@ -110,6 +143,10 @@ const Visits = (() => {
   // A first clear in a battle earns the card (not the Prototype tools' lights, nor a save from before this build).
   if (typeof Campaign !== 'undefined' && Campaign.onSettle) Campaign.onSettle((r, stage, res, s) => {
     for (const id of (r && r.unlocks) || []) if (VISITS[id] && s && s.guide && !(s.guide.visits && s.guide.visits[id])) { if (!s.guide.visits) s.guide.visits = {}; s.guide.visits[id] = 'new'; }
+  });
+  // Bess's quest brought the Toll House's plan (js/quests.js): the first building's card
+  if (typeof Quests !== 'undefined' && Quests.onChange) Quests.onChange((what, s) => {
+    if (what === 'plan' && s && s.guide && !(s.guide.visits && s.guide.visits.plan)) { if (!s.guide.visits) s.guide.visits = {}; s.guide.visits.plan = 'new'; }
   });
 
   // The goal tracker (js/camp.js): a visit earned and not yet seen, with Go to start it.

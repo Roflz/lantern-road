@@ -83,7 +83,7 @@ const HeroSheet = (() => {
   const btn = (label, fn, o = {}) => h('button', { class: 'hc-btn' + (o.sec ? ' sec' : '') + (o.cls ? ' ' + o.cls : ''), type: 'button', 'data-tut': o.tut || null, 'data-tip': o.tip || null, disabled: o.off, onclick: e => { e.stopPropagation(); if (!o.quiet) click(); fn(); } },
     label, o.badge ? h('em', { class: 'hc-badge', text: String(o.badge) }) : null);
   const glyph = g => h('span', { class: 'gl', text: g });
-  const plate = (title, o = {}) => h('div', { class: 'hc-plate', 'data-tut': o.tut || null }, o.left ? h('div', { class: 'l' }, o.left) : null, h('h4', { text: title }), o.right ? h('div', { class: 'r' }, o.right) : null);
+  const plate = (title, o = {}) => h('div', { class: 'hc-plate', 'data-tut': o.tut || null, 'data-tip': o.tip || null }, o.left ? h('div', { class: 'l' }, o.left) : null, h('h4', { text: title }), o.right ? h('div', { class: 'r' }, o.right) : null);
   const sect = (cls, plateEl, body) => h('section', { class: 'hr-sect ' + cls }, plateEl, body);
 
   // ── the arched window: docs/mockups/hero-card.js's, drawn with the few parts of the pixel kit it needs (whole art
@@ -356,7 +356,7 @@ const HeroSheet = (() => {
   function resS(c) {
     const t = tried(c), now = Hero.sheet(t || c, rowOf(c)).res, base = Hero.sheet(c, rowOf(c)).res;
     const G = typeof GLOSSARY !== 'undefined' ? GLOSSARY : {};
-    return sect('mid g2 hc-in', plate('Resistances', { tut: 'hero-stat-res' }), h('div', { class: 'hr-res' }, RES_KEYS.map(k => {
+    return sect('mid g2 hc-in', plate('Resistances', { tut: 'hero-stat-res', tip: tip('Resistances', 'Harder to stun, poison or burn.') }), h('div', { class: 'hr-res' }, RES_KEYS.map(k => {
       const g = G['res_' + k], d = Math.round(now[k]) - Math.round(base[k]);
       return h('div', { class: 'hr-rs' + (d > 0 ? ' up' : d < 0 ? ' dn' : ''), 'data-tut': 'hero-stat-res-' + k, 'data-tip': tip(g ? g.name : RESISTS[k].name, g ? g.line : RESISTS[k].tip), 'aria-label': `${RESISTS[k].name} resistance` },
         icon(RES_ICON[k], 16), h('b', { text: Math.round(now[k]) + '%' }));

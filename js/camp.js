@@ -65,8 +65,8 @@ const CAMP_LINES = {
   cutpurse: ['Didn’t take anything. Promise.', 'Pockets are for emptying.', 'Shh. Listen.'],
 };
 const CAMP_TIRED = ['I could sleep for a week.', 'My feet are lead.', 'Give me an hour by the fire.'];
-// What Wick says when tapped at the fire, once his first session is over (js/firstsession.js): placeholders, tune.
-const WICK_LINES = ['Keep the fire fed. The road remembers who lit it.', 'Every lantern lit pushes the dark back a step.', 'Rest them well. The road is long.', 'Mind the graves past the posts. They listen.', 'I’ve tended this fire longer than I’ve had a name.'];
+// What Wick says when tapped at the fire while his first session runs (after it, a tap opens his menu: js/wickmenu.js).
+const WICK_LINES = ['Keep the fire fed. The road remembers who lit it.', 'Rest them well. The road is long.', 'Mind the graves past the posts. They listen.'];
 
 const Camp = (() => {
   const click = () => sfx('click');
@@ -539,7 +539,8 @@ const Camp = (() => {
       // the first pick and the first session's free recruit open the board's own panel (js/firstpick.js)
       if (a.id === 'board') { click(); if (!FirstSession.boardTap()) Buildings.open('recruitboard'); return; }
       if (a.id === 'fire') { click(); tapFire(); return; }
-      if (a.id === 'wick') { click(); say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
+      // Wick: his menu once the first session is over (js/wickmenu.js)
+      if (a.id === 'wick') { click(); if (!(typeof WickMenu !== 'undefined' && WickMenu.open())) say(WICK_LINES[Math.floor(Math.random() * WICK_LINES.length)], a); return; }
       // Bess tips her hat, and her panel opens (js/quests.js)
       if (a.id === 'bess') { click(); live.hop('bess'); Quests.tap(); return; }
       if (a.hero != null) {
@@ -564,7 +565,8 @@ const Camp = (() => {
       if (best) { const a = (live.out ? live.out.anchors : []).find(q => q.id === best.dataset.id); if (a) return a; }
       return live.hit(x / K, y / K);
     }
-    function tapAt(x, y) { const a = at(x, y); if (a) act(a); }
+    // (while Wick shows the drag round the camp, the scene's taps wait: js/firstsession.js, step 17)
+    function tapAt(x, y) { if (typeof FirstSession !== 'undefined' && FirstSession.dragOnly) return; const a = at(x, y); if (a) act(a); }
     // ── input: drag to turn, tap the scene
     let down = null;
     camp.addEventListener('pointerdown', ev => {
@@ -658,7 +660,7 @@ const Camp = (() => {
       alive = false;
       if (live) { cam.yaw = live.view === 'build' ? 180 : 0; live.stop(); live = null; }
     }
-    return { el, camp, start, stop, sync, at, toRoad, home, turnTo: v => live && live.go(v), turn: d => live && live.turn(d), get live() { return live; } };
+    return { el, camp, start, stop, sync, at, toRoad, home, turnTo: v => live && live.go(v), turn: d => live && live.turn(d), get live() { return live; }, get dragging() { return !!down; } };
   }
 
   App.screen('home', {
@@ -719,6 +721,12 @@ const Camp = (() => {
     if (tolls.length) waiting.tolls = tolls;
     for (const id of ['tollhouse', 'scavengercamp', 'salvagepit', 'trainingyard', 'infirmary']) if (Base.built(id, s)) { const got = Base.preview(id, s); if (got.length) waiting[id] = got; }
     if (s.freePotion.waiting) waiting.fire = [{ kind: 'item', item: 'draught', n: s.freePotion.waiting, text: `+${s.freePotion.waiting}` }];
+    // the first sheet with tolls on it: Wick's line on them (docs/first-session-spec.md §2, from his old goodbye)
+    let tollsLine = null;
+    if (waiting.tolls && !s.campaign.tips['away:tolls'] && s.settings.tips !== false) {
+      s.campaign.tips['away:tolls'] = Date.now(); Save.commit();
+      tollsLine = h('div', { class: 'aw-wick', 'data-tut': 'away-tolls' }, h('img', { class: 'aw-pt', src: Wick.portraitURL(), alt: 'Old Wick', draggable: 'false' }), h('span', { text: 'The road earned tolls while you were gone.' }));
+    }
     let fullName = null;
     for (const id of order) {
       const got = waiting[id];
@@ -741,6 +749,7 @@ const Camp = (() => {
       h('button', { class: 'sheet-x', 'aria-label': 'Close', onclick: () => { click(); closeSheet(); } }, '×'),
       h('span', { class: 'kicker c', text: `${timeStr(ms)} by lantern-light` }),
       h('h2', { class: 'c', text: 'While you were away' }),
+      tollsLine,
       rows.length ? h('div', { class: 'gains' }, rows) : h('p', { class: 'flavor', text: 'The lantern burned low and the road kept quiet. Every cleared stage earns tolls while you are gone.' }),
       fullName && STORE_UP[fullName] ? h('div', { class: 'banner warm' }, ico(BUILDINGS[fullName].icon, 'm'), h('span', { text: `The ${BUILDINGS[fullName].name} filled up. ${STORE_UP[fullName]}` })) : null,
       btn(Object.keys(waiting).length ? 'Gather it all' : 'Back to the fire', () => {
@@ -835,5 +844,6 @@ const Camp = (() => {
   // scene: the camp's live scene while it shows (js/campscene.js), and at(x, y): the anchor a tap at that point in the
   // camp (design pixels) would reach, both for the tools. toRoad(k): up the road to stage k (the frontier when not
   // given), with its card open, while the Hearth shows (Wick's guide, back on a road step after a load).
-  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, at: (x, y) => (ui ? ui.at(x, y) : null), toRoad: k => { if (ui && ui.live && App.current === 'home') ui.toRoad(k); } };
+  // dragging: a finger (or the mouse) is down on the scene (Wick's drag step waits for it to lift, js/firstsession.js)
+  return { showPick, showAway, showRenown, statusOf, timeStr, waiting, anyWaiting, goal, sceneState, gatherAll, get scene() { return ui && ui.live; }, get dragging() { return !!(ui && ui.dragging); }, at: (x, y) => (ui ? ui.at(x, y) : null), toRoad: k => { if (ui && ui.live && App.current === 'home') ui.toRoad(k); } };
 })();

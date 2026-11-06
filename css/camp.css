@@ -148,6 +148,9 @@
 .cv-roadhud button,.cv-roadhud .cv-region{pointer-events:auto}
 .camp .cv-round.cv-back{position:absolute;left:18px;top:13px;width:44px;height:44px;font:400 34px/1 var(--f-display);color:var(--ember)}
 .cv-region{position:absolute;left:72px;top:11px;display:flex;align-items:center;gap:8px}
+/* "While you were away": Wick's first-time line on the tolls */
+.aw-wick{display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:6px 10px;background:#f2e7d0;color:#2a1a10;border:1px solid #000;box-shadow:0 0 0 2px #6b4a2a;font:600 14px/1.3 var(--f-body)}
+.aw-wick .aw-pt{width:30px;height:40px;flex:none;image-rendering:pixelated}
 /* the gold, at the top right while the road shows (the dock is down) */
 .cv-roadhud .cv-rgold{position:absolute;right:18px;top:13px;height:44px;display:flex;align-items:center;gap:6px;padding:0 14px 0 10px;background:var(--panel);border:1px solid var(--trim);box-shadow:0 0 0 1px #000;pointer-events:auto}
 .cv-rgold b{font:600 15px/1 var(--f-body);color:var(--bone);text-shadow:0 1px 0 #000;white-space:nowrap}
