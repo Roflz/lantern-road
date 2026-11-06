@@ -228,7 +228,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Rest** | Heroes at the Hearth lose fatigue over time, even while the app is closed. | 10 an hour at the fire, 20 to 35 in an Infirmary bed, and 10 training or at a lesson. | `rest` · fatigue |
 | **Bed** | An Infirmary bed, where the most tired hero at the Hearth rests faster. | Pin a hero to keep a bed for them. | `bed` · cross |
 | **Plot** | A space in the ring around the fire where one building can stand. | You start with 3. Renown clears more, up to 14. | `plot` · plus |
-| **Blueprint** | A building you can now raise, brought to you by the road. | First clears in Region I bring most of them, and Regions II to IV the rest. | `blueprint` · scroll |
+| **Blueprint** | A building you can now raise, brought to you by the road. | None comes before the Sexton: Bess’s first quest brings the Toll House’s plan, and first clears from Region II on bring the rest. | `blueprint` · scroll |
 | **Upgrade** | Raise a building a level, for gold and a material; it’s instant. | Every building has five levels. Levels 1 and 2 cost Bone Dust, and level 3 and up its home material. | `upgrade` · plus |
 | **Home material** | The material a building costs from level 3, which ties it to one region. |  | `home_material` · bone |
 | **Choice** | At levels 3 and 5, an idle building offers two upgrades: pick one. | One always adds storage. You can switch later by paying that level’s cost again. | `choice` · check |
@@ -245,7 +245,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 | **Notices** | A Recruit Board track: more recruits on each board. |  | `notices` · scroll |
 | **Picks** | A Recruit Board track: more hires from each board. |  | `picks` · scroll |
 | **Veterans** | A Recruit Board track: recruits who arrive at higher levels, points spent. | The top rank brings storied recruits, some already combined or awakened. | `veterans` · scroll |
-| **Recruit Board** | Where new heroes wait to be hired; it stands outside the plots. | A new board comes whenever the party comes home, and every 4 hours. Its first recruit is free. | `recruitboard` · scroll |
+| **Recruit Board** | Where new heroes wait to be hired; it stands outside the plots. | A new board comes whenever the party comes home, and every 4 hours. Only your first pick is free. | `recruitboard` · scroll |
 | **Toll House** | Raises the tolls travellers pay to use the road you’ve cleared. | It earns more the further you’ve cleared. Its focus can take party items instead of gold. | `tollhouse` · coin |
 | **Infirmary** | Beds where tired heroes rest faster than at the fire. | More levels bring more and better beds, and from level 3 a still-room. | `infirmary` · cross |
 | **Training Yard** | XP for resting heroes, up to the level of your highest lit stage. | You choose who trains. | `trainingyard` · sword |
@@ -357,7 +357,7 @@ Where the game still shows a name that you've renamed, the tool reports a pendin
 
 | Name | Line | More, for the Codex | Id · icon |
 |---|---|---|---|
-| **Gold** | The coin of the road, for recruits, buildings, items and respecs. | You start with 100. Foes further down the road drop more. | `gold` · coin |
+| **Gold** | The coin of the road, for recruits, buildings, items and respecs. | You start with 300, the crown’s advance. Foes further down the road drop more. | `gold` · coin |
 | **Material** | What buildings are made of; each region drops one more than the rest. | The Scavenger Camp gathers them while you’re away. | `material` · bone |
 | **Bone Dust** | The Gravefields’ material, which every building’s first two levels need. | It also pays for the Recruit Board’s ranks, and the Training Yard and Shop past level 2. | `bone_dust` · bone |
 | **Chapel Wax** | The Drowned Chapel’s material, for raising some buildings past level 2. | The Toll House, Infirmary and Tactician need it from level 3. | `chapel_wax` · wax |
@@ -406,17 +406,17 @@ This table is generated from `DECIDED` in `tools/glossary.js`. "Still in the gam
 
 | Old name | Decided name | Note | Still in the game |
 |---|---|---|---|
-| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 69 · js/buildings.js 167, 181, 276, 293 · js/camp.js 820 · js/data.js 592 · js/firstsession.js 111, 124, 140 · js/guide.js 129, 145 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
-| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 132 · js/main.js 115, 178, 319 |
+| Camp, Base, Home, home base | the Hearth, and “Hearth” on buttons | One name for the home base, like Darkest Dungeon’s Hamlet. Players don’t name it. | js/base.js 73 · js/buildings.js 167, 181, 276, 293 · js/camp.js 828 · js/data.js 595 · js/firstsession.js 111, 124, 139 · js/guide.js 141 · js/main.js 389 · js/map.js 419 · js/proto.js 94, 118 |
+| Come home, the come-home rule | “Hearth” on the button, and Return to the Hearth for the action | Calling the party home. A battle under way finishes first. | js/guide.js 128 · js/main.js 115, 178, 319 |
 | Return to base | Return to the Hearth | The party rule action that ends a trip. | js/data.js 342 |
 | Come home when | Return when… | The stage sheet’s chips. | js/map.js 388 |
-| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 582, 588 · js/firstsession.js 120 · js/guide.js 92, 98 · js/main.js 377 |
+| turn strip, turn flags, flag | Turn order | The banners along the top. | js/classes.js 298 · js/data.js 19, 294, 585, 591 · js/firstsession.js 120 · js/guide.js 92, 98 · js/main.js 377 |
 | character | hero | On every screen. | js/classes-late.js 144 · js/classes.js 217 · js/data.js 309 · js/main.js 377, 379, 391 |
-| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 131 · js/battle.js 545 · js/campaign.js 327 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
+| Knocked out, knockouts, fell | Fallen, and “An ally has fallen” | A hero at 0 health. | js/base.js 135 · js/battle.js 545 · js/campaign.js 338 · js/classes-late.js 253 · js/data.js 310 · js/main.js 262, 308, 335, 476 · js/map.js 358 |
 | spoils, rewards | Loot | What battles drop. The rules editor’s “learned from a battle reward” means a first clear, not loot. | js/data.js 277, 278, 282, 288, 289, 290, 291, 292, 293, 294, 301, 303, 305, 311 · js/main.js 202, 478 · js/map.js 279 |
-| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 90 · js/buildings.js 45, 57 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 535, 694 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
-| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 506 |
-| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 511 · js/rules.js 288, 401, 717 |
+| Defense | Defence | British spelling throughout, as in Armour and Draught. | js/base.js 94 · js/buildings.js 45, 57 · js/classes-late.js 51, 83, 91, 232, 247 · js/classes.js 122, 268, 273, 360 · js/data.js 45, 538, 697 · js/hero.js 31 · js/items.js 59 · js/map.js 319 |
+| Foe: highest attack | Foe: highest Power |  | js/data.js 288, 507 |
+| Tactician I | Lesson I | The Tactician’s lessons are Lesson I, II and III. | js/data.js 512 · js/rules.js 288, 401, 717 |
 | Holding the line | Holding the Line | Title Case for skills, statuses, items, paths, buildings and regions. | js/data.js 74 |
 | Empty Plot, How Battles Work | Empty plot, How battles work | Sentence case for rules, conditions, buttons and labels. | js/main.js 372 |
 | straight apostrophes | curly ones (’) |  | js/data.js 295 |

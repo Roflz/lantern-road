@@ -222,7 +222,7 @@ def main():
             check(tap('.camp [data-tut=hearth-quest]', 500) and wait(PANEL + " && !!document.querySelector('[data-tut=quest-claim]')", 1500), f'{tag}: her panel has The Gravedigger’s Claim')
             shot('10-done')
             g0 = js('Save.state.currencies.gold')
-            check(tap('[data-tut=quest-claim]', 400) and q()['story'] == 'claimed' and js('Save.state.currencies.gold') > g0, f'{tag}: Claim pays (the plan already came with 1-5)')
+            check(tap('[data-tut=quest-claim]', 400) and q()['story'] == 'claimed' and js("Base.blueprint('tollhouse', Save.state)"), f'{tag}: Claim brings the Toll House plan (no stage brings it)')
             check(not js("!!document.querySelector('[data-tut=quest-card]')"), f'{tag}: the card is gone')
             tap('.qs .kp-x', 400)
             check(tracker() is None, f'{tag}: and so is the tracker’s line')

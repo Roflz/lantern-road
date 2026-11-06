@@ -16,7 +16,7 @@
 //   2. if old data has to change shape, raise SAVE_VERSION and add MIGRATIONS[n] (it receives a version n-1 save).
 // normalize() fills anything missing from defaultState(), so step 1 is usually enough.
 
-const SAVE_VERSION = 8;
+const SAVE_VERSION = 9;
 const SAVE_KEY = 'lantern-road-save';
 const SAVE_BAK = 'lantern-road-save-bak';        // the last save that loaded cleanly (S1's: saveKey(n, '-bak'))
 const SAVE_BROKEN = 'lantern-road-save-broken';  // a save that could not be read, kept for inspection (saveKey(n, '-broken'))
@@ -56,7 +56,7 @@ function defaultState() {
     roster: [],             // every character you own
     party: [null, null, null, null, null, null],          // formation slots 0-5: 2 front, 4 back
     inventory: { items: [], potions: {} },                // items: the Bag's gear (js/items.js); potions: party items, by id
-    currencies: { gold: typeof BASE !== 'undefined' ? BASE.START_GOLD : 100, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
+    currencies: { gold: typeof BASE !== 'undefined' ? BASE.START_GOLD : 300, mats: Object.fromEntries(MATERIALS.map(m => [m.id, 0])) },
     // The road (js/campaign.js). current: { stage, seed } of a battle under way. road: the trip settings and the rule
     // set chosen for each stage. trip: the trip under way. lastTrip: its summary once home. tips: first-time tips shown.
     campaign: { cleared: [], best: {}, current: null, road: { keepGoing: true, sets: {} }, trip: null, lastTrip: null, tips: {} },
@@ -66,7 +66,7 @@ function defaultState() {
     tactics: { party: { slots: PARTY_RULES.slots[0], rules: [] }, loadout: { slots: LOADOUT.slots[0], items: [] } },
     base: { buildings: {}, plots: [], beds: [], pins: [], hall: {}, done: {}, paid: [], clock: 0, skew: 0 }, // the home base (js/base.js)
     renown: { points: 0, awarded: {} },
-    board: { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, free: true, seq: 0 },
+    board: { recruits: [], picks: 1, refreshedAt: 0, ranks: { notices: 0, picks: 0, veterans: 0 }, seq: 0 },
     freePotion: { waiting: 0, since: 0 },
     shop: { stall: [], refreshedAt: 0, n: 0 },
     settings: { sfx: true, music: true, motion: true, speed: 1, tips: true, proto: true }, // tips: first-time tips; proto: show the prototype tools
@@ -74,8 +74,9 @@ function defaultState() {
     name: '',               // the name you gave Wick (the Hearth shows it by your Renown); '' until you do
     // Wick's first session (js/firstsession.js): step, the forced step under way; done once it is over (or skipped);
     // replay: the steps seen again since Settings → Replay the guide, or null. visits: his unlock visits
-    // (js/visits.js), each 'new', 'later' or 'seen'.
-    guide: { step: '', done: false, replay: null, visits: {} },
+    // (js/visits.js), each 'new', 'later' or 'seen'. camp: the Hearth's buildings view is open (Wick has shown it, or
+    // the session is over), with or without a blueprint (Base.viewOpen).
+    guide: { step: '', done: false, replay: null, visits: {}, camp: false },
     // Bess the carter (js/quests.js): bess, at the Hearth; story, her first quest ('', 'offered', 'on', 'claimed');
     // jobs, the daily jobs ('', 'due', 'new', 'seen'); daily, today's.
     quests: { bess: false, story: '', jobs: '', daily: null },
@@ -128,7 +129,7 @@ function normalize(d) {
   s.inventory.items = s.inventory.items.map(x => Items.valid(x)).filter(x => x && !uids.has(x.uid) && uids.add(x.uid));
   if (!(s.lastSeen > 0)) s.lastSeen = Date.now();
   // A save from before the guide, with heroes in it, has had its first session.
-  if (!(isObj(d) && isObj(d.guide)) && s.roster.length) s.guide.done = true;
+  if (!(isObj(d) && isObj(d.guide)) && s.roster.length) { s.guide.done = true; s.guide.camp = true; }
   // A save from before Bess, past 1-2, has her at the Hearth already, with her first quest offered.
   if (!(isObj(d) && isObj(d.quests)) && s.campaign.cleared.includes('1-2')) { s.quests.bess = true; s.quests.story = 'offered'; }
   if (typeof Quests !== 'undefined') Quests.ensure(s);
@@ -238,6 +239,26 @@ const MIGRATIONS = {
   // one comes back as a point to spend on a stat (the hero card's Spend shows them on its badge).
   8: old => {
     for (const c of Array.isArray(old.roster) ? old.roster : []) if (isObj(c) && isObj(c.alloc)) delete c.alloc.res;
+    return old;
+  },
+  // Version 9 (the first session's rules, docs/first-session-spec.md §5–6): only the first pick is free, a new game
+  // starts with the crown's advance (300 gold), and no building's blueprint comes before the Sexton. Nothing is taken
+  // away: a save with nobody yet gets the advance; one whose free recruit is still on the board gets the difference
+  // instead (200 gold, about what a recruit costs); and every blueprint a first clear already brought stays, recorded
+  // in unlocks (with the Tactician's, now apart from Tactician I). A save past Wick's first session keeps the buildings
+  // view open.
+  9: old => {
+    const roster = Array.isArray(old.roster) ? old.roster : [], cur = isObj(old.currencies) ? old.currencies : (old.currencies = {});
+    const START = typeof BASE !== 'undefined' ? BASE.START_GOLD : 300, gold = Number.isFinite(cur.gold) ? cur.gold : 0;
+    if (!roster.length) cur.gold = Math.max(gold, START);
+    else if (isObj(old.board) && old.board.free === true) cur.gold = gold + START - 100;
+    if (isObj(old.board)) delete old.board.free;
+    const u = isObj(old.unlocks) ? old.unlocks : (old.unlocks = {}), cleared = isObj(old.campaign) && Array.isArray(old.campaign.cleared) ? old.campaign.cleared : [];
+    const WAS = { recruitboard: '1-2', tollhouse: '1-5', infirmary: '1-7', trainingyard: '1-8', shop: '1-10', tacticianhall: '1-11', scavengercamp: '1-13', barracks: '1-15', salvagepit: '1-16' };
+    for (const id in WAS) if (!u[id] && cleared.includes(WAS[id])) u[id] = Date.now();
+    if (u.tactician && !u.tacticianhall) u.tacticianhall = u.tactician;
+    // the buildings view no longer waits for a blueprint, but for Wick: a save past his first session has it open
+    if (isObj(old.guide) && old.guide.done) old.guide.camp = true;
     return old;
   },
 };

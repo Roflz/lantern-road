@@ -106,11 +106,7 @@ const Guide = (() => {
   const V = () => (typeof Visits !== 'undefined' ? Visits : null);
   function onScreen(name) {
     if (!tipsOn() || (FS() && FS().on) || (V() && V().on)) return;
-    const s = st();
     if (name === 'tactics') setTimeout(() => { if (!(V() && V().on)) coach('c:tactics', '.tx-rule .tx-grip', 'Tactics run from the top. Drag one to move it; switch one off to skip it.', { place: 'below', ms: 7000 }); }, 450);
-    // the free recruit: the Recruit Board's chip in the camp's party view (its plaque, if the chip isn't up)
-    if (name === 'home' && typeof Base !== 'undefined' && Base.boardOpen(s) && s.board.free && s.board.recruits.length)
-      setTimeout(() => coach('c:board', $('.camp .cv-wait[data-id="board"]') ? '.camp .cv-wait[data-id="board"]' : '.camp .cv-plq[data-id="board"]', 'Your first recruit is free: open the Recruit Board.', { place: 'above', ms: 6500 }), 700);
   }
 
   // ── new things: what a trip unlocked, with a way to each (the trip summary on the Road tab, js/map.js)
@@ -126,11 +122,11 @@ const Guide = (() => {
   const BUILD = id => ({ label: 'Build it', fn: () => goBuild(id) });
   const NEW = {
     tactics: () => ({ line: 'Every hero follows rules you set, read from the top on each turn.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
-    recruitboard: () => ({ line: 'It stands at camp, and your first recruit is free.', label: 'Recruit', fn: goBoard }),
+    recruitboard: () => ({ line: 'It stands at the Hearth: new faces for the road, for a price.', label: 'Recruit', fn: goBoard }),
     // Party items (1-3): Wick's visit to the Tactics screen until it's seen (js/visits.js), then the party's tactics
     items: () => ({ line: 'Two Healing Draughts are packed. A party tactic uses one when an ally drops below half health, or tap one in battle.', label: 'The loadout', fn: () => (V() && V().waiting('items') ? V().start('items') : App.actions.tactics('party', 'map')) }),
     keepgoing: () => ({ line: 'After a win the party walks on to the next stage. The come-home rule brings everyone back at 75 fatigue.' }),
-    tactician: () => ({ line: 'Thresholds, Focus fire, the Move action, saved rule sets and a dozen new conditions are yours. The Tactician’s blueprint comes with it: rule and loadout slots.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
+    tactician: () => ({ line: 'Thresholds, Focus fire, the Move action, saved rule sets and a dozen new conditions are yours.', label: 'Open Tactics', fn: () => App.actions.tactics(leader(), 'map') }),
     gravecaller: () => ({ line: 'A new class joins the Recruit Board: the Gravecaller, who raises thralls from the fallen.', label: 'Recruit', fn: goBoard }),
   };
   // What a new thing is and the way to it: { id, name, icon, line, label, fn }, fn and label only where there is a way.

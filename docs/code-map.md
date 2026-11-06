@@ -13,7 +13,7 @@ that changes a screen.
 | Screen | Files | State |
 |---|---|---|
 | 1 Title, servers, the landscape frame | `js/title.js`, `css/title.css`, `js/frame.js`, `#stage`/`#frame` in `css/game.css`, servers in `js/save.js` | Redesigned (PR #21) |
-| 2 The Hearth (camp) | `js/campscene.js` (the scene), `js/hearthart.js` (its buildings and props, drawn in code), `js/camp.js` (the screen: HUD, the dock, plaques, taps, formation), `js/dockart.js` (the dock's menu objects and the board's picture), `js/tip.js` (tooltips), `css/camp.css` (`cv-`) | Redesigned (PR #24); the scene's detail pass from `hearth.html` (phase A: the art, the terrace, the Old Beacon); the dock along the bottom (`docs/mockups/hearth-dock.html`, 2026-11-05: gold and materials, Set out, the menus as drawn things), checked by `tools/board_check.py` |
+| 2 The Hearth (camp) | `js/campscene.js` (the scene), `js/hearthart.js` (its buildings and props, drawn in code), `js/camp.js` (the screen: HUD, the dock, plaques, taps, formation), `js/dockart.js` (the dock's menu objects and the board's picture), `js/tip.js` (tooltips), `css/camp.css` (`cv-`) | Redesigned (PR #24); the scene's detail pass from `hearth.html` (phase A: the art, the terrace, the Old Beacon); the dock along the bottom (`docs/mockups/hearth-dock.html`, 2026-11-05: gold and materials, Set out, the menus as drawn things), checked by `tools/board_check.py`. Collect rises over the menus at the right (clear of the Recruit Board's plaque), and the road's HUD shows the gold at the top right (`road-gold`). The buildings view opens once Wick has shown it (`save.guide.camp`) or with a blueprint: `Base.viewOpen` |
 | 3 The first pick | `js/firstpick.js` (`FirstPick`), on the Recruit Board's panel (`RecruitBoard` in `js/buildings.js`); `css/board.css` (`rb-`, `fp-`) | Redesigned: the board's panel with Free tags and Wick (`docs/mockups/recruit-board.html`, First pick); checked by `tools/board_check.py` and `tools/guide_check.py` |
 | 4 The Road and the stage sheet | `js/map.js`, `css/map.css` | Old layout, in the column; the road view is being built (`docs/mockups/road-view.html`) |
 | 5 Formation and the Heroes list | Formation: `js/formation.js`, `css/formation.css` (`fm-`). The Heroes list: `js/heroes.js` (`HeroesList`, the `'party'` screen the Hearth's Heroes button opens), `css/hero.css` (`hl-`, with the card kit `hc-`) | Formation redesigned (PR #26); checked by `tools/formation_check.py`. The Heroes list redesigned (the hero card mockup's Heroes state: a card a hero, filters, Dismiss, the Bag); checked by `tools/bag_heroes_check.py` |
@@ -39,11 +39,11 @@ that changes a screen.
 | The battle simulation (seed and setup in, event log out) | `js/sim.js` |
 | Heroes: rolls, levels, points (stats only: resistances take none from save version 8), thresholds, trees | `js/hero.js` |
 | Gear and loot: pieces, rolls, stars and enchantment lines (`ENCHANT`; the star odds and floors are `STARS` in `js/data.js`) | `js/items.js` |
-| The home base model: buildings, plots, Renown, the Recruit Board, idle buildings, the road's tolls | `js/base.js` |
+| The home base model: buildings, plots, Renown, the Recruit Board, idle buildings, the road's tolls | `js/base.js`. From the first session's rules (`docs/first-session-spec.md` §5–6): 300 gold to start (`BASE.START_GOLD`, the crown's advance); only the first pick is free (the board's `free` flag is gone); the board opens with 1-1; no blueprint before the Sexton (`BASE_UNLOCK_STAGE`: Region I's move to 2-1 … 2-7, the Tactician's as `tacticianhall`, apart from Tactician I at 1-11; the Toll House's plan is Bess's quest's reward) |
 | Fatigue and rest | `js/rest.js` |
 | The campaign: progress, rewards, unlocks, trips | `js/campaign.js` |
 | Bess's quests: the story quest, the daily jobs (counted from `Campaign.onSettle` and the tolls collected) | `js/quests.js` (`save.quests`, with its migration in `js/save.js`) |
-| Saves, migrations, servers, the cloud copy | `js/save.js` |
+| Saves, migrations, servers, the cloud copy | `js/save.js` (version 9: the first session's rules; nothing taken away, see `MIGRATIONS[9]`) |
 | The app shell: screens, the tab bar, the purse | `js/app.js`, `css/app.css` |
 | Tooltips (a hover, or a press held), for the screens drawn to `docs/ui-rules.md` | `js/tip.js`, `.tp` in `css/board.css` |
 | Pixel art, icons, scenery | `js/art.js` |

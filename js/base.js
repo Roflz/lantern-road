@@ -15,7 +15,7 @@
 //                   BASE.STORE hours), from the first cleared stage on
 //   base.clock      the last moment the base was brought up to date; base.skew: prototype time travel, in ms
 //   renown          { points, awarded: { key: 1 } }: every award that counts once per save
-//   board           the Recruit Board: { recruits, picks, refreshedAt, ranks: { notices, picks, veterans }, free, seq,
+//   board           the Recruit Board: { recruits, picks, refreshedAt, ranks: { notices, picks, veterans }, seq,
 //                   pending (a refresh owed for the next time the party is home), first (the first board's classes) }
 //   freePotion      { waiting, since }: Healing Draughts by the fire
 //   shop            { stall, refreshedAt, n }: the Shop's gear stall
@@ -44,13 +44,17 @@ const BASE = {
   ITEM_SELL: 0.3,                 // a party item sells for 30% of its Shop price
   ITEM_ODDS: [['draught', 50], ['lampoil', 25], ['tincture', 15], ['salts', 10]],
   RECRUIT: 150, RESPEC: 150,      // × S at the character's level
-  START_GOLD: 100,
+  // a new game's gold: the crown's advance, which pays for the first paid recruit (docs/first-session-spec.md §5). Only
+  // the first pick is free.
+  START_GOLD: 300,
 };
 const BASE_S = L => 1 + L / 5;    // the gold scale, S = 1 + L ÷ 5 (home-base spec §2)
 
 // Unlocks the campaign records on first clears (campaign spec §5.3). Until the campaign map lands, a cleared stage of
-// the same id counts too.
-const BASE_UNLOCK_STAGE = { recruitboard: '1-2', items: '1-3', tollhouse: '1-5', infirmary: '1-7', trainingyard: '1-8', shop: '1-10', tactician: '1-11', scavengercamp: '1-13', barracks: '1-15', salvagepit: '1-16', gravecaller: '1-18', 'region:1': '1-18' };
+// the same id counts too. No building comes before the Sexton (docs/first-session-spec.md §6, decision 1): Region I's
+// blueprints come with Region II's early first clears, and the Toll House's plan is Bess's first quest's reward
+// (js/quests.js), so it has no stage. The Tactician's blueprint (tacticianhall) is apart from Tactician I (1-11).
+const BASE_UNLOCK_STAGE = { recruitboard: '1-1', items: '1-3', tactician: '1-11', gravecaller: '1-18', 'region:1': '1-18', infirmary: '2-1', trainingyard: '2-2', shop: '2-3', tacticianhall: '2-4', scavengercamp: '2-5', barracks: '2-6', salvagepit: '2-7' };
 
 // ── the buildings (home-base spec §3)
 // f: cost factor. home: the material its level 3+ costs. unlock: what makes it a blueprint. choices: the level-3 and
@@ -70,7 +74,7 @@ const BUILDINGS = {
     choices: { 3: [['longdrills', 'Long Drills', 'Stores 12 hours'], ['harddrills', 'Hard Drills', '+50% XP, but trainees don’t recover fatigue']],
       5: [['nightdrills', 'Night Drills', 'Stores 12 hours more'], ['mentors', 'Mentors', 'Double XP for trainees 10 or more levels below your best']] } },
   shop: { name: 'Shop', icon: 'bag', art: 'shop', home: 'bone_dust', f: 0.8, unlock: 'shop', line: 'Party items, and a small gear stall.' },
-  tactician: { name: 'Tactician', icon: 'book', art: 'tactician', home: 'chapel_wax', f: 0.8, unlock: 'tactician',
+  tactician: { name: 'Tactician', icon: 'book', art: 'tactician', home: 'chapel_wax', f: 0.8, unlock: 'tacticianhall',
     line: 'New rule conditions, party rule slots and loadout slots.' },
   scavengercamp: { name: 'Scavenger Camp', icon: 'bone', art: 'scav', home: 'heartwood', f: 1, unlock: 'scavengercamp', idle: true,
     line: 'Scavengers bring back a region’s material.',
@@ -185,7 +189,7 @@ const Base = (() => {
     for (const k in BOARD_TRACKS) b.ranks[k] = clamp(Math.round(b.ranks[k]) || 0, 0, BOARD_TRACKS[k].ranks.length);
     if (!Number.isFinite(b.picks)) b.picks = 1;
     if (!Number.isFinite(b.refreshedAt)) b.refreshedAt = 0;
-    if (typeof b.free !== 'boolean') b.free = true;
+    delete b.free; // only the first pick is free now (docs/first-session-spec.md §5)
     if (!Number.isFinite(b.seq)) b.seq = 0;
     if (!isO(s.freePotion)) s.freePotion = { waiting: 0, since: 0 };
     if (!isO(s.shop)) s.shop = { stall: [], refreshedAt: 0, n: 0 };
@@ -242,9 +246,13 @@ const Base = (() => {
   const built = (id, s = store()) => level(id, s) > 0;
   const choice = (id, lv, s = store()) => { const x = rec(id, s); return x && x.choices ? x.choices[lv] || null : null; };
   const hasChoice = (id, key, s = store()) => { const x = rec(id, s); return !!x && (x.choices[3] === key || x.choices[5] === key); };
-  // Is it a blueprint you can build: unlocked by the road (its unlock, or its own id if the campaign records one).
-  const blueprint = (id, s = store()) => BUILDINGS[id].plot !== false && (unlocked(BUILDINGS[id].unlock, s) || !!(s && s.unlocks && s.unlocks[id]));
+  // Is it a blueprint you can build: unlocked by the road (its unlock, or its own id if the campaign records one as a
+  // building: Tactician I, the feature, shares the Tactician's id and isn't its blueprint).
+  const blueprint = (id, s = store()) => BUILDING_ORDER.includes(id) && BUILDINGS[id].plot !== false && (unlocked(BUILDINGS[id].unlock, s) || !!(s && s.unlocks && s.unlocks[id] && (typeof UNLOCKS === 'undefined' || !UNLOCKS[id] || UNLOCKS[id].kind === 'building')));
   const available = (s = store()) => BUILDING_ORDER.filter(id => blueprint(id, s) && !built(id, s));
+  // The Hearth's buildings view (js/camp.js) opens once Wick has shown it (save.guide.camp, js/firstsession.js), or with
+  // the first blueprint or building: until then the camera stays with the party. Collect and the tolls' goal wait for it.
+  const viewOpen = (s = store()) => !!s && (!!(s.guide && s.guide.camp) || BUILDING_ORDER.some(id => BUILDINGS[id].plot !== false && (built(id, s) || blueprint(id, s))));
   // The cost of raising a building to a level: { gold, mat, n }.
   function cost(id, lv) {
     const D = BUILDINGS[id], [g, m] = BASE.STD[lv - 1], f = D.f || 1, x = m * f;
@@ -719,7 +727,6 @@ const Base = (() => {
   }
   const qualityFactor = q => 0.9 + 0.35 * q;
   function recruitPrice(r, s = store()) {
-    if (s.board.free) return 0;
     return Math.round(BASE.RECRUIT * BASE_S(r.level) * qualityFactor(r.q) * (r.storied ? 1.5 : 1));
   }
   // A new board: recruits of the classes on offer, at most 2 of one class. The first board after the first pick shows
@@ -778,7 +785,6 @@ const Base = (() => {
     const r = b.recruits[i], price = recruitPrice(r, s);
     if (s.currencies.gold < price) return null;
     s.currencies.gold -= price;
-    if (b.free) b.free = false;
     const c = Hero.create(r.cls, 'c' + s.nextId++, { name: r.name, base: r.base });
     if (r.level > 1) {
       Hero.gainXp(c, Hero.xpBetween(1, r.level), { quiet: true });
@@ -964,7 +970,7 @@ const Base = (() => {
     return true;
   }
 
-  // ── a new game: one hero picked from three, and 100 gold
+  // ── a new game: one hero picked from three (free), and the crown's advance (BASE.START_GOLD)
   function newGame(cls, s = store(), o = {}) {
     if (!STARTERS.includes(cls) || s.roster.length) return null;
     const rng = o.rng || Math.random;
@@ -975,7 +981,6 @@ const Base = (() => {
     // the first board: the two starting classes you didn't pick, and one other
     const others = STARTERS.filter(k => k !== cls), rest = CLASS_ORDER.filter(k => !STARTERS.includes(k) && !CLASS_JOINS[k]);
     s.board.first = others.concat(rest[Math.floor(rng() * rest.length)]);
-    s.board.free = true;
     s.renown.awarded['cls:' + cls] = 1; // the first pick isn't a class joining: only hires are
     changed(s);
     return c;
@@ -1120,7 +1125,7 @@ const Base = (() => {
   const proto = {
     gold: (n = 1000, s = store()) => { s.currencies.gold += n; changed(s); },
     mats: (n = 50, s = store()) => { for (const m of MATERIALS) s.currencies.mats[m.id] = (s.currencies.mats[m.id] || 0) + n; changed(s); },
-    blueprints: (s = store()) => { const t = Date.now(); for (const id of ['recruitboard', 'items', 'tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit', 'gravecaller', 'region:1', 'region:2', 'region:3', 'region:4']) if (!s.unlocks[id]) s.unlocks[id] = t; ensure(s); teach(s); tick(s); changed(s); },
+    blueprints: (s = store()) => { const t = Date.now(); for (const id of ['recruitboard', 'items', 'tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'tacticianhall', 'scavengercamp', 'barracks', 'salvagepit', 'gravecaller', 'region:1', 'region:2', 'region:3', 'region:4']) if (!s.unlocks[id]) s.unlocks[id] = t; ensure(s); teach(s); tick(s); changed(s); },
     renown: (s = store()) => { const R = renown(s); award(null, R.need - R.into, s); ensure(s); changed(s); },
     // Time travel: the clock jumps on, as if you had been away (the party counts as home), and the away sheet reports it.
     skip: (hours = 1, s = store()) => { const before = snapshot(s); s.base.skew += hours * HOUR; tickTo(now(s), s, { offline: true }); report = makeReport(s, before, hours * HOUR); changed(s); },
@@ -1128,7 +1133,7 @@ const Base = (() => {
 
   return {
     ensure, unlocked, frontier, reached, furthest, regionName, highestLevel, now,
-    rec, level, built, choice, hasChoice, blueprint, available, cost, canPay, short, matName, matIcon, build, next, upgrade, rechoose, tearDown, setFocus,
+    rec, level, built, choice, hasChoice, blueprint, available, viewOpen, cost, canPay, short, matName, matIcon, build, next, upgrade, rechoose, tearDown, setFocus,
     renown, plotsCleared, renownFor, award,
     partySlots, loadoutSlots, rosterCap, syncSlots, teach, bonuses,
     storeHours, rates, scavRegions, trainees, yardCap, setTrainee, yardCeiling, span, collect, preview, storage, collectTrainee, tollRate,

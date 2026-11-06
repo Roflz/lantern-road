@@ -100,7 +100,8 @@ const Campaign = (() => {
   // The foes the party defeated: fallen, not called into the battle, not fled.
   const defeated = res => res.final.filter(u => u.side === 1 && !u.alive && !u.summoned && !u.fled && !u.thrall);
   // What a battle earns, worked out from its result. Deterministic: the rolls come from the battle's seed.
-  // o: { first (a first clear), classes (the roster's classes, for gear), regions (reached region ids) }
+  // o: { first (a first clear), classes (the roster's classes, for gear), regions (reached region ids), lead ({ cls, row }:
+  //   the hero a stage's firstGear fits) }
   function earn(res, stage, o = {}) {
     const rng = makeRng((((res.seed >>> 0) ^ 0x51ed270b) >>> 0) || 3);
     const L = stage.level, S = GOLD_SCALE(L), won = res.winner === 0, rank = stageRank(stage);
@@ -111,7 +112,11 @@ const Campaign = (() => {
     // clear of a PLAIN stage (the first session's 1-1) gives ★0.
     const stars = r.first && STARS.PLAIN.includes(stage.id) ? { stars: 0 } : { minStars: STARS.FLOOR[rank] || 0 };
     const gear = (gr, why) => r.gear.push({ piece: Items.loot(L, stage.region, rng, Object.assign({ classes: o.classes }, stars, gr)), why });
-    const lootRoll = () => (rng() < LOOT_ITEM ? item() : gear({ rank }, 'loot'));
+    // A stage with firstGear (1-1, docs/first-session-spec.md §1) gives its first clear's gear as those pieces, in place of
+    // the clear's one roll: Fine, level 1, ★0, with no cost line, fitting the lead hero (a weapon of their class, armour
+    // of their row's weight: medium in front, light behind). Nothing else that clear drops is gear.
+    const fixed = r.first && stage.firstGear && stage.firstGear.length ? stage.firstGear : null;
+    const lootRoll = () => (rng() < LOOT_ITEM || fixed ? item() : gear({ rank }, 'loot'));
     // battle spoils, from every foe defeated
     for (const u of defeated(res)) {
       const sp = SPOILS[rankOf(u)];
@@ -140,7 +145,10 @@ const Campaign = (() => {
         r.mats[mat] = (r.mats[mat] || 0) + C.other[1] * k;
       }
       if (rng() < C.items[0]) for (let n = 0; n < C.items[1]; n++) item();
-      if ((r.first && (stage.tier === 'light' || stage.tier === 'standard')) || rng() < C.gear) gear({ rank }, 'clear');
+      if (fixed) {
+        const lead = o.lead || { cls: (o.classes || [])[0], row: null }, cls = CLASSES[lead.cls] ? lead.cls : null, row = lead.row || (cls ? CLASSES[cls].row : 'back');
+        for (const slot of fixed) r.gear.push({ piece: Items.roll(L, stage.region, rng, { slot, rarity: 'fine', classes: cls ? [cls] : o.classes, weight: row === 'front' ? 'medium' : 'light', plain: true, stars: 0 }), why: 'first' });
+      } else if ((r.first && (stage.tier === 'light' || stage.tier === 'standard')) || rng() < C.gear) gear({ rank }, 'clear');
     }
     // a stage whose first clear must bring a level (1-1: the first level comes in the first battle)
     if (r.first && stage.firstXp) r.xpLv = Math.max(r.xpLv, stage.firstXp);
@@ -171,7 +179,7 @@ const Campaign = (() => {
     let xp = Math.round(xpL * Hero.xpToNext(stage.level)), floor = null;
     if (first) { const f = floorXp(top); if (f > xp) { xp = f; floor = top; } }
     const each = list.map(c => ({ c, share: share(xp, c.level), easy: tooEasy(xp, c.level) }));
-    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp, xpLv: xpL, floor, each, gear: first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
+    return { gold: Math.round(spoils + C.gold * S * k), mat: C.mat * k, xp, xpLv: xpL, floor, each, gear: first && stage.firstGear ? stage.firstGear.length : first && (stage.tier === 'light' || stage.tier === 'standard') ? 1 : C.gear, tier: C.name };
   }
 
   // ── fatigue (home-base spec §6): +1 for each turn a hero took, times their gear's multiplier. The home base's
@@ -228,7 +236,10 @@ const Campaign = (() => {
   function settle(res, i, s = store()) {
     const stage = STAGES[i], won = res.winner === 0, first = won && !isLit(stage.id, s);
     const classes = s.roster.map(c => c.cls), regions = REGIONS.map((R, r) => r).filter(r => reached(r, s));
-    const r = earn(res, stage, { first, classes, regions });
+    // the lead: the first hero in the formation (or on the roster), and the row they stand in
+    const li = s.party.findIndex(id => id && s.roster.some(c => c.id === id)), lc = li >= 0 ? s.roster.find(c => c.id === s.party[li]) : s.roster[0];
+    const lead = lc ? { cls: lc.cls, row: li < 0 ? CLASSES[lc.cls].row : li < 2 ? 'front' : 'back' } : null;
+    const r = earn(res, stage, { first, classes, regions, lead });
     // gold, materials and items
     s.currencies.gold += r.gold;
     for (const k in r.mats) s.currencies.mats[k] = (s.currencies.mats[k] || 0) + r.mats[k];

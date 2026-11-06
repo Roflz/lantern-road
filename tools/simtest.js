@@ -633,7 +633,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v1.roster = PARTY.map((cls, i) => ({ id: 'c' + (i + 1), cls, name: CLASSES[cls].name, level: 1, xp: 0, stats: { hp: CLASSES[cls].hp, mp: CLASSES[cls].mp, pow: CLASSES[cls].pow, def: CLASSES[cls].def, spd: CLASSES[cls].spd, crit: CLASSES[cls].crit, dodge: CLASSES[cls].dodge }, fatigue: 0, gear: { weapon: null, armor: null, accessory: null }, rules: null, joined: 1 }));
   v1.tactics = { v: 1, heroes: { warden: { slots: 4, rules: [{ if: 'always', do: 'guard', on: true }] }, pilgrim: { slots: 2, rules: [{ if: 'ally_fallen', do: 'rites', on: true }] } }, party: { slots: 2, rules: [] }, loadout: { slots: 2, items: ['draught', null] }, known: [], sets: [{ name: 'A', heroes: { warden: [] }, party: [], loadout: [] }] };
   const s = upgrade(JSON.parse(JSON.stringify(v1)));
-  ok(s.v === SAVE_VERSION && SAVE_VERSION === 8, 'save version 8');
+  ok(s.v === SAVE_VERSION && SAVE_VERSION === 9, 'save version 9');
   ok(s.roster.length === 6 && s.roster.every(c => c.base && c.level === 1 && c.equip.length === 1), 'characters upgraded');
   ok(s.roster.every(c => c.gear.weapon && GEAR[c.gear.weapon.id].type === WEAPON_OF[c.cls] && !c.gear.armor) && Array.isArray(s.inventory.items), 'version 3 gives every character a Common weapon');
   ok(s.roster[0].base.hp === CLASSES.warden.hp, 'the prototype stats became the level-1 roll');
@@ -675,9 +675,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   v7.v = 7;
   const w7 = v7.roster[0]; w7.level = 12; w7.alloc = { hp: 2, mp: 0, pow: 3, def: 0, spd: 0, crit: 0, dodge: 0, res: { stun: 4, move: 0, bleed: 2, blight: 0, curse: 0, debuff: 0 } };
   const s8 = upgrade(v7), w8 = s8.roster[0];
-  ok(s8.v === 8 && !('res' in w8.alloc) && w8.alloc.hp === 2 && w8.alloc.pow === 3 && Hero.points(w8).stat === 11 - 5 && Hero.res(w8).stun === CLASSES[w8.cls].res.stun + HERO.RES_GROWTH * 11,
+  ok(s8.v === SAVE_VERSION && !('res' in w8.alloc) && w8.alloc.hp === 2 && w8.alloc.pow === 3 && Hero.points(w8).stat === 11 - 5 && Hero.res(w8).stun === CLASSES[w8.cls].res.stun + HERO.RES_GROWTH * 11,
     `version 7 → 8: the 6 points in resistances come back (${Hero.points(w8).stat} to spend), the 5 in stats stay`);
-  console.log('Save migration checked: version 1 → 8 (characters, their rules, gear, the road, the camp, Relics, stars, resistance points), 2 → 8, 3 → 8, 5 → 8, 6 → 8, 7 → 8 and 0 → 8.');
+  console.log('Save migration checked: version 1 → 9 (characters, their rules, gear, the road, the camp, Relics, stars, resistance points), 2 → 9, 3 → 9, 5 → 9, 6 → 9, 7 → 9 and 0 → 9 (8 → 9 with the home base).');
 }
 
 // ── The Tactics model
@@ -744,20 +744,22 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
   const fresh = () => { const st = defaultState(); Base.ensure(st); st.base.clock = Date.now(); return st; };
 
-  // ── a new game: one hero picked from three, and 100 gold
+  // ── a new game: one hero picked from three (free), and the crown's advance, 300 gold (docs/first-session-spec.md §5)
   {
     const st = fresh();
-    ok(st.roster.length === 0 && st.currencies.gold === 100, 'a new game starts with nobody and 100 gold');
+    ok(st.roster.length === 0 && st.currencies.gold === 300 && BASE.START_GOLD === 300, 'a new game starts with nobody and the crown’s advance, 300 gold');
     const c = Base.newGame('pilgrim', st, { rng: makeRng(5) });
     ok(c && st.roster.length === 1 && st.party[2] === c.id && st.party.filter(Boolean).length === 1, 'the first pick stands in the back row');
     ok(st.board.first.includes('sellsword') && st.board.first.includes('hexblade') && st.board.first.length === 3 && !st.board.first.includes('pilgrim'), 'the first board shows the other two starters and one more');
-    ok(!Base.boardOpen(st), 'the Recruit Board waits for 1-2');
-    st.campaign.cleared.push('1-1', '1-2');
+    ok(!Base.boardOpen(st), 'the Recruit Board waits for 1-1');
+    ok(STAGES[0].first.includes('recruitboard') && !STAGES[1].first.includes('recruitboard') && BASE_UNLOCK_STAGE.recruitboard === '1-1', 'the board opens with 1-1’s first clear, not 1-2’s');
+    st.campaign.cleared.push('1-1');
     Base.tickTo(Date.now(), st);
-    const b = st.board.recruits;
-    ok(Base.boardOpen(st) && b.length === 3 && b[0].cls === 'sellsword' && b[1].cls === 'hexblade' && Base.recruitPrice(b[0], st) === 0, 'it opens at 1-2: the first board, and the first recruit is free');
+    const b = st.board.recruits, p0 = Base.recruitPrice(b[0], st);
+    ok(Base.boardOpen(st) && b.length === 3 && b[0].cls === 'sellsword' && b[1].cls === 'hexblade' && p0 >= 162 && p0 <= 225 && b.every(r => Base.recruitPrice(r, st) > 0), `it opens at 1-1: the first board, and every recruit has a price, only the first pick being free (${b.map(r => Base.recruitPrice(r, st)).join(', ')})`);
     const h1 = Base.hire(b[0].id, st);
-    ok(h1 && st.roster.length === 2 && st.party.includes(h1.id) && st.currencies.gold === 100 && !st.board.free && st.board.picks === 0, 'the free hire joins the formation; one pick per board');
+    ok(h1 && st.roster.length === 2 && st.party.includes(h1.id) && st.currencies.gold === 300 - p0 && !('free' in st.board) && st.board.picks === 0, `the second recruit is paid from the advance (${p0}), and joins the formation; one pick per board`);
+    ok(Math.round(BASE.RECRUIT * BASE_S(1) * 1.25) <= BASE.START_GOLD, 'the dearest level-1 recruit (225) always fits the advance');
     ok(!Base.hire(st.board.recruits[0].id, st), 'no second hire from the same board');
     Base.rollBoard(st, 'home');
     const p = Base.recruitPrice(st.board.recruits[0], st);
@@ -773,18 +775,19 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   // as they unlock and a plot is free, and hiring to the campaign's party sizes (§5.4)
   {
     // [stage, level, tier, normal foes, elite, boss, party size]; summoned foes give nothing
-    const R1 = [['1-1', 1, 'light', 1, 0, 0, 1], ['1-2', 1, 'light', 2, 0, 0, 1], ['1-3', 2, 'light', 3, 0, 0, 2], ['1-4', 2, 'standard', 3, 0, 0, 2],
+    const R1 = [['1-1', 1, 'light', 1, 0, 0, 1], ['1-2', 1, 'light', 2, 0, 0, 2], ['1-3', 2, 'light', 3, 0, 0, 2], ['1-4', 2, 'standard', 3, 0, 0, 2],
       ['1-5', 3, 'standard', 3, 0, 0, 2], ['1-6', 3, 'standard', 4, 0, 0, 3], ['1-7', 4, 'standard', 4, 0, 0, 3], ['1-8', 4, 'rich', 4, 0, 0, 3],
       ['1-9', 5, 'elite', 4, 1, 0, 4], ['1-10', 5, 'standard', 5, 0, 0, 4], ['1-11', 6, 'standard', 4, 0, 0, 4], ['1-12', 6, 'standard', 5, 0, 0, 4],
       ['1-13', 7, 'standard', 5, 0, 0, 5], ['1-14', 7, 'rich', 5, 0, 0, 5], ['1-15', 8, 'elite', 3, 1, 0, 5], ['1-16', 8, 'standard', 6, 0, 0, 6],
       ['1-17', 9, 'rich', 6, 0, 0, 6], ['1-18', 10, 'boss', 3, 0, 1, 6]];
     const CLEAR_GOLD = { light: 12, standard: 20, rich: 40, elite: 60, boss: 200 }, CLEAR_XP = { light: 0.09, standard: 0.15, rich: 0.22, elite: 0.38, boss: 0.9 };
-    const UNLOCK = { '1-2': 'recruitboard', '1-3': 'items', '1-5': 'tollhouse', '1-7': 'infirmary', '1-8': 'trainingyard', '1-10': 'shop', '1-11': 'tactician', '1-13': 'scavengercamp', '1-15': 'barracks', '1-16': 'salvagepit' };
+    // no building before the Sexton (docs/first-session-spec.md §6, decision 1): Region I brings no blueprint
+    const UNLOCK = { '1-1': 'recruitboard', '1-3': 'items', '1-11': 'tactician' };
     const WANT = ['tollhouse', 'infirmary', 'trainingyard', 'tactician', 'shop', 'scavengercamp', 'barracks', 'salvagepit'];
     const run = q => {
       const st = fresh();
       Base.newGame('sellsword', st, { rng: makeRng(9) });
-      let earned = 100, low = Infinity;
+      let earned = BASE.START_GOLD, low = Infinity;
       const rows = [];
       let late = 0;
       for (const [id, L, tier, n, el, boss, party] of R1) {
@@ -821,6 +824,9 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     const at = (r, id) => r.rows.find(x => x.id === id);
     ok(!cheap.late && !dear.late && at(dear, '1-6').party === 3 && at(dear, '1-10').party === 4 && at(dear, '1-13').party === 5 && at(dear, '1-16').party === 6, 'the campaign’s party sizes are affordable on time, even with the dearest recruits');
     ok(at(cheap, '1-18').plots >= 4, 'by the Sexton, Renown has cleared plot 4, even on first clears alone');
+    ok(cheap.rows.every(x => x.built === 0) && dear.rows.every(x => x.built === 0), 'no building stands before the Sexton');
+    // the first session's paid hire, after 1-1 (§5): 300, and 1-1's first clear, always covers it, with room to spare
+    { const g1 = BASE.START_GOLD + Math.round(8 * BASE_S(1)) + Math.round(12 * BASE_S(1) * 2), dear1 = Math.round(BASE.RECRUIT * BASE_S(1) * 1.25); ok(g1 - dear1 >= 100, `after 1-1 you hold ${g1}: the dearest level-1 recruit (${dear1}) leaves ${g1 - dear1}`); }
     console.log('\nThe economy over Region I’s first clears (home-base spec §10; recruits at their cheapest / dearest)');
     console.log('   by     party  earned   gold left     Renown  plots  built');
     for (let i = 0; i < cheap.rows.length; i++) { const a = cheap.rows[i], b = dear.rows[i]; console.log(`   ${pad(a.id, 6)} ${lpad(a.party, 5)}  ${lpad(fmt(a.earned), 6)}  ${lpad(fmt(b.left), 5)}–${pad(fmt(a.left), 6)}  ${lpad(a.renown, 6)}  ${lpad(a.plots, 5)}  ${lpad(a.built, 5)}`); }
@@ -989,7 +995,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   // ── the Masters' Hall, the Shrine, the Tactician, the Shop and dismissing
   {
     const st = fresh();
-    st.unlocks['region:1'] = 1; st.unlocks.tactician = 1; st.unlocks.shop = 1; st.currencies.gold = 1e6; for (const m of MATERIALS) st.currencies.mats[m.id] = 999;
+    st.unlocks['region:1'] = 1; st.unlocks.tactician = 1; st.unlocks.tacticianhall = 1; st.unlocks.shop = 1; st.currencies.gold = 1e6; for (const m of MATERIALS) st.currencies.mats[m.id] = 999;
     st.renown.points = 4200; Base.ensure(st);
     Base.newGame('sellsword', st, { rng: makeRng(3) });
     const c = st.roster[0];
@@ -1033,12 +1039,26 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
     const elite = STAGES.find(x => x.id === '1-9').kind === 'elite';
     ok(s5.v === SAVE_VERSION && s5.roster.length === 6 && s5.currencies.gold === 777, 'version 4 → 5: everyone stays, and so does the gold');
     ok(s5.base.legacySlots.party === 4 && s5.base.legacySlots.loadout === 3 && s5.roster[0].lessons.rule === 1, 'slots opened in the prototype stay');
-    ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !s5.board.free && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
+    ok(elite && s5.renown.points === 40 * 8 + 100 && s5.renown.awarded['lit:1-9'] && !('free' in s5.board) && s5.base.buildings.recruitboard, `Renown for the stages already lit, the elite at 100; the Recruit Board stands (${s5.renown.points})`);
     const n = JSON.parse(JSON.stringify(s5));
     ok(JSON.stringify(upgrade(n).renown) === JSON.stringify(s5.renown), 'a version 5 save loads unchanged');
     const v3 = JSON.parse(JSON.stringify(protoState())); v3.v = 3; v3.campaign.cleared = ['1-1', '2-3'];
     const r3 = upgrade(v3);
     ok(r3.v === SAVE_VERSION && r3.renown.points === 0 && r3.roster.length === 6, 'a version 3 save passes through the rebuilt road to the camp, with no Renown for the old road');
+  }
+  // ── the save: version 8 → 9 (the first session's rules): nothing is taken away
+  {
+    const v8 = (f) => { const d = JSON.parse(JSON.stringify(defaultState())); d.v = 8; d.currencies.gold = 100; d.board.free = true; f(d); return upgrade(JSON.parse(JSON.stringify(d))); };
+    const none = v8(d => { d.roster = []; });
+    ok(none.v === SAVE_VERSION && none.currencies.gold === 300 && !('free' in none.board), 'version 8 → 9: a save with nobody yet gets the crown’s advance, 300 gold');
+    const one = v8(d => { const c = Hero.create('sellsword', 'c1'); d.roster = [c]; d.party = ['c1', null, null, null, null, null]; d.currencies.gold = 138; d.campaign.cleared = ['1-1']; d.guide = { step: 'heroes', done: false, replay: null, visits: {} }; });
+    ok(one.currencies.gold === 338 && !('free' in one.board) && one.guide.camp === false, `a save whose free recruit is still on the board gets 200 gold in its place (${one.currencies.gold})`);
+    const paid = v8(d => { d.roster = [Hero.create('sellsword', 'c1'), Hero.create('pilgrim', 'c2')]; d.party = ['c1', null, 'c2', null, null, null]; d.board.free = false; d.currencies.gold = 90; });
+    ok(paid.currencies.gold === 90, 'a save that hired its free recruit keeps its gold as it was');
+    const past = v8(d => { d.roster = [Hero.create('sellsword', 'c1')]; d.board.free = false; d.campaign.cleared = STAGES.slice(0, 16).map(x => x.id); d.unlocks = { recruitboard: 1, items: 1, tollhouse: 1, infirmary: 1, tactician: 1 }; d.guide = { step: '', done: true, replay: null, visits: {} }; d.base.buildings = { tollhouse: { level: 1, plot: 0 } }; d.base.plots = ['tollhouse']; });
+    ok(['tollhouse', 'infirmary', 'trainingyard', 'shop', 'tactician', 'scavengercamp', 'barracks', 'salvagepit'].every(id => Base.blueprint(id, past)) && Base.built('tollhouse', past) && past.guide.camp && Base.viewOpen(past),
+      'a save past 1-16 keeps every blueprint the road gave it (the Tactician’s apart from Tactician I), the Toll House it built, and the buildings view');
+    ok(Quests.storyReward(past).gold === Base.cost('tollhouse', 1).gold, 'with the Toll House known already, Bess’s quest pays its cost instead');
   }
   console.log('Home base checked: a new game, the board, Region I’s gold, rest and beds, battle fatigue, idle buildings and time away, costs, choices, tearing down, Renown, the Hall, the Shrine, the Tactician, the Shop, dismissing, and the save.');
 }
@@ -1235,6 +1255,28 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   {
     const r1 = won(st('1-1'), 1), e1 = Campaign.earn(r1, st('1-1'), { first: true });
     ok(e1.xp === Math.round(st('1-1').firstXp * Hero.xpToNext(1)) && e1.xp >= Hero.xpToNext(1), `1-1's first clear still brings the first level (${e1.xp} XP)`);
+    // 1-1's first clear (docs/first-session-spec.md §1): a weapon and an armour in place of the clear's one roll, both
+    // level 1, Fine, ★0 and with no cost line, that fit the lead (their class's weapon; medium armour in front, light behind)
+    const costLine = id => (GEAR[id].lines || []).some(l => l[0] === '-') || Object.values(GEAR[id].cost || {}).some(v => v < 0);
+    let fits = 0, n1 = 0;
+    for (const [cls, row] of [['sellsword', 'front'], ['hexblade', 'back'], ['pilgrim', 'back'], ['warden', 'front'], ['crossbowman', 'back']]) for (let k = 0; k < 12; k++) {
+      const e = Campaign.earn(Object.assign({}, r1, { seed: k * 17 + 3 }), st('1-1'), { first: true, classes: [cls], lead: { cls, row } });
+      const w = e.gear.find(g => GEAR[g.piece.id].slot === 'weapon'), a = e.gear.find(g => GEAR[g.piece.id].slot === 'armor');
+      n1++;
+      if (e.gear.length === 2 && w && a && e.gear.every(g => g.why === 'first' && GEAR[g.piece.id].rarity === 'fine' && g.piece.lv === 1 && g.piece.st === 0 && !GEAR[g.piece.id].regional)
+        && GEAR[w.piece.id].type === WEAPON_OF[cls] && GEAR[a.piece.id].weight === (row === 'front' ? 'medium' : 'light') && (!costLine(w.piece.id) || cls === 'crossbowman') && !costLine(a.piece.id)) fits++;
+    }
+    ok(fits === n1, `1-1’s first clear: a Fine weapon of the lead’s class and a Fine armour for their row, level 1, ★0, no cost line, and no other gear (${fits}/${n1})`);
+    const e1r = Campaign.earn(r1, st('1-1'));
+    ok(!e1r.gear.some(g => g.why === 'first') && Campaign.preview(st('1-1'), true, []).gear === 2, 'a replay of 1-1 rolls as any stage does; the stage sheet counts the two pieces');
+    // 1-2 is fought with two, a Shambler in the back row (tune)
+    ok(st('1-2').party === 2 && st('1-2').foes.filter(Boolean).length === 2 && st('1-2').foes.slice(2).includes('shambler'), '1-2: two heroes, and a Shambler in the back row');
+    // no building before the Sexton (decision 1): Region I's first clears bring no blueprint; Region II's early ones bring
+    // them, and the Toll House's plan is Bess's quest's alone
+    const before = STAGES.filter(x => x.region === 0 && !x.boss).flatMap(x => x.first);
+    ok(!before.some(id => UNLOCKS[id] && UNLOCKS[id].kind === 'building' && id !== 'recruitboard'), `no blueprint from 1-1 to 1-17 (${before.filter(id => UNLOCKS[id] && UNLOCKS[id].kind === 'building').join(', ')})`);
+    for (const [id, at] of [['infirmary', '2-1'], ['trainingyard', '2-2'], ['shop', '2-3'], ['tacticianhall', '2-4'], ['scavengercamp', '2-5'], ['barracks', '2-6'], ['salvagepit', '2-7']]) ok(st(at).first.includes(id) && BASE_UNLOCK_STAGE[id] === at && UNLOCKS[id].kind === 'building', `${at} brings the ${UNLOCKS[id].name}`);
+    ok(!STAGES.some(x => x.first.includes('tollhouse')) && !BASE_UNLOCK_STAGE.tollhouse && BUILDINGS.tactician.unlock === 'tacticianhall', 'no stage brings the Toll House’s plan, and the Tactician’s blueprint is apart from Tactician I');
     // the play-test's case: after 1-1, a level 2 hero at 1-2
     const r2 = won(st('1-2'), 2), first2 = Campaign.earn(r2, st('1-2'), { first: true }), again2 = Campaign.earn(r2, st('1-2'));
     ok(first2.xp === Math.round(XP_FLOOR * Hero.xpToNext(2)) && Campaign.share(first2.xp, 2) >= XP_FLOOR - 0.01 && !Campaign.tooEasy(first2.xp, 2),
@@ -1317,7 +1359,7 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(S.unlocks.recruitboard && S.unlocks.items && S.inventory.potions.draught >= 2 && Tactics.loadout().items.filter(x => x === 'draught').length === 2 && Tactics.owner('party').rules.some(r => r.do === 'draught' && r.n === 50), '1-3 brings the loadout, 2 Healing Draughts and the draught rule');
   ok(Tactics.isKnown({ if: 'foes_at_least', n: 3 }) === false, 'N or more foes waits for 1-4');
   for (const id of ['1-4', '1-5', '1-6']) { Campaign.setOut(st(id).index, S); Campaign.afterBattle(won(st(id), 5), S); }
-  ok(Tactics.isKnown({ if: 'foes_at_least', n: 3 }) && Tactics.isKnown({ if: 'foe_back' }) && S.unlocks.tollhouse && S.unlocks.keepgoing && S.campaign.road.keepGoing, 'conditions and blueprints from 1-4 to 1-6, and Keep going');
+  ok(Tactics.isKnown({ if: 'foes_at_least', n: 3 }) && Tactics.isKnown({ if: 'foe_back' }) && !S.unlocks.tollhouse && !Base.available(S).length && S.unlocks.keepgoing && S.campaign.road.keepGoing, 'conditions from 1-4 to 1-6 (and no blueprint), and Keep going');
   ok(Tactics.owner('party').rules.some(r => r.if === 'bb_fatigue' && r.n === 75 && r.do === 'home' && r.on), 'the come-home rule at 75+ fatigue is on by default from 1-6');
   // Keep going: a win walks on to the next stage, until a between-battle rule fires
   for (const c of S.roster) c.fatigue = 0;
@@ -1353,12 +1395,13 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   Campaign.setOut(17, S);
   out = Campaign.afterBattle(rb, S);
   ok(out.why.k === 'boss' && S.unlocks['region:1'] && S.unlocks['relic:gravediggersspade'] && Items.owns(S, 'gravediggersspade') && Tactics.isKnown({ if: 'boss_present' }), 'the boss: home, the Relic, Boss present and Region II opens');
-  // 1-11 teaches Tactician I and brings the Tactician's blueprint. The building builds on it: a 3rd party rule slot.
-  ok(S.unlocks.tactician && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }) && Tactics.isKnown({ if: 'bb_out', s: 'draught' }), '1-11 teaches Tactician I (the thresholds, its conditions and “out of an item”) and brings the Tactician’s blueprint');
+  // 1-11 teaches Tactician I; the Tactician's blueprint comes with 2-4. The building builds on it: a 3rd party rule slot.
+  ok(S.unlocks.tactician && !Base.blueprint('tactician', S) && Tactics.isKnown({ if: 'foe_hp_lt', n: 25 }) && Tactics.isKnown({ if: 'bb_fell' }) && Tactics.isKnown({ if: 'self_has', s: 'kindled' }) && Tactics.isKnown({ if: 'bb_out', s: 'draught' }), '1-11 teaches Tactician I (the thresholds, its conditions and “out of an item”), without the Tactician’s blueprint');
   // Region II opens with the Sexton: its buildings and its classes; and Tactician I brings the Move action
   ok(S.unlocks.mastershall && S.unlocks.shrine && S.unlocks.surgeon && S.unlocks.bellringer && /Gravefields are lit/.test(out.why.text), 'Region II opens with the Masters’ Hall, the Shrine, the Barber-Surgeon and the Bellringer');
   ok(Tactics.actions(c0.id).includes('move') && !Tactics.actions(c0.id).includes('gather'), 'Tactician I teaches the Move action, and Gather waits for Lesson II');
   Base.ensure(S); S.currencies.gold += 1000; S.currencies.mats.bone_dust += 50;
+  ok(Campaign.unlock('tacticianhall', S) && Base.blueprint('tactician', S), '2-4’s unlock is the Tactician’s blueprint');
   const slots0 = Tactics.owner('party').slots;
   ok(Base.build('tactician', S.base.plots.indexOf(null), S) && Tactics.owner('party').slots === Math.min(5, slots0 + 1), `the Tactician stands, with a 3rd party rule slot (${slots0} → ${Tactics.owner('party').slots})`);
   // “Out of [item]” (Tactician I): a between-battle rule that sends the party home once the Bag has none left
@@ -1523,14 +1566,15 @@ ok(f1.focus > 0 && f2.focus > 0 && d0.focus === 0, 'focus fire never aimed an at
   ok(D2.day !== day0 && D2.jobs.length === 3 && D2.jobs.every(j => !j.done && !j.claimed) && !D2.bonus, 'quests: after midnight, three new jobs');
   // the story quest: done once 1-18 is lit, and claimed for the Toll House plan
   const P = protoState(); P.quests = { bess: true, story: 'on', jobs: 'seen', daily: null }; Quests.ensure(P); Base.ensure(P);
-  for (const x of STAGES.filter(x => x.region === 0)) if (!['1-5'].includes(x.id)) P.campaign.cleared.push(x.id); // as if the plan hadn't come with 1-5
-  ok(Quests.story(P).state === 'done' && Quests.story(P).lit === 17 && Quests.ready(P) === 1 && !Base.blueprint('tollhouse', P), 'quests: 1-18 lit, The Gravedigger is done');
+  for (const x of STAGES.filter(x => x.region === 0)) P.campaign.cleared.push(x.id); // no stage brings the plan
+  ok(Quests.story(P).state === 'done' && Quests.story(P).lit === 18 && Quests.ready(P) === 1 && !Base.blueprint('tollhouse', P), 'quests: 1-18 lit, The Gravedigger is done');
   const pr = Quests.claimStory(P);
   ok(pr && pr.plan === 'tollhouse' && Base.blueprint('tollhouse', P) && P.quests.story === 'claimed' && Quests.claimStory(P) === null && Quests.ready(P) === 0, 'quests: claimed once, for the Toll House plan');
   const P2 = protoState(); P2.quests = { bess: true, story: 'on', jobs: '', daily: null }; Quests.ensure(P2); Base.ensure(P2);
   for (const x of STAGES.filter(x => x.region === 0)) { P2.campaign.cleared.push(x.id); for (const id of x.first) Campaign.unlock(id, P2); }
+  P2.unlocks.tollhouse = 1; // a save from before, whose plan came with 1-5
   const c1 = Base.cost('tollhouse', 1), pg = P2.currencies.gold, pb = P2.currencies.mats.bone_dust || 0, pr2 = Quests.claimStory(P2);
-  ok(pr2 && !pr2.plan && P2.currencies.gold === pg + c1.gold && P2.currencies.mats.bone_dust === pb + c1.n, `quests: with the plan already known (from 1-5), it pays the Toll House’s cost instead (${c1.gold} gold, ${c1.n} Bone Dust)`);
+  ok(pr2 && !pr2.plan && P2.currencies.gold === pg + c1.gold && P2.currencies.mats.bone_dust === pb + c1.n, `quests: with the plan already known (an older save's, from 1-5), it pays the Toll House’s cost instead (${c1.gold} gold, ${c1.n} Bone Dust)`);
   const P3 = protoState(); P3.quests = { bess: true, story: 'offered', jobs: '', daily: null }; Quests.ensure(P3);
   for (const x of STAGES.filter(x => x.region === 0)) P3.campaign.cleared.push(x.id);
   ok(Quests.story(P3).state === 'offered' && Quests.accept(P3) && Quests.story(P3).state === 'done', 'quests: accepted after the Sexton already fell, it’s done at once');

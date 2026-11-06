@@ -222,7 +222,7 @@ const GLOSSARY = (() => {
     rest: { name: 'Rest', icon: 'fatigue', line: 'Heroes at the Hearth lose fatigue over time, even while the app is closed.', more: '10 an hour at the fire, 20 to 35 in an Infirmary bed, and 10 training or at a lesson.', see: ['fatigue', 'bed', 'fire'] },
     bed: { name: 'Bed', icon: 'cross', line: 'An Infirmary bed, where the most tired hero at the Hearth rests faster.', more: 'Pin a hero to keep a bed for them.', see: ['infirmary', 'rest'] },
     plot: { name: 'Plot', icon: 'plus', line: 'A space in the ring around the fire where one building can stand.', more: 'You start with 3. Renown clears more, up to 14.', see: ['renown', 'blueprint', 'tear_down'] },
-    blueprint: { name: 'Blueprint', icon: 'scroll', line: 'A building you can now raise, brought to you by the road.', more: 'First clears in Region I bring most of them, and Regions II to IV the rest.', see: ['plot', 'first_clear'] },
+    blueprint: { name: 'Blueprint', icon: 'scroll', line: 'A building you can now raise, brought to you by the road.', more: 'None comes before the Sexton: Bess’s first quest brings the Toll House’s plan, and first clears from Region II on bring the rest.', see: ['plot', 'first_clear'] },
     upgrade: { name: 'Upgrade', icon: 'plus', line: 'Raise a building a level, for gold and a material; it’s instant.', more: 'Every building has five levels. Levels 1 and 2 cost Bone Dust, and level 3 and up its home material.', see: ['home_material', 'choice'] },
     home_material: { name: 'Home material', icon: 'bone', line: 'The material a building costs from level 3, which ties it to one region.', see: ['material', 'upgrade'] },
     choice: { name: 'Choice', icon: 'check', line: 'At levels 3 and 5, an idle building offers two upgrades: pick one.', more: 'One always adds storage. You can switch later by paying that level’s cost again.', see: ['idle_building', 'storage'] },
@@ -241,7 +241,7 @@ const GLOSSARY = (() => {
     veterans: { name: 'Veterans', icon: 'scroll', line: 'A Recruit Board track: recruits who arrive at higher levels, points spent.', more: 'The top rank brings storied recruits, some already combined or awakened.', see: ['recruitboard', 'recruit'] },
 
     // The buildings, one line each
-    recruitboard: { name: 'Recruit Board', icon: 'scroll', line: 'Where new heroes wait to be hired; it stands outside the plots.', more: 'A new board comes whenever the party comes home, and every 4 hours. Its first recruit is free.', see: ['recruit', 'notices', 'picks', 'veterans'] },
+    recruitboard: { name: 'Recruit Board', icon: 'scroll', line: 'Where new heroes wait to be hired; it stands outside the plots.', more: 'A new board comes whenever the party comes home, and every 4 hours. Only your first pick is free.', see: ['recruit', 'notices', 'picks', 'veterans'] },
     tollhouse: { name: 'Toll House', icon: 'coin', line: 'Raises the tolls travellers pay to use the road you’ve cleared.', more: 'It earns more the further you’ve cleared. Its focus can take party items instead of gold.', see: ['tolls', 'idle_building', 'focus'] },
     infirmary: { name: 'Infirmary', icon: 'cross', line: 'Beds where tired heroes rest faster than at the fire.', more: 'More levels bring more and better beds, and from level 3 a still-room.', see: ['bed', 'still_room', 'rest'] },
     trainingyard: { name: 'Training Yard', icon: 'sword', line: 'XP for resting heroes, up to the level of your highest lit stage.', more: 'You choose who trains.', see: ['xp', 'idle_building'] },
@@ -354,7 +354,7 @@ const GLOSSARY = (() => {
 
   // ═══════════════════════════════════════════════════════════════════ resources
   topic('resources', {
-    gold: { name: 'Gold', icon: 'coin', line: 'The coin of the road, for recruits, buildings, items and respecs.', more: 'You start with 100. Foes further down the road drop more.', see: ['loot', 'sell', 'tollhouse'] },
+    gold: { name: 'Gold', icon: 'coin', line: 'The coin of the road, for recruits, buildings, items and respecs.', more: 'You start with 300, the crown’s advance. Foes further down the road drop more.', see: ['loot', 'sell', 'tollhouse'] },
     material: { name: 'Material', icon: 'bone', line: 'What buildings are made of; each region drops one more than the rest.', more: 'The Scavenger Camp gathers them while you’re away.', see: ['home_material', 'scavengercamp'] },
     bone_dust: { name: 'Bone Dust', icon: 'bone', line: 'The Gravefields’ material, which every building’s first two levels need.', more: 'It also pays for the Recruit Board’s ranks, and the Training Yard and Shop past level 2.', see: ['gravefields', 'upgrade'] },
     chapel_wax: { name: 'Chapel Wax', icon: 'wax', line: 'The Drowned Chapel’s material, for raising some buildings past level 2.', more: 'The Toll House, Infirmary and Tactician need it from level 3.', see: ['drownedchapel', 'home_material'] },
